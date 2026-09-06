@@ -1,0 +1,42 @@
+# IDE
+.idea/
+
+# Local secrets and dev state
+.dev.vars
+.wrangler/
+
+# Claude Code
+.claude/
+
+# Temp files
+*.tmp.*
+
+# Raw dictionary source (JSON version is used by the app)
+cmudict.dict
+
+# Reference docs
+definitions.txt
+style.txt
+
+# Screenshots / QA artifacts
+*.png
+!icons/*.png
+
+# Design reference images (third-party, not for redistribution)
+design_ideas/
+
+# Private business notes
+idea.md
+
+# Working notes / scratch prompts
+instructions.txt
+
+# Playwright test artifacts
+.playwright-mcp/
+
+# Unverified third-party data (no known source/license)
+english-words.json
+blocklist.json
+
+# Internal planning docs (new ones stay local; already-tracked files here are unaffected)
+design_plans/

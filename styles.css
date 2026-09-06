@@ -1,0 +1,1348 @@
+/* ── Fonts (self-hosted, SIL OFL — licenses in /fonts) ── */
+
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('fonts/iAWriterQuattroS-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('fonts/CourierPrime-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('fonts/CourierPrime-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('fonts/CourierPrime-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('fonts/CourierPrime-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('fonts/Montserrat-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Design tokens: the notepad palette (see design_plan.md §2) ──
+   Two materials: paper (what the writer owns) and the desk/binding
+   (what the app owns). Every color in the app flows through here. */
+
+:root {
+  /* Paper */
+  --paper: #f5e9d6;             /* cream pad surface */
+  --rule: #d8c4a6;              /* soft tan ruled lines */
+  --margin-line: #3a332a;       /* the down line: thin dark ink */
+  --margin-red: #c0392b;        /* red ink accents (grips, focus, marks) */
+  --margin-red-wash: rgba(192, 57, 43, 0.06);  /* active-page tint */
+  --ink: #26221b;               /* warm near-black writing ink */
+  --ink-faded: #6e654f;         /* pencil: marginalia, placeholders (4.8:1 on paper) */
+  --ink-wash: rgba(38, 34, 27, 0.06);   /* hover/focus tint on paper */
+  --ink-wash-strong: rgba(38, 34, 27, 0.12);
+  --ink-border: rgba(38, 34, 27, 0.25); /* button borders on paper cards */
+  --paper-card: #fbf9f2;        /* white memo card (rhymes panel, overlays) */
+
+  --desk: #221b14;              /* surface the pad rests on */
+
+  /* Editor metrics: integer pitch keeps ruling crisp and text on-line.
+     Everything that renders or measures lyric lines MUST share these. */
+  --editor-font-size: 24px;
+  --line-pitch: 41px;
+  --editor-pad: 20px;
+  --ruling: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--line-pitch) - 1px),
+    var(--rule) calc(var(--line-pitch) - 1px),
+    var(--rule) var(--line-pitch)
+  );
+
+  --border-focus: #6e654f;
+
+  /* States (red ink on paper) */
+  --danger: #b3403a;
+  --danger-hover: #8e2b20;
+  --danger-border: rgba(179, 64, 58, 0.45);
+  --danger-border-hover: #b3403a;
+  --danger-bg: rgba(179, 64, 58, 0.08);
+
+  /* Rhyme categories: saturated inks, legible on the white memo card */
+  --rhyme-perfect: #1f7a43;
+  --rhyme-family: #2c5f9e;
+  --rhyme-additive: #8c6d1f;
+  --rhyme-subtractive: #b4551d;
+  --rhyme-assonance: #a83a68;
+  --rhyme-consonance: #6b4fa1;
+
+  /* Rhyme-scheme letter cycle (consumed by SCHEME_COLORS in app.js).
+     Re-inked for the paper margin: saturated inks, not neons. */
+  --scheme-0: #1c7040;
+  --scheme-1: #2c5f9e;
+  --scheme-2: #7a5f1a;
+  --scheme-3: #9e4a19;
+  --scheme-4: #a83a68;
+  --scheme-5: #6b4fa1;
+  --scheme-6: #14766e;
+  --scheme-7: #b3403a;
+  --scheme-8: #1d6e97;
+  --scheme-9: #7e4b9e;
+
+  /* Effects */
+  --highlight-word: rgba(192, 57, 43, 0.18);  /* red-ink wash on paper */
+  --selection: rgba(192, 57, 43, 0.25);
+  --flash: rgba(192, 57, 43, 0.14);
+  --scrim: rgba(20, 14, 8, 0.55);             /* dimmed desk */
+  --scrim-light: rgba(20, 14, 8, 0.45);
+  --shadow-popup: 0 8px 32px rgba(20, 14, 8, 0.35);
+  --shadow-card: 0 2px 12px rgba(20, 14, 8, 0.35);
+  --sheet-handle: rgba(38, 34, 27, 0.25);
+  --scrollbar-thumb: rgba(38, 34, 27, 0.25);
+
+  /* Type */
+  --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+  --font-marginalia: 'Courier Prime', 'Courier New', Courier, monospace;
+  --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:focus-visible {
+  outline: 2px solid var(--margin-red);
+  outline-offset: 2px;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--desk);
+  color: var(--ink);
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#app-content {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* The pad's printed header: ink on the same paper, like the
+   letterpress title block on the reference notepad. */
+header {
+  padding: 14px 24px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--margin-line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+header h1 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+#status {
+  font-family: var(--font-marginalia);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faded);
+}
+
+/* Tool buttons: printed labels on the paper. */
+.toggle-btn {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--ink-border);
+  border-radius: 3px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.toggle-btn:hover {
+  background: var(--ink-wash);
+}
+
+.danger-btn {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.danger-btn:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border-hover);
+  color: var(--danger-hover);
+}
+
+.toggle-btn.active {
+  background: var(--margin-red-wash);
+  border-color: var(--margin-red);
+  color: var(--margin-red);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background: var(--desk);
+}
+
+/* One orchestrated moment: the page settles onto the desk. */
+@keyframes page-settle {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lyrics-panel,
+.rhymes-panel {
+  animation: page-settle 0.18s ease-out;
+}
+
+.lyrics-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--paper);
+}
+
+/* The desk gap between pad and memo card; red when gripped. */
+.resize-handle {
+  width: 10px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--desk);
+  transition: background 0.15s;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--margin-red);
+}
+
+.lyrics-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* One ruling recipe for every surface that renders lyric lines; each
+   scrolls it with its own content to stay in register. */
+.syllable-gutter,
+.rhyme-scheme-gutter,
+#lyrics {
+  background-image: var(--ruling);
+  background-attachment: local;
+  background-position-y: var(--editor-pad);
+}
+
+/* The annotation margin: always part of the paper, like a real pad.
+   Syllable counts appear in it only when the toggle is on. */
+.syllable-gutter {
+  display: flex;
+  flex-direction: column;
+  padding: var(--editor-pad) 0;
+  width: 56px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--margin-line);
+  overflow-y: hidden;
+  user-select: none;
+}
+
+.syllable-gutter:not(.visible) .syl-line {
+  visibility: hidden;
+}
+
+.syllable-gutter .syl-line {
+  font-family: var(--font-marginalia);
+  font-size: 15px;
+  line-height: var(--line-pitch);
+  text-align: center;
+  color: var(--ink-faded);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.syllable-gutter .syl-line.empty-line {
+  color: transparent;
+}
+
+/* Rhyme-scheme letters: ink marks at the line ends. */
+.rhyme-scheme-gutter {
+  display: none;
+  flex-direction: column;
+  padding: var(--editor-pad) 0;
+  width: 44px;
+  flex-shrink: 0;
+  overflow-y: hidden;
+  user-select: none;
+}
+
+.rhyme-scheme-gutter.visible {
+  display: flex;
+}
+
+.rhyme-scheme-gutter .scheme-line {
+  font-family: var(--font-marginalia);
+  font-size: 16px;
+  line-height: var(--line-pitch);
+  text-align: center;
+  font-weight: 700;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.rhyme-scheme-gutter .scheme-line.empty-line {
+  color: transparent;
+}
+
+/* The pad's top edge: title written on the paper itself. */
+.panel-header {
+  padding: 12px 20px 10px;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#lyrics-panel-title {
+  cursor: text;
+  border-radius: 3px;
+  padding: 1px 4px;
+  outline: none;
+  min-width: 40px;
+  font-family: var(--font-editor);
+}
+
+#lyrics-panel-title:hover {
+  background: var(--ink-wash);
+}
+
+#lyrics-panel-title:focus {
+  background: var(--ink-wash);
+  box-shadow: 0 0 0 1px var(--rule);
+}
+
+.lyrics-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+#lyrics-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: var(--editor-pad);
+  font-family: var(--font-editor);
+  font-size: var(--editor-font-size);
+  line-height: var(--line-pitch);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#line-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-editor);
+  font-size: var(--editor-font-size);
+  line-height: var(--line-pitch);
+  padding: 0 var(--editor-pad);
+}
+
+#lyrics-highlight .highlight-word {
+  background: var(--highlight-word);
+  border-radius: 4px;
+}
+
+#lyrics {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: var(--editor-pad);
+  background-color: transparent;
+  border: none;
+  color: var(--ink);
+  caret-color: var(--ink);
+  font-family: var(--font-editor);
+  font-size: var(--editor-font-size);
+  line-height: var(--line-pitch);
+  resize: none;
+  outline: none;
+}
+
+#lyrics::-webkit-scrollbar {
+  display: none;
+}
+
+#lyrics {
+  scrollbar-width: none;
+}
+
+#lyrics::placeholder {
+  color: var(--ink-faded);
+}
+
+#lyrics::selection {
+  background: var(--selection);
+}
+
+/* The white memo card on the desk: reference material beside the pad. */
+.rhymes-panel {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper-card);
+  margin: 10px 12px 10px 0;
+  border-radius: 5px;
+  box-shadow: var(--shadow-card);
+}
+
+.selected-word-bar {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.context-line {
+  width: 100%;
+  font-size: 13px;
+  color: var(--ink-faded);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.context-line:empty {
+  display: none;
+}
+
+@keyframes word-flash {
+  0% { background: var(--flash); }
+  100% { background: transparent; }
+}
+
+.selected-word-bar.flash {
+  animation: word-flash 0.4s ease-out;
+}
+
+.selected-word-bar .label {
+  font-family: var(--font-marginalia);
+  font-size: 12px;
+  color: var(--ink-faded);
+  text-transform: lowercase;
+  letter-spacing: 0.08em;
+  font-weight: 400;
+}
+
+/* Typewritten header register, echoing the memo-pad reference. */
+.selected-word-bar .label::before { content: '\2013\00a0'; }
+.selected-word-bar .label::after { content: '\00a0\2013'; }
+
+.selected-word-bar .word {
+  font-family: var(--font-editor);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+#rhyme-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+#rhyme-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+#rhyme-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#rhyme-results::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.rhyme-group {
+  margin-bottom: 4px;
+}
+
+.rhyme-group-header {
+  padding: 10px 20px;
+  font-family: var(--font-marginalia);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.rhyme-group-header:hover {
+  background: var(--ink-wash);
+}
+
+.rhyme-group-header .name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rhyme-group-header .count {
+  font-size: 11px;
+  color: var(--ink-faded);
+  background: var(--ink-wash);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.rhyme-group-header .chevron {
+  font-size: 10px;
+  color: var(--ink-faded);
+  transition: transform 0.2s;
+}
+
+.rhyme-group.open .chevron {
+  transform: rotate(90deg);
+}
+
+.rhyme-group-body {
+  display: none;
+  padding: 4px 20px 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rhyme-group.open .rhyme-group-body {
+  display: flex;
+}
+
+.rhyme-word {
+  font-family: var(--font-editor);
+  font-size: 13px;
+  padding: 4px 10px;
+  background: var(--ink-wash);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rhyme-word:hover {
+  background: var(--ink-wash-strong);
+}
+
+/* ── Definition popup (desktop) ── */
+
+.def-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.def-popup {
+  position: fixed;
+  z-index: 101;
+  width: 320px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px;
+  box-shadow: var(--shadow-popup);
+}
+
+.def-popup::-webkit-scrollbar {
+  width: 5px;
+}
+
+.def-popup::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.def-word {
+  font-family: var(--font-editor);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.def-phonetic {
+  font-family: var(--font-marginalia);
+  font-size: 13px;
+  color: var(--ink-faded);
+  margin-bottom: 12px;
+}
+
+.def-pos {
+  font-family: var(--font-marginalia);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.def-meaning {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.5;
+  margin-bottom: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--rule);
+}
+
+.def-example {
+  font-size: 12px;
+  color: var(--ink-faded);
+  font-style: italic;
+  padding-left: 10px;
+  margin-bottom: 8px;
+}
+
+.def-loading {
+  font-size: 13px;
+  color: var(--ink-faded);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.def-error {
+  font-size: 13px;
+  color: var(--ink-faded);
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Definition bottom sheet (mobile) ── */
+
+@media (max-width: 768px) {
+  .def-overlay {
+    background: var(--scrim-light);
+  }
+
+  .def-popup {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 50vh;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    border-top: 1px solid var(--rule);
+    padding: 20px 16px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .def-popup::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--sheet-handle);
+    border-radius: 2px;
+    margin: 0 auto 14px;
+  }
+}
+
+.color-perfect { color: var(--rhyme-perfect); }
+.color-family { color: var(--rhyme-family); }
+.color-additive { color: var(--rhyme-additive); }
+.color-subtractive { color: var(--rhyme-subtractive); }
+.color-assonance { color: var(--rhyme-assonance); }
+.color-consonance { color: var(--rhyme-consonance); }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-perfect { background: var(--rhyme-perfect); }
+.dot-family { background: var(--rhyme-family); }
+.dot-additive { background: var(--rhyme-additive); }
+.dot-subtractive { background: var(--rhyme-subtractive); }
+.dot-assonance { background: var(--rhyme-assonance); }
+.dot-consonance { background: var(--rhyme-consonance); }
+
+.show-more-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--ink-faded);
+  font-family: var(--font-marginalia);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.show-more-btn:hover {
+  background: var(--ink-wash);
+}
+
+.no-rhymes {
+  display: block;
+  padding: 8px 0;
+  color: var(--ink-faded);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-faded);
+  font-family: var(--font-marginalia);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--ink-faded);
+  font-size: 14px;
+}
+
+.description {
+  font-size: 11px;
+  color: var(--ink-faded);
+  padding: 2px 20px 8px;
+  font-style: italic;
+  display: none;
+}
+
+.rhyme-group.open .description {
+  display: block;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+#user-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#user-email {
+  font-family: var(--font-marginalia);
+  font-size: 12px;
+  color: var(--ink-faded);
+}
+
+/* ── Account settings overlay ── */
+
+#account-settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+#account-settings-overlay.open {
+  display: flex;
+}
+
+#account-settings-panel {
+  background: var(--paper-card);
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-popup);
+  width: 400px;
+  max-width: 92vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.account-settings-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-marginalia);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.account-settings-header span {
+  flex: 1;
+}
+
+.account-settings-body {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+}
+
+.settings-section:not(:first-child) {
+  border-top: 1px solid var(--rule);
+  padding-top: 20px;
+}
+
+.settings-section-title {
+  font-family: var(--font-marginalia);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faded);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.settings-label {
+  color: var(--ink-faded);
+  flex-shrink: 0;
+}
+
+.settings-value {
+  color: var(--ink);
+}
+
+.settings-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--ink);
+  font-family: var(--font-editor);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.settings-input:focus {
+  border-color: var(--border-focus);
+}
+
+.settings-input::placeholder {
+  color: var(--ink-faded);
+}
+
+.settings-btn {
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid var(--ink-faded);
+  border-radius: 4px;
+  color: var(--ink);
+  font-family: var(--font-marginalia);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.settings-btn:hover {
+  background: var(--ink-wash);
+}
+
+.settings-btn.danger-btn {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.settings-btn.danger-btn:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border-hover);
+  color: var(--danger-hover);
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--ink-faded);
+}
+
+/* ── Lyrics list overlay ── */
+
+#lyrics-list-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: 100;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+#lyrics-list-overlay.open {
+  display: flex;
+}
+
+#lyrics-list-panel {
+  background: var(--paper-card);
+  border-right: none;
+  box-shadow: var(--shadow-popup);
+  width: 320px;
+  max-width: 90vw;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#lyrics-list-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-marginalia);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+#lyrics-list-panel-header span {
+  flex: 1;
+}
+
+#lyrics-list-items {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.lyrics-list-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.lyrics-list-item:hover {
+  background: var(--ink-wash);
+}
+
+/* The red margin marks the open page. */
+.lyrics-list-item.active {
+  background: var(--margin-red-wash);
+  border-left: 3px solid var(--margin-red);
+}
+
+.lyrics-list-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.lyrics-list-title {
+  font-family: var(--font-editor);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.lyrics-list-date {
+  font-family: var(--font-marginalia);
+  font-size: 11px;
+  color: var(--ink-faded);
+}
+
+.lyrics-list-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.lyrics-action-btn {
+  font-family: var(--font-marginalia);
+  font-size: 11px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--ink-border);
+  border-radius: 3px;
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+
+.lyrics-action-btn:hover {
+  background: var(--ink-wash);
+  color: var(--ink);
+}
+
+.lyrics-delete-btn:hover {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.lyrics-list-empty {
+  padding: 32px 16px;
+  color: var(--ink-faded);
+  font-family: var(--font-marginalia);
+  font-style: italic;
+  font-size: 13px;
+  text-align: center;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--ink-faded);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+}
+
+#save-indicator {
+  font-family: var(--font-marginalia);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faded);
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+/* ── Mobile tabs (hidden on desktop) ── */
+
+.mobile-tabs {
+  display: none;
+}
+
+/* ── Mobile layout ── */
+
+@media (max-width: 768px) {
+  header {
+    padding: 10px 16px;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+
+  header h1 {
+    width: 100%;
+  }
+
+  .toggle-btn {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  /* Even columns: the three tool buttons share their row equally,
+     and the account controls fill a full-width row below. */
+  header > .toggle-btn {
+    flex: 1 1 0;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    padding: 6px 2px;
+  }
+
+  .header-right {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  #user-area {
+    width: 100%;
+  }
+
+  #user-area .toggle-btn {
+    flex: 1 1 0;
+  }
+
+  #user-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+  }
+
+  #user-email {
+    width: 100%;
+    text-align: center;
+  }
+
+  #status {
+    display: none;
+  }
+
+  .mobile-tabs {
+    display: flex;
+    background: var(--paper);
+    border-bottom: 1px solid var(--margin-line);
+    flex-shrink: 0;
+  }
+
+  .mobile-tab {
+    flex: 1;
+    padding: 10px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    background: transparent;
+    border: none;
+    color: var(--ink-faded);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    min-height: 44px;
+  }
+
+  .mobile-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--margin-red);
+  }
+
+  .main {
+    flex-direction: column;
+  }
+
+  .lyrics-panel,
+  .rhymes-panel {
+    transition: opacity 0.15s ease;
+  }
+
+  .lyrics-panel {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .panel-header {
+    display: none;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+
+  .rhymes-panel {
+    width: 100% !important;
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Tab switching */
+  .main.show-lyrics .lyrics-panel {
+    display: flex;
+    flex: 1;
+  }
+
+  .main.show-lyrics .rhymes-panel {
+    display: none;
+  }
+
+  .main.show-rhymes .lyrics-panel {
+    display: none;
+  }
+
+  .main.show-rhymes .rhymes-panel {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Editor metrics shrink together: one token change keeps the ruling,
+     text, overlay, and gutters in lockstep. */
+  :root {
+    --editor-font-size: 18px;
+    --line-pitch: 31px;
+    --editor-pad: 16px;
+  }
+
+  .syllable-gutter {
+    width: 40px;
+  }
+
+  .syllable-gutter .syl-line {
+    font-size: 13px;
+  }
+
+  .rhyme-scheme-gutter .scheme-line {
+    font-size: 14px;
+  }
+
+  /* Rhyme results adjustments */
+  .selected-word-bar {
+    padding: 14px 16px;
+    background: var(--paper-card);
+  }
+
+  .selected-word-bar .word {
+    font-size: 20px;
+  }
+
+  .rhyme-group-header {
+    padding: 10px 16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .rhyme-group-body {
+    padding: 4px 16px 12px;
+    gap: 8px;
+  }
+
+  .rhyme-word {
+    font-size: 15px;
+    padding: 10px 14px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .description {
+    padding: 2px 16px 8px;
+  }
+
+  .empty-state {
+    padding: 30px 16px;
+  }
+}
+
+/* ── Reduced motion ──
+   Kept last: it must out-cascade every animation declared above
+   (equal specificity, later source order wins). */
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-panel,
+  .rhymes-panel,
+  .selected-word-bar.flash {
+    animation: none;
+  }
+
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

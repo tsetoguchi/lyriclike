@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>LyricLike</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f5e9d6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LyricLike">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app-content">
+  <header>
+    <h1>LyricLike</h1>
+    <button id="syllable-toggle" class="toggle-btn">Syllable Count</button>
+    <button id="rhyme-scheme-toggle" class="toggle-btn">Rhyme Scheme</button>
+    <button id="english-toggle" class="toggle-btn">English Only</button>
+    <div class="header-right">
+      <span id="status">Loading dictionary...</span>
+      <div id="user-area">
+        <button id="sign-in-btn" class="toggle-btn">Sign in</button>
+        <span id="user-info" style="display:none">
+          <span id="user-email"></span>
+          <button id="my-lyrics-btn" class="toggle-btn">My Lyrics</button>
+          <button id="account-settings-btn" class="toggle-btn">Account</button>
+          <button id="sign-out-btn" class="toggle-btn">Sign out</button>
+        </span>
+      </div>
+    </div>
+  </header>
+  <nav class="mobile-tabs" id="mobile-tabs">
+    <button class="mobile-tab active" data-tab="lyrics">Lyrics</button>
+    <button class="mobile-tab" data-tab="rhymes">Rhymes</button>
+  </nav>
+  <div class="main">
+    <div class="lyrics-panel">
+      <div class="panel-header">
+        <span id="lyrics-panel-title" contenteditable="true" spellcheck="false">Untitled</span>
+        <span id="save-indicator"></span>
+      </div>
+      <div class="lyrics-area">
+        <div class="syllable-gutter" id="syllable-gutter"></div>
+        <div class="lyrics-wrapper">
+          <div id="lyrics-highlight"></div>
+          <textarea id="lyrics" placeholder="Start writing your lyrics here..."></textarea>
+        </div>
+        <div class="rhyme-scheme-gutter" id="rhyme-scheme-gutter"></div>
+        <div id="line-measure"></div>
+      </div>
+    </div>
+    <div class="resize-handle" id="resize-handle"></div>
+    <div class="rhymes-panel" id="rhymes-panel">
+      <div class="selected-word-bar">
+        <span class="label">Rhymes</span>
+        <span class="word" id="selected-word"></span>
+        <span class="context-line" id="selected-context"></span>
+      </div>
+      <div id="rhyme-results">
+        <div class="empty-state">
+          Select a word in the lyrics<br>to find rhymes
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div id="account-settings-overlay">
+    <div id="account-settings-panel">
+      <div class="account-settings-header">
+        <span>Account</span>
+        <button id="close-account-settings-btn" class="icon-btn">&#x2715;</button>
+      </div>
+      <div class="account-settings-body">
+        <div class="settings-section">
+          <div class="settings-row">
+            <span class="settings-label">Email</span>
+            <span id="settings-user-email" class="settings-value"></span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Danger Zone</div>
+          <button id="settings-delete-account-btn" class="settings-btn danger-btn">Delete Account</button>
+          <p class="settings-hint">Permanently deletes your account and all saved lyrics.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="lyrics-list-overlay">
+    <div id="lyrics-list-panel">
+      <div id="lyrics-list-panel-header">
+        <span>My Lyrics</span>
+        <button id="new-lyric-btn" class="toggle-btn">+ New</button>
+        <button id="close-lyrics-list-btn" class="icon-btn">&#x2715;</button>
+      </div>
+      <div id="lyrics-list-items"></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+  <script src="auth.js"></script>
+  <script src="storage.js"></script>
+</body>
+</html>
