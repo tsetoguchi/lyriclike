@@ -1,7 +1,8 @@
-import { randomHex } from '../../../_shared.js';
+import { randomHex, secureCookieAttribute } from '../../../_shared.js';
 
 export async function onRequestGet({ request, env }) {
   const state = randomHex(16);
+  const secure = secureCookieAttribute(new URL(request.url));
 
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID,
@@ -15,7 +16,7 @@ export async function onRequestGet({ request, env }) {
     Location: `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
   });
   headers.append('Set-Cookie',
-    `oauth_state=${state}; HttpOnly; SameSite=Lax; Max-Age=600; Path=/`
+    `oauth_state=${state}; HttpOnly${secure}; SameSite=Lax; Max-Age=600; Path=/`
   );
 
   return new Response(null, { status: 302, headers });
