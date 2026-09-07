@@ -284,14 +284,14 @@ async function loadDictionary() {
       }
     }
   }
-
-  statusEl.textContent = '';
 }
 
 // ── Rhyme search ──
 
 function findRhymes(targetWord) {
   if (typeof targetWord !== 'string') return null;
+  // Fail closed: without the blocklist, results would render unfiltered.
+  if (!blocklist) return null;
   targetWord = targetWord.toLowerCase().replace(/[^a-z']/g, '');
   if (!targetWord || !rhymeIndex[targetWord]) return null;
   console.assert(rhymeIndex[targetWord], 'findRhymes: target must exist in index');
@@ -332,9 +332,7 @@ function findRhymes(targetWord) {
     if (englishOnly && englishWords) {
       results[key] = results[key].filter(function filterEnglish(word) { return englishWords.has(word); });
     }
-    if (blocklist) {
-      results[key] = results[key].filter(function filterBlocked(word) { return !blocklist.has(word); });
-    }
+    results[key] = results[key].filter(function filterBlocked(word) { return !blocklist.has(word); });
     results[key].sort();
   }
 
@@ -1131,25 +1129,33 @@ setInterval(function pollTextChanges() {
 }, POLL_INTERVAL_MS);
 
 // ── Init ──
-async function loadEnglishWords() {
-  const resp = await fetch('english-words.json');
-  if (!resp.ok) throw new Error('loadEnglishWords: failed to fetch english-words.json');
+async function loadWordSet(path, label) {
+  const resp = await fetch(path);
+  if (!resp.ok) throw new Error(label + ': failed to fetch ' + path);
   const words = await resp.json();
-  console.assert(Array.isArray(words), 'loadEnglishWords: words must be an array');
-  englishWords = new Set(words);
+  console.assert(Array.isArray(words), label + ': words must be an array');
+  return new Set(words);
+}
+
+async function loadEnglishWords() {
+  englishWords = await loadWordSet('english-words.json', 'loadEnglishWords');
 }
 
 async function loadBlocklist() {
-  const resp = await fetch('blocklist.json');
-  if (!resp.ok) throw new Error('loadBlocklist: failed to fetch blocklist.json');
-  const words = await resp.json();
-  blocklist = new Set(words);
+  blocklist = await loadWordSet('blocklist.json', 'loadBlocklist');
 }
 
-Promise.all([loadDictionary(), loadEnglishWords(), loadBlocklist()]).then(function onLoaded() {
+// The blocklist gates rhyme results, so it is required at startup. The English
+// word list only refines them, so losing it degrades quality without blocking.
+Promise.all([loadDictionary(), loadBlocklist()]).then(function onRequiredLoaded() {
+  statusEl.textContent = '';
   updateSyllableGutter();
   if (rhymeSchemeVisible) updateRhymeSchemeGutter();
-}).catch(function onDictError(err) {
+}).catch(function onRequiredLoadError(err) {
   statusEl.textContent = 'Failed to load dictionary';
+  console.error(err);
+});
+
+loadEnglishWords().catch(function onEnglishWordsError(err) {
   console.error(err);
 });
