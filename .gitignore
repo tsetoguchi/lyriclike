@@ -34,9 +34,5 @@ instructions.txt
 # Playwright test artifacts
 .playwright-mcp/
 
-# Unverified third-party data (no known source/license)
-english-words.json
-blocklist.json
-
 # Internal planning docs (new ones stay local; already-tracked files here are unaffected)
 design_plans/
