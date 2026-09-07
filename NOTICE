@@ -37,3 +37,36 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Source: https://github.com/cmusphinx/cmudict
+
+
+english-words.json — filtered English word list
+-----------------------------------------------------------------
+Derived from the dwyl/english-words list (words_alpha.txt), released
+into the public domain under the Unlicense.
+
+Modified: reduced to the 57,800 entries that also appear in the CMU
+Pronouncing Dictionary, since rhyme results are only ever drawn from
+CMUdict. No other changes.
+
+Source: https://github.com/dwyl/english-words
+Upstream revision: 20f5cc9b3f0ccc8ce45d814c532b7c2031bba31c
+License: https://unlicense.org/
+
+
+blocklist.json — slur blocklist
+-----------------------------------------------------------------
+Derived in part from "Our List of Dirty, Naughty, Obscene, and
+Otherwise Bad Words".
+
+Copyright (C) 2012-2020 Shutterstock, Inc.
+
+Licensed under a Creative Commons Attribution 4.0 International
+License: https://creativecommons.org/licenses/by/4.0/
+
+Modified: 31 of the 120 entries here originate from that list. The
+remainder are inflected forms and additional terms added for this
+project, and general profanity from the upstream list was deliberately
+not carried over — this list targets slurs only.
+
+Source: https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words
+Upstream revision: 5faf2ba42d7b1c0977169ec3611df25a3c08eb13
