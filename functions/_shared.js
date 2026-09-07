@@ -1,3 +1,11 @@
+const LOCAL_HOSTNAME = 'localhost';
+
+// Browsers reject Secure cookies over plain HTTP, which is what `wrangler
+// pages dev` serves, so the attribute is dropped for local development only.
+export function secureCookieAttribute(url) {
+  return url.hostname === LOCAL_HOSTNAME ? '' : '; Secure';
+}
+
 export function parseCookies(request) {
   const header = request.headers.get('Cookie') || '';
   return Object.fromEntries(
