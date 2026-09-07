@@ -1,4 +1,6 @@
-import { parseCookies, randomHex, writeLog } from '../../../_shared.js';
+import {
+  parseCookies, randomHex, secureCookieAttribute, writeLog,
+} from '../../../_shared.js';
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -59,14 +61,15 @@ export async function onRequestGet({ request, env }) {
     'INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)'
   ).bind(sessionId, user.id, expiresAt, Date.now()).run();
 
-  const isLocal = url.hostname === 'localhost';
-  const secure = isLocal ? '' : '; Secure';
+  const secure = secureCookieAttribute(url);
 
   const headers = new Headers({ Location: '/' });
   headers.append('Set-Cookie',
     `sid=${sessionId}; HttpOnly${secure}; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}; Path=/`
   );
-  headers.append('Set-Cookie', 'oauth_state=; HttpOnly; Max-Age=0; Path=/');
+  headers.append('Set-Cookie',
+    `oauth_state=; HttpOnly${secure}; SameSite=Lax; Max-Age=0; Path=/`
+  );
 
   return new Response(null, { status: 302, headers });
 }
