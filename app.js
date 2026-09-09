@@ -1129,6 +1129,33 @@ textareaEl.addEventListener('focus', function handleFocus() {
   }, 300);
 });
 
+// ── First-run guidance ──
+
+const RHYME_HINT_TOUCH = 'Tap any word to see what rhymes with it.';
+const RHYME_HINT_POINTER = 'Click any word to see what rhymes with it.';
+const EMPTY_RESULTS_TOUCH = 'Tap a word in your lyrics<br>to see what rhymes with it';
+const EMPTY_RESULTS_POINTER = 'Click a word in your lyrics<br>to see what rhymes with it';
+
+// The tap/click wording follows the pointer, not the viewport width: a narrow
+// desktop window is still a mouse, and a wide tablet is still a finger.
+function isTouchPrimary() {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+// The intro line lives in index.html so the pad reads correctly before this
+// runs; only the rhyme hint is appended here, where the pointer is known.
+function showFirstRunGuidance() {
+  const isTouch = isTouchPrimary();
+  textareaEl.placeholder += '\n\n' + (isTouch ? RHYME_HINT_TOUCH : RHYME_HINT_POINTER);
+
+  const emptyState = resultsEl.querySelector('.empty-state');
+  if (emptyState) {
+    emptyState.innerHTML = isTouch ? EMPTY_RESULTS_TOUCH : EMPTY_RESULTS_POINTER;
+  }
+}
+
+showFirstRunGuidance();
+
 // Initialize mobile view with lyrics tab
 if (isMobileView()) {
   switchMobileTab('lyrics');
