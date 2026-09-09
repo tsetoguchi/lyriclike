@@ -1397,10 +1397,21 @@ header h1 {
   }
 
   /* Editor metrics shrink together: one token change keeps the text,
-     overlay, and gutters in lockstep. */
+     overlay, and gutters in lockstep.
+
+     16px is the floor, not a preference: iOS Safari zooms the page when a
+     text field it focuses is set below it, and the editor is a text field.
+     It also sits in the same band as the apps this is read beside — iOS body
+     text is 17pt, Spotify's titles about 16, X's body 15 — and the editor
+     face is wider per character than any of them, so it reads a size larger
+     than it measures.
+
+     The pitch comes down with it. Holding 31px under a 16px face would leave
+     nearly two lines of air per line; 26px keeps the page open without the
+     lyrics drifting apart. */
   :root {
-    --editor-font-size: 18px;
-    --line-pitch: 31px;
+    --editor-font-size: 16px;
+    --line-pitch: 26px;
     --editor-pad: 16px;
   }
 
@@ -1412,11 +1423,11 @@ header h1 {
   }
 
   .syllable-gutter .syl-line {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .rhyme-scheme-gutter .scheme-line {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   /* Rhyme results adjustments */
