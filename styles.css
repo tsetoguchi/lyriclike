@@ -1120,11 +1120,11 @@ body.signed-in #notebook-btn {
    once the drawer has gone. */
 /* Naming a new lyric. Same surface, motion and type as the account panel —
    it sits above the notebook, which is where it is opened from. */
-#name-lyric-overlay[hidden] {
+#dialog-overlay[hidden] {
   display: none;
 }
 
-#name-lyric-overlay {
+#dialog-overlay {
   display: flex;
   position: fixed;
   inset: 0;
@@ -1138,13 +1138,13 @@ body.signed-in #notebook-btn {
   transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
 }
 
-#name-lyric-overlay.open {
+#dialog-overlay.open {
   opacity: 1;
   visibility: visible;
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
-#name-lyric-panel {
+#dialog-panel {
   width: var(--dialog-width);
   max-width: 100%;
   background: var(--paper-card);
@@ -1156,11 +1156,11 @@ body.signed-in #notebook-btn {
   flex-direction: column;
 }
 
-#name-lyric-overlay.open #name-lyric-panel {
+#dialog-overlay.open #dialog-panel {
   transform: none;
 }
 
-#name-lyric-header {
+#dialog-header {
   padding: var(--space-4);
   border-bottom: var(--hairline) solid var(--rule);
   font-family: var(--font-display);
@@ -1171,22 +1171,40 @@ body.signed-in #notebook-btn {
   color: var(--ink);
 }
 
-#name-lyric-label {
+#dialog-label {
   font-family: var(--font-marginalia);
   font-style: italic;
   font-size: var(--text-footnote);
   color: var(--ink-faded);
 }
 
-#name-lyric-body {
+#dialog-body {
   padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+#dialog-message {
+  font-family: var(--font-marginalia);
+  font-size: var(--text-footnote);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* A display of its own outranks the attribute, so say it again here. */
+#dialog-field[hidden] {
+  display: none;
+}
+
+#dialog-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
 /* Callout size, because a field below it makes iOS zoom the page. */
-#name-lyric-input {
+#dialog-input {
   width: 100%;
   padding: var(--space-3);
   background: transparent;
@@ -1199,30 +1217,43 @@ body.signed-in #notebook-btn {
   transition: border-color var(--duration-base);
 }
 
-#name-lyric-input:focus {
+#dialog-input:focus {
   border-color: var(--margin-red);
 }
 
-#name-lyric-input::placeholder {
+#dialog-input::placeholder {
   color: var(--ink-faded);
 }
 
-#name-lyric-actions {
+#dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
   padding: 0 var(--space-4) var(--space-4);
 }
 
-#name-lyric-actions .toggle-btn {
+#dialog-actions .toggle-btn {
   min-height: var(--tap-target);
   padding: var(--space-2) var(--space-4);
 }
 
-#name-lyric-confirm {
+#dialog-confirm {
   background: var(--margin-red-wash);
   border-color: var(--margin-red);
   color: var(--margin-red);
+}
+
+/* Losing work should look like it. */
+#dialog-confirm.danger-btn {
+  background: var(--danger-bg);
+  border-color: var(--danger-border-hover);
+  color: var(--danger);
+}
+
+/* Held shut until what was asked for has been typed. */
+#dialog-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 #lyrics-list-overlay {
