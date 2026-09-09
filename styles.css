@@ -1156,6 +1156,13 @@ header h1 {
   color: var(--ink);
 }
 
+#name-lyric-label {
+  font-family: var(--font-marginalia);
+  font-style: italic;
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+}
+
 #name-lyric-body {
   padding: var(--space-5) var(--space-4);
   display: flex;
