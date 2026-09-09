@@ -483,7 +483,7 @@ function handleSelection(switchTab) {
     wordBarEl.classList.add('flash');
     if (switchTab && results && hasEarnedTabSwitch(word, start !== end)) {
       autoSwitchedWord = word.toLowerCase();
-      switchMobileTab('rhymes');
+      switchMobileTab(RHYMES_TAB);
     }
   }, DEBOUNCE_DELAY_MS);
 }
@@ -1079,9 +1079,21 @@ document.addEventListener('mouseup', handleResizeEnd);
 // ── Mobile tabs ──
 
 const MOBILE_BREAKPOINT = 768;
+const LYRICS_TAB = 'lyrics';
+const RHYMES_TAB = 'rhymes';
 
 function isMobileView() {
   return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+// Hiding the editor while iOS is still building a selection leaves the OS
+// hunting for somewhere to put it, and it lands on the header — the page
+// title ends up selected with drag handles. Collapsing and dropping focus
+// while the textarea is still on screen ends the gesture cleanly.
+function endEditorSelection() {
+  const caret = textareaEl.selectionStart;
+  textareaEl.setSelectionRange(caret, caret);
+  textareaEl.blur();
 }
 
 function switchMobileTab(tab) {
@@ -1096,10 +1108,12 @@ function switchMobileTab(tab) {
   // Swap immediately and fade the incoming panel in; a delayed swap
   // shows a blank desk, and a lingering inline opacity:0 would hide
   // the rhymes panel after a mobile-to-desktop resize.
+  if (tab !== LYRICS_TAB) endEditorSelection();
+
   mainEl.classList.remove('show-lyrics', 'show-rhymes');
   mainEl.classList.add('show-' + tab);
   var lyricsPanel = document.querySelector('.lyrics-panel');
-  var incoming = tab === 'lyrics' ? lyricsPanel : rhymesPanelEl;
+  var incoming = tab === LYRICS_TAB ? lyricsPanel : rhymesPanelEl;
   incoming.style.opacity = '0';
   void incoming.offsetWidth;
   incoming.style.opacity = '1';
@@ -1158,7 +1172,7 @@ showFirstRunGuidance();
 
 // Initialize mobile view with lyrics tab
 if (isMobileView()) {
-  switchMobileTab('lyrics');
+  switchMobileTab(LYRICS_TAB);
 }
 
 setInterval(function pollTextChanges() {

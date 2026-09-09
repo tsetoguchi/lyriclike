@@ -1331,6 +1331,25 @@ header h1 {
   }
 }
 
+/* On touch devices a selection gesture that outlives the element it started
+   in gets re-homed onto whatever text is still on screen — usually the header.
+   Only the editor and definition text are meant to be selectable there; a
+   mouse keeps full run of the page. */
+@media (hover: none) and (pointer: coarse) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  #lyrics,
+  .def-popup {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
+
 /* ── Reduced motion ──
    Kept last: it must out-cascade every animation declared above
    (equal specificity, later source order wins). */
