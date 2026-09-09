@@ -76,8 +76,6 @@ if (rhymeSchemeVisible) {
   rhymeSchemeToggleEl.classList.add('active');
   rhymeSchemeGutterEl.classList.add('visible');
 }
-gutterEl.classList.add('settled');
-rhymeSchemeGutterEl.classList.add('settled');
 
 // ── Phoneme helpers ──
 
@@ -862,37 +860,17 @@ function toggleRhymeScheme() {
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
   rhymeSchemeToggleEl.classList.toggle('active', rhymeSchemeVisible);
   // Showing or hiding either margin changes the editor's width, so the text
-  // re-wraps for both of them; openGutter() re-measures both once the width
-  // has stopped moving.
+  // re-wraps for both of them; openGutter() re-measures both.
   openGutter(rhymeSchemeGutterEl, rhymeSchemeVisible);
 }
 
-// A margin that is opening changes the editor's width every frame, so the rows
-// beside it are measured against a width that has already moved on. The marks
-// stay hidden until the movement finishes, then the lines are measured once
-// against the width that actually held. The duration is read from the
-// stylesheet so the two cannot drift apart, and so reduced motion — which
-// flattens it — settles immediately.
-const SETTLE_GRACE_MS = 20;
-
-let settleTimer = null;
-
+// A margin opens and closes at once, so the editor's new width is settled by
+// the time the class lands. Reading it back measures the lines against the
+// width that actually holds.
 function openGutter(gutterElement, isVisible) {
-  gutterElement.classList.remove('settled');
   gutterElement.classList.toggle('visible', isVisible);
-
-  const durationMs = parseFloat(getComputedStyle(gutterElement).transitionDuration) * 1000;
-  clearTimeout(settleTimer);
-  settleTimer = setTimeout(function settleGutters() {
-    invalidateLineHeightCache();
-    updateGutters();
-    markGuttersSettled();
-  }, durationMs + SETTLE_GRACE_MS);
-}
-
-function markGuttersSettled() {
-  gutterEl.classList.add('settled');
-  rhymeSchemeGutterEl.classList.add('settled');
+  invalidateLineHeightCache();
+  updateGutters();
 }
 
 function toggleSyllables() {
