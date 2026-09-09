@@ -1213,19 +1213,23 @@ function handleEditorScrollForNav() {
 // ── Keyboard-aware resize on mobile ──
 
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', function handleViewportResize() {
-    if (!isMobileView()) return;
-    var appContent = document.getElementById('app-content');
-    if (appContent) appContent.style.height = window.visualViewport.height + 'px';
-  });
-}
+  const viewport = window.visualViewport;
 
-textareaEl.addEventListener('focus', function handleFocus() {
-  if (!isMobileView()) return;
-  setTimeout(function() {
-    textareaEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, 300);
-});
+  function fitAppToVisualViewport() {
+    if (!isMobileView()) return;
+    const appContent = document.getElementById('app-content');
+    if (appContent) appContent.style.height = viewport.height + 'px';
+
+    // The app is already sized to the space the keyboard leaves, so the
+    // document behind it never needs to move. iOS scrolls it anyway when it
+    // raises the keyboard, which drags the header off the top of the screen
+    // and leaves the desk showing under the app.
+    window.scrollTo(0, 0);
+  }
+
+  viewport.addEventListener('resize', fitAppToVisualViewport);
+  viewport.addEventListener('scroll', fitAppToVisualViewport);
+}
 
 // ── First-run guidance ──
 
