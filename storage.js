@@ -1,7 +1,8 @@
 const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_TITLE = 'Untitled';
 const FOCUS_DELAY_MS = 50;
-const LYRIC_TITLE_PROMPT = 'Lyric title';
+const NEW_LYRIC_HEADING = 'New lyric';
+const RENAME_HEADING = 'Rename lyric';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
 const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
@@ -19,11 +20,11 @@ let saveTimer = null;
 // surface, motion and type as every other panel.
 let resolveNameDialog = null;
 
-function askForLyricName({ title, confirmLabel, value }) {
+function askForLyricName({ heading, confirmLabel, value }) {
   const overlay = document.getElementById('name-lyric-overlay');
   const input = document.getElementById('name-lyric-input');
 
-  document.getElementById('name-lyric-title').textContent = title;
+  document.getElementById('name-lyric-title').textContent = heading;
   document.getElementById('name-lyric-confirm').textContent = confirmLabel;
   input.value = value || '';
   overlay.classList.add('open');
@@ -138,7 +139,7 @@ async function loadLyric(id) {
 }
 
 async function createLyric() {
-  const name = await askForLyricName({ title: LYRIC_TITLE_PROMPT, confirmLabel: 'Create', value: '' });
+  const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create', value: '' });
   if (name === null) return;
 
   currentLyricId = crypto.randomUUID();
@@ -196,7 +197,7 @@ async function deleteLyric(id) {
 }
 
 async function renameLyric(id, oldTitle) {
-  const entered = await askForLyricName({ title: LYRIC_TITLE_PROMPT, confirmLabel: 'Rename', value: oldTitle });
+  const entered = await askForLyricName({ heading: RENAME_HEADING, confirmLabel: 'Rename', value: oldTitle });
   if (entered === null) return;
   const newTitle = entered.trim();
   if (!newTitle || newTitle === oldTitle) return;
