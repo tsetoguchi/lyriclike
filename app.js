@@ -41,6 +41,7 @@ let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') === '1';
 let blocklist = null;
 let debounceTimer = null;
 let lastTextValue = '';
+let lastMeasuredWidth = 0;
 
 // ── DOM references ──
 const textareaEl = document.getElementById('lyrics');
@@ -937,10 +938,30 @@ rhymeSchemeToggleEl.addEventListener('click', toggleRhymeScheme);
 textareaEl.addEventListener('mouseup', handleSelection);
 textareaEl.addEventListener('touchend', handleSelection);
 textareaEl.addEventListener('keyup', handleSelection);
+// An editor with no layout — a hidden panel, a viewport mid-rotation —
+// measures every line as nothing, and rows of no height stack every mark on
+// the same line. The last good measurement is better than that, so leave it.
+function canMeasureEditor() {
+  return textareaEl.offsetParent !== null && textareaEl.clientWidth > 0;
+}
+
 function updateGutters() {
+  if (!canMeasureEditor()) return;
   resizeEditorToContent();
   updateSyllableGutter();
   updateRhymeSchemeGutter();
+}
+
+// Only a change of width re-wraps the lines, and the width is only worth
+// reading once the editor has one. This is what picks the marks back up after
+// a rotation, or after the panel that holds them has been away.
+function remeasureIfWidthChanged() {
+  if (!canMeasureEditor()) return;
+  const width = textareaEl.clientWidth;
+  if (width === lastMeasuredWidth) return;
+  lastMeasuredWidth = width;
+  invalidateLineHeightCache();
+  updateGutters();
 }
 textareaEl.addEventListener('input', function handleInput() {
   updateGutters();
@@ -1264,8 +1285,7 @@ function handleWindowResize() {
   placeControlsForViewport();
   if (resizeRAF) cancelAnimationFrame(resizeRAF);
   resizeRAF = requestAnimationFrame(function remeasureAfterResize() {
-    invalidateLineHeightCache();
-    updateGutters();
+    remeasureIfWidthChanged();
     resizeRAF = null;
   });
 }
@@ -1277,7 +1297,10 @@ window.addEventListener('resize', handleWindowResize);
 // viewport; neither fires a window resize, and both change the floor the
 // editor has to reach.
 if (window.ResizeObserver) {
-  new ResizeObserver(resizeEditorToContent).observe(lyricsAreaEl);
+  new ResizeObserver(function onEditorAreaResize() {
+    resizeEditorToContent();
+    remeasureIfWidthChanged();
+  }).observe(lyricsAreaEl);
 }
 
 // Initialize mobile view with lyrics tab
