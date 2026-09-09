@@ -419,14 +419,14 @@ function renderResults(word, results) {
 let currentHighlightWord = '';
 let currentResults = null;
 
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+
 function escapeHtml(text) {
   console.assert(typeof text === 'string', 'escapeHtml: text must be a string');
   if (typeof text !== 'string') return '';
-  const ampEscaped = text.replace(/&/g, '&amp;');
-  const ltEscaped = ampEscaped.replace(/</g, '&lt;');
-  const result = ltEscaped.replace(/>/g, '&gt;');
-  console.assert(typeof result === 'string', 'escapeHtml: result must be a string');
-  return result;
+  return text.replace(/[&<>"]/g, function replaceChar(char) {
+    return HTML_ESCAPES[char];
+  });
 }
 
 function updateHighlight(word) {
@@ -1112,14 +1112,6 @@ function renderMeaning(meaning, remaining) {
     }
   }
   return { html: html, count: definitions.length };
-}
-
-const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
-
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"]/g, function replaceChar(char) {
-    return HTML_ESCAPES[char];
-  });
 }
 
 resizeHandleEl.addEventListener('mousedown', handleResizeStart);
