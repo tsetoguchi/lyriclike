@@ -289,7 +289,9 @@ header h1 {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--paper);
+  /* The writing surface matches the rhymes panel: with no ruling left to make
+     it read as a pad, the cream only made the two halves look mismatched. */
+  background: var(--paper-card);
 }
 
 /* The desk gap between pad and memo card; red when gripped. */
