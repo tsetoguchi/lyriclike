@@ -351,7 +351,6 @@ header h1 {
   min-height: 100%;
   overflow: hidden;
   user-select: none;
-  transition: width 0.28s ease, border-right-width 0.28s ease;
 }
 
 .syllable-gutter.visible {
@@ -365,8 +364,8 @@ header h1 {
   flex-shrink: 0;
 }
 
-.syllable-gutter:not(.settled) .syl-line,
-.rhyme-scheme-gutter:not(.settled) .scheme-line {
+.syllable-gutter:not(.visible) .syl-line,
+.rhyme-scheme-gutter:not(.visible) .scheme-line {
   visibility: hidden;
 }
 
@@ -401,7 +400,6 @@ header h1 {
   min-height: 100%;
   overflow: hidden;
   user-select: none;
-  transition: width 0.28s ease;
 }
 
 .rhyme-scheme-gutter.visible {
@@ -1421,7 +1419,10 @@ header h1 {
     --editor-pad: 16px;
   }
 
-  .syllable-gutter {
+  /* A phone gets a narrower margin than the desk does. It belongs on the open
+     state: as a bare width it also outranks the closed state's zero, so the
+     margin kept 40px of the page with nothing written in it. */
+  .syllable-gutter.visible {
     width: 40px;
   }
 
