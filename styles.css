@@ -929,9 +929,11 @@ header h1 {
   align-items: center;
   padding: 16px;
   border-bottom: 1px solid var(--rule);
-  font-family: var(--font-marginalia);
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 13px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--ink);
 }
 
@@ -1070,9 +1072,11 @@ header h1 {
   gap: 8px;
   padding: 16px;
   border-bottom: 1px solid var(--rule);
-  font-family: var(--font-marginalia);
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 13px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--ink);
 }
 
