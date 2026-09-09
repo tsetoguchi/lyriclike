@@ -213,6 +213,8 @@ titleEl.addEventListener('blur', () => {
   }
 });
 document.getElementById('my-lyrics-btn').addEventListener('click', openLyricsList);
+document.getElementById('notebook-btn').addEventListener('click', openLyricsList);
+document.getElementById('create-btn').addEventListener('click', newLyric);
 document.getElementById('new-lyric-btn').addEventListener('click', newLyric);
 document.getElementById('close-lyrics-list-btn').addEventListener('click', closeLyricsList);
 document.getElementById('lyrics-list-overlay').addEventListener('click', e => {
