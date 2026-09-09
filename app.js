@@ -551,8 +551,8 @@ function countSyllablesForLine(line) {
 
 function buildSyllableLine(line, height) {
   const trimmed = line.trim();
-  // Hidden counts still need spacer divs: the gutter's ruled background
-  // only scrolls in sync with the textarea if its content overflows too.
+  // Hidden counts still need spacer divs: every row below one of them sits
+  // where the rows above have put it.
   if (!syllablesVisible || trimmed === '') {
     return '<div class="syl-line empty-line" style="height:' + height + 'px">&middot;</div>';
   }
@@ -616,8 +616,8 @@ function resizeEditorToContent() {
   if (textareaEl.offsetParent === null) return;
   textareaEl.style.height = 'auto';
   const contentHeight = textareaEl.scrollHeight;
-  // A short lyric still has to fill the pad, or its ruling stops mid-page
-  // while the gutters beside it run to the bottom. The floor is measured
+  // A short lyric still has to fill the pad, or the writing surface stops
+  // mid-page while the gutters beside it run on. The floor is measured
   // rather than declared: a percentage min-height resolves against the
   // wrapper, whose own height is content-driven, so it never applies.
   textareaEl.style.height = Math.max(contentHeight, lyricsAreaEl.clientHeight) + 'px';
