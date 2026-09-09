@@ -92,11 +92,43 @@
 
   --desk: #221b14;              /* surface the pad rests on */
 
+  /* Spacing: a 4pt grid, as the system lays out on. Hairlines and optical
+     nudges below one step stay as raw pixels. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* The smallest a control should be under a fingertip. */
+  --tap-target: 44px;
+
+  /* Type scale — iOS Dynamic Type at the default size. Every label in the
+     app is one of these; nothing sits between two steps. */
+  --text-caption-2: 11px;
+  --text-caption-1: 12px;
+  --text-footnote: 13px;
+  --text-subhead: 15px;
+  --text-callout: 16px;
+  --text-body: 17px;
+  --text-title-3: 20px;
+  --text-title-2: 22px;
+
+  /* Corner radii: four steps, plus a pill for count badges. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
   /* Editor metrics: an integer pitch keeps the gutters' rows whole, since
      each is a multiple of it.
      Everything that renders or measures lyric lines MUST share these. */
-  --editor-font-size: 24px;
-  --line-pitch: 41px;
+  --editor-font-size: var(--text-title-2);
+  --line-pitch: 36px;
   --editor-pad: 20px;
   --border-focus: #6e654f;
 
@@ -186,18 +218,18 @@ body {
 /* The pad's printed header: ink on the same paper, like the
    letterpress title block on the reference notepad. */
 header {
-  padding: 14px 24px;
+  padding: var(--space-4) var(--space-6);
   background: var(--paper);
   border-bottom: 1px solid var(--margin-line);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-shrink: 0;
 }
 
 header h1 {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: var(--text-body);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -207,21 +239,21 @@ header h1 {
 #status {
   font-family: var(--font-marginalia);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
 
 /* Tool buttons: printed labels on the paper. */
 .toggle-btn {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: var(--text-caption-2);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 6px 12px;
+  padding: var(--space-2) var(--space-3);
   background: transparent;
   border: 1px solid var(--ink-border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--ink);
   cursor: pointer;
   transition: all 0.15s;
@@ -361,7 +393,7 @@ header h1 {
      measured height is the whole point of these rows; never shrink it. */
   flex-shrink: 0;
   font-family: var(--font-marginalia);
-  font-size: 15px;
+  font-size: var(--text-subhead);
   line-height: var(--line-pitch);
   text-align: center;
   color: var(--ink-faded);
@@ -398,7 +430,7 @@ header h1 {
      measured height is the whole point of these rows; never shrink it. */
   flex-shrink: 0;
   font-family: var(--font-marginalia);
-  font-size: 16px;
+  font-size: var(--text-callout);
   line-height: var(--line-pitch);
   text-align: center;
   font-weight: 700;
@@ -413,21 +445,21 @@ header h1 {
 
 /* The pad's top edge: title written on the paper itself. */
 .panel-header {
-  padding: 12px 20px 10px;
-  font-size: 17px;
+  padding: var(--space-3) var(--space-5) var(--space-3);
+  font-size: var(--text-body);
   font-weight: 400;
   color: var(--ink);
   border-bottom: 1px solid var(--rule);
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 #lyrics-panel-title {
   cursor: text;
-  border-radius: 3px;
-  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
   outline: none;
   min-width: 40px;
   font-family: var(--font-editor);
@@ -480,7 +512,7 @@ header h1 {
 
 #lyrics-highlight .highlight-word {
   background: var(--highlight-word);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 #lyrics {
@@ -529,30 +561,30 @@ header h1 {
   flex-direction: column;
   overflow: hidden;
   background: var(--paper-card);
-  margin: 10px 12px 10px 0;
-  border-radius: 5px;
+  margin: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
 }
 
 .selected-word-bar {
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--rule);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 
 .context-line {
   width: 100%;
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--ink-faded);
   font-style: italic;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 2px;
+  margin-top: var(--space-1);
 }
 
 .context-line:empty {
@@ -570,7 +602,7 @@ header h1 {
 
 .selected-word-bar .label {
   font-family: var(--font-marginalia);
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
   text-transform: lowercase;
   letter-spacing: 0.08em;
@@ -583,7 +615,7 @@ header h1 {
 
 .selected-word-bar .word {
   font-family: var(--font-editor);
-  font-size: 17px;
+  font-size: var(--text-body);
   font-weight: 700;
   color: var(--ink);
 }
@@ -591,7 +623,7 @@ header h1 {
 #rhyme-results {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
 }
 
 #rhyme-results::-webkit-scrollbar {
@@ -604,17 +636,17 @@ header h1 {
 
 #rhyme-results::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .rhyme-group {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .rhyme-group-header {
-  padding: 10px 20px;
+  padding: var(--space-3) var(--space-5);
   font-family: var(--font-marginalia);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -631,19 +663,19 @@ header h1 {
 .rhyme-group-header .name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .rhyme-group-header .count {
-  font-size: 11px;
+  font-size: var(--text-caption-2);
   color: var(--ink-faded);
   background: var(--ink-wash);
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
 }
 
 .rhyme-group-header .chevron {
-  font-size: 10px;
+  font-size: var(--text-caption-2);
   color: var(--ink-faded);
   transition: transform 0.2s;
 }
@@ -654,9 +686,9 @@ header h1 {
 
 .rhyme-group-body {
   display: none;
-  padding: 4px 20px 12px;
+  padding: var(--space-1) var(--space-5) var(--space-3);
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .rhyme-group.open .rhyme-group-body {
@@ -665,10 +697,10 @@ header h1 {
 
 .rhyme-word {
   font-family: var(--font-editor);
-  font-size: 13px;
-  padding: 4px 10px;
+  font-size: var(--text-footnote);
+  padding: var(--space-1) var(--space-3);
   background: var(--ink-wash);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -693,8 +725,8 @@ header h1 {
   overflow-y: auto;
   background: var(--paper-card);
   border: 1px solid var(--rule);
-  border-radius: 6px;
-  padding: 16px;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   box-shadow: var(--shadow-popup);
 }
 
@@ -704,62 +736,62 @@ header h1 {
 
 .def-popup::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .def-word {
   font-family: var(--font-editor);
-  font-size: 18px;
+  font-size: var(--text-body);
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .def-phonetic {
   font-family: var(--font-marginalia);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--ink-faded);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .def-pos {
   font-family: var(--font-marginalia);
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   font-weight: 700;
   color: var(--ink);
-  margin-top: 10px;
-  margin-bottom: 4px;
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .def-meaning {
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--ink);
   line-height: 1.5;
-  margin-bottom: 4px;
-  padding-left: 10px;
+  margin-bottom: var(--space-1);
+  padding-left: var(--space-3);
   border-left: 2px solid var(--rule);
 }
 
 .def-example {
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
   font-style: italic;
-  padding-left: 10px;
-  margin-bottom: 8px;
+  padding-left: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .def-loading {
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--ink-faded);
   text-align: center;
-  padding: 20px 0;
+  padding: var(--space-5) 0;
 }
 
 .def-error {
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--ink-faded);
   text-align: center;
-  padding: 20px 0;
+  padding: var(--space-5) 0;
 }
 
 /* ── Definition bottom sheet (mobile) ── */
@@ -776,11 +808,11 @@ header h1 {
     right: 0;
     width: 100%;
     max-height: 50vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     border: none;
     border-top: 1px solid var(--rule);
-    padding: 20px 16px;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    padding: var(--space-5) var(--space-4);
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   }
 
   .def-popup::before {
@@ -789,8 +821,8 @@ header h1 {
     width: 36px;
     height: 4px;
     background: var(--sheet-handle);
-    border-radius: 2px;
-    margin: 0 auto 14px;
+    border-radius: var(--radius-sm);
+    margin: 0 auto var(--space-4);
   }
 }
 
@@ -817,14 +849,14 @@ header h1 {
 
 .show-more-btn {
   width: 100%;
-  padding: 10px;
-  margin-top: 8px;
+  padding: var(--space-3);
+  margin-top: var(--space-2);
   background: transparent;
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--ink-faded);
   font-family: var(--font-marginalia);
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -835,35 +867,26 @@ header h1 {
 
 .no-rhymes {
   display: block;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   color: var(--ink-faded);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   font-style: italic;
 }
 
 .empty-state {
-  padding: 40px 20px;
+  padding: var(--space-10) var(--space-5);
   text-align: center;
   color: var(--ink-faded);
   font-family: var(--font-marginalia);
   font-style: italic;
-  font-size: 13px;
+  font-size: var(--text-footnote);
   line-height: 1.6;
 }
 
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--ink-faded);
-  font-size: 14px;
-}
-
 .description {
-  font-size: 11px;
+  font-size: var(--text-caption-2);
   color: var(--ink-faded);
-  padding: 2px 20px 8px;
+  padding: var(--space-1) var(--space-5) var(--space-2);
   font-style: italic;
   display: none;
 }
@@ -875,19 +898,19 @@ header h1 {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
 #user-area {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 #user-email {
   font-family: var(--font-marginalia);
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
 
@@ -915,7 +938,7 @@ header h1 {
 #account-settings-panel {
   background: var(--paper-card);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
   transform: translateY(8px) scale(0.98);
   transition: transform 0.2s ease;
@@ -934,10 +957,10 @@ header h1 {
 .account-settings-header {
   display: flex;
   align-items: center;
-  padding: 16px;
+  padding: var(--space-4);
   border-bottom: 1px solid var(--rule);
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -949,7 +972,7 @@ header h1 {
 }
 
 .account-settings-body {
-  padding: 20px 16px;
+  padding: var(--space-5) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -958,30 +981,30 @@ header h1 {
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 20px;
+  gap: var(--space-2);
+  padding-bottom: var(--space-5);
 }
 
 .settings-section:not(:first-child) {
   border-top: 1px solid var(--rule);
-  padding-top: 20px;
+  padding-top: var(--space-5);
 }
 
 .settings-section-title {
   font-family: var(--font-marginalia);
-  font-size: 11px;
+  font-size: var(--text-caption-2);
   font-weight: 700;
   color: var(--ink-faded);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .settings-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-2);
+  font-size: var(--text-subhead);
 }
 
 .settings-label {
@@ -993,35 +1016,14 @@ header h1 {
   color: var(--ink);
 }
 
-.settings-input {
-  width: 100%;
-  padding: 10px 14px;
-  background: transparent;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  color: var(--ink);
-  font-family: var(--font-editor);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.settings-input:focus {
-  border-color: var(--border-focus);
-}
-
-.settings-input::placeholder {
-  color: var(--ink-faded);
-}
-
 .settings-btn {
-  padding: 10px 16px;
+  padding: var(--space-3) var(--space-4);
   background: transparent;
   border: 1px solid var(--ink-faded);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--ink);
   font-family: var(--font-marginalia);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -1042,7 +1044,7 @@ header h1 {
 }
 
 .settings-hint {
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
 
@@ -1093,11 +1095,11 @@ header h1 {
 #lyrics-list-panel-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 16px;
+  gap: var(--space-2);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--rule);
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1114,7 +1116,7 @@ header h1 {
 }
 
 .lyrics-list-item {
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--rule);
   border-left: 3px solid transparent;
   cursor: pointer;
@@ -1134,34 +1136,34 @@ header h1 {
 .lyrics-list-item-main {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 6px;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
 }
 
 .lyrics-list-title {
   font-family: var(--font-editor);
-  font-size: 14px;
+  font-size: var(--text-subhead);
   color: var(--ink);
 }
 
 .lyrics-list-date {
   font-family: var(--font-marginalia);
-  font-size: 11px;
+  font-size: var(--text-caption-2);
   color: var(--ink-faded);
 }
 
 .lyrics-list-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .lyrics-action-btn {
   font-family: var(--font-marginalia);
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: var(--text-caption-2);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
   border: 1px solid var(--ink-border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--ink-faded);
   cursor: pointer;
 }
@@ -1177,21 +1179,28 @@ header h1 {
 }
 
 .lyrics-list-empty {
-  padding: 32px 16px;
+  padding: var(--space-8) var(--space-4);
   color: var(--ink-faded);
   font-family: var(--font-marginalia);
   font-style: italic;
-  font-size: 13px;
+  font-size: var(--text-footnote);
   text-align: center;
 }
 
+/* A glyph is smaller than a fingertip. The mark keeps its size; the button
+   around it meets the 44pt minimum a touch target is expected to have. */
 .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
   background: none;
   border: none;
   color: var(--ink-faded);
-  font-size: 18px;
+  font-size: var(--text-body);
   cursor: pointer;
-  padding: 2px 6px;
+  padding: var(--space-1) var(--space-2);
   line-height: 1;
 }
 
@@ -1202,15 +1211,15 @@ header h1 {
 /* A plus draws less ink than the close glyph at the same type size, so it is
    sized to match what the eye sees rather than what the CSS says. */
 #new-lyric-btn {
-  font-size: 22px;
+  font-size: var(--text-title-3);
 }
 
 #save-indicator {
   font-family: var(--font-marginalia);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
-  margin-left: 8px;
+  margin-left: var(--space-2);
   font-weight: 400;
 }
 
@@ -1249,10 +1258,10 @@ header h1 {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    padding: 10px 12px;
-    gap: 8px;
+    padding: var(--space-3) var(--space-3);
+    gap: var(--space-2);
     flex-wrap: nowrap;
-    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-top: calc(var(--space-3) + env(safe-area-inset-top));
   }
 
   header h1 {
@@ -1275,8 +1284,8 @@ header h1 {
   }
 
   .toggle-btn {
-    font-size: 11px;
-    padding: 6px 8px;
+    font-size: var(--text-caption-2);
+    padding: var(--space-2) var(--space-2);
   }
 
   /* The account controls occupy the header's left cell, so they stay on one
@@ -1290,14 +1299,14 @@ header h1 {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 4px;
+    gap: var(--space-1);
     width: auto;
   }
 
   /* Sized so both signed-in controls clear the centred wordmark. */
   #user-area .toggle-btn {
-    font-size: 9px;
-    padding: 5px 6px;
+    font-size: var(--text-caption-2);
+    padding: var(--space-1) var(--space-2);
     letter-spacing: 0.02em;
   }
 
@@ -1325,9 +1334,9 @@ header h1 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: 10px;
+    padding: var(--space-3);
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: var(--text-caption-1);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -1410,7 +1419,7 @@ header h1 {
      nearly two lines of air per line; 26px keeps the page open without the
      lyrics drifting apart. */
   :root {
-    --editor-font-size: 16px;
+    --editor-font-size: var(--text-callout);
     --line-pitch: 26px;
     --editor-pad: 16px;
   }
@@ -1423,49 +1432,49 @@ header h1 {
   }
 
   .syllable-gutter .syl-line {
-    font-size: 12px;
+    font-size: var(--text-caption-1);
   }
 
   .rhyme-scheme-gutter .scheme-line {
-    font-size: 13px;
+    font-size: var(--text-footnote);
   }
 
   /* Rhyme results adjustments */
   .selected-word-bar {
-    padding: 14px 16px;
+    padding: var(--space-4) var(--space-4);
     background: var(--paper-card);
   }
 
   .selected-word-bar .word {
-    font-size: 20px;
+    font-size: var(--text-title-3);
   }
 
   .rhyme-group-header {
-    padding: 10px 16px;
+    padding: var(--space-3) var(--space-4);
     min-height: 44px;
     display: flex;
     align-items: center;
   }
 
   .rhyme-group-body {
-    padding: 4px 16px 12px;
-    gap: 8px;
+    padding: var(--space-1) var(--space-4) var(--space-3);
+    gap: var(--space-2);
   }
 
   .rhyme-word {
-    font-size: 15px;
-    padding: 10px 14px;
+    font-size: var(--text-subhead);
+    padding: var(--space-3) var(--space-4);
     min-height: 44px;
     display: inline-flex;
     align-items: center;
   }
 
   .description {
-    padding: 2px 16px 8px;
+    padding: var(--space-1) var(--space-4) var(--space-2);
   }
 
   .empty-state {
-    padding: 30px 16px;
+    padding: var(--space-8) var(--space-4);
   }
 
   /* The tool bar rides at the bottom of the visible area, out of the way of
@@ -1481,9 +1490,9 @@ header h1 {
     /* Stretch, so a label that wraps to two lines doesn't leave its
        neighbours short. */
     align-items: stretch;
-    gap: 6px;
-    padding: 8px 12px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
     background: var(--paper);
     border-top: 1px solid var(--margin-line);
     box-shadow: var(--shadow-bottom-nav);
@@ -1512,13 +1521,13 @@ header h1 {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    gap: 4px;
-    padding: 6px 2px;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-1);
     background: transparent;
     border: none;
     border-radius: 0;
     color: var(--ink-faded);
-    font-size: 10px;
+    font-size: var(--text-caption-2);
     letter-spacing: 0.02em;
     line-height: 1.2;
     /* Four columns on a phone: a two-word label wraps rather than overruns
