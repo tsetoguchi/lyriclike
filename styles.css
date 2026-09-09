@@ -1,9 +1,13 @@
 /* ── Fonts (self-hosted, SIL OFL — licenses in /fonts) ── */
 
+/* Descriptors take literal values. A custom property does not resolve in a
+   descriptor — it voids the declaration, every face then claims the same
+   weight, and the browser is free to draw regular text in the bold file.
+   These numbers stay numbers. */
 @font-face {
   font-family: 'iA Writer Quattro';
   src: url('fonts/iAWriterQuattroS-Regular.woff2') format('woff2');
-  font-weight: var(--weight-regular);
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -11,7 +15,7 @@
 @font-face {
   font-family: 'iA Writer Quattro';
   src: url('fonts/iAWriterQuattroS-Italic.woff2') format('woff2');
-  font-weight: var(--weight-regular);
+  font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
@@ -19,7 +23,7 @@
 @font-face {
   font-family: 'iA Writer Quattro';
   src: url('fonts/iAWriterQuattroS-Bold.woff2') format('woff2');
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -27,7 +31,7 @@
 @font-face {
   font-family: 'iA Writer Quattro';
   src: url('fonts/iAWriterQuattroS-BoldItalic.woff2') format('woff2');
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   font-style: italic;
   font-display: swap;
 }
@@ -35,7 +39,7 @@
 @font-face {
   font-family: 'Courier Prime';
   src: url('fonts/CourierPrime-Regular.woff2') format('woff2');
-  font-weight: var(--weight-regular);
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -43,7 +47,7 @@
 @font-face {
   font-family: 'Courier Prime';
   src: url('fonts/CourierPrime-Italic.woff2') format('woff2');
-  font-weight: var(--weight-regular);
+  font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
@@ -51,7 +55,7 @@
 @font-face {
   font-family: 'Courier Prime';
   src: url('fonts/CourierPrime-Bold.woff2') format('woff2');
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -59,7 +63,7 @@
 @font-face {
   font-family: 'Courier Prime';
   src: url('fonts/CourierPrime-BoldItalic.woff2') format('woff2');
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   font-style: italic;
   font-display: swap;
 }
@@ -67,7 +71,7 @@
 @font-face {
   font-family: 'Montserrat';
   src: url('fonts/Montserrat-Bold.woff2') format('woff2');
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
