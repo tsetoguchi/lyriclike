@@ -345,23 +345,29 @@ function findRhymes(targetWord) {
 
 // ── Results rendering ──
 
+function buildGroupBodyHtml(key, words) {
+  if (words.length === 0) return '<span class="no-rhymes">No rhymes found</span>';
+
+  const visible = words.slice(0, MAX_RESULTS_PER_GROUP);
+  let html = visible.map(word => `<span class="rhyme-word color-${key}">${word}</span>`).join('');
+
+  if (words.length > MAX_RESULTS_PER_GROUP) {
+    const remaining = words.length - MAX_RESULTS_PER_GROUP;
+    html += `<button class="show-more-btn" data-type="${key}" data-page="1" data-total="${words.length}">Show more (${remaining} remaining)</button>`;
+  }
+  return html;
+}
+
+// Groups render as headers only. Filling every body up front put thousands of
+// chips in the panel — five of the six groups invisible behind a collapsed
+// header — which is what made the panel paint its way down the screen on open.
+// A body is filled the first time its group is opened; see populateGroupBody().
 function buildGroupHtml(key, name, desc, words) {
   console.assert(typeof key === 'string', 'buildGroupHtml: key must be a string');
   console.assert(typeof name === 'string', 'buildGroupHtml: name must be a string');
   console.assert(Array.isArray(words), 'buildGroupHtml: words must be an array');
 
-  const isEmpty = words.length === 0;
-  const openClass = key === 'perfect' ? ' open' : '';
-  const visible = words.slice(0, MAX_RESULTS_PER_GROUP);
-  const hasMore = words.length > MAX_RESULTS_PER_GROUP;
-  const bodyContent = isEmpty
-    ? '<span class="no-rhymes">No rhymes found</span>'
-    : visible.map(word => `<span class="rhyme-word color-${key}">${word}</span>`).join('');
-  const showMoreBtn = hasMore
-    ? `<button class="show-more-btn" data-type="${key}" data-page="1" data-total="${words.length}">Show more (${words.length - MAX_RESULTS_PER_GROUP} remaining)</button>`
-    : '';
-
-  return `<div class="rhyme-group${openClass}" data-type="${key}">
+  return `<div class="rhyme-group" data-type="${key}">
     <div class="rhyme-group-header">
       <span class="name">
         <span class="dot dot-${key}"></span>
@@ -373,8 +379,19 @@ function buildGroupHtml(key, name, desc, words) {
       </span>
     </div>
     <div class="description">${desc}</div>
-    <div class="rhyme-group-body">${bodyContent}${showMoreBtn}</div>
+    <div class="rhyme-group-body"></div>
   </div>`;
+}
+
+function populateGroupBody(group) {
+  if (group.dataset.populated === '1') return;
+
+  const words = currentResults ? currentResults[group.dataset.type] : null;
+  const body = group.querySelector('.rhyme-group-body');
+  if (!body) return;
+
+  body.innerHTML = buildGroupBodyHtml(group.dataset.type, words || []);
+  group.dataset.populated = '1';
 }
 
 function renderResults(word, results) {
@@ -402,14 +419,14 @@ function renderResults(word, results) {
 let currentHighlightWord = '';
 let currentResults = null;
 
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+
 function escapeHtml(text) {
   console.assert(typeof text === 'string', 'escapeHtml: text must be a string');
   if (typeof text !== 'string') return '';
-  const ampEscaped = text.replace(/&/g, '&amp;');
-  const ltEscaped = ampEscaped.replace(/</g, '&lt;');
-  const result = ltEscaped.replace(/>/g, '&gt;');
-  console.assert(typeof result === 'string', 'escapeHtml: result must be a string');
-  return result;
+  return text.replace(/[&<>"]/g, function replaceChar(char) {
+    return HTML_ESCAPES[char];
+  });
 }
 
 function updateHighlight(word) {
@@ -481,21 +498,27 @@ function handleSelection(switchTab) {
     wordBarEl.classList.remove('flash');
     void wordBarEl.offsetWidth;
     wordBarEl.classList.add('flash');
-    if (switchTab && results && hasEarnedTabSwitch(word, start !== end)) {
+    if (switchTab && results && shouldOpenRhymesTab(text, start, end, word)) {
       autoSwitchedWord = word.toLowerCase();
-      switchMobileTab('rhymes');
+      switchMobileTab(RHYMES_TAB);
     }
   }, DEBOUNCE_DELAY_MS);
 }
 
-// A tap on a word opens the rhymes tab, but only the first time for that word.
-// Tapping the same word again leaves the caret in the editor, which is what
-// makes a word reachable for editing — otherwise every tap would bounce the
-// writer out of the lyrics. A deliberate selection (double-tap / long-press)
-// always switches, so a re-lookup of the current word is still one gesture.
-function hasEarnedTabSwitch(word, isDeliberateSelection) {
+// A tap opens the rhymes tab only when it reads as a lookup. Two things say
+// it isn't one: a caret parked at the end of a line, where the writer is
+// lining up to type rather than asking about the word behind it; and a repeat
+// tap on the word already showing, which is how a word is reached for
+// editing. A deliberate selection (double-tap / long-press) overrides both.
+function shouldOpenRhymesTab(text, start, end, word) {
   if (!isMobileView()) return false;
-  return isDeliberateSelection || word.toLowerCase() !== autoSwitchedWord;
+  if (start !== end) return true;
+  if (isCaretAtLineEnd(text, start)) return false;
+  return word.toLowerCase() !== autoSwitchedWord;
+}
+
+function isCaretAtLineEnd(text, caret) {
+  return caret === text.length || text[caret] === '\n';
 }
 
 // ── Syllable counting ──
@@ -577,24 +600,21 @@ function measureLineHeights(lines) {
     return cachedLineHeights;
   }
   lineMeasureEl.style.width = currentWidth + 'px';
-  // Render all lines at once with span markers to avoid rounding drift
+  // Render all lines at once with span markers to avoid rounding drift. A
+  // trailing marker closes the last line: measuring it against scrollHeight
+  // instead reports a short final row, because scrollHeight stops at the
+  // text rather than at the end of its line box.
   let html = '';
   for (let i = 0; i < lines.length; i++) {
-    const escaped = escapeHtml(lines[i]) || '\u200b';
     html += '<span data-ln="' + i + '">\u200b</span>';
-    if (i < lines.length - 1) {
-      html += escaped + '\n';
-    } else {
-      html += escaped;
-    }
+    html += (escapeHtml(lines[i]) || '\u200b') + '\n';
   }
+  html += '<span data-ln="end">\u200b</span>';
   lineMeasureEl.innerHTML = html;
   const markers = lineMeasureEl.querySelectorAll('span[data-ln]');
   const heights = [];
-  for (let j = 0; j < markers.length; j++) {
-    const top = markers[j].offsetTop;
-    const nextTop = (j < markers.length - 1) ? markers[j + 1].offsetTop : lineMeasureEl.scrollHeight;
-    heights.push(nextTop - top);
+  for (let j = 0; j < markers.length - 1; j++) {
+    heights.push(markers[j + 1].offsetTop - markers[j].offsetTop);
   }
   lineMeasureEl.innerHTML = '';
   cachedLineHeights = heights;
@@ -846,8 +866,12 @@ function toggleRhymeScheme() {
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
   rhymeSchemeToggleEl.classList.toggle('active', rhymeSchemeVisible);
   rhymeSchemeGutterEl.classList.toggle('visible', rhymeSchemeVisible);
+  // Showing or hiding either gutter changes the editor's width, so the text
+  // re-wraps for both of them. Refreshing only the toggled one leaves the
+  // other holding line heights measured at the old width, and its marks drift
+  // a row further out of step with every line that wraps.
   invalidateLineHeightCache();
-  if (rhymeSchemeVisible) requestAnimationFrame(function() { updateRhymeSchemeGutter(); syncGutterScroll(); });
+  requestAnimationFrame(function refreshGutters() { updateGutters(); syncGutterScroll(); });
 }
 
 function toggleSyllables() {
@@ -856,7 +880,7 @@ function toggleSyllables() {
   toggleBtn.classList.toggle('active', syllablesVisible);
   gutterEl.classList.toggle('visible', syllablesVisible);
   invalidateLineHeightCache();
-  requestAnimationFrame(function() { updateSyllableGutter(); syncGutterScroll(); });
+  requestAnimationFrame(function refreshGutters() { updateGutters(); syncGutterScroll(); });
 }
 
 // ── Resize handle ──
@@ -947,7 +971,9 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   const header = clicked.closest('.rhyme-group-header');
   if (header) {
     const group = header.parentElement;
-    if (group) group.classList.toggle('open');
+    if (!group) return;
+    if (!group.classList.contains('open')) populateGroupBody(group);
+    group.classList.toggle('open');
     return;
   }
 
@@ -1088,14 +1114,6 @@ function renderMeaning(meaning, remaining) {
   return { html: html, count: definitions.length };
 }
 
-const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
-
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"]/g, function replaceChar(char) {
-    return HTML_ESCAPES[char];
-  });
-}
-
 resizeHandleEl.addEventListener('mousedown', handleResizeStart);
 document.addEventListener('mousemove', handleResizeMove);
 document.addEventListener('mouseup', handleResizeEnd);
@@ -1103,9 +1121,21 @@ document.addEventListener('mouseup', handleResizeEnd);
 // ── Mobile tabs ──
 
 const MOBILE_BREAKPOINT = 768;
+const LYRICS_TAB = 'lyrics';
+const RHYMES_TAB = 'rhymes';
 
 function isMobileView() {
   return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+// Hiding the editor while iOS is still building a selection leaves the OS
+// hunting for somewhere to put it, and it lands on the header — the page
+// title ends up selected with drag handles. Collapsing and dropping focus
+// while the textarea is still on screen ends the gesture cleanly.
+function endEditorSelection() {
+  const caret = textareaEl.selectionStart;
+  textareaEl.setSelectionRange(caret, caret);
+  textareaEl.blur();
 }
 
 function switchMobileTab(tab) {
@@ -1120,10 +1150,12 @@ function switchMobileTab(tab) {
   // Swap immediately and fade the incoming panel in; a delayed swap
   // shows a blank desk, and a lingering inline opacity:0 would hide
   // the rhymes panel after a mobile-to-desktop resize.
+  if (tab !== LYRICS_TAB) endEditorSelection();
+
   mainEl.classList.remove('show-lyrics', 'show-rhymes');
   mainEl.classList.add('show-' + tab);
   var lyricsPanel = document.querySelector('.lyrics-panel');
-  var incoming = tab === 'lyrics' ? lyricsPanel : rhymesPanelEl;
+  var incoming = tab === LYRICS_TAB ? lyricsPanel : rhymesPanelEl;
   incoming.style.opacity = '0';
   void incoming.offsetWidth;
   incoming.style.opacity = '1';
@@ -1153,9 +1185,36 @@ textareaEl.addEventListener('focus', function handleFocus() {
   }, 300);
 });
 
+// ── First-run guidance ──
+
+const RHYME_HINT_TOUCH = 'Tap any word to see what rhymes with it.';
+const RHYME_HINT_POINTER = 'Click any word to see what rhymes with it.';
+const EMPTY_RESULTS_TOUCH = 'Tap a word in your lyrics<br>to see what rhymes with it';
+const EMPTY_RESULTS_POINTER = 'Click a word in your lyrics<br>to see what rhymes with it';
+
+// The tap/click wording follows the pointer, not the viewport width: a narrow
+// desktop window is still a mouse, and a wide tablet is still a finger.
+function isTouchPrimary() {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+// The intro line lives in index.html so the pad reads correctly before this
+// runs; only the rhyme hint is appended here, where the pointer is known.
+function showFirstRunGuidance() {
+  const isTouch = isTouchPrimary();
+  textareaEl.placeholder += '\n\n' + (isTouch ? RHYME_HINT_TOUCH : RHYME_HINT_POINTER);
+
+  const emptyState = resultsEl.querySelector('.empty-state');
+  if (emptyState) {
+    emptyState.innerHTML = isTouch ? EMPTY_RESULTS_TOUCH : EMPTY_RESULTS_POINTER;
+  }
+}
+
+showFirstRunGuidance();
+
 // Initialize mobile view with lyrics tab
 if (isMobileView()) {
-  switchMobileTab('lyrics');
+  switchMobileTab(LYRICS_TAB);
 }
 
 setInterval(function pollTextChanges() {
