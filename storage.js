@@ -1,3 +1,9 @@
+const HTTP_UNAUTHORIZED = 401;
+const LOADING_MESSAGE = 'Loading...';
+const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
+const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
+const LOAD_FAILED_MESSAGE = 'Could not open your notebook';
+
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
 let lastSavedBody = '';
@@ -14,15 +20,27 @@ function closeLyricsList() {
 
 async function loadLyricsList() {
   const container = document.getElementById('lyrics-list-items');
-  container.innerHTML = '<div class="lyrics-list-empty">Loading...</div>';
+  showListMessage(container, LOADING_MESSAGE);
 
   try {
     const res = await fetch('/api/lyrics');
-    if (!res.ok) { container.innerHTML = '<div class="lyrics-list-empty">Failed to load</div>'; return; }
-    const lyrics = await res.json();
 
+    // An expired session and a broken request are worth telling apart, and
+    // neither should read as an empty notebook: someone whose lyrics failed
+    // to load must not be told they have none.
+    if (res.status === HTTP_UNAUTHORIZED) {
+      showListMessage(container, SIGNED_OUT_MESSAGE);
+      if (window.handleSessionExpired) window.handleSessionExpired();
+      return;
+    }
+    if (!res.ok) {
+      showListMessage(container, LOAD_FAILED_MESSAGE);
+      return;
+    }
+
+    const lyrics = await res.json();
     if (lyrics.length === 0) {
-      container.innerHTML = '<div class="lyrics-list-empty">No saved lyrics yet</div>';
+      showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
       return;
     }
 
@@ -49,8 +67,12 @@ async function loadLyricsList() {
       container.appendChild(item);
     }
   } catch {
-    container.innerHTML = '<div class="lyrics-list-empty">Failed to load</div>';
+    showListMessage(container, LOAD_FAILED_MESSAGE);
   }
+}
+
+function showListMessage(container, message) {
+  container.innerHTML = '<div class="lyrics-list-empty">' + escapeHtml(message) + '</div>';
 }
 
 async function loadLyric(id) {
