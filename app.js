@@ -978,6 +978,12 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
 
 // ── Definition popup ──
 
+const DEFINITION_ENDPOINT = '/api/define/';
+const DEFINITION_TIMEOUT_MS = 8000;
+const DEFINITION_UNAVAILABLE_TEXT = 'Definitions are unavailable right now. Try again in a moment.';
+const MAX_DEFINITIONS_SHOWN = 3;
+const HTTP_NOT_FOUND = 404;
+
 function closeDefinition() {
   var overlay = document.querySelector('.def-overlay');
   var popup = document.querySelector('.def-popup');
@@ -1014,49 +1020,67 @@ function showDefinition(word, anchorEl) {
     popup.style.top = Math.max(8, top) + 'px';
   }
 
-  fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word))
-    .then(function(resp) {
-      if (!resp.ok) throw new Error('not found');
-      return resp.json();
+  fetchDefinition(word)
+    .then(function renderIntoPopup(entry) {
+      popup.innerHTML = entry
+        ? renderDefinition(entry)
+        : '<div class="def-error">No definition found for "' + escapeHtml(word) + '"</div>';
     })
-    .then(function(data) {
-      popup.innerHTML = renderDefinition(data[0]);
-    })
-    .catch(function() {
-      popup.innerHTML = '<div class="def-error">No definition found for "' + word + '"</div>';
+    .catch(function showLookupFailure() {
+      popup.innerHTML = '<div class="def-error">' + DEFINITION_UNAVAILABLE_TEXT + '</div>';
+    });
+}
+
+// Resolves to a definition entry, or null when the word genuinely has no
+// entry. Rejects only when the lookup itself failed, so an outage is never
+// reported to the user as a missing word.
+function fetchDefinition(word) {
+  const url = DEFINITION_ENDPOINT + encodeURIComponent(word);
+  return fetch(url, { signal: AbortSignal.timeout(DEFINITION_TIMEOUT_MS) })
+    .then(function readDefinitionResponse(resp) {
+      if (resp.ok) return resp.json();
+      if (resp.status === HTTP_NOT_FOUND) return null;
+      throw new Error('definition lookup failed with status ' + resp.status);
     });
 }
 
 function renderDefinition(entry) {
-  var html = '<div class="def-word">' + entry.word + '</div>';
+  var html = '<div class="def-word">' + escapeHtml(entry.word) + '</div>';
   if (entry.phonetic) {
-    html += '<div class="def-phonetic">' + entry.phonetic + '</div>';
-  } else if (entry.phonetics && entry.phonetics.length > 0) {
-    for (var p = 0; p < entry.phonetics.length; p++) {
-      if (entry.phonetics[p].text) {
-        html += '<div class="def-phonetic">' + entry.phonetics[p].text + '</div>';
-        break;
-      }
-    }
+    html += '<div class="def-phonetic">' + escapeHtml(entry.phonetic) + '</div>';
   }
 
   var meanings = entry.meanings || [];
-  var maxMeanings = 3;
-  var count = 0;
-  for (var i = 0; i < meanings.length && count < maxMeanings; i++) {
-    var m = meanings[i];
-    html += '<div class="def-pos">' + m.partOfSpeech + '</div>';
-    var defs = m.definitions || [];
-    for (var j = 0; j < defs.length && count < maxMeanings; j++) {
-      html += '<div class="def-meaning">' + defs[j].definition + '</div>';
-      if (defs[j].example) {
-        html += '<div class="def-example">"' + defs[j].example + '"</div>';
-      }
-      count++;
-    }
+  var shown = 0;
+  for (var i = 0; i < meanings.length && shown < MAX_DEFINITIONS_SHOWN; i++) {
+    var rendered = renderMeaning(meanings[i], MAX_DEFINITIONS_SHOWN - shown);
+    if (rendered.count === 0) continue;
+    html += '<div class="def-pos">' + escapeHtml(meanings[i].partOfSpeech) + '</div>';
+    html += rendered.html;
+    shown += rendered.count;
   }
 
   return html;
+}
+
+function renderMeaning(meaning, remaining) {
+  var definitions = (meaning.definitions || []).slice(0, remaining);
+  var html = '';
+  for (var i = 0; i < definitions.length; i++) {
+    html += '<div class="def-meaning">' + escapeHtml(definitions[i].definition) + '</div>';
+    if (definitions[i].example) {
+      html += '<div class="def-example">"' + escapeHtml(definitions[i].example) + '"</div>';
+    }
+  }
+  return { html: html, count: definitions.length };
+}
+
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"]/g, function replaceChar(char) {
+    return HTML_ESCAPES[char];
+  });
 }
 
 resizeHandleEl.addEventListener('mousedown', handleResizeStart);
