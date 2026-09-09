@@ -1171,6 +1171,12 @@ header h1 {
   color: var(--ink);
 }
 
+/* A plus draws less ink than the close glyph at the same type size, so it is
+   sized to match what the eye sees rather than what the CSS says. */
+#new-lyric-btn {
+  font-size: 22px;
+}
+
 #save-indicator {
   font-family: var(--font-marginalia);
   font-style: italic;
