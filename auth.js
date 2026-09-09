@@ -46,7 +46,6 @@ async function signOut() {
   showSignIn();
 }
 
-document.getElementById('sign-out-btn').addEventListener('click', signOut);
 document.getElementById('settings-sign-out-btn').addEventListener('click', signOut);
 
 document.getElementById('account-settings-btn').addEventListener('click', openAccountSettings);

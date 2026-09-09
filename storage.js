@@ -1,6 +1,7 @@
 const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_TITLE = 'Untitled';
 const FOCUS_DELAY_MS = 50;
+const CLOSE_DELAY_MS = 250;
 const NEW_LYRIC_HEADING = 'New lyric';
 const RENAME_HEADING = 'Rename lyric';
 const LOADING_MESSAGE = 'Loading...';
@@ -27,6 +28,7 @@ function askForLyricName({ heading, confirmLabel, value }) {
   document.getElementById('name-lyric-title').textContent = heading;
   document.getElementById('name-lyric-confirm').textContent = confirmLabel;
   input.value = value || '';
+  overlay.hidden = false;
   overlay.classList.add('open');
 
   // Focus once the panel is on its way in, so iOS raises the keyboard for it.
@@ -36,7 +38,10 @@ function askForLyricName({ heading, confirmLabel, value }) {
 }
 
 function closeNameDialog(name) {
-  document.getElementById('name-lyric-overlay').classList.remove('open');
+  const overlay = document.getElementById('name-lyric-overlay');
+  overlay.classList.remove('open');
+  // Wait out the fade before taking it out of the page entirely.
+  setTimeout(() => { if (!overlay.classList.contains('open')) overlay.hidden = true; }, CLOSE_DELAY_MS);
   const resolve = resolveNameDialog;
   resolveNameDialog = null;
   if (resolve) resolve(name);
@@ -310,7 +315,6 @@ titleEl.addEventListener('blur', () => {
     performSave();
   }
 });
-document.getElementById('my-lyrics-btn').addEventListener('click', openLyricsList);
 document.getElementById('notebook-btn').addEventListener('click', openLyricsList);
 document.getElementById('create-btn').addEventListener('click', createLyric);
 document.getElementById('new-lyric-btn').addEventListener('click', createLyric);

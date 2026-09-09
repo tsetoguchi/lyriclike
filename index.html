@@ -18,7 +18,7 @@
     <h1>LyricLike</h1>
     <button id="syllable-toggle" class="toggle-btn"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="nav-label">Syllables</span></button>
     <button id="rhyme-scheme-toggle" class="toggle-btn"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="8" x2="15" y2="8"/><circle cx="19" cy="8" r="2"/><line x1="4" y1="16" x2="15" y2="16"/><circle cx="19" cy="16" r="2"/></svg><span class="nav-label">Rhyme Scheme</span></button>
-    <button id="notebook-btn" class="toggle-btn"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="13" height="18" rx="2"/><line x1="10" y1="3" x2="10" y2="21"/></svg><span class="nav-label">Your Notebook</span></button>
+    <button id="notebook-btn" class="toggle-btn"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="13" height="18" rx="2"/><line x1="10" y1="3" x2="10" y2="21"/></svg><span class="nav-label">My Notebook</span></button>
     <button id="create-btn" class="toggle-btn"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="nav-label">Create</span></button>
     <div class="header-right">
       <span id="status">Loading dictionary...</span>
@@ -26,9 +26,7 @@
         <button id="sign-in-btn" class="toggle-btn">Sign in</button>
         <span id="user-info" style="display:none">
           <span id="user-email"></span>
-          <button id="my-lyrics-btn" class="toggle-btn">My Notebook</button>
           <button id="account-settings-btn" class="toggle-btn">Account</button>
-          <button id="sign-out-btn" class="toggle-btn">Sign out</button>
         </span>
       </div>
     </div>
@@ -94,7 +92,7 @@
       </div>
     </div>
   </div>
-  <div id="name-lyric-overlay">
+  <div id="name-lyric-overlay" hidden>
     <div id="name-lyric-panel" role="dialog" aria-modal="true" aria-labelledby="name-lyric-title">
       <div id="name-lyric-header"><span id="name-lyric-title">New lyric</span></div>
       <div id="name-lyric-body">
