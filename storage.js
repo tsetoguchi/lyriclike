@@ -1,4 +1,6 @@
 const HTTP_UNAUTHORIZED = 401;
+const DEFAULT_TITLE = 'Untitled';
+const NEW_LYRIC_PROMPT = 'Name your lyric';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
 const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
@@ -93,9 +95,12 @@ async function loadLyric(id) {
   closeLyricsList();
 }
 
-function newLyric() {
+async function createLyric() {
+  const name = prompt(NEW_LYRIC_PROMPT, '');
+  if (name === null) return;
+
   currentLyricId = crypto.randomUUID();
-  currentTitle = 'Untitled';
+  currentTitle = name.trim() || DEFAULT_TITLE;
   lastSavedBody = '';
 
   const textarea = document.getElementById('lyrics');
@@ -104,7 +109,33 @@ function newLyric() {
 
   setSaveIndicator('');
   updatePanelHeader();
+  saveDraft();
   closeLyricsList();
+  textarea.focus();
+
+  await saveNewLyric();
+}
+
+// A lyric someone has just named belongs in the notebook straight away, even
+// with no words in it yet. performSave() deliberately skips an empty body, so
+// the first write goes out from here.
+async function saveNewLyric() {
+  if (!window.currentUser) return;
+
+  setSaveIndicator('Saving...');
+  try {
+    const res = await fetch(`/api/lyrics/${currentLyricId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: currentTitle, body: '' }),
+    });
+    if (!res.ok) { setSaveIndicator('Save failed'); return; }
+    lastSavedBody = '';
+    setSaveIndicator('Saved');
+    setTimeout(() => setSaveIndicator(''), 3000);
+  } catch {
+    setSaveIndicator('Save failed');
+  }
 }
 
 async function deleteLyric(id) {
@@ -236,8 +267,8 @@ titleEl.addEventListener('blur', () => {
 });
 document.getElementById('my-lyrics-btn').addEventListener('click', openLyricsList);
 document.getElementById('notebook-btn').addEventListener('click', openLyricsList);
-document.getElementById('create-btn').addEventListener('click', newLyric);
-document.getElementById('new-lyric-btn').addEventListener('click', newLyric);
+document.getElementById('create-btn').addEventListener('click', createLyric);
+document.getElementById('new-lyric-btn').addEventListener('click', createLyric);
 document.getElementById('close-lyrics-list-btn').addEventListener('click', closeLyricsList);
 document.getElementById('lyrics-list-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('lyrics-list-overlay')) closeLyricsList();
