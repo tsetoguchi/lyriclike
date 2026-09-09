@@ -14,6 +14,7 @@ async function initAuth() {
 
 function showUser(user) {
   window.currentUser = user;
+  document.body.classList.add('signed-in');
   document.getElementById('sign-in-btn').style.display = 'none';
   document.getElementById('user-info').style.display = '';
   document.getElementById('user-email').textContent = user.email;
@@ -21,6 +22,7 @@ function showUser(user) {
 
 function showSignIn() {
   window.currentUser = null;
+  document.body.classList.remove('signed-in');
   document.getElementById('sign-in-btn').style.display = '';
   document.getElementById('user-info').style.display = 'none';
 }

@@ -64,6 +64,8 @@ const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
 const lyricsAreaEl = document.querySelector('.lyrics-area');
 const bottomNavEl = document.getElementById('bottom-nav');
+const notebookBtn = document.getElementById('notebook-btn');
+const createBtn = document.getElementById('create-btn');
 const headerEl = document.querySelector('header');
 const headerRightEl = document.querySelector('.header-right');
 const userAreaEl = document.getElementById('user-area');
@@ -633,7 +635,12 @@ function resizeEditorToContent() {
   // A hidden panel measures zero, which would collapse the editor.
   if (textareaEl.offsetParent === null) return;
   textareaEl.style.height = 'auto';
-  textareaEl.style.height = textareaEl.scrollHeight + 'px';
+  const contentHeight = textareaEl.scrollHeight;
+  // A short lyric still has to fill the pad, or its ruling stops mid-page
+  // while the gutters beside it run to the bottom. The floor is measured
+  // rather than declared: a percentage min-height resolves against the
+  // wrapper, whose own height is content-driven, so it never applies.
+  textareaEl.style.height = Math.max(contentHeight, lyricsAreaEl.clientHeight) + 'px';
 }
 
 // ── Rhyme scheme detection ──
@@ -1188,11 +1195,15 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
-    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl);
+    // The notebook pair rides along but stays hidden until sign-in; CSS owns
+    // that, so placement does not have to know about auth.
+    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, notebookBtn, createBtn);
     headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
   } else {
     headerEl.insertBefore(toggleBtn, headerRightEl);
     headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
+    headerEl.insertBefore(notebookBtn, headerRightEl);
+    headerEl.insertBefore(createBtn, headerRightEl);
     headerRightEl.appendChild(userAreaEl);
   }
   controlsAreInBottomNav = wantsBottomNav;
@@ -1275,6 +1286,13 @@ function handleWindowResize() {
 
 placeControlsForViewport();
 window.addEventListener('resize', handleWindowResize);
+
+// Signing in changes the header's height and the keyboard changes the visible
+// viewport; neither fires a window resize, and both change the floor the
+// editor has to reach.
+if (window.ResizeObserver) {
+  new ResizeObserver(resizeEditorToContent).observe(lyricsAreaEl);
+}
 
 // Initialize mobile view with lyrics tab
 if (isMobileView()) {

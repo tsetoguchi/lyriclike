@@ -243,6 +243,13 @@ header h1 {
   display: none;
 }
 
+/* Bar-only, and only once there is an account to hold a notebook. Desktop
+   keeps the My Lyrics button it already has. */
+#notebook-btn,
+#create-btn {
+  display: none;
+}
+
 .danger-btn {
   border-color: var(--danger-border);
   color: var(--danger);
@@ -486,8 +493,9 @@ header h1 {
      the wrapper ends up taller than the gutters beside it. */
   display: block;
   width: 100%;
+  /* Height is set from content by resizeEditorToContent(); a percentage
+     min-height here cannot resolve, since the wrapper's own height is auto. */
   height: auto;
-  min-height: 100%;
   overflow: hidden;
   padding: var(--editor-pad);
   background-color: transparent;
@@ -1163,6 +1171,12 @@ header h1 {
   color: var(--ink);
 }
 
+/* A plus draws less ink than the close glyph at the same type size, so it is
+   sized to match what the eye sees rather than what the CSS says. */
+#new-lyric-btn {
+  font-size: 22px;
+}
+
 #save-indicator {
   font-family: var(--font-marginalia);
   font-style: italic;
@@ -1436,17 +1450,30 @@ header h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 4px;
-    padding: 6px 4px;
+    padding: 6px 2px;
     background: transparent;
     border: none;
     border-radius: 0;
     color: var(--ink-faded);
     font-size: 10px;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     line-height: 1.2;
-    white-space: nowrap;
+    /* Four columns on a phone: a two-word label wraps rather than overruns
+       its neighbour. */
+    white-space: normal;
+    text-align: center;
+  }
+
+  body.signed-in .bottom-nav #notebook-btn,
+  body.signed-in .bottom-nav #create-btn {
+    display: flex;
+  }
+
+  /* Your Notebook replaces it, and the header has room for one control. */
+  body.signed-in header #my-lyrics-btn {
+    display: none;
   }
 
   .bottom-nav .nav-icon {
