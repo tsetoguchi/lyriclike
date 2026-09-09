@@ -143,6 +143,7 @@
   --scrim-light: rgba(20, 14, 8, 0.45);
   --shadow-popup: 0 8px 32px rgba(20, 14, 8, 0.35);
   --shadow-card: 0 2px 12px rgba(20, 14, 8, 0.35);
+  --shadow-bottom-nav: 0 -2px 12px rgba(20, 14, 8, 0.18);
   --sheet-handle: rgba(38, 34, 27, 0.25);
   --scrollbar-thumb: rgba(38, 34, 27, 0.25);
 
@@ -182,6 +183,7 @@ body {
 }
 
 #app-content {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -1147,9 +1149,13 @@ header h1 {
   font-weight: 400;
 }
 
-/* ── Mobile tabs (hidden on desktop) ── */
+/* ── Mobile tabs and bottom bar (hidden on desktop) ── */
 
 .mobile-tabs {
+  display: none;
+}
+
+.bottom-nav {
   display: none;
 }
 
@@ -1347,6 +1353,63 @@ header h1 {
 
   .empty-state {
     padding: 30px 16px;
+  }
+
+  /* The tool bar rides at the bottom of the visible area, out of the way of
+     the writing. It ducks on a downward scroll, returns on an upward one, and
+     leaves entirely while the rhymes panel is showing. */
+  .bottom-nav {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    /* Stretch, so a label that wraps to two lines doesn't leave its
+       neighbours short. */
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 12px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    background: var(--paper);
+    border-top: 1px solid var(--margin-line);
+    box-shadow: var(--shadow-bottom-nav);
+    transform: translateY(0);
+    transition: transform 0.28s ease, opacity 0.28s ease;
+  }
+
+  .bottom-nav.ducked,
+  .bottom-nav.off-screen {
+    /* Past 100% so the shadow clears the edge too. */
+    transform: translateY(130%);
+    opacity: 0;
+  }
+
+  .bottom-nav > .toggle-btn,
+  .bottom-nav #user-area {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .bottom-nav .toggle-btn {
+    width: 100%;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    padding: 8px 4px;
+    /* Four labels across a phone is tight; let the long ones wrap rather
+       than run past their own border. */
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .bottom-nav #user-info {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .bottom-nav #user-email {
+    display: none;
   }
 }
 
