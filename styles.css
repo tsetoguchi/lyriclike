@@ -220,7 +220,6 @@
   --scrim: rgba(20, 14, 8, 0.55);             /* dimmed desk */
   --scrim-light: rgba(20, 14, 8, 0.45);
   --shadow-popup: 0 8px 32px rgba(20, 14, 8, 0.35);
-  --shadow-card: 0 2px 12px rgba(20, 14, 8, 0.35);
   --shadow-bottom-nav: 0 -2px 12px rgba(20, 14, 8, 0.18);
   --sheet-handle: rgba(38, 34, 27, 0.25);
   --scrollbar-thumb: rgba(38, 34, 27, 0.25);
@@ -349,7 +348,7 @@ header h1 {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background: var(--desk);
+  background: var(--paper-card);
 }
 
 /* One orchestrated moment: the page settles onto the desk. */
@@ -380,16 +379,27 @@ header h1 {
 }
 
 /* The desk gap between pad and memo card; red when gripped. */
+/* Wide enough to catch with a cursor, but only a hairline is drawn — the same
+   hairline the rest of the page divides itself with. */
 .resize-handle {
+  position: relative;
   width: var(--resize-handle-width);
   flex-shrink: 0;
   cursor: col-resize;
-  background: var(--desk);
+  background: transparent;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: var(--hairline);
+  background: var(--rule);
   transition: background var(--duration-fast);
 }
 
-.resize-handle:hover,
-.resize-handle.active {
+.resize-handle:hover::after,
+.resize-handle.active::after {
   background: var(--margin-red);
 }
 
@@ -614,9 +624,6 @@ header h1 {
   flex-direction: column;
   overflow: hidden;
   background: var(--paper-card);
-  margin: var(--space-3) var(--space-3) var(--space-3) 0;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
 }
 
 .selected-word-bar {
@@ -1537,9 +1544,6 @@ header h1 {
     width: 100% !important;
     flex: 1;
     min-height: 0;
-    margin: 0;
-    border-radius: 0;
-    box-shadow: none;
   }
 
   /* Tab switching */
