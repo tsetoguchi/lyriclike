@@ -1107,6 +1107,102 @@ header h1 {
    layout and hides behind opacity instead of display, which cannot animate.
    visibility waits out the fade on the way closed, so nothing is clickable
    once the drawer has gone. */
+/* Naming a new lyric. Same surface, motion and type as the account panel —
+   it sits above the notebook, which is where it is opened from. */
+#name-lyric-overlay {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: var(--z-overlay-raised);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
+}
+
+#name-lyric-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-base) ease, visibility 0s;
+}
+
+#name-lyric-panel {
+  width: var(--dialog-width);
+  max-width: 100%;
+  background: var(--paper-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+  transform: translateY(var(--space-2)) scale(0.98);
+  transition: transform var(--duration-base) ease;
+  display: flex;
+  flex-direction: column;
+}
+
+#name-lyric-overlay.open #name-lyric-panel {
+  transform: none;
+}
+
+#name-lyric-header {
+  padding: var(--space-4);
+  border-bottom: var(--hairline) solid var(--rule);
+  font-family: var(--font-display);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-normal);
+  color: var(--ink);
+}
+
+#name-lyric-body {
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Callout size, because a field below it makes iOS zoom the page. */
+#name-lyric-input {
+  width: 100%;
+  padding: var(--space-3);
+  background: transparent;
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font-editor);
+  font-size: var(--text-callout);
+  outline: none;
+  transition: border-color var(--duration-base);
+}
+
+#name-lyric-input:focus {
+  border-color: var(--margin-red);
+}
+
+#name-lyric-input::placeholder {
+  color: var(--ink-faded);
+}
+
+#name-lyric-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+#name-lyric-actions .toggle-btn {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+}
+
+#name-lyric-confirm {
+  background: var(--margin-red-wash);
+  border-color: var(--margin-red);
+  color: var(--margin-red);
+}
+
 #lyrics-list-overlay {
   display: flex;
   position: fixed;
