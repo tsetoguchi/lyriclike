@@ -79,7 +79,7 @@
 :root {
   /* Paper */
   --paper: #f5e9d6;             /* cream pad surface */
-  --rule: #d8c4a6;              /* soft tan ruled lines */
+  --rule: #d8c4a6;              /* soft tan hairlines between sections */
   --margin-line: #3a332a;       /* the down line: thin dark ink */
   --margin-red: #c0392b;        /* red ink accents (grips, focus, marks) */
   --margin-red-wash: rgba(192, 57, 43, 0.06);  /* active-page tint */
@@ -92,19 +92,12 @@
 
   --desk: #221b14;              /* surface the pad rests on */
 
-  /* Editor metrics: integer pitch keeps ruling crisp and text on-line.
+  /* Editor metrics: an integer pitch keeps the gutters' rows whole, since
+     each is a multiple of it.
      Everything that renders or measures lyric lines MUST share these. */
   --editor-font-size: 24px;
   --line-pitch: 41px;
   --editor-pad: 20px;
-  --ruling: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(var(--line-pitch) - 1px),
-    var(--rule) calc(var(--line-pitch) - 1px),
-    var(--rule) var(--line-pitch)
-  );
-
   --border-focus: #6e654f;
 
   /* States (red ink on paper) */
@@ -325,16 +318,6 @@ header h1 {
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
-}
-
-/* One ruling recipe for every surface that renders lyric lines; each
-   scrolls it with its own content to stay in register. */
-.syllable-gutter,
-.rhyme-scheme-gutter,
-#lyrics {
-  background-image: var(--ruling);
-  background-attachment: local;
-  background-position-y: var(--editor-pad);
 }
 
 /* The annotation margin is only ruled off when there is something to write in
@@ -1411,8 +1394,8 @@ header h1 {
     flex: 1;
   }
 
-  /* Editor metrics shrink together: one token change keeps the ruling,
-     text, overlay, and gutters in lockstep. */
+  /* Editor metrics shrink together: one token change keeps the text,
+     overlay, and gutters in lockstep. */
   :root {
     --editor-font-size: 18px;
     --line-pitch: 31px;
