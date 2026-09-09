@@ -83,8 +83,8 @@
 :root {
   /* Paper */
   --paper: #f5e9d6;             /* cream pad surface */
-  --rule: #d8c4a6;              /* soft tan hairlines between sections */
-  --margin-line: #3a332a;       /* the down line: thin dark ink */
+  --rule: #d8c4a6;              /* soft tan hairlines within the paper */
+  --margin-line: #3a332a;       /* where chrome meets paper: header, tabs, bar */
   --margin-red: #c0392b;        /* red ink accents (grips, focus, marks) */
   --margin-red-wash: rgba(192, 57, 43, 0.06);  /* active-page tint */
   --ink: #26221b;               /* warm near-black writing ink */
@@ -417,7 +417,7 @@ header h1 {
   width: 0;
   min-width: 0;
   flex-shrink: 0;
-  border-right: 0 solid var(--margin-line);
+  border-right: 0 solid var(--rule);
   min-height: 100%;
   overflow: hidden;
   user-select: none;
