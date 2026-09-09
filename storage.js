@@ -1,6 +1,7 @@
 const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_TITLE = 'Untitled';
-const NEW_LYRIC_PROMPT = 'Name your lyric';
+const FOCUS_DELAY_MS = 50;
+const LYRIC_TITLE_PROMPT = 'Lyric title';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
 const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
@@ -10,6 +11,47 @@ let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
 let lastSavedBody = '';
 let saveTimer = null;
+
+// ── Naming dialog ──
+
+// Resolves with the name entered, or null if the writer backed out. The
+// browser's own prompt does not belong to this app; this one is the same
+// surface, motion and type as every other panel.
+let resolveNameDialog = null;
+
+function askForLyricName({ title, confirmLabel, value }) {
+  const overlay = document.getElementById('name-lyric-overlay');
+  const input = document.getElementById('name-lyric-input');
+
+  document.getElementById('name-lyric-title').textContent = title;
+  document.getElementById('name-lyric-confirm').textContent = confirmLabel;
+  input.value = value || '';
+  overlay.classList.add('open');
+
+  // Focus once the panel is on its way in, so iOS raises the keyboard for it.
+  setTimeout(() => { input.focus(); input.select(); }, FOCUS_DELAY_MS);
+
+  return new Promise(resolve => { resolveNameDialog = resolve; });
+}
+
+function closeNameDialog(name) {
+  document.getElementById('name-lyric-overlay').classList.remove('open');
+  const resolve = resolveNameDialog;
+  resolveNameDialog = null;
+  if (resolve) resolve(name);
+}
+
+document.getElementById('name-lyric-confirm').addEventListener('click', () => {
+  closeNameDialog(document.getElementById('name-lyric-input').value);
+});
+document.getElementById('name-lyric-cancel').addEventListener('click', () => closeNameDialog(null));
+document.getElementById('name-lyric-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('name-lyric-overlay')) closeNameDialog(null);
+});
+document.getElementById('name-lyric-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); closeNameDialog(e.target.value); }
+  if (e.key === 'Escape') { e.preventDefault(); closeNameDialog(null); }
+});
 
 function openLyricsList() {
   document.getElementById('lyrics-list-overlay').classList.add('open');
@@ -96,7 +138,7 @@ async function loadLyric(id) {
 }
 
 async function createLyric() {
-  const name = prompt(NEW_LYRIC_PROMPT, '');
+  const name = await askForLyricName({ title: LYRIC_TITLE_PROMPT, confirmLabel: 'Create', value: '' });
   if (name === null) return;
 
   currentLyricId = crypto.randomUUID();
@@ -154,7 +196,9 @@ async function deleteLyric(id) {
 }
 
 async function renameLyric(id, oldTitle) {
-  const newTitle = prompt('Rename:', oldTitle);
+  const entered = await askForLyricName({ title: LYRIC_TITLE_PROMPT, confirmLabel: 'Rename', value: oldTitle });
+  if (entered === null) return;
+  const newTitle = entered.trim();
   if (!newTitle || newTitle === oldTitle) return;
 
   const res = await fetch(`/api/lyrics/${id}`);
