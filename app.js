@@ -588,7 +588,7 @@ function updateSyllableGutter() {
   for (let i = 0; i < lineCount; i++) {
     parts.push(buildSyllableLine(lines[i], heights[i]));
   }
-  gutterEl.innerHTML = parts.join('');
+  gutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';
 }
 
 const lineMeasureEl = document.getElementById('line-measure');
@@ -628,9 +628,19 @@ function measureLineHeights(lines) {
   return heights;
 }
 
+// Setting scrollTop on the gutters makes each one lay out and paint on its own
+// before it can catch up with the textarea, which shows as the marks lagging a
+// few pixels behind their lines mid-scroll. Moving one promoted layer instead
+// keeps the offset on the compositor, where it lands in the same frame.
+function offsetGutter(gutterElement, scrollTop) {
+  const inner = gutterElement.firstElementChild;
+  if (inner) inner.style.transform = 'translate3d(0, ' + -scrollTop + 'px, 0)';
+}
+
 function syncGutterScroll() {
-  gutterEl.scrollTop = textareaEl.scrollTop;
-  rhymeSchemeGutterEl.scrollTop = textareaEl.scrollTop;
+  const scrollTop = textareaEl.scrollTop;
+  offsetGutter(gutterEl, scrollTop);
+  offsetGutter(rhymeSchemeGutterEl, scrollTop);
   syncHighlightScroll();
 }
 
@@ -857,7 +867,7 @@ function updateRhymeSchemeGutter() {
       parts.push('<div class="scheme-line" style="height:' + lineHeight + 'px;color:' + (labelColors[i] || 'var(--ink-faded)') + '">' + (labels[i] || '&ndash;') + '</div>');
     }
   }
-  rhymeSchemeGutterEl.innerHTML = parts.join('');
+  rhymeSchemeGutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';
 }
 
 function invalidateLineHeightCache() {
@@ -1197,7 +1207,8 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
-    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, userAreaEl);
+    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl);
+    headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
   } else {
     headerEl.insertBefore(toggleBtn, headerRightEl);
     headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
