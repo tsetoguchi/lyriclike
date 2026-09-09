@@ -898,17 +898,22 @@ header h1 {
 /* ── Account settings overlay ── */
 
 #account-settings-overlay {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   background: var(--scrim);
   z-index: 100;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s;
 }
 
 #account-settings-overlay.open {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease, visibility 0s;
 }
 
 #account-settings-panel {
@@ -916,12 +921,18 @@ header h1 {
   border: none;
   border-radius: 6px;
   box-shadow: var(--shadow-popup);
+  transform: translateY(8px) scale(0.98);
+  transition: transform 0.2s ease;
   width: 400px;
   max-width: 92vw;
   max-height: 90vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+#account-settings-overlay.open #account-settings-panel {
+  transform: none;
 }
 
 .account-settings-header {
@@ -1041,18 +1052,27 @@ header h1 {
 
 /* ── Lyrics list overlay ── */
 
+/* Opening is a movement, not a state change, so the overlay stays in the
+   layout and hides behind opacity instead of display, which cannot animate.
+   visibility waits out the fade on the way closed, so nothing is clickable
+   once the drawer has gone. */
 #lyrics-list-overlay {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   background: var(--scrim);
   z-index: 100;
   align-items: flex-start;
   justify-content: flex-start;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0s linear 0.28s;
 }
 
 #lyrics-list-overlay.open {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease, visibility 0s;
 }
 
 #lyrics-list-panel {
@@ -1064,6 +1084,14 @@ header h1 {
   height: 100%;
   display: flex;
   flex-direction: column;
+  /* Same easing and duration as the bottom bar, so the two pieces of chrome
+     move like they belong to one app. */
+  transform: translateX(-100%);
+  transition: transform 0.28s ease;
+}
+
+#lyrics-list-overlay.open #lyrics-list-panel {
+  transform: translateX(0);
 }
 
 #lyrics-list-panel-header {
@@ -1561,5 +1589,6 @@ header h1 {
 
   *, *::before, *::after {
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
 }
