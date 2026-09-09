@@ -32,7 +32,10 @@ let rhymeIndex = null;
 let vowelBuckets = null;
 let codaBuckets = null;
 let englishWords = null;
-let englishOnly = sessionStorage.getItem('englishOnly') === '1';
+// English-only filtering is always on. Its button was removed from the UI,
+// so this is state rather than a constant only because setEnglishOnly()
+// keeps it reachable for a settings page.
+let englishOnly = true;
 let syllablesVisible = sessionStorage.getItem('syllablesVisible') === '1';
 let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') === '1';
 let blocklist = null;
@@ -50,7 +53,6 @@ const toggleBtn = document.getElementById('syllable-toggle');
 const statusEl = document.getElementById('status');
 const selectedWordEl = document.getElementById('selected-word');
 const resultsEl = document.getElementById('rhyme-results');
-const englishToggleEl = document.getElementById('english-toggle');
 const resizeHandleEl = document.getElementById('resize-handle');
 const rhymesPanelEl = document.getElementById('rhymes-panel');
 const highlightEl = document.getElementById('lyrics-highlight');
@@ -66,7 +68,6 @@ const headerRightEl = document.querySelector('.header-right');
 const userAreaEl = document.getElementById('user-area');
 
 // ── Restore session state ──
-if (englishOnly) englishToggleEl.classList.add('active');
 if (syllablesVisible) {
   toggleBtn.classList.add('active');
   gutterEl.classList.add('visible');
@@ -923,19 +924,25 @@ function handleResizeEnd() {
   updateRhymeSchemeGutter();
 }
 
+// ── English-only filtering ──
+
+function refreshCurrentResults() {
+  if (!currentHighlightWord) return;
+  renderResults(currentHighlightWord, findRhymes(currentHighlightWord));
+}
+
+// No control exposes this yet. It stays so a settings page can turn the filter
+// off without the filtering itself having to be rebuilt.
+function setEnglishOnly(isEnabled) {
+  console.assert(typeof isEnabled === 'boolean', 'setEnglishOnly: isEnabled must be a boolean');
+  englishOnly = isEnabled;
+  refreshCurrentResults();
+}
+
 // ── Event binding (no inline handlers) ──
 
 toggleBtn.addEventListener('click', toggleSyllables);
 rhymeSchemeToggleEl.addEventListener('click', toggleRhymeScheme);
-englishToggleEl.addEventListener('click', function toggleEnglish() {
-  englishOnly = !englishOnly;
-  sessionStorage.setItem('englishOnly', englishOnly ? '1' : '0');
-  englishToggleEl.classList.toggle('active', englishOnly);
-  if (currentHighlightWord) {
-    const results = findRhymes(currentHighlightWord);
-    renderResults(currentHighlightWord, results);
-  }
-});
 textareaEl.addEventListener('mouseup', function() { handleSelection(true); });
 textareaEl.addEventListener('touchend', function() { handleSelection(true); });
 textareaEl.addEventListener('keyup', function() { handleSelection(false); });
@@ -1190,11 +1197,10 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
-    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, englishToggleEl, userAreaEl);
+    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, userAreaEl);
   } else {
     headerEl.insertBefore(toggleBtn, headerRightEl);
     headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
-    headerEl.insertBefore(englishToggleEl, headerRightEl);
     headerRightEl.appendChild(userAreaEl);
   }
   controlsAreInBottomNav = wantsBottomNav;
@@ -1306,6 +1312,8 @@ Promise.all([loadDictionary(), loadBlocklist()]).then(function onRequiredLoaded(
   console.error(err);
 });
 
-loadEnglishWords().catch(function onEnglishWordsError(err) {
+// Lookups made before the list lands come back unfiltered, so redo the last
+// one once it is in.
+loadEnglishWords().then(refreshCurrentResults).catch(function onEnglishWordsError(err) {
   console.error(err);
 });
