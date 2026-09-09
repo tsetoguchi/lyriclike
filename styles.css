@@ -337,17 +337,26 @@ header h1 {
   background-position-y: var(--editor-pad);
 }
 
-/* The annotation margin: always part of the paper, like a real pad.
-   Syllable counts appear in it only when the toggle is on. */
+/* The annotation margin is only ruled off when there is something to write in
+   it. Closed it takes no width at all, so the lyrics start at the paper's
+   edge; opening widens it and the margin line arrives with it. */
 .syllable-gutter {
   display: flex;
   flex-direction: column;
   padding: var(--editor-pad) 0;
-  width: 56px;
+  width: 0;
+  min-width: 0;
   flex-shrink: 0;
-  border-right: 1px solid var(--margin-line);
+  border-right: 0 solid var(--margin-line);
   min-height: 100%;
+  overflow: hidden;
   user-select: none;
+  transition: width 0.28s ease, border-right-width 0.28s ease;
+}
+
+.syllable-gutter.visible {
+  width: 56px;
+  border-right-width: 1px;
 }
 
 /* Holds the rows as one block so the gutter's height is theirs. Nothing
@@ -356,7 +365,8 @@ header h1 {
   flex-shrink: 0;
 }
 
-.syllable-gutter:not(.visible) .syl-line {
+.syllable-gutter:not(.settled) .syl-line,
+.rhyme-scheme-gutter:not(.settled) .scheme-line {
   visibility: hidden;
 }
 
@@ -382,17 +392,20 @@ header h1 {
 
 /* Rhyme-scheme letters: ink marks at the line ends. */
 .rhyme-scheme-gutter {
-  display: none;
+  display: flex;
   flex-direction: column;
   padding: var(--editor-pad) 0;
-  width: 44px;
+  width: 0;
+  min-width: 0;
   flex-shrink: 0;
   min-height: 100%;
+  overflow: hidden;
   user-select: none;
+  transition: width 0.28s ease;
 }
 
 .rhyme-scheme-gutter.visible {
-  display: flex;
+  width: 44px;
 }
 
 .rhyme-scheme-gutter .scheme-line {
