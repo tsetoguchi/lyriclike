@@ -155,6 +155,15 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* iOS inflates text in block containers but leaves form controls alone, which
+   would render the hidden line-measuring div at a different size than the
+   textarea it is measuring — the syllable and rhyme gutters then drift out of
+   step with the lines they annotate. Opt out so both size identically. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 :focus-visible {
   outline: 2px solid var(--margin-red);
   outline-offset: 2px;
@@ -1328,6 +1337,25 @@ header h1 {
 
   .empty-state {
     padding: 30px 16px;
+  }
+}
+
+/* On touch devices a selection gesture that outlives the element it started
+   in gets re-homed onto whatever text is still on screen — usually the header.
+   Only the editor and definition text are meant to be selectable there; a
+   mouse keeps full run of the page. */
+@media (hover: none) and (pointer: coarse) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  #lyrics,
+  .def-popup {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
   }
 }
 
