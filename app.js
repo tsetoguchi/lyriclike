@@ -38,6 +38,10 @@ let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') === '1';
 let blocklist = null;
 let debounceTimer = null;
 let lastTextValue = '';
+// The word the rhymes tab was last auto-opened for. A repeat tap on that
+// same word stays in the editor so the word can be edited; see
+// hasEarnedTabSwitch().
+let autoSwitchedWord = null;
 
 // ── DOM references ──
 const textareaEl = document.getElementById('lyrics');
@@ -477,12 +481,21 @@ function handleSelection(switchTab) {
     wordBarEl.classList.remove('flash');
     void wordBarEl.offsetWidth;
     wordBarEl.classList.add('flash');
-    // A deliberate selection (double-tap / long-press) always opens the
-    // rhymes tab; a bare caret tap never does, so editing stays put.
-    if (switchTab && isMobileView() && results && start !== end) {
+    if (switchTab && results && hasEarnedTabSwitch(word, start !== end)) {
+      autoSwitchedWord = word.toLowerCase();
       switchMobileTab('rhymes');
     }
   }, DEBOUNCE_DELAY_MS);
+}
+
+// A tap on a word opens the rhymes tab, but only the first time for that word.
+// Tapping the same word again leaves the caret in the editor, which is what
+// makes a word reachable for editing — otherwise every tap would bounce the
+// writer out of the lyrics. A deliberate selection (double-tap / long-press)
+// always switches, so a re-lookup of the current word is still one gesture.
+function hasEarnedTabSwitch(word, isDeliberateSelection) {
+  if (!isMobileView()) return false;
+  return isDeliberateSelection || word.toLowerCase() !== autoSwitchedWord;
 }
 
 // ── Syllable counting ──
