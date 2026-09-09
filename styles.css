@@ -320,11 +320,15 @@ header h1 {
   display: none;
 }
 
-/* Bar-only, and only once there is an account to hold a notebook. Desktop
-   keeps the My Lyrics button it already has. */
+/* Both need an account behind them. Create is a bar affordance; the notebook
+   sits with the other tools on a wide screen. */
 #notebook-btn,
 #create-btn {
   display: none;
+}
+
+body.signed-in #notebook-btn {
+  display: inline-block;
 }
 
 .danger-btn {
@@ -1116,6 +1120,10 @@ header h1 {
    once the drawer has gone. */
 /* Naming a new lyric. Same surface, motion and type as the account panel —
    it sits above the notebook, which is where it is opened from. */
+#name-lyric-overlay[hidden] {
+  display: none;
+}
+
 #name-lyric-overlay {
   display: flex;
   position: fixed;
@@ -1473,10 +1481,8 @@ header h1 {
     letter-spacing: var(--tracking-tight);
   }
 
-  /* No room for these beside a centred wordmark; the account panel carries
-     the email and the sign-out control instead. */
-  #user-email,
-  header #sign-out-btn {
+  /* No room beside a centred wordmark; the account panel carries the email. */
+  #user-email {
     display: none;
   }
 
@@ -1699,11 +1705,6 @@ header h1 {
   body.signed-in .bottom-nav #notebook-btn,
   body.signed-in .bottom-nav #create-btn {
     display: flex;
-  }
-
-  /* Your Notebook replaces it, and the header has room for one control. */
-  body.signed-in header #my-lyrics-btn {
-    display: none;
   }
 
   .bottom-nav .nav-icon {
