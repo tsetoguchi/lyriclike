@@ -62,6 +62,7 @@ const selectedContextEl = document.getElementById('selected-context');
 const wordBarEl = document.querySelector('.selected-word-bar');
 const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
+const lyricsAreaEl = document.querySelector('.lyrics-area');
 const bottomNavEl = document.getElementById('bottom-nav');
 const headerEl = document.querySelector('header');
 const headerRightEl = document.querySelector('.header-right');
@@ -455,10 +456,7 @@ function updateHighlight(word) {
   highlightEl.innerHTML = highlighted + '\n';
 }
 
-function syncHighlightScroll() {
-  highlightEl.scrollTop = textareaEl.scrollTop;
-  highlightEl.scrollLeft = textareaEl.scrollLeft;
-}
+
 
 // ── Word selection handling ──
 
@@ -628,20 +626,14 @@ function measureLineHeights(lines) {
   return heights;
 }
 
-// Setting scrollTop on the gutters makes each one lay out and paint on its own
-// before it can catch up with the textarea, which shows as the marks lagging a
-// few pixels behind their lines mid-scroll. Moving one promoted layer instead
-// keeps the offset on the compositor, where it lands in the same frame.
-function offsetGutter(gutterElement, scrollTop) {
-  const inner = gutterElement.firstElementChild;
-  if (inner) inner.style.transform = 'translate3d(0, ' + -scrollTop + 'px, 0)';
-}
-
-function syncGutterScroll() {
-  const scrollTop = textareaEl.scrollTop;
-  offsetGutter(gutterEl, scrollTop);
-  offsetGutter(rhymeSchemeGutterEl, scrollTop);
-  syncHighlightScroll();
+// The editor area is the only thing that scrolls, so the gutters and the
+// highlight overlay move with the text by construction. Sizing the textarea to
+// its content is what keeps it that way: it must never scroll on its own.
+function resizeEditorToContent() {
+  // A hidden panel measures zero, which would collapse the editor.
+  if (textareaEl.offsetParent === null) return;
+  textareaEl.style.height = 'auto';
+  textareaEl.style.height = textareaEl.scrollHeight + 'px';
 }
 
 // ── Rhyme scheme detection ──
@@ -886,7 +878,7 @@ function toggleRhymeScheme() {
   // other holding line heights measured at the old width, and its marks drift
   // a row further out of step with every line that wraps.
   invalidateLineHeightCache();
-  requestAnimationFrame(function refreshGutters() { updateGutters(); syncGutterScroll(); });
+  requestAnimationFrame(updateGutters);
 }
 
 function toggleSyllables() {
@@ -895,7 +887,7 @@ function toggleSyllables() {
   toggleBtn.classList.toggle('active', syllablesVisible);
   gutterEl.classList.toggle('visible', syllablesVisible);
   invalidateLineHeightCache();
-  requestAnimationFrame(function refreshGutters() { updateGutters(); syncGutterScroll(); });
+  requestAnimationFrame(updateGutters);
 }
 
 // ── Resize handle ──
@@ -930,8 +922,7 @@ function handleResizeEnd() {
   bodyStyle.cursor = '';
   bodyStyle.userSelect = '';
   invalidateLineHeightCache();
-  updateSyllableGutter();
-  updateRhymeSchemeGutter();
+  updateGutters();
 }
 
 // ── English-only filtering ──
@@ -957,6 +948,7 @@ textareaEl.addEventListener('mouseup', function() { handleSelection(true); });
 textareaEl.addEventListener('touchend', function() { handleSelection(true); });
 textareaEl.addEventListener('keyup', function() { handleSelection(false); });
 function updateGutters() {
+  resizeEditorToContent();
   updateSyllableGutter();
   updateRhymeSchemeGutter();
 }
@@ -973,18 +965,7 @@ if (document.fonts && document.fonts.ready) {
     updateGutters();
   });
 }
-let scrollRAF = null;
-textareaEl.addEventListener('scroll', function handleScroll() {
-  syncGutterScroll();
-  syncHighlightScroll();
-  handleEditorScrollForNav();
-  if (scrollRAF) cancelAnimationFrame(scrollRAF);
-  scrollRAF = requestAnimationFrame(function rafScroll() {
-    syncGutterScroll();
-    syncHighlightScroll();
-    scrollRAF = null;
-  });
-});
+lyricsAreaEl.addEventListener('scroll', handleEditorScrollForNav, { passive: true });
 
 resultsEl.addEventListener('click', function handleResultsClick(event) {
   const clicked = event.target;
@@ -1226,7 +1207,7 @@ function setBottomNavOffScreen(isOffScreen) {
 }
 
 function handleEditorScrollForNav() {
-  const scrollTop = textareaEl.scrollTop;
+  const scrollTop = lyricsAreaEl.scrollTop;
   const delta = scrollTop - lastNavScrollTop;
   if (Math.abs(delta) < NAV_SCROLL_THRESHOLD_PX) return;
 
@@ -1280,8 +1261,20 @@ function showFirstRunGuidance() {
 
 showFirstRunGuidance();
 
+let resizeRAF = null;
+
+function handleWindowResize() {
+  placeControlsForViewport();
+  if (resizeRAF) cancelAnimationFrame(resizeRAF);
+  resizeRAF = requestAnimationFrame(function remeasureAfterResize() {
+    invalidateLineHeightCache();
+    updateGutters();
+    resizeRAF = null;
+  });
+}
+
 placeControlsForViewport();
-window.addEventListener('resize', placeControlsForViewport);
+window.addEventListener('resize', handleWindowResize);
 
 // Initialize mobile view with lyrics tab
 if (isMobileView()) {
@@ -1316,8 +1309,7 @@ async function loadBlocklist() {
 // word list only refines them, so losing it degrades quality without blocking.
 Promise.all([loadDictionary(), loadBlocklist()]).then(function onRequiredLoaded() {
   statusEl.textContent = '';
-  updateSyllableGutter();
-  if (rhymeSchemeVisible) updateRhymeSchemeGutter();
+  updateGutters();
 }).catch(function onRequiredLoadError(err) {
   statusEl.textContent = 'Failed to load dictionary';
   console.error(err);
