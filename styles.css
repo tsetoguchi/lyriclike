@@ -1186,6 +1186,21 @@ header h1 {
   font-weight: 400;
 }
 
+/* The word the rhymes tab is currently holding, written beside its name the
+   way a note is written in the margin. */
+.tab-word {
+  font-family: var(--font-marginalia);
+  font-style: italic;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink-faded);
+}
+
+.tab-word:not(:empty)::before {
+  content: " · ";
+}
+
 /* ── Mobile tabs and bottom bar (hidden on desktop) ── */
 
 .mobile-tabs {
@@ -1278,6 +1293,10 @@ header h1 {
 
   .mobile-tab {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     padding: 10px;
     font-family: var(--font-display);
     font-size: 12px;
