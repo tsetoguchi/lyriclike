@@ -345,23 +345,29 @@ function findRhymes(targetWord) {
 
 // ── Results rendering ──
 
+function buildGroupBodyHtml(key, words) {
+  if (words.length === 0) return '<span class="no-rhymes">No rhymes found</span>';
+
+  const visible = words.slice(0, MAX_RESULTS_PER_GROUP);
+  let html = visible.map(word => `<span class="rhyme-word color-${key}">${word}</span>`).join('');
+
+  if (words.length > MAX_RESULTS_PER_GROUP) {
+    const remaining = words.length - MAX_RESULTS_PER_GROUP;
+    html += `<button class="show-more-btn" data-type="${key}" data-page="1" data-total="${words.length}">Show more (${remaining} remaining)</button>`;
+  }
+  return html;
+}
+
+// Groups render as headers only. Filling every body up front put thousands of
+// chips in the panel — five of the six groups invisible behind a collapsed
+// header — which is what made the panel paint its way down the screen on open.
+// A body is filled the first time its group is opened; see populateGroupBody().
 function buildGroupHtml(key, name, desc, words) {
   console.assert(typeof key === 'string', 'buildGroupHtml: key must be a string');
   console.assert(typeof name === 'string', 'buildGroupHtml: name must be a string');
   console.assert(Array.isArray(words), 'buildGroupHtml: words must be an array');
 
-  const isEmpty = words.length === 0;
-  const openClass = key === 'perfect' ? ' open' : '';
-  const visible = words.slice(0, MAX_RESULTS_PER_GROUP);
-  const hasMore = words.length > MAX_RESULTS_PER_GROUP;
-  const bodyContent = isEmpty
-    ? '<span class="no-rhymes">No rhymes found</span>'
-    : visible.map(word => `<span class="rhyme-word color-${key}">${word}</span>`).join('');
-  const showMoreBtn = hasMore
-    ? `<button class="show-more-btn" data-type="${key}" data-page="1" data-total="${words.length}">Show more (${words.length - MAX_RESULTS_PER_GROUP} remaining)</button>`
-    : '';
-
-  return `<div class="rhyme-group${openClass}" data-type="${key}">
+  return `<div class="rhyme-group" data-type="${key}">
     <div class="rhyme-group-header">
       <span class="name">
         <span class="dot dot-${key}"></span>
@@ -373,8 +379,19 @@ function buildGroupHtml(key, name, desc, words) {
       </span>
     </div>
     <div class="description">${desc}</div>
-    <div class="rhyme-group-body">${bodyContent}${showMoreBtn}</div>
+    <div class="rhyme-group-body"></div>
   </div>`;
+}
+
+function populateGroupBody(group) {
+  if (group.dataset.populated === '1') return;
+
+  const words = currentResults ? currentResults[group.dataset.type] : null;
+  const body = group.querySelector('.rhyme-group-body');
+  if (!body) return;
+
+  body.innerHTML = buildGroupBodyHtml(group.dataset.type, words || []);
+  group.dataset.populated = '1';
 }
 
 function renderResults(word, results) {
@@ -954,7 +971,9 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   const header = clicked.closest('.rhyme-group-header');
   if (header) {
     const group = header.parentElement;
-    if (group) group.classList.toggle('open');
+    if (!group) return;
+    if (!group.classList.contains('open')) populateGroupBody(group);
+    group.classList.toggle('open');
     return;
   }
 
