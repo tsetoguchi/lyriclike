@@ -577,24 +577,21 @@ function measureLineHeights(lines) {
     return cachedLineHeights;
   }
   lineMeasureEl.style.width = currentWidth + 'px';
-  // Render all lines at once with span markers to avoid rounding drift
+  // Render all lines at once with span markers to avoid rounding drift. A
+  // trailing marker closes the last line: measuring it against scrollHeight
+  // instead reports a short final row, because scrollHeight stops at the
+  // text rather than at the end of its line box.
   let html = '';
   for (let i = 0; i < lines.length; i++) {
-    const escaped = escapeHtml(lines[i]) || '\u200b';
     html += '<span data-ln="' + i + '">\u200b</span>';
-    if (i < lines.length - 1) {
-      html += escaped + '\n';
-    } else {
-      html += escaped;
-    }
+    html += (escapeHtml(lines[i]) || '\u200b') + '\n';
   }
+  html += '<span data-ln="end">\u200b</span>';
   lineMeasureEl.innerHTML = html;
   const markers = lineMeasureEl.querySelectorAll('span[data-ln]');
   const heights = [];
-  for (let j = 0; j < markers.length; j++) {
-    const top = markers[j].offsetTop;
-    const nextTop = (j < markers.length - 1) ? markers[j + 1].offsetTop : lineMeasureEl.scrollHeight;
-    heights.push(nextTop - top);
+  for (let j = 0; j < markers.length - 1; j++) {
+    heights.push(markers[j + 1].offsetTop - markers[j].offsetTop);
   }
   lineMeasureEl.innerHTML = '';
   cachedLineHeights = heights;
@@ -846,8 +843,12 @@ function toggleRhymeScheme() {
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
   rhymeSchemeToggleEl.classList.toggle('active', rhymeSchemeVisible);
   rhymeSchemeGutterEl.classList.toggle('visible', rhymeSchemeVisible);
+  // Showing or hiding either gutter changes the editor's width, so the text
+  // re-wraps for both of them. Refreshing only the toggled one leaves the
+  // other holding line heights measured at the old width, and its marks drift
+  // a row further out of step with every line that wraps.
   invalidateLineHeightCache();
-  if (rhymeSchemeVisible) requestAnimationFrame(function() { updateRhymeSchemeGutter(); syncGutterScroll(); });
+  requestAnimationFrame(function refreshGutters() { updateGutters(); syncGutterScroll(); });
 }
 
 function toggleSyllables() {
@@ -856,7 +857,7 @@ function toggleSyllables() {
   toggleBtn.classList.toggle('active', syllablesVisible);
   gutterEl.classList.toggle('visible', syllablesVisible);
   invalidateLineHeightCache();
-  requestAnimationFrame(function() { updateSyllableGutter(); syncGutterScroll(); });
+  requestAnimationFrame(function refreshGutters() { updateGutters(); syncGutterScroll(); });
 }
 
 // ── Resize handle ──
