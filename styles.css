@@ -99,9 +99,9 @@
   /* Motion. The slow step is what the bottom bar ducks and the notebook
      slides at, so anything that should feel like part of that movement
      shares it. */
-  --duration-fast: var(--duration-fast);
-  --duration-base: var(--duration-base);
-  --duration-slow: var(--duration-slow);
+  --duration-fast: 0.15s;
+  --duration-base: 0.2s;
+  --duration-slow: 0.28s;
   --duration-flash: 0.4s;
 
   /* Stacking. Only two things ever lift off the page: the bar above the
