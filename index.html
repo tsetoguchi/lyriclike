@@ -92,17 +92,20 @@
       </div>
     </div>
   </div>
-  <div id="name-lyric-overlay" hidden>
-    <div id="name-lyric-panel" role="dialog" aria-modal="true" aria-labelledby="name-lyric-title">
-      <div id="name-lyric-header"><span id="name-lyric-title">New lyric</span></div>
-      <div id="name-lyric-body">
-        <label id="name-lyric-label" for="name-lyric-input">Title</label>
-        <input id="name-lyric-input" type="text" maxlength="300"
-               autocomplete="off" autocorrect="off" spellcheck="false">
+  <div id="dialog-overlay" hidden>
+    <div id="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div id="dialog-header"><span id="dialog-title">New lyric</span></div>
+      <div id="dialog-body">
+        <p id="dialog-message" hidden></p>
+        <div id="dialog-field">
+          <label id="dialog-label" for="dialog-input">Title</label>
+          <input id="dialog-input" type="text" maxlength="300"
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
       </div>
-      <div id="name-lyric-actions">
-        <button id="name-lyric-cancel" class="toggle-btn">Cancel</button>
-        <button id="name-lyric-confirm" class="toggle-btn">Create</button>
+      <div id="dialog-actions">
+        <button id="dialog-cancel" class="toggle-btn">Cancel</button>
+        <button id="dialog-confirm" class="toggle-btn">Create</button>
       </div>
     </div>
   </div>
