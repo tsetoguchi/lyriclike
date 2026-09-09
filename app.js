@@ -41,10 +41,6 @@ let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') === '1';
 let blocklist = null;
 let debounceTimer = null;
 let lastTextValue = '';
-// The word the rhymes tab was last auto-opened for. A repeat tap on that
-// same word stays in the editor so the word can be edited; see
-// hasEarnedTabSwitch().
-let autoSwitchedWord = null;
 
 // ── DOM references ──
 const textareaEl = document.getElementById('lyrics');
@@ -63,6 +59,7 @@ const wordBarEl = document.querySelector('.selected-word-bar');
 const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
 const lyricsAreaEl = document.querySelector('.lyrics-area');
+const tabRhymeWordEl = document.getElementById('tab-rhyme-word');
 const bottomNavEl = document.getElementById('bottom-nav');
 const notebookBtn = document.getElementById('notebook-btn');
 const createBtn = document.getElementById('create-btn');
@@ -405,6 +402,9 @@ function populateGroupBody(group) {
 function renderResults(word, results) {
   if (typeof word !== 'string') return;
   selectedWordEl.textContent = word;
+  // The tab names the word it is holding, so the rhymes are visibly one tap
+  // away without anything switching underneath the writer.
+  tabRhymeWordEl.textContent = word;
   currentResults = results;
 
   if (!results) {
@@ -483,7 +483,7 @@ function getWordContext(text, cursorPos) {
   return text.substring(lineStart, lineEnd).trim();
 }
 
-function handleSelection(switchTab) {
+function handleSelection() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function processSelection() {
     const text = textareaEl.value;
@@ -503,27 +503,7 @@ function handleSelection(switchTab) {
     wordBarEl.classList.remove('flash');
     void wordBarEl.offsetWidth;
     wordBarEl.classList.add('flash');
-    if (switchTab && results && shouldOpenRhymesTab(text, start, end, word)) {
-      autoSwitchedWord = word.toLowerCase();
-      switchMobileTab(RHYMES_TAB);
-    }
   }, DEBOUNCE_DELAY_MS);
-}
-
-// A tap opens the rhymes tab only when it reads as a lookup. Two things say
-// it isn't one: a caret parked at the end of a line, where the writer is
-// lining up to type rather than asking about the word behind it; and a repeat
-// tap on the word already showing, which is how a word is reached for
-// editing. A deliberate selection (double-tap / long-press) overrides both.
-function shouldOpenRhymesTab(text, start, end, word) {
-  if (!isMobileView()) return false;
-  if (start !== end) return true;
-  if (isCaretAtLineEnd(text, start)) return false;
-  return word.toLowerCase() !== autoSwitchedWord;
-}
-
-function isCaretAtLineEnd(text, caret) {
-  return caret === text.length || text[caret] === '\n';
 }
 
 // ── Syllable counting ──
@@ -951,9 +931,9 @@ function setEnglishOnly(isEnabled) {
 
 toggleBtn.addEventListener('click', toggleSyllables);
 rhymeSchemeToggleEl.addEventListener('click', toggleRhymeScheme);
-textareaEl.addEventListener('mouseup', function() { handleSelection(true); });
-textareaEl.addEventListener('touchend', function() { handleSelection(true); });
-textareaEl.addEventListener('keyup', function() { handleSelection(false); });
+textareaEl.addEventListener('mouseup', handleSelection);
+textareaEl.addEventListener('touchend', handleSelection);
+textareaEl.addEventListener('keyup', handleSelection);
 function updateGutters() {
   resizeEditorToContent();
   updateSyllableGutter();
@@ -1132,7 +1112,6 @@ document.addEventListener('mouseup', handleResizeEnd);
 
 const MOBILE_BREAKPOINT = 768;
 const LYRICS_TAB = 'lyrics';
-const RHYMES_TAB = 'rhymes';
 
 function isMobileView() {
   return window.innerWidth <= MOBILE_BREAKPOINT;
@@ -1247,9 +1226,9 @@ textareaEl.addEventListener('focus', function handleFocus() {
 
 // ── First-run guidance ──
 
-const RHYME_HINT_TOUCH = 'Tap any word to see what rhymes with it.';
+const RHYME_HINT_TOUCH = 'Tap a word, then open Rhymes to see what it rhymes with.';
 const RHYME_HINT_POINTER = 'Click any word to see what rhymes with it.';
-const EMPTY_RESULTS_TOUCH = 'Tap a word in your lyrics<br>to see what rhymes with it';
+const EMPTY_RESULTS_TOUCH = 'Tap a word in your lyrics<br>and its rhymes appear here';
 const EMPTY_RESULTS_POINTER = 'Click a word in your lyrics<br>to see what rhymes with it';
 
 // The tap/click wording follows the pointer, not the viewport width: a narrow
