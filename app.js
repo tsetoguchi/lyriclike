@@ -481,21 +481,27 @@ function handleSelection(switchTab) {
     wordBarEl.classList.remove('flash');
     void wordBarEl.offsetWidth;
     wordBarEl.classList.add('flash');
-    if (switchTab && results && hasEarnedTabSwitch(word, start !== end)) {
+    if (switchTab && results && shouldOpenRhymesTab(text, start, end, word)) {
       autoSwitchedWord = word.toLowerCase();
       switchMobileTab(RHYMES_TAB);
     }
   }, DEBOUNCE_DELAY_MS);
 }
 
-// A tap on a word opens the rhymes tab, but only the first time for that word.
-// Tapping the same word again leaves the caret in the editor, which is what
-// makes a word reachable for editing — otherwise every tap would bounce the
-// writer out of the lyrics. A deliberate selection (double-tap / long-press)
-// always switches, so a re-lookup of the current word is still one gesture.
-function hasEarnedTabSwitch(word, isDeliberateSelection) {
+// A tap opens the rhymes tab only when it reads as a lookup. Two things say
+// it isn't one: a caret parked at the end of a line, where the writer is
+// lining up to type rather than asking about the word behind it; and a repeat
+// tap on the word already showing, which is how a word is reached for
+// editing. A deliberate selection (double-tap / long-press) overrides both.
+function shouldOpenRhymesTab(text, start, end, word) {
   if (!isMobileView()) return false;
-  return isDeliberateSelection || word.toLowerCase() !== autoSwitchedWord;
+  if (start !== end) return true;
+  if (isCaretAtLineEnd(text, start)) return false;
+  return word.toLowerCase() !== autoSwitchedWord;
+}
+
+function isCaretAtLineEnd(text, caret) {
+  return caret === text.length || text[caret] === '\n';
 }
 
 // ── Syllable counting ──
