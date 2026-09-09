@@ -2,7 +2,9 @@ const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_TITLE = 'Untitled';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
+const LYRIC_TITLE_LABEL = 'Title';
 const NEW_LYRIC_HEADING = 'New lyric';
+const DELETE_LYRIC_HEADING = 'Delete lyric';
 const RENAME_HEADING = 'Rename lyric';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
@@ -14,50 +16,91 @@ let currentTitle = 'Untitled';
 let lastSavedBody = '';
 let saveTimer = null;
 
-// ── Naming dialog ──
+// ── Dialog ──
 
-// Resolves with the name entered, or null if the writer backed out. The
-// browser's own prompt does not belong to this app; this one is the same
-// surface, motion and type as every other panel.
-let resolveNameDialog = null;
+// One panel for everything the app needs to ask. It comes in three shapes:
+// a question with a field (naming a lyric), a question without one (deleting
+// a lyric), and a question whose field has to be typed correctly before the
+// answer counts (deleting an account). Resolves with the field's contents, or
+// true when there is no field, or null if the person backed out.
+let resolveDialog = null;
+let requiredAnswer = null;
 
-function askForLyricName({ heading, confirmLabel, value }) {
-  const overlay = document.getElementById('name-lyric-overlay');
-  const input = document.getElementById('name-lyric-input');
+function openDialog({ heading, message, confirmLabel, danger, field }) {
+  const overlay = document.getElementById('dialog-overlay');
+  const input = document.getElementById('dialog-input');
+  const confirm = document.getElementById('dialog-confirm');
+  const messageEl = document.getElementById('dialog-message');
+  const fieldEl = document.getElementById('dialog-field');
 
-  document.getElementById('name-lyric-title').textContent = heading;
-  document.getElementById('name-lyric-confirm').textContent = confirmLabel;
-  input.value = value || '';
+  document.getElementById('dialog-title').textContent = heading;
+  confirm.textContent = confirmLabel;
+  confirm.classList.toggle('danger-btn', Boolean(danger));
+
+  messageEl.textContent = message || '';
+  messageEl.hidden = !message;
+
+  fieldEl.hidden = !field;
+  requiredAnswer = field && field.mustMatch ? field.mustMatch : null;
+  if (field) {
+    document.getElementById('dialog-label').textContent = field.label;
+    input.value = field.value || '';
+  }
+  updateDialogConfirmState();
+
   overlay.hidden = false;
   overlay.classList.add('open');
 
   // Focus once the panel is on its way in, so iOS raises the keyboard for it.
-  setTimeout(() => { input.focus(); input.select(); }, FOCUS_DELAY_MS);
+  setTimeout(() => {
+    if (field) { input.focus(); input.select(); } else { confirm.focus(); }
+  }, FOCUS_DELAY_MS);
 
-  return new Promise(resolve => { resolveNameDialog = resolve; });
+  return new Promise(resolve => { resolveDialog = resolve; });
 }
 
-function closeNameDialog(name) {
-  const overlay = document.getElementById('name-lyric-overlay');
+// Only a field that has to match can hold the button shut.
+function updateDialogConfirmState() {
+  const input = document.getElementById('dialog-input');
+  document.getElementById('dialog-confirm').disabled =
+    requiredAnswer !== null && input.value.trim() !== requiredAnswer;
+}
+
+function closeDialog(answer) {
+  const overlay = document.getElementById('dialog-overlay');
   overlay.classList.remove('open');
   // Wait out the fade before taking it out of the page entirely.
   setTimeout(() => { if (!overlay.classList.contains('open')) overlay.hidden = true; }, CLOSE_DELAY_MS);
-  const resolve = resolveNameDialog;
-  resolveNameDialog = null;
-  if (resolve) resolve(name);
+  const resolve = resolveDialog;
+  resolveDialog = null;
+  requiredAnswer = null;
+  if (resolve) resolve(answer);
 }
 
-document.getElementById('name-lyric-confirm').addEventListener('click', () => {
-  closeNameDialog(document.getElementById('name-lyric-input').value);
+function submitDialog() {
+  if (document.getElementById('dialog-confirm').disabled) return;
+  const fieldEl = document.getElementById('dialog-field');
+  closeDialog(fieldEl.hidden ? true : document.getElementById('dialog-input').value);
+}
+
+document.getElementById('dialog-confirm').addEventListener('click', submitDialog);
+document.getElementById('dialog-cancel').addEventListener('click', () => closeDialog(null));
+document.getElementById('dialog-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('dialog-overlay')) closeDialog(null);
 });
-document.getElementById('name-lyric-cancel').addEventListener('click', () => closeNameDialog(null));
-document.getElementById('name-lyric-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('name-lyric-overlay')) closeNameDialog(null);
+document.getElementById('dialog-input').addEventListener('input', updateDialogConfirmState);
+document.getElementById('dialog-overlay').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'dialog-input') { e.preventDefault(); submitDialog(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeDialog(null); }
 });
-document.getElementById('name-lyric-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); closeNameDialog(e.target.value); }
-  if (e.key === 'Escape') { e.preventDefault(); closeNameDialog(null); }
-});
+
+function askForLyricName({ heading, confirmLabel, value }) {
+  return openDialog({
+    heading,
+    confirmLabel,
+    field: { label: LYRIC_TITLE_LABEL, value },
+  });
+}
 
 function openLyricsList() {
   document.getElementById('lyrics-list-overlay').classList.add('open');
@@ -112,7 +155,7 @@ async function loadLyricsList() {
 
       item.querySelector('.lyrics-list-item-main').addEventListener('click', () => loadLyric(lyric.id));
       item.querySelectorAll('.lyrics-action-btn')[0].addEventListener('click', e => { e.stopPropagation(); renameLyric(lyric.id, lyric.title); });
-      item.querySelectorAll('.lyrics-action-btn')[1].addEventListener('click', e => { e.stopPropagation(); deleteLyric(lyric.id); });
+      item.querySelectorAll('.lyrics-action-btn')[1].addEventListener('click', e => { e.stopPropagation(); deleteLyric(lyric.id, lyric.title); });
 
       container.appendChild(item);
     }
@@ -186,13 +229,20 @@ async function saveNewLyric() {
   }
 }
 
-async function deleteLyric(id) {
-  if (!confirm('Delete this lyric?')) return;
+async function deleteLyric(id, title) {
+  const confirmed = await openDialog({
+    heading: DELETE_LYRIC_HEADING,
+    message: `“${title}” will be deleted, along with everything written in it. This cannot be undone.`,
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!confirmed) return;
+
   await fetch(`/api/lyrics/${id}`, { method: 'DELETE' });
 
   if (id === currentLyricId) {
     currentLyricId = crypto.randomUUID();
-    currentTitle = 'Untitled';
+    currentTitle = DEFAULT_TITLE;
     document.getElementById('lyrics').value = '';
     document.getElementById('lyrics').dispatchEvent(new Event('input'));
     updatePanelHeader();
