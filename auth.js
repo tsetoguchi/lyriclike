@@ -38,10 +38,14 @@ document.getElementById('sign-in-btn').addEventListener('click', () => {
   window.location.href = '/api/auth/google/start';
 });
 
-document.getElementById('sign-out-btn').addEventListener('click', async () => {
+async function signOut() {
   await fetch('/api/auth/logout', { method: 'POST' });
+  closeAccountSettings();
   showSignIn();
-});
+}
+
+document.getElementById('sign-out-btn').addEventListener('click', signOut);
+document.getElementById('settings-sign-out-btn').addEventListener('click', signOut);
 
 document.getElementById('account-settings-btn').addEventListener('click', openAccountSettings);
 document.getElementById('close-account-settings-btn').addEventListener('click', closeAccountSettings);

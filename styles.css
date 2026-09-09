@@ -239,6 +239,10 @@ header h1 {
   background: var(--ink-wash);
 }
 
+.nav-icon {
+  display: none;
+}
+
 .danger-btn {
   border-color: var(--danger-border);
   color: var(--danger);
@@ -330,6 +334,14 @@ header h1 {
   border-right: 1px solid var(--margin-line);
   overflow-y: hidden;
   user-select: none;
+}
+
+/* Promoted so the scroll offset is a compositor move, not a repaint. The
+   wrapper is now the flex item in each gutter, so it inherits the rule its
+   rows needed: never shrink, or the marks drift off their lines. */
+.gutter-inner {
+  will-change: transform;
+  flex-shrink: 0;
 }
 
 .syllable-gutter:not(.visible) .syl-line {
@@ -1162,15 +1174,36 @@ header h1 {
 /* ── Mobile layout ── */
 
 @media (max-width: 768px) {
+  /* Account controls on the left, wordmark centred. The trailing spacer
+     column matches the left cell so the title centres on the header rather
+     than on whatever space the controls leave behind. */
   header {
-    padding: 10px 16px;
-    gap: 6px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
     padding-top: calc(10px + env(safe-area-inset-top));
   }
 
   header h1 {
-    width: 100%;
+    grid-column: 2;
+    width: auto;
+    text-align: center;
+  }
+
+  header #user-area {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    width: auto;
+  }
+
+  header .header-right {
+    grid-column: 3;
+    width: auto;
+    margin-left: 0;
   }
 
   .toggle-btn {
@@ -1178,39 +1211,33 @@ header h1 {
     padding: 6px 8px;
   }
 
-  /* Even columns: the three tool buttons share their row equally,
-     and the account controls fill a full-width row below. */
-  header > .toggle-btn {
-    flex: 1 1 0;
-    font-size: 10px;
-    letter-spacing: 0.03em;
-    padding: 6px 2px;
-  }
-
-  .header-right {
-    width: 100%;
-    margin-left: 0;
-  }
-
+  /* The account controls occupy the header's left cell, so they stay on one
+     line and shrink rather than push the wordmark off centre. */
   #user-area {
-    width: 100%;
-  }
-
-  #user-area .toggle-btn {
-    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
   }
 
   #user-info {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    width: 100%;
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: auto;
   }
 
-  #user-email {
-    width: 100%;
-    text-align: center;
+  /* Sized so both signed-in controls clear the centred wordmark. */
+  #user-area .toggle-btn {
+    font-size: 9px;
+    padding: 5px 6px;
+    letter-spacing: 0.02em;
+  }
+
+  /* No room for these beside a centred wordmark; the account panel carries
+     the email and the sign-out control instead. */
+  #user-email,
+  header #sign-out-btn {
+    display: none;
   }
 
   #status {
@@ -1385,31 +1412,59 @@ header h1 {
     opacity: 0;
   }
 
-  .bottom-nav > .toggle-btn,
-  .bottom-nav #user-area {
+  .bottom-nav > .toggle-btn {
     flex: 1 1 0;
     min-width: 0;
   }
 
+  /* Bar items read as icon-and-label targets rather than buttons: no box, no
+     fill, just the mark and its name. Separation comes from the icons and the
+     even columns, as on the apps this follows. */
   .bottom-nav .toggle-btn {
     width: 100%;
-    font-size: 10px;
-    letter-spacing: 0.02em;
-    padding: 8px 4px;
-    /* Four labels across a phone is tight; let the long ones wrap rather
-       than run past their own border. */
-    white-space: normal;
-    line-height: 1.25;
-  }
-
-  .bottom-nav #user-info {
     display: flex;
-    gap: 6px;
-    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 4px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--ink-faded);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 
-  .bottom-nav #user-email {
-    display: none;
+  .bottom-nav .nav-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+
+  /* Filled dots read as marks on the page; the strokes are the lines they
+     annotate. */
+  .bottom-nav .nav-icon circle {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  /* Active is a colour change on icon and label together, since there is no
+     longer a box to fill. */
+  .bottom-nav .toggle-btn.active {
+    background: transparent;
+    border: none;
+    color: var(--margin-red);
+  }
+
+  .bottom-nav .toggle-btn:hover {
+    background: transparent;
   }
 }
 
