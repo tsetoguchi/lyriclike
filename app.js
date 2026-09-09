@@ -60,6 +60,10 @@ const selectedContextEl = document.getElementById('selected-context');
 const wordBarEl = document.querySelector('.selected-word-bar');
 const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
+const bottomNavEl = document.getElementById('bottom-nav');
+const headerEl = document.querySelector('header');
+const headerRightEl = document.querySelector('.header-right');
+const userAreaEl = document.getElementById('user-area');
 
 // ── Restore session state ──
 if (englishOnly) englishToggleEl.classList.add('active');
@@ -956,6 +960,7 @@ let scrollRAF = null;
 textareaEl.addEventListener('scroll', function handleScroll() {
   syncGutterScroll();
   syncHighlightScroll();
+  handleEditorScrollForNav();
   if (scrollRAF) cancelAnimationFrame(scrollRAF);
   scrollRAF = requestAnimationFrame(function rafScroll() {
     syncGutterScroll();
@@ -1150,6 +1155,7 @@ function switchMobileTab(tab) {
   // Swap immediately and fade the incoming panel in; a delayed swap
   // shows a blank desk, and a lingering inline opacity:0 would hide
   // the rhymes panel after a mobile-to-desktop resize.
+  setBottomNavOffScreen(tab !== LYRICS_TAB);
   if (tab !== LYRICS_TAB) endEditorSelection();
 
   mainEl.classList.remove('show-lyrics', 'show-rhymes');
@@ -1167,6 +1173,51 @@ mobileTabsEl.addEventListener('click', function handleTabClick(event) {
   if (!tabButton) return;
   switchMobileTab(tabButton.dataset.tab);
 });
+
+// ── Bottom navigation (mobile) ──
+
+// Small scrolls are the writer settling the page, not asking for space; only
+// a deliberate one moves the bar.
+const NAV_SCROLL_THRESHOLD_PX = 10;
+
+let lastNavScrollTop = 0;
+let controlsAreInBottomNav = false;
+
+// The controls are moved rather than duplicated, so their ids stay unique and
+// the listeners bound at startup keep working in either position.
+function placeControlsForViewport() {
+  const wantsBottomNav = isMobileView();
+  if (wantsBottomNav === controlsAreInBottomNav) return;
+
+  if (wantsBottomNav) {
+    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, englishToggleEl, userAreaEl);
+  } else {
+    headerEl.insertBefore(toggleBtn, headerRightEl);
+    headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
+    headerEl.insertBefore(englishToggleEl, headerRightEl);
+    headerRightEl.appendChild(userAreaEl);
+  }
+  controlsAreInBottomNav = wantsBottomNav;
+}
+
+function setBottomNavDucked(isDucked) {
+  bottomNavEl.classList.toggle('ducked', isDucked);
+}
+
+function setBottomNavOffScreen(isOffScreen) {
+  bottomNavEl.classList.toggle('off-screen', isOffScreen);
+}
+
+function handleEditorScrollForNav() {
+  const scrollTop = textareaEl.scrollTop;
+  const delta = scrollTop - lastNavScrollTop;
+  if (Math.abs(delta) < NAV_SCROLL_THRESHOLD_PX) return;
+
+  // Scrolling down hands the screen to the lyrics; scrolling up asks for the
+  // tools back. At the very top there is nothing to duck for.
+  setBottomNavDucked(delta > 0 && scrollTop > 0);
+  lastNavScrollTop = scrollTop;
+}
 
 // ── Keyboard-aware resize on mobile ──
 
@@ -1211,6 +1262,9 @@ function showFirstRunGuidance() {
 }
 
 showFirstRunGuidance();
+
+placeControlsForViewport();
+window.addEventListener('resize', placeControlsForViewport);
 
 // Initialize mobile view with lyrics tab
 if (isMobileView()) {
