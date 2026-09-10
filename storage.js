@@ -331,9 +331,10 @@ function updatePanelHeader() {
   if (document.activeElement !== el) el.textContent = currentTitle;
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+// escapeHtml lives in app.js. These three scripts share one global scope, so a
+// second copy here does not shadow anything — it replaces app.js's version for
+// app.js's own callers too, because this file loads last. That collision has
+// happened twice now; leave the single definition where it is.
 
 function formatDate(ts) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
