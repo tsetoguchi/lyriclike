@@ -76,25 +76,27 @@
   font-display: swap;
 }
 
-/* ── Design tokens: the notepad palette (see design_plan.md §2) ──
-   Two materials: paper (what the writer owns) and the desk/binding
-   (what the app owns). Every color in the app flows through here. */
+/* ── Design tokens: the Blue Hour palette (see design_plan.md §2) ──
+   The notepad after dark. Two materials remain: paper (what the writer
+   owns) and the desk/binding (what the app owns), now lit by a lamp
+   rather than daylight — a cool slate ground with a warm amber accent.
+   Every color in the app flows through here. */
 
 :root {
   /* Paper */
-  --paper: #f5e9d6;             /* cream pad surface */
-  --rule: #d8c4a6;              /* soft tan hairlines within the paper */
-  --margin-line: #3a332a;       /* where chrome meets paper: header, tabs, bar */
-  --margin-red: #c0392b;        /* red ink accents (grips, focus, marks) */
-  --margin-red-wash: rgba(192, 57, 43, 0.06);  /* active-page tint */
-  --ink: #26221b;               /* warm near-black writing ink */
-  --ink-faded: #6e654f;         /* pencil: marginalia, placeholders (4.8:1 on paper) */
-  --ink-wash: rgba(38, 34, 27, 0.06);   /* hover/focus tint on paper */
-  --ink-wash-strong: rgba(38, 34, 27, 0.12);
-  --ink-border: rgba(38, 34, 27, 0.25); /* button borders on paper cards */
-  --paper-card: #fbf9f2;        /* white memo card (rhymes panel, overlays) */
+  --paper: #141922;             /* slate pad surface (header, tabs, bottom bar) */
+  --rule: #2c3441;              /* soft hairlines within the paper */
+  --margin-line: #3b4553;       /* where chrome meets paper: header, tabs, bar */
+  --accent: #e9b45f;            /* amber lamp accents (grips, focus, marks) */
+  --accent-wash: rgba(233, 180, 95, 0.10);  /* active-page tint */
+  --ink: #e2e7ef;               /* cool off-white writing ink (12.9:1 on the card) */
+  --ink-faded: #8b96a6;         /* pencil: marginalia, placeholders (5.3:1 on the card) */
+  --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
+  --ink-wash-strong: rgba(226, 231, 239, 0.14);
+  --ink-border: rgba(226, 231, 239, 0.22); /* button borders on paper cards */
+  --paper-card: #1c222d;        /* the memo card (lyrics body, rhymes panel, overlays) */
 
-  --desk: #221b14;              /* surface the pad rests on */
+  --desk: #0a0d13;              /* surface the pad rests on */
 
   /* Motion. The slow step is what the bottom bar ducks and the notebook
      slides at, so anything that should feel like part of that movement
@@ -185,46 +187,52 @@
   --editor-pad: 20px;
   /* Set from the measured bar in app.js; zero wherever the bar is hidden. */
   --bottom-nav-height: 0px;
-  --border-focus: #6e654f;
+  --border-focus: #8b96a6;
 
-  /* States (red ink on paper) */
-  --danger: #b3403a;
-  --danger-hover: #8e2b20;
-  --danger-border: rgba(179, 64, 58, 0.45);
-  --danger-border-hover: #b3403a;
-  --danger-bg: rgba(179, 64, 58, 0.08);
+  /* States (red ink, kept red so danger never reads as the amber accent) */
+  --danger: #f0837a;
+  --danger-hover: #ff9f97;
+  --danger-border: rgba(240, 131, 122, 0.45);
+  --danger-border-hover: #f0837a;
+  --danger-bg: rgba(240, 131, 122, 0.14);
 
-  /* Rhyme categories: saturated inks, legible on the white memo card */
-  --rhyme-perfect: #1f7a43;
-  --rhyme-family: #2c5f9e;
-  --rhyme-additive: #8c6d1f;
-  --rhyme-subtractive: #b4551d;
-  --rhyme-assonance: #a83a68;
-  --rhyme-consonance: #6b4fa1;
+  /* Rhyme categories: lifted off the dark card, six hues that stay apart
+     from each other at the 8px dot the panel draws them as */
+  --rhyme-perfect: #5ad19a;
+  --rhyme-family: #7cb8ff;
+  --rhyme-additive: #cfc06b;
+  --rhyme-subtractive: #ff9a6b;
+  --rhyme-assonance: #f58fc0;
+  --rhyme-consonance: #a99bf7;
 
   /* Rhyme-scheme letter cycle (consumed by SCHEME_COLORS in app.js).
-     Re-inked for the paper margin: saturated inks, not neons. */
-  --scheme-0: #1c7040;
-  --scheme-1: #2c5f9e;
-  --scheme-2: #7a5f1a;
-  --scheme-3: #9e4a19;
-  --scheme-4: #a83a68;
-  --scheme-5: #6b4fa1;
-  --scheme-6: #14766e;
-  --scheme-7: #b3403a;
-  --scheme-8: #1d6e97;
-  --scheme-9: #7e4b9e;
+     Re-inked for the dark margin: the six category hues first, so a
+     scheme letter and its category dot read as the same ink. */
+  --scheme-0: #5ad19a;
+  --scheme-1: #7cb8ff;
+  --scheme-2: #cfc06b;
+  --scheme-3: #ff9a6b;
+  --scheme-4: #f58fc0;
+  --scheme-5: #a99bf7;
+  --scheme-6: #4fd0c4;
+  --scheme-7: #f0837a;
+  --scheme-8: #6cc4f0;
+  --scheme-9: #cf9ef0;
 
-  /* Effects */
-  --highlight-word: rgba(192, 57, 43, 0.18);  /* red-ink wash on paper */
-  --selection: rgba(192, 57, 43, 0.25);
-  --flash: rgba(192, 57, 43, 0.14);
-  --scrim: rgba(20, 14, 8, 0.55);             /* dimmed desk */
-  --scrim-light: rgba(20, 14, 8, 0.45);
-  --shadow-popup: 0 8px 32px rgba(20, 14, 8, 0.35);
-  --shadow-bottom-nav: 0 -2px 12px rgba(20, 14, 8, 0.18);
-  --sheet-handle: rgba(38, 34, 27, 0.25);
-  --scrollbar-thumb: rgba(38, 34, 27, 0.25);
+  /* Effects. The selection washes are cool, not amber, and this is not an
+     oversight: a warm wash has to stay dark enough for light ink to read on
+     top of it, and every amber dark enough to do that composites to khaki
+     over the slate card. The lift below is the Family ink, which keeps the
+     picked word looking picked. Amber stays on the chrome. */
+  --highlight-word: rgba(124, 184, 255, 0.22);  /* the word the panel is showing */
+  --selection: rgba(124, 184, 255, 0.30);
+  --flash: rgba(124, 184, 255, 0.20);
+  --scrim: rgba(0, 0, 0, 0.66);                /* dimmed desk */
+  --scrim-light: rgba(0, 0, 0, 0.55);
+  --shadow-popup: 0 8px 32px rgba(0, 0, 0, 0.60);
+  --shadow-bottom-nav: 0 -2px 12px rgba(0, 0, 0, 0.45);
+  --sheet-handle: rgba(226, 231, 239, 0.28);
+  --scrollbar-thumb: rgba(226, 231, 239, 0.24);
 
   /* Type */
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
@@ -245,7 +253,7 @@ html {
 }
 
 :focus-visible {
-  outline: 2px solid var(--margin-red);
+  outline: 2px solid var(--accent);
   outline-offset: var(--focus-ring-offset);
 }
 
@@ -345,9 +353,9 @@ body.signed-in #notebook-btn {
 }
 
 .toggle-btn.active {
-  background: var(--margin-red-wash);
-  border-color: var(--margin-red);
-  color: var(--margin-red);
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .main {
@@ -406,7 +414,7 @@ body.signed-in #notebook-btn {
 
 .resize-handle:hover::after,
 .resize-handle.active::after {
-  background: var(--margin-red);
+  background: var(--accent);
 }
 
 /* The single scroller. Nothing inside it scrolls on its own, so the gutters
@@ -1220,7 +1228,7 @@ body.signed-in #notebook-btn {
 }
 
 #dialog-input:focus {
-  border-color: var(--margin-red);
+  border-color: var(--accent);
 }
 
 #dialog-input::placeholder {
@@ -1240,9 +1248,9 @@ body.signed-in #notebook-btn {
 }
 
 #dialog-confirm {
-  background: var(--margin-red-wash);
-  border-color: var(--margin-red);
-  color: var(--margin-red);
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Losing work should look like it. */
@@ -1333,8 +1341,8 @@ body.signed-in #notebook-btn {
 
 /* The red margin marks the open page. */
 .lyrics-list-item.active {
-  background: var(--margin-red-wash);
-  border-left: 3px solid var(--margin-red);
+  background: var(--accent-wash);
+  border-left: 3px solid var(--accent);
 }
 
 .lyrics-list-item-main {
@@ -1554,7 +1562,7 @@ body.signed-in #notebook-btn {
 
   .mobile-tab.active {
     color: var(--ink);
-    border-bottom-color: var(--margin-red);
+    border-bottom-color: var(--accent);
   }
 
   .main {
@@ -1774,7 +1782,7 @@ body.signed-in #notebook-btn {
   .bottom-nav .toggle-btn.active {
     background: transparent;
     border: none;
-    color: var(--margin-red);
+    color: var(--accent);
   }
 
   .bottom-nav .toggle-btn:hover {
