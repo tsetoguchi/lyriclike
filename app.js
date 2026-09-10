@@ -615,6 +615,17 @@ function measureLineHeights(lines) {
 function resizeEditorToContent() {
   // A hidden panel measures zero, which would collapse the editor.
   if (textareaEl.offsetParent === null) return;
+
+  // Reading the content height means collapsing the textarea to it first, and
+  // that collapses the scroll container around it too: the page briefly gets
+  // shorter than its own scroll offset, so the browser clamps the offset to
+  // the new bottom. Chrome remembers where the offset was meant to be and puts
+  // it back once the height returns; Safari keeps the clamped value, then
+  // scrolls the caret back into view — which is the view jumping a line on
+  // every letter typed at the bottom of a lyric. Hold the offset ourselves so
+  // it does not depend on which browser is asked.
+  const scrollTop = lyricsAreaEl.scrollTop;
+
   textareaEl.style.height = 'auto';
   const contentHeight = textareaEl.scrollHeight;
   // A short lyric still has to fill the pad, or the writing surface stops
@@ -622,6 +633,8 @@ function resizeEditorToContent() {
   // rather than declared: a percentage min-height resolves against the
   // wrapper, whose own height is content-driven, so it never applies.
   textareaEl.style.height = Math.max(contentHeight, lyricsAreaEl.clientHeight) + 'px';
+
+  lyricsAreaEl.scrollTop = scrollTop;
 }
 
 // ── Rhyme scheme detection ──
