@@ -185,6 +185,8 @@
   --editor-font-size: var(--text-title-2);
   --line-pitch: 36px;
   --editor-pad: 20px;
+  /* Set from the measured bar in app.js; zero wherever the bar is hidden. */
+  --bottom-nav-height: 0px;
   --border-focus: #8b96a6;
 
   /* States (red ink, kept red so danger never reads as the amber accent) */
@@ -1682,9 +1684,21 @@ body.signed-in #notebook-btn {
     padding: var(--space-8) var(--space-4);
   }
 
+  /* The bar floats over the editor rather than beside it, so the last lines
+     of a lyric would be written underneath it. Padding gives them a floor to
+     land on, and scroll-padding keeps the caret from being scrolled into the
+     one strip of the editor the bar is covering. */
+  #lyrics {
+    padding-bottom: calc(var(--editor-pad) + var(--bottom-nav-height));
+  }
+
+  .lyrics-area {
+    scroll-padding-bottom: var(--bottom-nav-height);
+  }
+
   /* The tool bar rides at the bottom of the visible area, out of the way of
-     the writing. It ducks on a downward scroll, returns on an upward one, and
-     leaves entirely while the rhymes panel is showing. */
+     the writing. It shows only at the top of the lyric, ducks as soon as the
+     page moves, and leaves entirely while the rhymes panel is showing. */
   .bottom-nav {
     position: absolute;
     left: 0;
