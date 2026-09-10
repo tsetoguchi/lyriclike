@@ -1184,11 +1184,6 @@ mobileTabsEl.addEventListener('click', function handleTabClick(event) {
 
 // ── Bottom navigation (mobile) ──
 
-// Small scrolls are the writer settling the page, not asking for space; only
-// a deliberate one moves the bar.
-const NAV_SCROLL_THRESHOLD_PX = 10;
-
-let lastNavScrollTop = 0;
 let controlsAreInBottomNav = false;
 
 // The controls are moved rather than duplicated, so their ids stay unique and
@@ -1220,15 +1215,22 @@ function setBottomNavOffScreen(isOffScreen) {
   bottomNavEl.classList.toggle('off-screen', isOffScreen);
 }
 
+// The bar belongs to the top of the page and nowhere else. Reading the scroll
+// direction instead looked the same until the keyboard arrived: iOS shrinks
+// the editor, the clamped scrollTop reads as an upward scroll, and the bar
+// came back over the writing and stayed there. Position cannot be argued with.
 function handleEditorScrollForNav() {
-  const scrollTop = lyricsAreaEl.scrollTop;
-  const delta = scrollTop - lastNavScrollTop;
-  if (Math.abs(delta) < NAV_SCROLL_THRESHOLD_PX) return;
+  setBottomNavDucked(lyricsAreaEl.scrollTop > 0);
+}
 
-  // Scrolling down hands the screen to the lyrics; scrolling up asks for the
-  // tools back. At the very top there is nothing to duck for.
-  setBottomNavDucked(delta > 0 && scrollTop > 0);
-  lastNavScrollTop = scrollTop;
+// The bar floats over the editor, so the editor has to know how much of its
+// own floor is spoken for. Measured rather than declared: the height depends
+// on whether a label wraps and on the home-indicator inset. Desktop hides the
+// bar outright, so it measures zero there without asking about the viewport.
+function publishBottomNavHeight() {
+  document.documentElement.style.setProperty(
+    '--bottom-nav-height', bottomNavEl.offsetHeight + 'px');
+  resizeEditorToContent();
 }
 
 // ── Keyboard-aware resize on mobile ──
@@ -1283,6 +1285,7 @@ let resizeRAF = null;
 
 function handleWindowResize() {
   placeControlsForViewport();
+  publishBottomNavHeight();
   if (resizeRAF) cancelAnimationFrame(resizeRAF);
   resizeRAF = requestAnimationFrame(function remeasureAfterResize() {
     remeasureIfWidthChanged();
@@ -1291,7 +1294,14 @@ function handleWindowResize() {
 }
 
 placeControlsForViewport();
+publishBottomNavHeight();
 window.addEventListener('resize', handleWindowResize);
+
+// Moving the controls in or out of the bar changes its height, and so does
+// signing in, which adds a third and fourth column of labels to wrap.
+if (window.ResizeObserver) {
+  new ResizeObserver(publishBottomNavHeight).observe(bottomNavEl);
+}
 
 // Signing in changes the header's height and the keyboard changes the visible
 // viewport; neither fires a window resize, and both change the floor the
