@@ -637,6 +637,51 @@ function resizeEditorToContent() {
   lyricsAreaEl.scrollTop = scrollTop;
 }
 
+// Where the caret's line sits inside the editor, measured from the top of the
+// scrolling content. Reuses the same per-line heights the gutters are drawn
+// from, so the line this scrolls to is the line the marks are beside.
+function caretLineBounds() {
+  const lines = textareaEl.value.split('\n');
+  const caretLine = textareaEl.value.slice(0, textareaEl.selectionStart).split('\n').length - 1;
+  const heights = measureLineHeights(lines);
+
+  let top = parseFloat(getComputedStyle(textareaEl).paddingTop) || 0;
+  for (let i = 0; i < caretLine && i < heights.length; i++) {
+    top += heights[i];
+  }
+  return { top: top, bottom: top + (heights[caretLine] || 0) };
+}
+
+// How much of the editor's floor the tool bar is standing on. It floats over
+// the writing rather than beside it, so a line scrolled to the very bottom of
+// the editor is still hidden.
+function bottomNavObstruction() {
+  const isHidden = bottomNavEl.classList.contains('ducked') ||
+    bottomNavEl.classList.contains('off-screen');
+  return isHidden ? 0 : bottomNavEl.offsetHeight;
+}
+
+// The keyboard takes half the screen, and the line the writer just tapped can
+// be left under it — or under the tool bar sitting at the bottom of what is
+// left. Neither the browser nor the bar knows about the other, so put the
+// caret's line back on screen once the space it has to fit in is known.
+function revealCaretLine() {
+  if (!isMobileView()) return;
+  if (document.activeElement !== textareaEl) return;
+  if (!canMeasureEditor()) return;
+
+  const line = caretLineBounds();
+  const obstruction = bottomNavObstruction();
+  const viewTop = lyricsAreaEl.scrollTop;
+  const viewBottom = viewTop + lyricsAreaEl.clientHeight - obstruction;
+
+  if (line.bottom > viewBottom) {
+    lyricsAreaEl.scrollTop = line.bottom - lyricsAreaEl.clientHeight + obstruction;
+  } else if (line.top < viewTop) {
+    lyricsAreaEl.scrollTop = line.top;
+  }
+}
+
 // ── Rhyme scheme detection ──
 
 // Values live in styles.css :root so the theme owns all color decisions.
@@ -1263,7 +1308,14 @@ if (window.visualViewport) {
     window.scrollTo(0, 0);
   }
 
-  viewport.addEventListener('resize', fitAppToVisualViewport);
+  // Only a resize changes how much room the writing has. Scrolling the visual
+  // viewport does not, so it re-fits without disturbing where the writer is.
+  function handleViewportResize() {
+    fitAppToVisualViewport();
+    requestAnimationFrame(revealCaretLine);
+  }
+
+  viewport.addEventListener('resize', handleViewportResize);
   viewport.addEventListener('scroll', fitAppToVisualViewport);
 }
 
