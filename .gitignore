@@ -19,6 +19,7 @@ definitions.txt
 style.txt
 
 # Screenshots / QA artifacts
+screenshots/
 *.png
 !icons/*.png
 
