@@ -16,6 +16,9 @@ const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
 const MAX_HIGHLIGHT_MATCHES = 500;
 const SCROLL_THROTTLE_MS = 16;
+const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
+const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
+const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
 
 const RHYME_TYPES = [
   { key: 'perfect', name: 'Perfect', desc: 'Same vowel and ending consonants' },
@@ -263,6 +266,45 @@ function classifyRhyme(target, candidate) {
 
 // ── Dictionary loading ──
 
+// cmudict.json is several megabytes, so it is fetched on the first sign that a
+// writer wants rhymes rather than at startup. Every reader of `dictionary`
+// already tolerates a null, and onRhymeDataReady() re-renders what was waiting.
+let rhymeDataPromise = null;
+
+function ensureRhymeData() {
+  if (rhymeDataPromise) return rhymeDataPromise;
+
+  statusEl.textContent = RHYME_DATA_LOADING_MESSAGE;
+
+  // Lookups made before the list lands come back unfiltered, so redo the last
+  // one once it is in. It only refines results, so it never gates them.
+  loadEnglishWords().then(refreshCurrentResults).catch(function onEnglishWordsError(err) {
+    console.error(err);
+  });
+
+  // The blocklist gates rhyme results, so it is required alongside the
+  // dictionary rather than after it.
+  rhymeDataPromise = Promise.all([loadDictionary(), loadBlocklist()])
+    .then(onRhymeDataReady)
+    .catch(onRhymeDataError);
+
+  return rhymeDataPromise;
+}
+
+function onRhymeDataReady() {
+  statusEl.textContent = '';
+  updateGutters();
+  refreshCurrentResults();
+}
+
+// Clearing the promise lets the next interaction retry, which matters now that
+// loading is triggered by the writer rather than once at startup.
+function onRhymeDataError(err) {
+  rhymeDataPromise = null;
+  statusEl.textContent = RHYME_DATA_ERROR_MESSAGE;
+  console.error(err);
+}
+
 async function loadDictionary() {
   const resp = await fetch('cmudict.json');
   if (!resp.ok) throw new Error('loadDictionary: failed to fetch cmudict.json');
@@ -303,6 +345,8 @@ function findRhymes(targetWord) {
   // Fail closed: without the blocklist, results would render unfiltered.
   if (!blocklist) return null;
   targetWord = targetWord.toLowerCase().replace(/[^a-z']/g, '');
+  // Fail closed the same way while the index is still loading.
+  if (!rhymeIndex) return null;
   if (!targetWord || !rhymeIndex[targetWord]) return null;
   console.assert(rhymeIndex[targetWord], 'findRhymes: target must exist in index');
 
@@ -484,6 +528,20 @@ function getWordContext(text, cursorPos) {
   return text.substring(lineStart, lineEnd).trim();
 }
 
+function flashWordBar() {
+  wordBarEl.classList.remove('flash');
+  void wordBarEl.offsetWidth;
+  wordBarEl.classList.add('flash');
+}
+
+// The panel holds the word while the dictionary is still in flight, so a tap
+// is never silently dropped; onRhymeDataReady() fills the rhymes in after.
+function showPendingRhymes(word) {
+  selectedWordEl.textContent = word;
+  tabRhymeWordEl.textContent = word;
+  resultsEl.innerHTML = '<div class="empty-state">' + RHYMES_PENDING_MESSAGE + '</div>';
+}
+
 function handleSelection() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function processSelection() {
@@ -495,15 +553,19 @@ function handleSelection() {
     if (/\s/.test(word)) return;
     word = word.replace(/[^a-zA-Z']/g, '');
     if (word.length < MIN_WORD_LENGTH) return;
-    if (!rhymeIndex) return;
 
     updateHighlight(word);
-    const results = findRhymes(word);
-    renderResults(word, results);
     selectedContextEl.textContent = getWordContext(text, start);
-    wordBarEl.classList.remove('flash');
-    void wordBarEl.offsetWidth;
-    wordBarEl.classList.add('flash');
+    flashWordBar();
+
+    // Reaching for a word is the clearest signal that the rhymes are wanted.
+    if (!rhymeIndex) {
+      showPendingRhymes(word);
+      ensureRhymeData();
+      return;
+    }
+
+    renderResults(word, findRhymes(word));
   }, DEBOUNCE_DELAY_MS);
 }
 
@@ -927,6 +989,9 @@ function toggleRhymeScheme() {
 // the time the class lands. Reading it back measures the lines against the
 // width that actually holds.
 function openGutter(gutterElement, isVisible) {
+  // The rhyme scheme margin cannot be drawn without the dictionary, and the
+  // syllable margin only approximates its counts until it arrives.
+  if (isVisible) ensureRhymeData();
   gutterElement.classList.toggle('visible', isVisible);
   invalidateLineHeightCache();
   updateGutters();
@@ -978,6 +1043,10 @@ function handleResizeEnd() {
 
 function refreshCurrentResults() {
   if (!currentHighlightWord) return;
+  // The English word list can land before the dictionary does. Rendering now
+  // would replace the pending message with a false "not found"; the rhymes go
+  // in when onRhymeDataReady() calls this again with an index to search.
+  if (!rhymeIndex) return;
   renderResults(currentHighlightWord, findRhymes(currentHighlightWord));
 }
 
@@ -1022,6 +1091,9 @@ function remeasureIfWidthChanged() {
   updateGutters();
 }
 textareaEl.addEventListener('input', function handleInput() {
+  // Writing is the other signal that the rhyme data is wanted. It arrives in
+  // the background while the writer keeps typing.
+  ensureRhymeData();
   updateGutters();
   if (currentHighlightWord) updateHighlight(currentHighlightWord);
 });
@@ -1407,18 +1479,8 @@ async function loadBlocklist() {
   blocklist = await loadWordSet('blocklist.json', 'loadBlocklist');
 }
 
-// The blocklist gates rhyme results, so it is required at startup. The English
-// word list only refines them, so losing it degrades quality without blocking.
-Promise.all([loadDictionary(), loadBlocklist()]).then(function onRequiredLoaded() {
-  statusEl.textContent = '';
-  updateGutters();
-}).catch(function onRequiredLoadError(err) {
-  statusEl.textContent = 'Failed to load dictionary';
-  console.error(err);
-});
-
-// Lookups made before the list lands come back unfiltered, so redo the last
-// one once it is in.
-loadEnglishWords().then(refreshCurrentResults).catch(function onEnglishWordsError(err) {
-  console.error(err);
-});
+// A margin left open earlier in the session is already asking for the data, so
+// it is fetched now rather than on the next interaction. A first visit to an
+// empty pad fetches nothing until the writer reaches for it. A restored draft
+// arrives through storage.js, which dispatches an input event of its own.
+if (syllablesVisible || rhymeSchemeVisible) ensureRhymeData();
