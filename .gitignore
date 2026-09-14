@@ -22,6 +22,7 @@ style.txt
 media/
 *.png
 !icons/*.png
+!assets/*.png
 
 # Design reference images (third-party, not for redistribution)
 design_ideas/
