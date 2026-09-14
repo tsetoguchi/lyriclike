@@ -9,7 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { REPO_ROOT, loadBuildData } from './build-data.mjs';
 import { buildPageModel, countListedRhymes } from './page-content.mjs';
 import { RHYMES_PATH, renderHubPage, renderRhymePage, renderSitemap, rhymePagePath } from './render-html.mjs';
-import { buildRhymeIndex, findRhymes, hasRhymeEntry } from './rhyme-core.mjs';
+import rhymeCore from '../../rhyme-core.js';
+
+const { buildRhymeIndex, findRhymes, hasRhymeEntry } = rhymeCore;
 
 const MAX_PAGES = 1000;
 // Below this a page is too thin to be worth indexing.

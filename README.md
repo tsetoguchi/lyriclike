@@ -51,12 +51,20 @@ the site has no build step. To regenerate:
 
 ```
 node tools/rhymes/collect-popular-words.mjs   # rarely: re-rank popular searches
-node tools/rhymes/check-parity.mjs            # confirm pages match the editor
 node tools/rhymes/build-pages.mjs             # rewrite /rhymes/ and sitemap.xml
 ```
 
-`tools/rhymes/rhyme-core.mjs` is a copy of the rhyme functions in `app.js`;
-change both together, and the parity check will catch any drift.
+The editor and the pages share one copy of the rhyme logic, `rhyme-core.js`.
+
+## Tests
+
+The rhyme logic has tests. They need Node 22 or later and nothing installed:
+
+```
+node --test
+```
+
+GitHub Actions runs them on every pull request.
 
 ## License
 
