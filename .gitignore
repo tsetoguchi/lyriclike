@@ -36,4 +36,4 @@ instructions.txt
 .playwright-mcp/
 
 # Internal planning docs (new ones stay local; already-tracked files here are unaffected)
-design_plans/
+plans/
