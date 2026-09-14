@@ -55,10 +55,10 @@ async function readStoredLyric(id) {
   return database().prepare('SELECT * FROM lyrics WHERE id = ?').bind(id).first();
 }
 
-function makeRequest(path, { method = 'GET', sid, json } = {}) {
+function makeRequest(path, { method = 'GET', sid, json, rawBody } = {}) {
   const headers = new Headers();
   if (sid) headers.set('Cookie', `sid=${sid}`);
-  const body = json === undefined ? undefined : JSON.stringify(json);
+  const body = json === undefined ? rawBody : JSON.stringify(json);
   return new Request(BASE_URL + path, { method, headers, body });
 }
 
@@ -73,6 +73,11 @@ function getLyric(sid, id) {
 
 function saveLyric(sid, id, json) {
   const request = makeRequest(`/api/lyrics/${id}`, { method: 'PUT', sid, json });
+  return lyricById.onRequestPut({ request, env, params: { id } });
+}
+
+function saveRawBody(sid, id, rawBody) {
+  const request = makeRequest(`/api/lyrics/${id}`, { method: 'PUT', sid, rawBody });
   return lyricById.onRequestPut({ request, env, params: { id } });
 }
 
@@ -233,6 +238,20 @@ describe('saving', () => {
     it(`refuses ${description} and stores nothing`, async () => {
       assert.equal((await saveLyric(alice.sid, 'rejected', json)).status, status);
       assert.equal(await readStoredLyric('rejected'), null);
+    });
+  }
+
+  const garbledBodies = [
+    ['an empty body', ''],
+    ['cut-off JSON', '{"title": "x", "bo'],
+    ['plain text', 'not json'],
+    ['JSON null', 'null']
+  ];
+
+  for (const [description, rawBody] of garbledBodies) {
+    it(`answers ${description} with 400 and stores nothing`, async () => {
+      assert.equal((await saveRawBody(alice.sid, 'garbled', rawBody)).status, 400);
+      assert.equal(await readStoredLyric('garbled'), null);
     });
   }
 
