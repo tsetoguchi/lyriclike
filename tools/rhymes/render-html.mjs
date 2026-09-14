@@ -6,6 +6,9 @@ export const RHYMES_PATH = '/rhymes/';
 const STYLESHEET_PATH = '/rhymes/rhymes.css';
 const SITE_NAME = 'LyricLike';
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
+// Bing flags meta descriptions longer than this; Google truncates near it.
+const MAX_DESCRIPTION_LENGTH = 160;
+const MAX_DESCRIPTION_EXAMPLES = 3;
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -31,6 +34,9 @@ function joinWithAnd(items) {
 }
 
 function renderHead({ title, description, path }) {
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    throw new Error(`Description for ${path} is ${description.length} characters: ${description}`);
+  }
   const url = SITE_ORIGIN + path;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -141,10 +147,22 @@ function renderRelated(related) {
 </section>`;
 }
 
-function describeRhymePage(model) {
-  const examples = model.summary.examples.slice(0, 3).join(', ');
+function buildRhymeDescription(model, exampleCount) {
+  const count = model.totalRhymes.toLocaleString('en-US');
+  const tail = 'Grouped by rhyme type and syllable count.';
+  if (exampleCount === 0) return `${count} words that rhyme with ${model.word}. ${tail}`;
+  const examples = model.summary.examples.slice(0, exampleCount).join(', ');
   const lead = model.summary.kind === 'perfect' ? 'rhymes like' : 'near rhymes like';
-  return `${model.totalRhymes.toLocaleString('en-US')} words that rhyme with ${model.word}, including ${lead} ${examples}. Sorted by rhyme type and syllable count for songwriters and rappers.`;
+  return `${count} words that rhyme with ${model.word}, including ${lead} ${examples}. ${tail}`;
+}
+
+// Long example words can push past the limit, so drop examples until it fits.
+function describeRhymePage(model) {
+  for (let exampleCount = MAX_DESCRIPTION_EXAMPLES; exampleCount > 0; exampleCount--) {
+    const description = buildRhymeDescription(model, exampleCount);
+    if (description.length <= MAX_DESCRIPTION_LENGTH) return description;
+  }
+  return buildRhymeDescription(model, 0);
 }
 
 export function renderRhymePage(model, pageWords) {
