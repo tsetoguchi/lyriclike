@@ -1,0 +1,303 @@
+/* Stylesheet for the static rhyme pages, copied to /rhymes/rhymes.css by
+   build-pages.mjs. styles.css is built around the full-screen editor (a
+   locked, non-scrolling body), so these reading pages carry their own layout.
+   The colors and faces repeat the app's Blue Hour tokens so both read as one
+   product; if the palette changes in styles.css, change it here too. */
+
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('/fonts/iAWriterQuattroS-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer Quattro';
+  src: url('/fonts/iAWriterQuattroS-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --paper: #141922;
+  --paper-card: #1c222d;
+  --desk: #0a0d13;
+  --rule: #2c3441;
+  --accent: #e9b45f;
+  --ink: #e2e7ef;
+  --ink-faded: #8b96a6;
+  --ink-wash-strong: rgba(226, 231, 239, 0.14);
+  --ink-border: rgba(226, 231, 239, 0.22);
+
+  --rhyme-perfect: #5ad19a;
+  --rhyme-family: #7cb8ff;
+  --rhyme-additive: #cfc06b;
+  --rhyme-subtractive: #ff9a6b;
+  --rhyme-assonance: #f58fc0;
+  --rhyme-consonance: #a99bf7;
+
+  --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --text-footnote: 13px;
+  --text-subhead: 15px;
+  --text-body: 17px;
+  --text-title-3: 20px;
+  --text-title-1: 28px;
+
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --dot-size: 8px;
+  --page-width: 760px;
+  --tracking-wordmark: 0.14em;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  line-height: 1.55;
+  background: var(--desk);
+  color: var(--ink);
+  padding-inline: var(--space-4);
+}
+
+a { color: var(--ink); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.site-header,
+.page,
+.site-footer {
+  max-width: var(--page-width);
+  margin-inline: auto;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wordmark);
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.header-link {
+  color: var(--ink-faded);
+  font-size: var(--text-subhead);
+}
+
+.page {
+  padding-block: var(--space-8);
+}
+
+.breadcrumb {
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+  margin-bottom: var(--space-2);
+}
+
+.breadcrumb a { color: var(--ink-faded); }
+
+h1 {
+  font-family: var(--font-editor);
+  font-size: var(--text-title-1);
+  line-height: 1.2;
+  margin-bottom: var(--space-4);
+}
+
+.answer {
+  font-size: var(--text-title-3);
+  margin-bottom: var(--space-2);
+}
+
+.fact {
+  color: var(--ink-faded);
+  margin-bottom: var(--space-6);
+}
+
+.cta {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-8);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.cta p {
+  flex: 1 1 280px;
+  font-size: var(--text-subhead);
+}
+
+.cta-button {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cta-button:hover { background: rgba(233, 180, 95, 0.10); }
+
+.rhyme-section,
+.related,
+.letter-section {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-title-3);
+}
+
+h3 {
+  font-size: var(--text-footnote);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faded);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-perfect { background: var(--rhyme-perfect); }
+.dot-family { background: var(--rhyme-family); }
+.dot-additive { background: var(--rhyme-additive); }
+.dot-subtractive { background: var(--rhyme-subtractive); }
+.dot-assonance { background: var(--rhyme-assonance); }
+.dot-consonance { background: var(--rhyme-consonance); }
+
+.count {
+  font-size: var(--text-footnote);
+  font-weight: 400;
+  color: var(--ink-faded);
+  border: 1px solid var(--ink-border);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+}
+
+.type-desc,
+.more {
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+}
+
+.more { margin-top: var(--space-3); }
+
+.rhyme-list,
+.related-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.rhyme-word {
+  display: inline-block;
+  font-family: var(--font-editor);
+  font-size: var(--text-subhead);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+a.rhyme-word {
+  text-decoration: underline;
+  text-decoration-color: var(--ink-border);
+  text-underline-offset: 3px;
+}
+
+a.rhyme-word:hover { background: var(--ink-wash-strong); }
+
+.color-perfect { color: var(--rhyme-perfect); }
+.color-family { color: var(--rhyme-family); }
+.color-additive { color: var(--rhyme-additive); }
+.color-subtractive { color: var(--rhyme-subtractive); }
+.color-assonance { color: var(--rhyme-assonance); }
+.color-consonance { color: var(--rhyme-consonance); }
+
+.related h2,
+.letter-section h2 { margin-bottom: var(--space-3); }
+
+.related-list a {
+  display: inline-block;
+  font-family: var(--font-editor);
+  font-size: var(--text-subhead);
+  padding: var(--space-1) var(--space-2);
+}
+
+.letter-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  font-family: var(--font-editor);
+}
+
+.site-footer {
+  padding-block: var(--space-6) var(--space-10);
+  border-top: 1px solid var(--rule);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+}
+
+.site-footer a { color: var(--ink-faded); }
