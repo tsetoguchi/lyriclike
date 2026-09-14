@@ -1783,12 +1783,12 @@ body.signed-in #notebook-btn {
     stroke: none;
   }
 
-  /* Active brightens icon and label together from pencil to full ink, since
-     there is no box to fill. */
+  /* Active is a colour change on icon and label together, since there is no
+     longer a box to fill. */
   .bottom-nav .toggle-btn.active {
     background: transparent;
     border: none;
-    color: var(--ink);
+    color: var(--accent);
   }
 
   .bottom-nav .toggle-btn:hover {
