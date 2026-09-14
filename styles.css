@@ -125,7 +125,7 @@
   --drawer-width: 320px;
   --dialog-width: 400px;
   --resize-handle-width: 10px;
-  --nav-icon-size: 22px;
+  --nav-icon-size: 24px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
   --dot-size: 8px;
@@ -1709,9 +1709,10 @@ body.signed-in #notebook-btn {
     /* Stretch, so a label that wraps to two lines doesn't leave its
        neighbours short. */
     align-items: stretch;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+    padding-top: var(--space-2);
+    /* The labels rest on the home indicator's inset, with a small floor on
+       screens that have none. */
+    padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
     background: var(--paper);
     border-top: var(--hairline) solid var(--margin-line);
     box-shadow: var(--shadow-bottom-nav);
@@ -1733,7 +1734,8 @@ body.signed-in #notebook-btn {
 
   /* Bar items read as icon-and-label targets rather than buttons: no box, no
      fill, just the mark and its name. Separation comes from the icons and the
-     even columns, as on the apps this follows. */
+     even columns, which run edge to edge. Labels drop the printed caps of the
+     desktop tools for plain system text, which reads smaller and quieter. */
   .bottom-nav .toggle-btn {
     width: 100%;
     display: flex;
@@ -1741,13 +1743,16 @@ body.signed-in #notebook-btn {
     align-items: center;
     justify-content: flex-start;
     gap: var(--space-1);
-    padding: var(--space-2) var(--space-1);
+    padding: var(--space-1) 0 0;
     background: transparent;
     border: none;
     border-radius: 0;
     color: var(--ink-faded);
+    font-family: var(--font-ui);
     font-size: var(--text-caption-2);
-    letter-spacing: var(--tracking-tight);
+    font-weight: var(--weight-regular);
+    letter-spacing: normal;
+    text-transform: none;
     line-height: 1.2;
     /* Four columns on a phone: a two-word label wraps rather than overruns
        its neighbour. */
@@ -1766,8 +1771,9 @@ body.signed-in #notebook-btn {
     height: var(--nav-icon-size);
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.8;
+    stroke-width: 2;
     stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   /* Filled dots read as marks on the page; the strokes are the lines they
