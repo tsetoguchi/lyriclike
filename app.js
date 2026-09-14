@@ -1,11 +1,4 @@
 // ── Constants ──
-const VOWELS = new Set([
-  'AA','AE','AH','AO','AW','AY','EH','ER','EY','IH','IY','OW','OY','UH','UW'
-]);
-const PLOSIVES = new Set(['B','D','G','P','T','K']);
-const FRICATIVES = new Set(['V','DH','Z','ZH','JH','F','TH','S','SH','CH']);
-const NASALS = new Set(['M','N','NG']);
-
 const DEBOUNCE_DELAY_MS = 150;
 const POLL_INTERVAL_MS = 300;
 const PASTE_DELAY_MS = 0;
@@ -20,20 +13,12 @@ const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
 const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
 
-const RHYME_TYPES = [
-  { key: 'perfect', name: 'Perfect', desc: 'Same vowel and ending consonants' },
-  { key: 'family', name: 'Family', desc: 'Same vowel, ending consonants in same phonetic family' },
-  { key: 'additive', name: 'Additive', desc: 'Same vowel, candidate adds extra consonants' },
-  { key: 'subtractive', name: 'Subtractive', desc: 'Same vowel, candidate has fewer consonants' },
-  { key: 'assonance', name: 'Assonance', desc: 'Same vowel, unrelated ending consonants' },
-  { key: 'consonance', name: 'Consonance', desc: 'Different vowel, same ending consonants' }
-];
+const RHYME_TYPES = RhymeCore.RHYME_TYPES;
 
 // ── State ──
-let dictionary = null;
+// Null until cmudict.json has loaded, which is how the code below tells
+// whether rhyme data is available yet.
 let rhymeIndex = null;
-let vowelBuckets = null;
-let codaBuckets = null;
 let englishWords = null;
 // English-only filtering is always on. Its button was removed from the UI,
 // so this is state rather than a constant only because setEnglishOnly()
@@ -81,193 +66,10 @@ if (rhymeSchemeVisible) {
   rhymeSchemeGutterEl.classList.add('visible');
 }
 
-// ── Phoneme helpers ──
-
-function getFamily(consonant) {
-  console.assert(typeof consonant === 'string', 'getFamily: consonant must be a string');
-  if (PLOSIVES.has(consonant)) return 'plosive';
-  if (FRICATIVES.has(consonant)) return 'fricative';
-  if (NASALS.has(consonant)) return 'nasal';
-  return null;
-}
-
-function stripStress(phoneme) {
-  console.assert(typeof phoneme === 'string', 'stripStress: phoneme must be a string');
-  return phoneme.replace(/[012]$/, '');
-}
-
-function checkVowel(phoneme) {
-  console.assert(typeof phoneme === 'string', 'checkVowel: phoneme must be a string');
-  return VOWELS.has(stripStress(phoneme));
-}
-
-function vowelsMatch(vowel1, vowel2) {
-  console.assert(typeof vowel1 === 'string', 'vowelsMatch: vowel1 must be a string');
-  console.assert(typeof vowel2 === 'string', 'vowelsMatch: vowel2 must be a string');
-  if (vowel1 === vowel2) return true;
-  // Cot-caught merger: AA (got/hot) ≈ AO (lost/caught)
-  if ((vowel1 === 'AA' || vowel1 === 'AO') && (vowel2 === 'AA' || vowel2 === 'AO')) return true;
-  return false;
-}
-
-function lookupWord(word) {
-  console.assert(typeof word === 'string', 'lookupWord: word must be a string');
-  if (typeof word !== 'string') return null;
-  if (dictionary[word]) return dictionary[word];
-  if (word.endsWith("in'")) {
-    const expanded = word.slice(0, -3) + 'ing';
-    if (dictionary[expanded]) return dictionary[expanded];
-  }
-  if (word.endsWith("'")) {
-    const trimmed = word.slice(0, -1);
-    if (dictionary[trimmed]) return dictionary[trimmed];
-  }
-  return null;
-}
-
-function getStress(phoneme) {
-  console.assert(typeof phoneme === 'string', 'getStress: phoneme must be a string');
-  const match = phoneme.match(/([012])$/);
-  return match ? parseInt(match[1]) : -1;
-}
-
-// ── Rhyme part extraction ──
-
-function findStressedVowelIndex(phonemes) {
-  console.assert(Array.isArray(phonemes), 'findStressedVowelIndex: phonemes must be an array');
-  for (let i = phonemes.length - 1; i >= 0; i--) {
-    if (checkVowel(phonemes[i]) && getStress(phonemes[i]) === 1) {
-      return i;
-    }
-  }
-  for (let i = phonemes.length - 1; i >= 0; i--) {
-    if (checkVowel(phonemes[i])) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-function extractRhymePart(phonemes) {
-  if (!Array.isArray(phonemes) || phonemes.length === 0) return null;
-  const idx = findStressedVowelIndex(phonemes);
-  if (idx === -1) return null;
-  const onset = phonemes.slice(0, idx).map(stripStress);
-  const vowel = stripStress(phonemes[idx]);
-  const coda = phonemes.slice(idx + 1).map(stripStress);
-  console.assert(typeof vowel === 'string', 'extractRhymePart: vowel must be a string');
-  console.assert(Array.isArray(coda), 'extractRhymePart: coda must be an array');
-  return { onset, vowel, coda };
-}
-
-function extractEndRhymePart(phonemes) {
-  console.assert(Array.isArray(phonemes), 'extractEndRhymePart: phonemes must be an array');
-  if (!Array.isArray(phonemes) || phonemes.length === 0) return null;
-  let lastVowelIdx = -1;
-  for (let i = phonemes.length - 1; i >= 0; i--) {
-    if (checkVowel(phonemes[i])) { lastVowelIdx = i; break; }
-  }
-  if (lastVowelIdx === -1) return null;
-  const stressedIdx = findStressedVowelIndex(phonemes);
-  if (lastVowelIdx === stressedIdx) return null;
-  const onset = phonemes.slice(0, lastVowelIdx).map(stripStress);
-  const vowel = stripStress(phonemes[lastVowelIdx]);
-  const coda = phonemes.slice(lastVowelIdx + 1).map(stripStress);
-  console.assert(typeof vowel === 'string', 'extractEndRhymePart: vowel must be a string');
-  console.assert(Array.isArray(coda), 'extractEndRhymePart: coda must be an array');
-  return { onset, vowel, coda };
-}
-
-// ── Coda comparison helpers ──
-
-function checkFamilyCoda(coda1, coda2) {
-  if (!Array.isArray(coda1) || !Array.isArray(coda2)) return false;
-  if (coda1.length === 0 || coda2.length === 0) return false;
-  if (coda1.length !== coda2.length) return false;
-  let hasFamilySwap = false;
-  for (let i = 0; i < coda1.length; i++) {
-    if (coda1[i] === coda2[i]) continue;
-    const family1 = getFamily(coda1[i]);
-    const family2 = getFamily(coda2[i]);
-    if (family1 !== null && family1 === family2) {
-      hasFamilySwap = true;
-    } else {
-      return false;
-    }
-  }
-  return hasFamilySwap;
-}
-
-function checkCodaContains(longer, shorter) {
-  if (!Array.isArray(longer) || !Array.isArray(shorter)) return false;
-  if (shorter.length === 0) return true;
-  const longerStr = longer.join(' ');
-  const shorterStr = shorter.join(' ');
-  const prefixMatch = longerStr.startsWith(shorterStr)
-    && (longerStr.length === shorterStr.length || longerStr[shorterStr.length] === ' ');
-  if (prefixMatch) return true;
-  const suffixMatch = longerStr.endsWith(shorterStr)
-    && (longerStr.length === shorterStr.length || longerStr[longerStr.length - shorterStr.length - 1] === ' ');
-  return suffixMatch;
-}
-
-function checkCodaUnrelated(coda1, coda2) {
-  if (!Array.isArray(coda1) || !Array.isArray(coda2)) return false;
-  for (let i = 0; i < coda1.length; i++) {
-    const family1 = getFamily(coda1[i]);
-    for (let j = 0; j < coda2.length; j++) {
-      if (coda1[i] === coda2[j]) return false;
-      const family2 = getFamily(coda2[j]);
-      if (family1 && family2 && family1 === family2) return false;
-    }
-  }
-  return true;
-}
-
-// ── Rhyme classification ──
-
-function classifyRhyme(target, candidate) {
-  if (!target || !candidate) return null;
-  console.assert(target.vowel && target.coda, 'classifyRhyme: target must have vowel and coda');
-  console.assert(candidate.vowel && candidate.coda, 'classifyRhyme: candidate must have vowel and coda');
-
-  const exactVowelMatch = target.vowel === candidate.vowel;
-  const sameVowel = exactVowelMatch || vowelsMatch(target.vowel, candidate.vowel);
-  const targetCoda = target.coda;
-  const candidateCoda = candidate.coda;
-  const targetOnset = target.onset;
-  const candidateOnset = candidate.onset;
-  const targetCodaStr = targetCoda.join(' ');
-  const candidateCodaStr = candidateCoda.join(' ');
-  const sameCoda = targetCodaStr === candidateCodaStr;
-  const sameOnset = targetOnset.join(' ') === candidateOnset.join(' ');
-
-  if (sameVowel && sameCoda && !sameOnset) return 'perfect';
-
-  if (sameVowel && !sameCoda && !sameOnset && checkFamilyCoda(targetCoda, candidateCoda)) {
-    return 'family';
-  }
-
-  if (sameVowel && !sameCoda) {
-    const candidateLonger = candidateCoda.length > targetCoda.length;
-    const targetLonger = targetCoda.length > candidateCoda.length;
-    if (candidateLonger && checkCodaContains(candidateCoda, targetCoda)) return 'additive';
-    if (targetLonger && checkCodaContains(targetCoda, candidateCoda)) return 'subtractive';
-  }
-
-  // Assonance requires exact vowel match — merged vowels (AA/AO) need coda
-  // evidence from stronger categories above to avoid false positives
-  if (exactVowelMatch && !sameCoda) return 'assonance';
-
-  if (!sameVowel && sameCoda && targetCoda.length > 0) return 'consonance';
-
-  return null;
-}
-
 // ── Dictionary loading ──
 
 // cmudict.json is several megabytes, so it is fetched on the first sign that a
-// writer wants rhymes rather than at startup. Every reader of `dictionary`
+// writer wants rhymes rather than at startup. Every reader of `rhymeIndex`
 // already tolerates a null, and onRhymeDataReady() re-renders what was waiting.
 let rhymeDataPromise = null;
 
@@ -308,34 +110,7 @@ function onRhymeDataError(err) {
 async function loadDictionary() {
   const resp = await fetch('cmudict.json');
   if (!resp.ok) throw new Error('loadDictionary: failed to fetch cmudict.json');
-  dictionary = await resp.json();
-  console.assert(dictionary !== null, 'loadDictionary: dictionary must not be null');
-
-  rhymeIndex = {};
-  vowelBuckets = {};
-  codaBuckets = {};
-  const words = Object.keys(dictionary);
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const firstPronunciation = dictionary[word][0];
-    const rhymePart = extractRhymePart(firstPronunciation);
-    if (rhymePart) {
-      rhymeIndex[word] = rhymePart;
-      const vowel = rhymePart.vowel;
-      if (!vowelBuckets[vowel]) vowelBuckets[vowel] = [];
-      vowelBuckets[vowel].push(word);
-      if (vowel === 'AA' || vowel === 'AO') {
-        const other = vowel === 'AA' ? 'AO' : 'AA';
-        if (!vowelBuckets[other]) vowelBuckets[other] = [];
-        vowelBuckets[other].push(word);
-      }
-      if (rhymePart.coda.length > 0) {
-        const codaKey = rhymePart.coda.join(' ');
-        if (!codaBuckets[codaKey]) codaBuckets[codaKey] = [];
-        codaBuckets[codaKey].push(word);
-      }
-    }
-  }
+  rhymeIndex = RhymeCore.buildRhymeIndex(await resp.json());
 }
 
 // ── Rhyme search ──
@@ -344,53 +119,10 @@ function findRhymes(targetWord) {
   if (typeof targetWord !== 'string') return null;
   // Fail closed: without the blocklist, results would render unfiltered.
   if (!blocklist) return null;
-  targetWord = targetWord.toLowerCase().replace(/[^a-z']/g, '');
   // Fail closed the same way while the index is still loading.
   if (!rhymeIndex) return null;
-  if (!targetWord || !rhymeIndex[targetWord]) return null;
-  console.assert(rhymeIndex[targetWord], 'findRhymes: target must exist in index');
-
-  const target = rhymeIndex[targetWord];
-  const results = {
-    perfect: [], family: [], additive: [],
-    subtractive: [], assonance: [], consonance: []
-  };
-
-  // Scan vowel bucket for vowel-matching types
-  const seen = new Set();
-  seen.add(targetWord);
-  const vowelWords = vowelBuckets[target.vowel] || [];
-  for (let i = 0; i < vowelWords.length; i++) {
-    const word = vowelWords[i];
-    if (seen.has(word)) continue;
-    seen.add(word);
-    const type = classifyRhyme(target, rhymeIndex[word]);
-    if (type) results[type].push(word);
-  }
-
-  // Scan coda bucket for consonance (same coda, different vowel)
-  if (target.coda.length > 0) {
-    const codaKey = target.coda.join(' ');
-    const codaWords = codaBuckets[codaKey] || [];
-    for (let i = 0; i < codaWords.length; i++) {
-      const word = codaWords[i];
-      if (seen.has(word)) continue;
-      seen.add(word);
-      const type = classifyRhyme(target, rhymeIndex[word]);
-      if (type) results[type].push(word);
-    }
-  }
-
-  for (let i = 0; i < RHYME_TYPES.length; i++) {
-    const key = RHYME_TYPES[i].key;
-    if (englishOnly && englishWords) {
-      results[key] = results[key].filter(function filterEnglish(word) { return englishWords.has(word); });
-    }
-    results[key] = results[key].filter(function filterBlocked(word) { return !blocklist.has(word); });
-    results[key].sort();
-  }
-
-  return results;
+  const filters = { englishWords: englishOnly ? englishWords : null, blocklist: blocklist };
+  return RhymeCore.findRhymes(rhymeIndex, RhymeCore.normalizeWord(targetWord), filters);
 }
 
 // ── Results rendering ──
@@ -571,47 +303,6 @@ function handleSelection() {
 
 // ── Syllable counting ──
 
-function countSyllablesFromDict(word) {
-  console.assert(typeof word === 'string', 'countSyllablesFromDict: word must be a string');
-  if (!dictionary) return 0;
-  const entry = dictionary[word];
-  if (!entry) return 0;
-  const firstPronunciation = entry[0];
-  const count = firstPronunciation.filter(checkVowel).length;
-  console.assert(count >= 0, 'countSyllablesFromDict: count must be non-negative');
-  return count;
-}
-
-function stripBrackets(text) {
-  return text.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '');
-}
-
-function countSyllablesFallback(cleaned) {
-  console.assert(typeof cleaned === 'string', 'countSyllablesFallback: cleaned must be a string');
-  const matches = cleaned.match(/[aeiouy]+/gi);
-  return matches ? matches.length : 1;
-}
-
-function countSyllablesForLine(line) {
-  if (typeof line !== 'string') return 0;
-  line = stripBrackets(line);
-  const tokens = line.split(/\s+/);
-  const words = tokens.filter(function hasLetters(token) {
-    const letters = token.replace(/[^a-z']/gi, '');
-    return letters.length > 0;
-  });
-  let total = 0;
-  for (let i = 0; i < words.length; i++) {
-    const lowered = words[i].toLowerCase();
-    const cleaned = lowered.replace(/[^a-z']/g, '');
-    if (cleaned.length === 0) continue;
-    const dictCount = countSyllablesFromDict(cleaned);
-    total += dictCount > 0 ? dictCount : countSyllablesFallback(cleaned);
-  }
-  console.assert(total >= 0, 'countSyllablesForLine: total must be non-negative');
-  return total;
-}
-
 function buildSyllableLine(line, height) {
   const trimmed = line.trim();
   // Hidden counts still need spacer divs: every row below one of them sits
@@ -619,7 +310,7 @@ function buildSyllableLine(line, height) {
   if (!syllablesVisible || trimmed === '') {
     return '<div class="syl-line empty-line" style="height:' + height + 'px">&middot;</div>';
   }
-  const count = countSyllablesForLine(trimmed);
+  const count = RhymeCore.countSyllablesForLine(rhymeIndex, trimmed);
   return '<div class="syl-line" style="height:' + height + 'px">' + (count > 0 ? count : '&nbsp;') + '</div>';
 }
 
@@ -753,152 +444,6 @@ const SCHEME_COLORS = [
   'var(--scheme-8)', 'var(--scheme-9)'
 ];
 
-function getLastWord(line) {
-  console.assert(typeof line === 'string', 'getLastWord: line must be a string');
-  if (typeof line !== 'string') return '';
-  const stripped = stripBrackets(line).trim();
-  if (!stripped) return '';
-  const words = stripped.match(/[a-zA-Z']+/g);
-  if (!words || words.length === 0) return '';
-  return words[words.length - 1].toLowerCase().replace(/[^a-z']/g, '');
-}
-
-const RHYME_STRENGTH = { perfect: 5, family: 4, additive: 3, subtractive: 2, assonance: 1 };
-const MIN_CROSS_STRENGTH = 2;
-
-function getAllRhymeParts(phonemes) {
-  console.assert(Array.isArray(phonemes), 'getAllRhymeParts: phonemes must be an array');
-  const parts = [];
-  const stressed = extractRhymePart(phonemes);
-  if (stressed) parts.push(stressed);
-  const end = extractEndRhymePart(phonemes);
-  if (end) parts.push(end);
-  return parts;
-}
-
-function bestRhymeStrength(word1, word2) {
-  console.assert(typeof word1 === 'string', 'bestRhymeStrength: word1 must be a string');
-  console.assert(typeof word2 === 'string', 'bestRhymeStrength: word2 must be a string');
-  if (!dictionary || !word1 || !word2) return 0;
-  if (word1 === word2) return 6;
-  const entries1 = lookupWord(word1);
-  const entries2 = lookupWord(word2);
-  if (!entries1 || !entries2) return 0;
-  let best = 0;
-  for (let i = 0; i < entries1.length; i++) {
-    const stressed1 = extractRhymePart(entries1[i]);
-    const end1 = extractEndRhymePart(entries1[i]);
-    for (let j = 0; j < entries2.length; j++) {
-      const stressed2 = extractRhymePart(entries2[j]);
-      const end2 = extractEndRhymePart(entries2[j]);
-      // Compare same-type parts: stressed vs stressed, end vs end
-      const pairs = [];
-      if (stressed1 && stressed2) pairs.push([stressed1, stressed2]);
-      if (end1 && end2) pairs.push([end1, end2]);
-      for (let k = 0; k < pairs.length; k++) {
-        const pair = pairs[k];
-        const type = classifyRhyme(pair[0], pair[1]);
-        const strength = type ? (RHYME_STRENGTH[type] || 0) : 0;
-        if (strength > best) best = strength;
-      }
-      // Cross-compare: end of polysyllabic word vs stressed of monosyllabic
-      const crossPairs = [];
-      if (end1 && !end2 && stressed2) crossPairs.push([end1, stressed2]);
-      if (!end1 && end2 && stressed1) crossPairs.push([stressed1, end2]);
-      for (let k = 0; k < crossPairs.length; k++) {
-        const crossPair = crossPairs[k];
-        const type = classifyRhyme(crossPair[0], crossPair[1]);
-        const strength = type ? (RHYME_STRENGTH[type] || 0) : 0;
-        if (strength >= MIN_CROSS_STRENGTH && strength > best) best = strength;
-      }
-    }
-  }
-  return best;
-}
-
-function computeRhymeScheme(lines) {
-  console.assert(Array.isArray(lines), 'computeRhymeScheme: lines must be an array');
-  const scheme = [];
-  let nextLabel = 0;
-  const labelMap = [];
-  const lineCount = Math.min(lines.length, MAX_GUTTER_LINES);
-
-  // Build an index of vowel -> [{lineIndex, word, label}] for O(n) lookups
-  const vowelIndex = {};
-
-  function addToVowelIndex(vowel, entry) {
-    if (!vowelIndex[vowel]) vowelIndex[vowel] = [];
-    vowelIndex[vowel].push(entry);
-  }
-
-  for (let i = 0; i < lineCount; i++) {
-    const word = getLastWord(lines[i]);
-    if (!word || lines[i].trim() === '') {
-      labelMap.push(-1);
-      continue;
-    }
-
-    // Find best match from vowel index instead of scanning all previous lines
-    let foundLabel = -1;
-    let bestStr = 0;
-    const entries = lookupWord(word);
-    if (entries) {
-      const checkedVowels = new Set();
-      for (let e = 0; e < entries.length; e++) {
-        const parts = getAllRhymeParts(entries[e]);
-        for (let p = 0; p < parts.length; p++) {
-          const vowel = parts[p].vowel;
-          if (checkedVowels.has(vowel)) continue;
-          checkedVowels.add(vowel);
-          const candidates = vowelIndex[vowel] || [];
-          for (let c = 0; c < candidates.length; c++) {
-            const strength = bestRhymeStrength(word, candidates[c].word);
-            if (strength > bestStr) {
-              bestStr = strength;
-              foundLabel = candidates[c].label;
-            }
-          }
-          // Also check merged vowels (AA/AO)
-          if (vowel === 'AA' || vowel === 'AO') {
-            const other = vowel === 'AA' ? 'AO' : 'AA';
-            const otherCandidates = vowelIndex[other] || [];
-            for (let c = 0; c < otherCandidates.length; c++) {
-              const strength = bestRhymeStrength(word, otherCandidates[c].word);
-              if (strength > bestStr) {
-                bestStr = strength;
-                foundLabel = otherCandidates[c].label;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    const label = foundLabel === -1 ? nextLabel++ : foundLabel;
-    labelMap.push(label);
-
-    // Add this word to the vowel index for future lines to find
-    if (entries) {
-      for (let e = 0; e < entries.length; e++) {
-        const parts = getAllRhymeParts(entries[e]);
-        for (let p = 0; p < parts.length; p++) {
-          addToVowelIndex(parts[p].vowel, { word: word, label: label });
-        }
-      }
-    }
-  }
-
-  for (let idx = 0; idx < labelMap.length; idx++) {
-    if (labelMap[idx] === -1) {
-      scheme.push('');
-    } else {
-      scheme.push(String.fromCharCode(65 + (labelMap[idx] % 26)));
-    }
-  }
-
-  return scheme;
-}
-
 function splitIntoStanzas(allLines, lineCount) {
   const stanzas = [];
   const stanzaStartIndices = [];
@@ -928,7 +473,7 @@ function splitIntoStanzas(allLines, lineCount) {
 function updateRhymeSchemeGutter() {
   if (!rhymeSchemeVisible) return;
   // Dictionary may still be loading; onLoaded() re-renders when it lands.
-  if (!dictionary) return;
+  if (!rhymeIndex) return;
   console.assert(rhymeSchemeGutterEl !== null, 'updateRhymeSchemeGutter: gutter element must exist');
   const text = textareaEl.value;
   const allLines = text.split('\n');
@@ -941,7 +486,7 @@ function updateRhymeSchemeGutter() {
 
   for (let stanzaIdx = 0; stanzaIdx < stanzas.length; stanzaIdx++) {
     const stanza = stanzas[stanzaIdx];
-    const scheme = computeRhymeScheme(stanza);
+    const scheme = RhymeCore.computeRhymeScheme(rhymeIndex, stanza);
     const startIdx = stanzaStartIndices[stanzaIdx];
 
     let stanzaLineIdx = 0;

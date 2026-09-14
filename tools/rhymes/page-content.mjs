@@ -2,7 +2,9 @@
 // the one-sentence answer at the top. Pure data in, plain objects out; the
 // HTML lives in render-html.mjs.
 
-import { RHYME_TYPES, countSyllables, getStressedSyllable } from './rhyme-core.mjs';
+import rhymeCore from '../../rhyme-core.js';
+
+const { RHYME_TYPES, countSyllables, getStressedSyllable } = rhymeCore;
 
 const MAX_WORDS_PER_TYPE = 100;
 const SUMMARY_EXAMPLE_COUNT = 5;
