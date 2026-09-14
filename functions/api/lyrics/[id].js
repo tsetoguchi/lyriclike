@@ -12,11 +12,24 @@ export async function onRequestGet({ request, env, params }) {
   return Response.json(lyric);
 }
 
+// A body that is not a JSON object is the caller's mistake, so it gets a 400
+// rather than an uncaught exception that Cloudflare reports as a server error.
+async function readJsonObject(request) {
+  try {
+    const payload = await request.json();
+    return payload !== null && typeof payload === 'object' ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function onRequestPut({ request, env, params }) {
   const user = await getUser(request, env);
   if (!user) return new Response(null, { status: 401 });
 
-  const { title, body } = await request.json();
+  const payload = await readJsonObject(request);
+  if (!payload) return new Response('Invalid payload', { status: 400 });
+  const { title, body } = payload;
 
   if (typeof title !== 'string' || typeof body !== 'string')
     return new Response('Invalid payload', { status: 400 });
