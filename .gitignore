@@ -21,8 +21,7 @@ style.txt
 # Demo videos, screenshots / QA artifacts
 media/
 *.png
-!icons/*.png
-!assets/*.png
+!assets/**/*.png
 
 # Design reference images (third-party, not for redistribution)
 design_ideas/

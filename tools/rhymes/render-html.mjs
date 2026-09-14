@@ -62,7 +62,7 @@ function renderHead({ title, description, path }) {
 <meta property="og:image:alt" content="${PREVIEW_IMAGE_ALT}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#141922">
-<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">
 </head>`;
 }
