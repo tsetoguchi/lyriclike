@@ -1,7 +1,7 @@
 // Rhyme logic against the real dictionary and word lists the site ships, to
 // catch data changes the hand-written cases in rhyme-core.test.mjs cannot.
 //
-//   node --test
+//   node --test "test/*.test.mjs"
 
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
