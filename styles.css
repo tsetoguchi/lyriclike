@@ -298,6 +298,13 @@ header h1 {
   color: var(--ink);
 }
 
+/* The wordmark is the way home: a full page load back to the index. It keeps
+   the look of the title rather than of a link. */
+header h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+
 #status {
   font-family: var(--font-marginalia);
   font-style: italic;
