@@ -58,10 +58,10 @@ The editor and the pages share one copy of the rhyme logic, `rhyme-core.js`.
 
 ## Tests
 
-The rhyme logic has tests. They need Node 22 or later and nothing installed:
+The rhyme logic and the API's access checks have tests. They need Node 22 or later and nothing installed:
 
 ```
-node --test
+node --test "test/*.test.mjs"
 ```
 
 GitHub Actions runs them on every pull request.
