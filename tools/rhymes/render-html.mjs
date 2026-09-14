@@ -5,6 +5,11 @@ export const SITE_ORIGIN = 'https://lyriclike.com';
 export const RHYMES_PATH = '/rhymes/';
 const STYLESHEET_PATH = '/rhymes/rhymes.css';
 const SITE_NAME = 'LyricLike';
+// The card shown when any page is shared; the homepage uses the same image.
+const PREVIEW_IMAGE_URL = `${SITE_ORIGIN}/assets/lyriclike.png`;
+const PREVIEW_IMAGE_WIDTH = 1200;
+const PREVIEW_IMAGE_HEIGHT = 630;
+const PREVIEW_IMAGE_ALT = 'LyricLike logo';
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
 // Bing flags meta descriptions longer than this; Google truncates near it.
 const MAX_DESCRIPTION_LENGTH = 160;
@@ -51,9 +56,13 @@ function renderHead({ title, description, path }) {
 <meta property="og:url" content="${url}">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${PREVIEW_IMAGE_URL}">
+<meta property="og:image:width" content="${PREVIEW_IMAGE_WIDTH}">
+<meta property="og:image:height" content="${PREVIEW_IMAGE_HEIGHT}">
+<meta property="og:image:alt" content="${PREVIEW_IMAGE_ALT}">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#141922">
-<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">
 </head>`;
 }
