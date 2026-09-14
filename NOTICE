@@ -70,3 +70,20 @@ not carried over — this list targets slurs only.
 
 Source: https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words
 Upstream revision: 5faf2ba42d7b1c0977169ec3611df25a3c08eb13
+
+
+tools/rhymes/word-frequency.txt — English word frequency list
+-----------------------------------------------------------------
+From hermitdave/FrequencyWords (content/2018/en/en_50k.txt), built from
+OpenSubtitles 2018 subtitle data.
+
+Copyright (c) 2016 Hermit Dave
+
+Licensed under a Creative Commons Attribution-ShareAlike 4.0 International
+License: https://creativecommons.org/licenses/by-sa/4.0/
+
+Unmodified. Used only at build time to order rhyme-page results by how
+common each word is; the list itself is not served by the site.
+
+Source: https://github.com/hermitdave/FrequencyWords
+Upstream revision: 525f9b560de45753a5ea01069454e72e9aa541c6

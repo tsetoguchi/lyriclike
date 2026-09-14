@@ -43,6 +43,21 @@ OAUTH_REDIRECT_URL=http://localhost:8788/api/auth/google/callback
 Get those from a Google Cloud OAuth client (type "Web") with that redirect
 URI added.
 
+## Rhyme pages
+
+`/rhymes/` holds static "words that rhyme with X" pages for search engines,
+generated from the same rhyme logic as the editor. They are committed, since
+the site has no build step. To regenerate:
+
+```
+node tools/rhymes/collect-popular-words.mjs   # rarely: re-rank popular searches
+node tools/rhymes/check-parity.mjs            # confirm pages match the editor
+node tools/rhymes/build-pages.mjs             # rewrite /rhymes/ and sitemap.xml
+```
+
+`tools/rhymes/rhyme-core.mjs` is a copy of the rhyme functions in `app.js`;
+change both together, and the parity check will catch any drift.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). The bundled CMU Pronouncing Dictionary carries
