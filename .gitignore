@@ -18,8 +18,8 @@ cmudict.dict
 definitions.txt
 style.txt
 
-# Screenshots / QA artifacts
-screenshots/
+# Demo videos, screenshots / QA artifacts
+media/
 *.png
 !icons/*.png
 
