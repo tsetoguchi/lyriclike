@@ -252,7 +252,6 @@ body {
 header {
   padding: var(--space-4) var(--space-6);
   background: var(--paper);
-  border-bottom: var(--hairline) solid var(--margin-line);
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -529,7 +528,6 @@ body.signed-in #notebook-btn {
   font-size: var(--text-page-title);
   font-weight: var(--weight-bold);
   color: var(--ink);
-  border-bottom: var(--hairline) solid var(--rule);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -645,7 +643,6 @@ body.signed-in #notebook-btn {
 
 .selected-word-bar {
   padding: var(--space-3) var(--space-5);
-  border-bottom: var(--hairline) solid var(--rule);
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -1471,6 +1468,9 @@ body.signed-in #notebook-btn {
     gap: var(--space-2);
     flex-wrap: nowrap;
     padding-top: calc(var(--space-3) + env(safe-area-inset-top));
+    /* The tabs below share the header's paper, so only a rule tells the
+       two apart here. Desktop's title bar is a different shade. */
+    border-bottom: var(--hairline) solid var(--margin-line);
   }
 
   header h1 {
