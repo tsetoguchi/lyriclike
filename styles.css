@@ -1545,10 +1545,10 @@ body.signed-in #notebook-btn {
     white-space: nowrap;
     padding: var(--space-3);
     font-family: var(--font-display);
-    font-size: var(--text-caption-1);
+    /* Written case, sized and tracked like the header's buttons. */
+    font-size: var(--text-footnote);
     font-weight: var(--weight-bold);
-    letter-spacing: var(--tracking-normal);
-    text-transform: uppercase;
+    letter-spacing: var(--tracking-tight);
     text-align: center;
     background: transparent;
     border: none;
