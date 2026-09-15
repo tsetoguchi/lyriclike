@@ -74,7 +74,7 @@
   --duration-slow: 0.28s;
   --duration-flash: 0.4s;
   /* A word under the pointer warms to amber and cools back at one pace. */
-  --duration-hover: 0.6s;
+  --duration-hover: 1s;
 
   /* Stacking. Only two things ever lift off the page: the bar above the
      lyrics, and a panel over everything. */
@@ -593,27 +593,19 @@ body.signed-in #notebook-btn {
   color: var(--accent);
 }
 
-/* Desktop only: the word under the pointer warms to the accent and cools back
-   to ink when the pointer moves off. Its colour fades rather than a tinted
-   copy over the ink, which would double every glyph edge. */
-#lyrics-highlight .word-hover {
+/* Each word is its own element and its colour transitions from wherever it
+   is, so a word the pointer leaves keeps fading out while the next fades in,
+   and a fade that reverses partway never jumps. */
+#lyrics-highlight .lyric-word {
+  transition: color var(--duration-hover) ease-out;
+  /* Vertical padding on an inline box leaves the layout alone but stretches
+     what the pointer can hit to the full line pitch. */
+  padding-block: calc((var(--line-pitch) - 1em) / 2);
+}
+
+/* Desktop only: the word under the pointer. */
+#lyrics-highlight .lyric-word.is-hovered {
   color: var(--accent);
-  animation: word-hover-in var(--duration-hover) ease-out;
-}
-
-#lyrics-highlight .word-hover.leaving {
-  color: var(--ink);
-  animation: word-hover-out var(--duration-hover) ease-out;
-}
-
-@keyframes word-hover-in {
-  from { color: var(--ink); }
-  to { color: var(--accent); }
-}
-
-@keyframes word-hover-out {
-  from { color: var(--accent); }
-  to { color: var(--ink); }
 }
 
 #lyrics {
@@ -1849,8 +1841,7 @@ body.signed-in #notebook-btn {
 @media (prefers-reduced-motion: reduce) {
   .lyrics-panel,
   .rhymes-panel,
-  .selected-word-bar.flash,
-  #lyrics-highlight .word-hover {
+  .selected-word-bar.flash {
     animation: none;
   }
 

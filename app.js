@@ -7,7 +7,6 @@ const MAX_RESULTS_PER_GROUP = 500;
 const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
-const HOVER_FADE_MS = 600; // --duration-hover, the hover fade in styles.css
 const SCROLL_THROTTLE_MS = 16;
 const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
@@ -217,14 +216,17 @@ function escapeHtml(text) {
 }
 
 // Only the clicked occurrence of the word is coloured, so its place in the
-// text is kept as well as the word.
+// text is kept as well as the word. Picking toggles classes rather than
+// redrawing, so no word's colour transition is cut off.
 function pickHighlightWord(word, bounds) {
   console.assert(typeof word === 'string', 'pickHighlightWord: word must be a string');
   if (typeof word !== 'string') return;
-  currentHighlightWord = word.toLowerCase().replace(/[^a-z']/g, '');
-  highlightedText = textareaEl.value;
-  pickedBounds = bounds;
   renderHighlight();
+  currentHighlightWord = word.toLowerCase().replace(/[^a-z']/g, '');
+  const isWholeWord = bounds !== null &&
+    isWholeWordAt(highlightedText, bounds, currentHighlightWord);
+  pickedBounds = isWholeWord ? bounds : null;
+  markPickedWord();
 }
 
 function pickedBoundsForSelection(text, start, end) {
@@ -233,13 +235,53 @@ function pickedBoundsForSelection(text, start, end) {
   return wordBoundsAt(text, position);
 }
 
+function wordBoundsAt(text, offset) {
+  let start = offset;
+  let end = offset;
+  while (start > 0 && WORD_CHAR.test(text[start - 1])) start--;
+  while (end < text.length && WORD_CHAR.test(text[end])) end++;
+  if (end - start < MIN_WORD_LENGTH) return null;
+  return { start: start, end: end };
+}
+
 // The textarea's own letters are transparent, so this layer draws every one of
-// them, and is redrawn on every edit, pick and hover change.
+// them. It is rebuilt only when the text changes; hovering and picking toggle
+// classes on the word elements it holds.
 function renderHighlight() {
   const text = textareaEl.value;
+  if (text === highlightedText && highlightEl.firstChild) return;
   followTextEdit(text);
-  const ranges = withHoverRange(pickedRanges(), currentHoverRange());
-  highlightEl.innerHTML = rangesToHtml(text, ranges) + '\n';
+  highlightEl.innerHTML = wordsToHtml(text) + '\n';
+  hoveredWordEl = null;
+  markPickedWord();
+}
+
+// Each word long enough to rhyme becomes its own element, found again by the
+// offset it starts at.
+function wordsToHtml(text) {
+  const pattern = new RegExp(WORD_CHAR.source + '+', 'g');
+  let html = '';
+  let lastIndex = 0;
+  let match = pattern.exec(text);
+  while (match !== null) {
+    if (match[0].length >= MIN_WORD_LENGTH) {
+      const word = escapeHtml(match[0]);
+      html += escapeHtml(text.slice(lastIndex, match.index));
+      html += '<span class="lyric-word" data-start="' + match.index + '">' + word + '</span>';
+      lastIndex = match.index + match[0].length;
+    }
+    match = pattern.exec(text);
+  }
+  return html + escapeHtml(text.slice(lastIndex));
+}
+
+function markPickedWord() {
+  const previous = highlightEl.querySelector('.highlight-word');
+  if (previous) previous.classList.remove('highlight-word');
+  if (!pickedBounds) return;
+  const selector = '.lyric-word[data-start="' + pickedBounds.start + '"]';
+  const picked = highlightEl.querySelector(selector);
+  if (picked) picked.classList.add('highlight-word');
 }
 
 // Moves the picked word along with any edit before it. An edit that reaches
@@ -250,12 +292,6 @@ function followTextEdit(text) {
     isWholeWordAt(text, shifted, currentHighlightWord);
   pickedBounds = isStillPicked ? shifted : null;
   highlightedText = text;
-}
-
-function pickedRanges() {
-  if (!pickedBounds) return [];
-  const bounds = pickedBounds;
-  return [{ start: bounds.start, end: bounds.end, className: 'highlight-word' }];
 }
 
 // Finds the single stretch of text that changed by trimming what the old and
@@ -294,194 +330,58 @@ function isWholeWordAt(text, bounds, word) {
   return isBoundedBefore && isBoundedAfter && isSameWord;
 }
 
-// A hover that overlaps a picked word is dropped: the pick already has the
-// stronger colour.
-function withHoverRange(ranges, hover) {
-  if (!hover) return ranges;
-  const overlapsPick = ranges.some(function overlaps(range) {
-    return hover.start < range.end && range.start < hover.end;
-  });
-  if (overlapsPick) return ranges;
-  return ranges.concat([hover]).sort(function byStart(a, b) {
-    return a.start - b.start;
-  });
-}
-
-function rangesToHtml(text, ranges) {
-  let html = '';
-  let lastIndex = 0;
-  for (let i = 0; i < ranges.length; i++) {
-    const range = ranges[i];
-    const word = escapeHtml(text.slice(range.start, range.end));
-    html += escapeHtml(text.slice(lastIndex, range.start));
-    html += '<span class="' + range.className + '">' + word + '</span>';
-    lastIndex = range.end;
-  }
-  return html + escapeHtml(text.slice(lastIndex));
-}
-
 // ── Word hover (desktop) ──
 
 const HOVER_QUERY = window.matchMedia('(hover: hover) and (pointer: fine)');
 const WORD_CHAR = /[a-zA-Z']/;
 
-let hoveredBounds = null;
-let leavingBounds = null;
+let hoveredWordEl = null;
 let hoverFrame = 0;
-let hoverClearTimer = null;
 
 function canHoverWords() {
   return HOVER_QUERY.matches && !isMobileView();
 }
 
-function caretAtPoint(x, y) {
-  if (document.caretPositionFromPoint) {
-    const position = document.caretPositionFromPoint(x, y);
-    return position ? { node: position.offsetNode, offset: position.offset } : null;
-  }
-  const range = document.caretRangeFromPoint(x, y);
-  return range ? { node: range.startContainer, offset: range.startOffset } : null;
-}
-
 // The textarea sits on top and answers every hit test, so it steps aside for
 // one synchronous query while the layer beneath, laid out identically, says
-// which character is under the pointer.
-function textOffsetAtPoint(x, y) {
+// which word is under the pointer.
+function wordElAtPoint(x, y) {
   textareaEl.style.pointerEvents = 'none';
   highlightEl.style.pointerEvents = 'auto';
-  const caret = caretAtPoint(x, y);
+  const hit = document.elementFromPoint(x, y);
   textareaEl.style.pointerEvents = '';
   highlightEl.style.pointerEvents = '';
-  if (!caret || !highlightEl.contains(caret.node)) return -1;
-  const range = document.createRange();
-  range.setStart(highlightEl, 0);
-  range.setEnd(caret.node, caret.offset);
-  return range.toString().length;
+  const isWord = hit !== null && hit.classList.contains('lyric-word') &&
+    highlightEl.contains(hit);
+  return isWord ? hit : null;
 }
 
-function wordBoundsAt(text, offset) {
-  let start = offset;
-  let end = offset;
-  while (start > 0 && WORD_CHAR.test(text[start - 1])) start--;
-  while (end < text.length && WORD_CHAR.test(text[end])) end++;
-  if (end - start < MIN_WORD_LENGTH) return null;
-  return { start: start, end: end };
+// Only classes change, so the word left behind keeps fading out on its own
+// while the next one fades in.
+function setHoveredWord(wordEl) {
+  if (wordEl === hoveredWordEl) return;
+  if (hoveredWordEl) hoveredWordEl.classList.remove('is-hovered');
+  hoveredWordEl = wordEl;
+  if (wordEl) wordEl.classList.add('is-hovered');
 }
 
-function rangeInHighlight(start, end) {
-  const walker = document.createTreeWalker(highlightEl, NodeFilter.SHOW_TEXT);
-  const range = document.createRange();
-  let seen = 0;
-  let hasStart = false;
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const length = node.nodeValue.length;
-    if (!hasStart && start <= seen + length) {
-      range.setStart(node, start - seen);
-      hasStart = true;
-    }
-    if (hasStart && end <= seen + length) {
-      range.setEnd(node, end - seen);
-      return range;
-    }
-    seen += length;
-  }
-  return null;
-}
-
-// A caret lands on the nearest character even past the end of a line, so the
-// pointer has to be over the word's own boxes. Those are as tall as the type,
-// not the line, so each is widened to the line pitch.
-function isPointOverWord(bounds, x, y) {
-  const range = rangeInHighlight(bounds.start, bounds.end);
-  if (!range) return false;
-  const pitch = parseFloat(getComputedStyle(highlightEl).lineHeight) || 0;
-  const rects = range.getClientRects();
-  for (let i = 0; i < rects.length; i++) {
-    const rect = rects[i];
-    const slack = Math.max(0, (pitch - rect.height) / 2);
-    const isInsideX = x >= rect.left && x <= rect.right;
-    const isInsideY = y >= rect.top - slack && y <= rect.bottom + slack;
-    if (isInsideX && isInsideY) return true;
-  }
-  return false;
-}
-
-function hoverableWordAt(x, y) {
-  const text = textareaEl.value;
-  const offset = textOffsetAtPoint(x, y);
-  if (offset < 0) return null;
-  const bounds = wordBoundsAt(text, offset);
-  if (!bounds || !isPointOverWord(bounds, x, y)) return null;
-  // The picked occurrence is already amber; hovering it changes nothing.
-  const isPicked = pickedBounds !== null &&
-    bounds.start === pickedBounds.start && bounds.end === pickedBounds.end;
-  return isPicked ? null : bounds;
-}
-
-function currentHoverRange() {
-  if (hoveredBounds) {
-    return { start: hoveredBounds.start, end: hoveredBounds.end, className: 'word-hover' };
-  }
-  if (leavingBounds) {
-    const className = 'word-hover leaving';
-    return { start: leavingBounds.start, end: leavingBounds.end, className: className };
-  }
-  return null;
-}
-
-function showWordHover(bounds) {
-  clearTimeout(hoverClearTimer);
-  hoveredBounds = bounds;
-  leavingBounds = null;
-  renderHighlight();
-}
-
-// Fades the word back to ink, then draws it plain once the fade is over.
-function hideWordHover() {
+function clearHoveredWord() {
   cancelAnimationFrame(hoverFrame);
-  if (!hoveredBounds) return;
-  leavingBounds = hoveredBounds;
-  hoveredBounds = null;
-  renderHighlight();
-  clearTimeout(hoverClearTimer);
-  hoverClearTimer = setTimeout(function endHoverFade() {
-    leavingBounds = null;
-    renderHighlight();
-  }, HOVER_FADE_MS);
-}
-
-// An edit moves every offset, so the hover is dropped without a fade. The
-// caller redraws the layer.
-function clearWordHover() {
-  cancelAnimationFrame(hoverFrame);
-  clearTimeout(hoverClearTimer);
-  hoveredBounds = null;
-  leavingBounds = null;
-}
-
-function updateHoverAt(x, y) {
-  const bounds = hoverableWordAt(x, y);
-  if (!bounds) {
-    hideWordHover();
-    return;
-  }
-  const isSameWord = hoveredBounds !== null &&
-    hoveredBounds.start === bounds.start && hoveredBounds.end === bounds.end;
-  if (!isSameWord) showWordHover(bounds);
+  setHoveredWord(null);
 }
 
 // Pointer moves arrive faster than frames; only the latest position in each
 // frame is looked up.
 function handleEditorPointerMove(event) {
   if (!canHoverWords() || event.buttons !== 0) {
-    hideWordHover();
+    clearHoveredWord();
     return;
   }
   const x = event.clientX;
   const y = event.clientY;
   cancelAnimationFrame(hoverFrame);
   hoverFrame = requestAnimationFrame(function lookUpHoveredWord() {
-    updateHoverAt(x, y);
+    setHoveredWord(wordElAtPoint(x, y));
   });
 }
 
@@ -534,7 +434,6 @@ function handleSelection() {
     word = word.replace(/[^a-zA-Z']/g, '');
     if (word.length < MIN_WORD_LENGTH) return;
 
-    clearWordHover();
     pickHighlightWord(word, pickedBoundsForSelection(text, start, end));
     selectedContextEl.textContent = getWordContext(text, start);
     flashWordBar();
@@ -889,12 +788,11 @@ textareaEl.addEventListener('input', function handleInput() {
   // the background while the writer keeps typing.
   ensureRhymeData();
   updateGutters();
-  clearWordHover();
   renderHighlight();
 });
 textareaEl.addEventListener('mousemove', handleEditorPointerMove);
-textareaEl.addEventListener('mouseleave', hideWordHover);
-lyricsAreaEl.addEventListener('scroll', hideWordHover, { passive: true });
+textareaEl.addEventListener('mouseleave', clearHoveredWord);
+lyricsAreaEl.addEventListener('scroll', clearHoveredWord, { passive: true });
 // A browser can restore the textarea's text on reload without an input
 // event, and nothing would draw those letters until the next edit.
 renderHighlight();
