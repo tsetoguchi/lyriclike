@@ -10,6 +10,11 @@ const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
 const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
 const LOAD_FAILED_MESSAGE = 'Could not open your notebook';
+const CREATE_ACCOUNT_HEADING = 'Create an account';
+const CREATE_ACCOUNT_MESSAGE =
+  'Your notebook saves every lyric you write, so you can pick it up again on '
+  + 'any device. Continue with Google to create your account.';
+const CREATE_ACCOUNT_CONFIRM = 'Continue with Google';
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -119,6 +124,23 @@ function setNotebookButtonActive(isActive) {
   const button = document.getElementById('notebook-btn');
   button.classList.toggle('active', isActive);
   button.setAttribute('aria-expanded', String(isActive));
+}
+
+// Signed out, the notebook has nothing to show, so the button asks for an
+// account instead. currentUser is null only once the sign-in check has
+// answered; before that, the list opens and handles a signed-out reply.
+async function handleNotebookClick() {
+  const isSignedOut = window.currentUser === null;
+  if (!isSignedOut) {
+    openLyricsList();
+    return;
+  }
+  const wantsAccount = await openDialog({
+    heading: CREATE_ACCOUNT_HEADING,
+    message: CREATE_ACCOUNT_MESSAGE,
+    confirmLabel: CREATE_ACCOUNT_CONFIRM,
+  });
+  if (wantsAccount && window.startSignIn) window.startSignIn();
 }
 
 async function loadLyricsList() {
@@ -376,7 +398,7 @@ titleEl.addEventListener('blur', () => {
     performSave();
   }
 });
-document.getElementById('notebook-btn').addEventListener('click', openLyricsList);
+document.getElementById('notebook-btn').addEventListener('click', handleNotebookClick);
 document.getElementById('create-btn').addEventListener('click', createLyric);
 document.getElementById('new-lyric-btn').addEventListener('click', createLyric);
 document.getElementById('close-lyrics-list-btn').addEventListener('click', closeLyricsList);

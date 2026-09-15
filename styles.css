@@ -330,15 +330,10 @@ header .toggle-btn {
   display: none;
 }
 
-/* Both need an account behind them. Create is a bar affordance; the notebook
-   sits with the other tools on a wide screen. */
-#notebook-btn,
+/* Create needs an account behind it, so it waits for sign-in. The notebook
+   shows either way: signed out, it asks for an account instead of opening. */
 #create-btn {
   display: none;
-}
-
-body.signed-in #notebook-btn {
-  display: inline-block;
 }
 
 .danger-btn {
@@ -1812,7 +1807,6 @@ body.signed-in #notebook-btn {
     text-align: center;
   }
 
-  body.signed-in .bottom-nav #notebook-btn,
   body.signed-in .bottom-nav #create-btn {
     display: flex;
   }
