@@ -731,11 +731,12 @@ body.signed-in #notebook-btn {
   animation: word-flash var(--duration-flash) ease-out;
 }
 
+/* The same amber as the picked word in the lyrics, so the two read as one. */
 .selected-word-bar .word {
   font-family: var(--font-editor);
   font-size: var(--text-body);
   font-weight: var(--weight-bold);
-  color: var(--ink);
+  color: var(--accent);
 }
 
 #rhyme-results {
