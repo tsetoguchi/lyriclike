@@ -57,6 +57,7 @@
   --margin-line: #3b4553;       /* where chrome meets paper: header, tabs, bar */
   --accent: #e9b45f;            /* amber lamp accents (grips, focus, marks) */
   --accent-wash: rgba(233, 180, 95, 0.10);  /* active-page tint */
+  --accent-half: color-mix(in srgb, var(--ink) 50%, var(--accent));  /* hovered word */
   --ink: #e2e7ef;               /* cool off-white writing ink (12.9:1 on the card) */
   --ink-faded: #8b96a6;         /* pencil: marginalia, placeholders (5.3:1 on the card) */
   --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
@@ -73,6 +74,8 @@
   --duration-base: 0.2s;
   --duration-slow: 0.28s;
   --duration-flash: 0.4s;
+  /* A word warms slowly under the pointer and cools at the usual pace. */
+  --duration-hover: 0.4s;
 
   /* Stacking. Only two things ever lift off the page: the bar above the
      lyrics, and a panel over everything. */
@@ -191,9 +194,8 @@
   /* Effects. The selection washes are cool, not amber, and this is not an
      oversight: a warm wash has to stay dark enough for light ink to read on
      top of it, and every amber dark enough to do that composites to khaki
-     over the slate card. The lift below is the Family ink, which keeps the
-     picked word looking picked. Amber stays on the chrome. */
-  --highlight-word: rgba(124, 184, 255, 0.22);  /* the word the panel is showing */
+     over the slate card. The picked word takes amber as its ink instead of a
+     wash behind it, which reads clearly on the card. */
   --selection: rgba(124, 184, 255, 0.30);
   --flash: rgba(124, 184, 255, 0.20);
   --scrim: rgba(0, 0, 0, 0.66);                /* dimmed desk */
@@ -568,7 +570,9 @@ body.signed-in #notebook-btn {
   line-height: var(--line-pitch);
   white-space: pre-wrap;
   word-wrap: break-word;
-  color: transparent;
+  /* The textarea's own letters are transparent and this layer draws them,
+     which is what lets a single word take a colour. */
+  color: var(--ink);
   pointer-events: none;
   overflow: hidden;
 }
@@ -585,9 +589,32 @@ body.signed-in #notebook-btn {
   padding: 0 var(--editor-pad);
 }
 
+/* The picked word, wherever it appears. */
 #lyrics-highlight .highlight-word {
-  background: var(--highlight-word);
-  border-radius: var(--radius-sm);
+  color: var(--accent);
+}
+
+/* Desktop only: the word under the pointer warms halfway to the accent, and
+   cools back to ink when the pointer moves off. Its colour fades rather
+   than a tinted copy over the ink, which would double every glyph edge. */
+#lyrics-highlight .word-hover {
+  color: var(--accent-half);
+  animation: word-hover-in var(--duration-hover) ease-out;
+}
+
+#lyrics-highlight .word-hover.leaving {
+  color: var(--ink);
+  animation: word-hover-out var(--duration-base) ease-out;
+}
+
+@keyframes word-hover-in {
+  from { color: var(--ink); }
+  to { color: var(--accent-half); }
+}
+
+@keyframes word-hover-out {
+  from { color: var(--accent-half); }
+  to { color: var(--ink); }
 }
 
 #lyrics {
@@ -603,7 +630,10 @@ body.signed-in #notebook-btn {
   padding: var(--editor-pad);
   background-color: transparent;
   border: none;
-  color: var(--ink);
+  /* The highlight layer beneath draws the letters; the textarea keeps the
+     caret, the selection and the typing. Safari needs the fill colour too. */
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   caret-color: var(--ink);
   font-family: var(--font-editor);
   font-size: var(--editor-font-size);
@@ -622,6 +652,7 @@ body.signed-in #notebook-btn {
 
 #lyrics::placeholder {
   color: var(--ink-faded);
+  -webkit-text-fill-color: var(--ink-faded);
 }
 
 #lyrics::selection {
@@ -1819,7 +1850,8 @@ body.signed-in #notebook-btn {
 @media (prefers-reduced-motion: reduce) {
   .lyrics-panel,
   .rhymes-panel,
-  .selected-word-bar.flash {
+  .selected-word-bar.flash,
+  #lyrics-highlight .word-hover {
     animation: none;
   }
 
