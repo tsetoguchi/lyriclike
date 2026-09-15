@@ -140,9 +140,6 @@
   --text-body: 17px;
   --text-title-3: 20px;
   --text-title-2: 22px;
-  /* Off the iOS scale on purpose: the lyric title sits one notch above
-     the lyrics' Title 2, and iOS has no step between that and Title 1. */
-  --text-page-title: 24px;
 
   /* Corner radii: four steps, plus a pill for count badges. */
   --radius-sm: 4px;
@@ -154,8 +151,8 @@
   /* Editor metrics: an integer pitch keeps the gutters' rows whole, since
      each is a multiple of it.
      Everything that renders or measures lyric lines MUST share these. */
-  --editor-font-size: var(--text-title-2);
-  --line-pitch: 36px;
+  --editor-font-size: var(--text-body);
+  --line-pitch: 28px;
   --editor-pad: 20px;
   /* Set from the measured bar in app.js; zero wherever the bar is hidden. */
   --bottom-nav-height: 0px;
@@ -525,7 +522,7 @@ body.signed-in #notebook-btn {
 .panel-header {
   padding: var(--space-3) var(--space-5) var(--space-3);
   /* Above the lyrics' own size and bold, so the title reads as the heading. */
-  font-size: var(--text-page-title);
+  font-size: var(--text-title-3);
   font-weight: var(--weight-bold);
   color: var(--ink);
   flex-shrink: 0;
