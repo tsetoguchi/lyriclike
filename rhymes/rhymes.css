@@ -48,7 +48,6 @@
 
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
-  --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -80,7 +79,7 @@ html {
 }
 
 body {
-  font-family: var(--font-ui);
+  font-family: var(--font-editor);
   font-size: var(--text-body);
   line-height: 1.55;
   background: var(--desk);

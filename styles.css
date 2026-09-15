@@ -37,38 +37,6 @@
 }
 
 @font-face {
-  font-family: 'Courier Prime';
-  src: url('fonts/CourierPrime-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Courier Prime';
-  src: url('fonts/CourierPrime-Italic.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Courier Prime';
-  src: url('fonts/CourierPrime-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Courier Prime';
-  src: url('fonts/CourierPrime-BoldItalic.woff2') format('woff2');
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
   font-family: 'Montserrat';
   src: url('fonts/Montserrat-Bold.woff2') format('woff2');
   font-weight: 700;
@@ -237,8 +205,6 @@
   /* Type */
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
-  --font-marginalia: 'Courier Prime', 'Courier New', Courier, monospace;
-  --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -258,7 +224,7 @@ html {
 }
 
 body {
-  font-family: var(--font-ui);
+  font-family: var(--font-editor);
   background: var(--desk);
   color: var(--ink);
   height: 100vh;
@@ -306,7 +272,7 @@ header h1 a {
 }
 
 #status {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-style: italic;
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
@@ -476,7 +442,7 @@ body.signed-in #notebook-btn {
      one and take every mark below it out of step with its line. The
      measured height is the whole point of these rows; never shrink it. */
   flex-shrink: 0;
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-subhead);
   line-height: var(--line-pitch);
   text-align: center;
@@ -513,7 +479,7 @@ body.signed-in #notebook-btn {
      one and take every mark below it out of step with its line. The
      measured height is the whole point of these rows; never shrink it. */
   flex-shrink: 0;
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-callout);
   line-height: var(--line-pitch);
   text-align: center;
@@ -682,7 +648,7 @@ body.signed-in #notebook-btn {
 }
 
 .selected-word-bar .label {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
   text-transform: lowercase;
@@ -726,7 +692,7 @@ body.signed-in #notebook-btn {
 
 .rhyme-group-header {
   padding: var(--space-3) var(--space-5);
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   cursor: pointer;
@@ -829,14 +795,14 @@ body.signed-in #notebook-btn {
 }
 
 .def-phonetic {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
   margin-bottom: var(--space-3);
 }
 
 .def-pos {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-bold);
   color: var(--ink);
@@ -936,7 +902,7 @@ body.signed-in #notebook-btn {
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-sm);
   color: var(--ink-faded);
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-1);
   cursor: pointer;
   transition: background var(--duration-fast);
@@ -958,7 +924,7 @@ body.signed-in #notebook-btn {
   padding: var(--space-10) var(--space-5);
   text-align: center;
   color: var(--ink-faded);
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-style: italic;
   font-size: var(--text-footnote);
   line-height: 1.6;
@@ -990,7 +956,7 @@ body.signed-in #notebook-btn {
 }
 
 #user-email {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
@@ -1072,7 +1038,7 @@ body.signed-in #notebook-btn {
 }
 
 .settings-section-title {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-2);
   font-weight: var(--weight-bold);
   color: var(--ink-faded);
@@ -1103,7 +1069,7 @@ body.signed-in #notebook-btn {
   border: var(--hairline) solid var(--ink-faded);
   border-radius: var(--radius-sm);
   color: var(--ink);
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -1189,7 +1155,7 @@ body.signed-in #notebook-btn {
 }
 
 #dialog-label {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-style: italic;
   font-size: var(--text-footnote);
   color: var(--ink-faded);
@@ -1203,7 +1169,7 @@ body.signed-in #notebook-btn {
 }
 
 #dialog-message {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   line-height: 1.5;
   color: var(--ink);
@@ -1366,7 +1332,7 @@ body.signed-in #notebook-btn {
 }
 
 .lyrics-list-date {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-2);
   color: var(--ink-faded);
 }
@@ -1377,7 +1343,7 @@ body.signed-in #notebook-btn {
 }
 
 .lyrics-action-btn {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-size: var(--text-caption-2);
   padding: var(--space-1) var(--space-2);
   background: transparent;
@@ -1400,7 +1366,7 @@ body.signed-in #notebook-btn {
 .lyrics-list-empty {
   padding: var(--space-8) var(--space-4);
   color: var(--ink-faded);
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-style: italic;
   font-size: var(--text-footnote);
   text-align: center;
@@ -1434,7 +1400,7 @@ body.signed-in #notebook-btn {
 }
 
 #save-indicator {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-style: italic;
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
@@ -1445,7 +1411,7 @@ body.signed-in #notebook-btn {
 /* The word the rhymes tab is currently holding, written beside its name the
    way a note is written in the margin. */
 .tab-word {
-  font-family: var(--font-marginalia);
+  font-family: var(--font-editor);
   font-style: italic;
   font-weight: var(--weight-regular);
   text-transform: none;
@@ -1742,7 +1708,7 @@ body.signed-in #notebook-btn {
   /* Bar items read as icon-and-label targets rather than buttons: no box, no
      fill, just the mark and its name. Separation comes from the icons and the
      even columns, which run edge to edge. Labels drop the printed caps of the
-     desktop tools for plain system text, which reads smaller and quieter. */
+     desktop tools for plain body text, which reads smaller and quieter. */
   .bottom-nav .toggle-btn {
     width: 100%;
     display: flex;
@@ -1755,7 +1721,7 @@ body.signed-in #notebook-btn {
     border: none;
     border-radius: 0;
     color: var(--ink-faded);
-    font-family: var(--font-ui);
+    font-family: var(--font-editor);
     font-size: var(--text-caption-2);
     font-weight: var(--weight-regular);
     letter-spacing: normal;
