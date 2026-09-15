@@ -661,6 +661,12 @@ body.signed-in #notebook-btn {
   display: none;
 }
 
+/* Until a word is picked the bar has nothing to show, and an empty strip with
+   a rule under it reads as a missing heading. */
+.selected-word-bar:has(#selected-word:empty) {
+  display: none;
+}
+
 @keyframes word-flash {
   0% { background: var(--flash); }
   100% { background: transparent; }
@@ -669,19 +675,6 @@ body.signed-in #notebook-btn {
 .selected-word-bar.flash {
   animation: word-flash var(--duration-flash) ease-out;
 }
-
-.selected-word-bar .label {
-  font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
-  color: var(--ink-faded);
-  text-transform: lowercase;
-  letter-spacing: var(--tracking-wide);
-  font-weight: var(--weight-regular);
-}
-
-/* Typewritten header register, echoing the memo-pad reference. */
-.selected-word-bar .label::before { content: '\2013\00a0'; }
-.selected-word-bar .label::after { content: '\00a0\2013'; }
 
 .selected-word-bar .word {
   font-family: var(--font-editor);
@@ -1175,8 +1168,7 @@ body.signed-in #notebook-btn {
   font-family: var(--font-display);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-normal);
+  letter-spacing: var(--tracking-tight);
   color: var(--ink);
 }
 
@@ -1312,8 +1304,7 @@ body.signed-in #notebook-btn {
   font-family: var(--font-display);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-normal);
+  letter-spacing: var(--tracking-tight);
   color: var(--ink);
 }
 
