@@ -1036,8 +1036,7 @@ body.signed-in #notebook-btn {
   font-family: var(--font-display);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-normal);
+  letter-spacing: var(--tracking-tight);
   color: var(--ink);
 }
 
@@ -1064,13 +1063,13 @@ body.signed-in #notebook-btn {
   padding-top: var(--space-5);
 }
 
+/* Written case, so a size up and tight tracking, like the header's buttons. */
 .settings-section-title {
   font-family: var(--font-editor);
-  font-size: var(--text-caption-2);
+  font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   color: var(--ink-faded);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-tight);
   margin-bottom: var(--space-1);
 }
 
