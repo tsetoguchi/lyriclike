@@ -1,3 +1,5 @@
+const GOOGLE_SIGN_IN_URL = '/api/auth/google/start';
+
 async function initAuth() {
   try {
     const res = await fetch('/api/me');
@@ -36,9 +38,13 @@ function closeAccountSettings() {
   document.getElementById('account-settings-overlay').classList.remove('open');
 }
 
-document.getElementById('sign-in-btn').addEventListener('click', () => {
-  window.location.href = '/api/auth/google/start';
-});
+// Signing in with Google is also how an account is made: the first visit
+// creates it.
+function startSignIn() {
+  window.location.href = GOOGLE_SIGN_IN_URL;
+}
+
+document.getElementById('sign-in-btn').addEventListener('click', startSignIn);
 
 async function signOut() {
   await fetch('/api/auth/logout', { method: 'POST' });
@@ -74,5 +80,6 @@ document.getElementById('settings-delete-account-btn').addEventListener('click',
 });
 
 window.handleSessionExpired = showSignIn;
+window.startSignIn = startSignIn;
 
 initAuth();

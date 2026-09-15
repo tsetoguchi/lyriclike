@@ -1022,8 +1022,8 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
-    // The notebook pair rides along but stays hidden until sign-in; CSS owns
-    // that, so placement does not have to know about auth.
+    // Create rides along but stays hidden until sign-in; CSS owns that, so
+    // placement does not have to know about auth.
     bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, notebookBtn, createBtn);
     headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
   } else {
