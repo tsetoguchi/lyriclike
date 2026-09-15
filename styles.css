@@ -101,6 +101,7 @@
   --sheet-handle-width: 36px;
   --sheet-handle-height: 4px;
   --title-min-width: 40px;
+  --wordmark-height: 28px;
 
   /* Weights: the face ships two, and the app uses both. */
   --weight-regular: 400;
@@ -262,6 +263,10 @@ header h1 {
   letter-spacing: var(--tracking-wordmark);
   text-transform: uppercase;
   color: var(--ink);
+  /* Grows to match .header-right, so the tool buttons between them sit in
+     the centre of the header. Flex, so the link only covers the logo. */
+  flex: 1 1 0;
+  display: flex;
 }
 
 /* The wordmark is the way home: a full page load back to the index. It keeps
@@ -269,6 +274,15 @@ header h1 {
 header h1 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* The logo replaces the typeset title. The h1's type rules stay so the alt
+   text still looks like the wordmark if the image fails to load. Block, so no
+   baseline gap sits under it. */
+header h1 img {
+  display: block;
+  height: var(--wordmark-height);
+  width: auto;
 }
 
 #status {
@@ -297,6 +311,15 @@ header h1 a {
 
 .toggle-btn:hover {
   background: var(--ink-wash);
+}
+
+/* The header's buttons read as written rather than in capitals. Lowercase
+   sets smaller and looser than capitals at the same size, so they step up a
+   size and close the tracking to match. */
+header .toggle-btn {
+  font-size: var(--text-footnote);
+  letter-spacing: var(--tracking-tight);
+  text-transform: none;
 }
 
 .nav-icon {
@@ -946,7 +969,11 @@ body.signed-in #notebook-btn {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
+  flex: 1 1 0;
+  justify-content: flex-end;
+  /* An equal share can be narrower than the email and Account button; they
+     push the buttons off centre then, rather than wrapping onto two lines. */
+  white-space: nowrap;
 }
 
 #user-area {
@@ -1465,7 +1492,6 @@ body.signed-in #notebook-btn {
   header .header-right {
     grid-column: 3;
     width: auto;
-    margin-left: 0;
   }
 
   .toggle-btn {
@@ -1519,10 +1545,10 @@ body.signed-in #notebook-btn {
     white-space: nowrap;
     padding: var(--space-3);
     font-family: var(--font-display);
-    font-size: var(--text-caption-1);
+    /* Written case, sized and tracked like the header's buttons. */
+    font-size: var(--text-footnote);
     font-weight: var(--weight-bold);
-    letter-spacing: var(--tracking-normal);
-    text-transform: uppercase;
+    letter-spacing: var(--tracking-tight);
     text-align: center;
     background: transparent;
     border: none;
