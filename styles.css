@@ -275,6 +275,9 @@ header h1 {
 header h1 a {
   color: inherit;
   text-decoration: none;
+  /* Starts on the syllable margin line below. A margin inside the h1, not
+     header padding, so the centred tool buttons stay centred. */
+  margin-left: calc(var(--gutter-syllables) - var(--space-6));
 }
 
 /* The logo replaces the typeset title. The h1's type rules stay so the alt
@@ -519,7 +522,10 @@ body.signed-in #notebook-btn {
 
 /* The pad's top edge: title written on the paper itself. */
 .panel-header {
-  padding: var(--space-3) var(--space-5) var(--space-3);
+  /* The title's letters start on the syllable margin line; its own inner
+     padding makes up the rest. */
+  padding: var(--space-3) var(--space-5) var(--space-3)
+    calc(var(--gutter-syllables) - var(--space-1));
   /* A step above the lyrics' own size, so the title reads as the heading. */
   font-size: var(--text-title-1);
   font-weight: var(--weight-regular);
@@ -1472,6 +1478,10 @@ body.signed-in #notebook-btn {
     grid-column: 2;
     width: auto;
     text-align: center;
+  }
+
+  header h1 a {
+    margin-left: 0;
   }
 
   header #user-area {
