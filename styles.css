@@ -140,7 +140,9 @@
   --text-body: 17px;
   --text-title-3: 20px;
   --text-title-2: 22px;
-  --text-title-1: 28px;
+  /* Off the iOS scale on purpose: the lyric title sits one notch above
+     the lyrics' Title 2, and iOS has no step between that and Title 1. */
+  --text-page-title: 24px;
 
   /* Corner radii: four steps, plus a pill for count badges. */
   --radius-sm: 4px;
@@ -522,13 +524,10 @@ body.signed-in #notebook-btn {
 
 /* The pad's top edge: title written on the paper itself. */
 .panel-header {
-  /* The title's letters start on the syllable margin line; its own inner
-     padding makes up the rest. */
-  padding: var(--space-3) var(--space-5) var(--space-3)
-    calc(var(--gutter-syllables) - var(--space-1));
-  /* A step above the lyrics' own size, so the title reads as the heading. */
-  font-size: var(--text-title-1);
-  font-weight: var(--weight-regular);
+  padding: var(--space-3) var(--space-5) var(--space-3);
+  /* Above the lyrics' own size and bold, so the title reads as the heading. */
+  font-size: var(--text-page-title);
+  font-weight: var(--weight-bold);
   color: var(--ink);
   border-bottom: var(--hairline) solid var(--rule);
   flex-shrink: 0;
