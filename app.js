@@ -914,9 +914,15 @@ if (window.visualViewport) {
   const viewport = window.visualViewport;
 
   function fitAppToVisualViewport() {
-    if (!isMobileView()) return;
     const appContent = document.getElementById('app-content');
-    if (appContent) appContent.style.height = viewport.height + 'px';
+    if (!appContent) return;
+    // A window widened past the mobile breakpoint would otherwise keep the
+    // narrow height it was last fitted to, and leave the desk showing below.
+    if (!isMobileView()) {
+      appContent.style.height = '';
+      return;
+    }
+    appContent.style.height = viewport.height + 'px';
 
     // The app is already sized to the space the keyboard leaves, so the
     // document behind it never needs to move. iOS scrolls it anyway when it
