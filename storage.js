@@ -1,5 +1,6 @@
 const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_TITLE = 'Untitled';
+const DRAFT_STORAGE_KEY = 'swag_draft';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -347,7 +348,7 @@ async function performSave() {
 }
 
 function saveDraft() {
-  localStorage.setItem('swag_draft', JSON.stringify({
+  localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
     id: currentLyricId,
     title: currentTitle,
     body: document.getElementById('lyrics').value,
@@ -408,10 +409,30 @@ document.getElementById('lyrics-list-overlay').addEventListener('click', e => {
 
 // Expose state for autosave (step 6).
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
+window.clearLyricState = clearLyricState;
+
+// Signing out must not leave the last account's lyric on screen, in the
+// notebook list, in the rhymes panel, or in the draft kept on this device.
+// The draft is removed after the input event, which saves an empty one.
+function clearLyricState() {
+  clearTimeout(saveTimer);
+  currentLyricId = crypto.randomUUID();
+  currentTitle = DEFAULT_TITLE;
+  lastSavedBody = '';
+  const textarea = document.getElementById('lyrics');
+  textarea.value = '';
+  textarea.dispatchEvent(new Event('input'));
+  localStorage.removeItem(DRAFT_STORAGE_KEY);
+  setSaveIndicator('');
+  updatePanelHeader();
+  closeLyricsList();
+  document.getElementById('lyrics-list-items').innerHTML = '';
+  if (window.resetRhymesPanel) window.resetRhymesPanel();
+}
 
 function restoreDraft() {
   try {
-    const raw = localStorage.getItem('swag_draft');
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return;
     const { id, title, body } = JSON.parse(raw);
     if (!body) return;

@@ -46,10 +46,18 @@ function startSignIn() {
 
 document.getElementById('sign-in-btn').addEventListener('click', startSignIn);
 
-async function signOut() {
-  await fetch('/api/auth/logout', { method: 'POST' });
+// An explicit sign-out or a deleted account leaves nothing of the account on
+// screen. An expired session does not come through here, so writing that
+// has not been saved yet survives it.
+function endSession() {
   closeAccountSettings();
   showSignIn();
+  if (window.clearLyricState) window.clearLyricState();
+}
+
+async function signOut() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  endSession();
 }
 
 document.getElementById('settings-sign-out-btn').addEventListener('click', signOut);
@@ -75,8 +83,7 @@ document.getElementById('settings-delete-account-btn').addEventListener('click',
   if (typed === null) return;
 
   await fetch('/api/me', { method: 'DELETE' });
-  closeAccountSettings();
-  showSignIn();
+  endSession();
 });
 
 window.handleSessionExpired = showSignIn;
