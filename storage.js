@@ -145,7 +145,7 @@ async function loadLyricsList() {
       item.innerHTML = `
         <div class="lyrics-list-item-main">
           <span class="lyrics-list-title">${escapeHtml(lyric.title)}</span>
-          <span class="lyrics-list-date">${formatDate(lyric.updated_at)}</span>
+          <span class="lyrics-list-date">${formatDate(lyric.created_at)}</span>
         </div>
         <div class="lyrics-list-actions">
           <button class="lyrics-action-btn">Rename</button>
