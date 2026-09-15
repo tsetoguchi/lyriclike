@@ -207,7 +207,22 @@ describe('own lyrics', () => {
     await addLyric(alice.id, { id: 'older', title: 'Older', body: 'b', updatedAt: 1 });
     const listed = await (await listLyrics(alice.sid)).json();
     assert.deepEqual(listed.map((lyric) => lyric.id), [ALICE_LYRIC_ID, 'older']);
-    assert.deepEqual(Object.keys(listed[0]).sort(), ['id', 'title', 'updated_at']);
+    assert.deepEqual(
+      Object.keys(listed[0]).sort(), ['created_at', 'id', 'title', 'updated_at']);
+  });
+
+  it('keep their created date in the list after a rename', async () => {
+    const id = 'renamed-lyric';
+    // An old timestamp, so a rename in the same millisecond cannot mask a bug.
+    const createdAt = 1;
+    await addLyric(alice.id, { id, title: 'Before', body: 'words', updatedAt: createdAt });
+
+    await saveLyric(alice.sid, id, { title: 'After', body: 'words' });
+    const listed = await (await listLyrics(alice.sid)).json();
+    const renamed = listed.find((lyric) => lyric.id === id);
+    assert.equal(renamed.title, 'After');
+    assert.equal(renamed.created_at, createdAt);
+    assert.ok(renamed.updated_at > createdAt);
   });
 
   it('can be created, updated and deleted', async () => {
