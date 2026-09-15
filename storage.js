@@ -104,11 +104,21 @@ function askForLyricName({ heading, confirmLabel, value }) {
 
 function openLyricsList() {
   document.getElementById('lyrics-list-overlay').classList.add('open');
+  setNotebookButtonActive(true);
   loadLyricsList();
 }
 
 function closeLyricsList() {
   document.getElementById('lyrics-list-overlay').classList.remove('open');
+  setNotebookButtonActive(false);
+}
+
+// The notebook button lights up amber while the notebook is open, like the
+// other tool buttons do while their tool is on.
+function setNotebookButtonActive(isActive) {
+  const button = document.getElementById('notebook-btn');
+  button.classList.toggle('active', isActive);
+  button.setAttribute('aria-expanded', String(isActive));
 }
 
 async function loadLyricsList() {
