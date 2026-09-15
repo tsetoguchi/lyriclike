@@ -1123,6 +1123,22 @@ function showFirstRunGuidance() {
 
 showFirstRunGuidance();
 
+// Back to what a new visitor sees: no picked word, no quoted lyric line, and
+// the pointer to click a word.
+function resetRhymesPanel() {
+  currentHighlightWord = '';
+  pickedBounds = null;
+  currentResults = null;
+  selectedWordEl.textContent = '';
+  selectedContextEl.textContent = '';
+  tabRhymeWordEl.textContent = '';
+  const pointer = isTouchPrimary() ? EMPTY_RESULTS_TOUCH : EMPTY_RESULTS_POINTER;
+  resultsEl.innerHTML = '<div class="empty-state">' + pointer + '</div>';
+  markPickedWord();
+}
+
+window.resetRhymesPanel = resetRhymesPanel;
+
 let resizeRAF = null;
 
 function handleWindowResize() {
