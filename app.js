@@ -8,6 +8,7 @@ const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
 const MAX_HIGHLIGHT_MATCHES = 500;
+const HOVER_FADE_MS = 200; // --duration-base, the hover fade-out in styles.css
 const SCROLL_THROTTLE_MS = 16;
 const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
@@ -218,24 +219,223 @@ function updateHighlight(word) {
   console.assert(typeof word === 'string', 'updateHighlight: word must be a string');
   if (typeof word !== 'string') return;
   currentHighlightWord = word.toLowerCase().replace(/[^a-z']/g, '');
-  const text = textareaEl.value;
-  if (!currentHighlightWord || currentHighlightWord.length < MIN_WORD_LENGTH) {
-    highlightEl.innerHTML = '';
-    return;
-  }
-  const safeWord = currentHighlightWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp('(\\b)(' + safeWord + ')(\\b)', 'gi');
-  const escaped = escapeHtml(text);
-  let matchCount = 0;
-  const highlighted = escaped.replace(pattern, function replaceMatch(full, pre, match, post) {
-    if (matchCount >= MAX_HIGHLIGHT_MATCHES) return full;
-    matchCount++;
-    return pre + '<span class="highlight-word">' + match + '</span>' + post;
-  });
-  highlightEl.innerHTML = highlighted + '\n';
+  renderHighlight();
 }
 
+// The textarea's own letters are transparent, so this layer draws every one of
+// them, and is redrawn on every edit, pick and hover change.
+function renderHighlight() {
+  const text = textareaEl.value;
+  const picked = pickedWordRanges(text, currentHighlightWord);
+  const ranges = withHoverRange(picked, currentHoverRange());
+  highlightEl.innerHTML = rangesToHtml(text, ranges) + '\n';
+}
 
+// Matching runs on the raw text, not the escaped HTML, so a word such as "amp"
+// cannot split an entity.
+function pickedWordRanges(text, word) {
+  const ranges = [];
+  if (!word || word.length < MIN_WORD_LENGTH) return ranges;
+  const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp('\\b' + safeWord + '\\b', 'gi');
+  let match = pattern.exec(text);
+  while (match !== null && ranges.length < MAX_HIGHLIGHT_MATCHES) {
+    const end = match.index + match[0].length;
+    ranges.push({ start: match.index, end: end, className: 'highlight-word' });
+    match = pattern.exec(text);
+  }
+  return ranges;
+}
+
+// A hover that overlaps a picked word is dropped: the pick already has the
+// stronger colour.
+function withHoverRange(ranges, hover) {
+  if (!hover) return ranges;
+  const overlapsPick = ranges.some(function overlaps(range) {
+    return hover.start < range.end && range.start < hover.end;
+  });
+  if (overlapsPick) return ranges;
+  return ranges.concat([hover]).sort(function byStart(a, b) {
+    return a.start - b.start;
+  });
+}
+
+function rangesToHtml(text, ranges) {
+  let html = '';
+  let lastIndex = 0;
+  for (let i = 0; i < ranges.length; i++) {
+    const range = ranges[i];
+    const word = escapeHtml(text.slice(range.start, range.end));
+    html += escapeHtml(text.slice(lastIndex, range.start));
+    html += '<span class="' + range.className + '">' + word + '</span>';
+    lastIndex = range.end;
+  }
+  return html + escapeHtml(text.slice(lastIndex));
+}
+
+// ── Word hover (desktop) ──
+
+const HOVER_QUERY = window.matchMedia('(hover: hover) and (pointer: fine)');
+const WORD_CHAR = /[a-zA-Z']/;
+
+let hoveredBounds = null;
+let leavingBounds = null;
+let hoverFrame = 0;
+let hoverClearTimer = null;
+
+function canHoverWords() {
+  return HOVER_QUERY.matches && !isMobileView();
+}
+
+function caretAtPoint(x, y) {
+  if (document.caretPositionFromPoint) {
+    const position = document.caretPositionFromPoint(x, y);
+    return position ? { node: position.offsetNode, offset: position.offset } : null;
+  }
+  const range = document.caretRangeFromPoint(x, y);
+  return range ? { node: range.startContainer, offset: range.startOffset } : null;
+}
+
+// The textarea sits on top and answers every hit test, so it steps aside for
+// one synchronous query while the layer beneath, laid out identically, says
+// which character is under the pointer.
+function textOffsetAtPoint(x, y) {
+  textareaEl.style.pointerEvents = 'none';
+  highlightEl.style.pointerEvents = 'auto';
+  const caret = caretAtPoint(x, y);
+  textareaEl.style.pointerEvents = '';
+  highlightEl.style.pointerEvents = '';
+  if (!caret || !highlightEl.contains(caret.node)) return -1;
+  const range = document.createRange();
+  range.setStart(highlightEl, 0);
+  range.setEnd(caret.node, caret.offset);
+  return range.toString().length;
+}
+
+function wordBoundsAt(text, offset) {
+  let start = offset;
+  let end = offset;
+  while (start > 0 && WORD_CHAR.test(text[start - 1])) start--;
+  while (end < text.length && WORD_CHAR.test(text[end])) end++;
+  if (end - start < MIN_WORD_LENGTH) return null;
+  return { start: start, end: end };
+}
+
+function rangeInHighlight(start, end) {
+  const walker = document.createTreeWalker(highlightEl, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let seen = 0;
+  let hasStart = false;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = node.nodeValue.length;
+    if (!hasStart && start <= seen + length) {
+      range.setStart(node, start - seen);
+      hasStart = true;
+    }
+    if (hasStart && end <= seen + length) {
+      range.setEnd(node, end - seen);
+      return range;
+    }
+    seen += length;
+  }
+  return null;
+}
+
+// A caret lands on the nearest character even past the end of a line, so the
+// pointer has to be over the word's own boxes. Those are as tall as the type,
+// not the line, so each is widened to the line pitch.
+function isPointOverWord(bounds, x, y) {
+  const range = rangeInHighlight(bounds.start, bounds.end);
+  if (!range) return false;
+  const pitch = parseFloat(getComputedStyle(highlightEl).lineHeight) || 0;
+  const rects = range.getClientRects();
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i];
+    const slack = Math.max(0, (pitch - rect.height) / 2);
+    const isInsideX = x >= rect.left && x <= rect.right;
+    const isInsideY = y >= rect.top - slack && y <= rect.bottom + slack;
+    if (isInsideX && isInsideY) return true;
+  }
+  return false;
+}
+
+function hoverableWordAt(x, y) {
+  const text = textareaEl.value;
+  const offset = textOffsetAtPoint(x, y);
+  if (offset < 0) return null;
+  const bounds = wordBoundsAt(text, offset);
+  if (!bounds || !isPointOverWord(bounds, x, y)) return null;
+  // The picked word is already in full accent; a half tint over it adds nothing.
+  const word = text.slice(bounds.start, bounds.end).toLowerCase();
+  return word === currentHighlightWord ? null : bounds;
+}
+
+function currentHoverRange() {
+  if (hoveredBounds) {
+    return { start: hoveredBounds.start, end: hoveredBounds.end, className: 'word-hover' };
+  }
+  if (leavingBounds) {
+    const className = 'word-hover leaving';
+    return { start: leavingBounds.start, end: leavingBounds.end, className: className };
+  }
+  return null;
+}
+
+function showWordHover(bounds) {
+  clearTimeout(hoverClearTimer);
+  hoveredBounds = bounds;
+  leavingBounds = null;
+  renderHighlight();
+}
+
+// Fades the word back to ink, then draws it plain once the fade is over.
+function hideWordHover() {
+  cancelAnimationFrame(hoverFrame);
+  if (!hoveredBounds) return;
+  leavingBounds = hoveredBounds;
+  hoveredBounds = null;
+  renderHighlight();
+  clearTimeout(hoverClearTimer);
+  hoverClearTimer = setTimeout(function endHoverFade() {
+    leavingBounds = null;
+    renderHighlight();
+  }, HOVER_FADE_MS);
+}
+
+// An edit moves every offset, so the hover is dropped without a fade. The
+// caller redraws the layer.
+function clearWordHover() {
+  cancelAnimationFrame(hoverFrame);
+  clearTimeout(hoverClearTimer);
+  hoveredBounds = null;
+  leavingBounds = null;
+}
+
+function updateHoverAt(x, y) {
+  const bounds = hoverableWordAt(x, y);
+  if (!bounds) {
+    hideWordHover();
+    return;
+  }
+  const isSameWord = hoveredBounds !== null &&
+    hoveredBounds.start === bounds.start && hoveredBounds.end === bounds.end;
+  if (!isSameWord) showWordHover(bounds);
+}
+
+// Pointer moves arrive faster than frames; only the latest position in each
+// frame is looked up.
+function handleEditorPointerMove(event) {
+  if (!canHoverWords() || event.buttons !== 0) {
+    hideWordHover();
+    return;
+  }
+  const x = event.clientX;
+  const y = event.clientY;
+  cancelAnimationFrame(hoverFrame);
+  hoverFrame = requestAnimationFrame(function lookUpHoveredWord() {
+    updateHoverAt(x, y);
+  });
+}
 
 // ── Word selection handling ──
 
@@ -286,6 +486,7 @@ function handleSelection() {
     word = word.replace(/[^a-zA-Z']/g, '');
     if (word.length < MIN_WORD_LENGTH) return;
 
+    clearWordHover();
     updateHighlight(word);
     selectedContextEl.textContent = getWordContext(text, start);
     flashWordBar();
@@ -640,8 +841,15 @@ textareaEl.addEventListener('input', function handleInput() {
   // the background while the writer keeps typing.
   ensureRhymeData();
   updateGutters();
-  if (currentHighlightWord) updateHighlight(currentHighlightWord);
+  clearWordHover();
+  updateHighlight(currentHighlightWord);
 });
+textareaEl.addEventListener('mousemove', handleEditorPointerMove);
+textareaEl.addEventListener('mouseleave', hideWordHover);
+lyricsAreaEl.addEventListener('scroll', hideWordHover, { passive: true });
+// A browser can restore the textarea's text on reload without an input
+// event, and nothing would draw those letters until the next edit.
+updateHighlight(currentHighlightWord);
 
 // Line heights cached before the editor webfont finishes loading are
 // measured with the fallback font; re-measure once fonts settle.
@@ -1010,6 +1218,7 @@ setInterval(function pollTextChanges() {
   if (textareaEl.value !== lastTextValue) {
     lastTextValue = textareaEl.value;
     updateGutters();
+    updateHighlight(currentHighlightWord);
   }
 }, POLL_INTERVAL_MS);
 
