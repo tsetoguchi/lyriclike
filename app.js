@@ -7,8 +7,7 @@ const MAX_RESULTS_PER_GROUP = 500;
 const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
-const MAX_HIGHLIGHT_MATCHES = 500;
-const HOVER_FADE_MS = 200; // --duration-base, the hover fade-out in styles.css
+const HOVER_FADE_MS = 600; // --duration-hover, the hover fade in styles.css
 const SCROLL_THROTTLE_MS = 16;
 const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
@@ -203,6 +202,8 @@ function renderResults(word, results) {
 // ── Word highlight overlay ──
 
 let currentHighlightWord = '';
+let pickedBounds = null;
+let highlightedText = '';
 let currentResults = null;
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
@@ -215,36 +216,82 @@ function escapeHtml(text) {
   });
 }
 
-function updateHighlight(word) {
-  console.assert(typeof word === 'string', 'updateHighlight: word must be a string');
+// Only the clicked occurrence of the word is coloured, so its place in the
+// text is kept as well as the word.
+function pickHighlightWord(word, bounds) {
+  console.assert(typeof word === 'string', 'pickHighlightWord: word must be a string');
   if (typeof word !== 'string') return;
   currentHighlightWord = word.toLowerCase().replace(/[^a-z']/g, '');
+  highlightedText = textareaEl.value;
+  pickedBounds = bounds;
   renderHighlight();
+}
+
+function pickedBoundsForSelection(text, start, end) {
+  let position = start;
+  while (position < end && !WORD_CHAR.test(text[position])) position++;
+  return wordBoundsAt(text, position);
 }
 
 // The textarea's own letters are transparent, so this layer draws every one of
 // them, and is redrawn on every edit, pick and hover change.
 function renderHighlight() {
   const text = textareaEl.value;
-  const picked = pickedWordRanges(text, currentHighlightWord);
-  const ranges = withHoverRange(picked, currentHoverRange());
+  followTextEdit(text);
+  const ranges = withHoverRange(pickedRanges(), currentHoverRange());
   highlightEl.innerHTML = rangesToHtml(text, ranges) + '\n';
 }
 
-// Matching runs on the raw text, not the escaped HTML, so a word such as "amp"
-// cannot split an entity.
-function pickedWordRanges(text, word) {
-  const ranges = [];
-  if (!word || word.length < MIN_WORD_LENGTH) return ranges;
-  const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp('\\b' + safeWord + '\\b', 'gi');
-  let match = pattern.exec(text);
-  while (match !== null && ranges.length < MAX_HIGHLIGHT_MATCHES) {
-    const end = match.index + match[0].length;
-    ranges.push({ start: match.index, end: end, className: 'highlight-word' });
-    match = pattern.exec(text);
+// Moves the picked word along with any edit before it. An edit that reaches
+// the word itself unpicks it.
+function followTextEdit(text) {
+  const shifted = shiftBoundsForEdit(pickedBounds, highlightedText, text);
+  const isStillPicked = shifted !== null &&
+    isWholeWordAt(text, shifted, currentHighlightWord);
+  pickedBounds = isStillPicked ? shifted : null;
+  highlightedText = text;
+}
+
+function pickedRanges() {
+  if (!pickedBounds) return [];
+  const bounds = pickedBounds;
+  return [{ start: bounds.start, end: bounds.end, className: 'highlight-word' }];
+}
+
+// Finds the single stretch of text that changed by trimming what the old and
+// new text share at each end.
+function shiftBoundsForEdit(bounds, oldText, newText) {
+  if (!bounds || oldText === newText) return bounds;
+  const prefix = commonPrefixLength(oldText, newText);
+  const suffix = commonSuffixLength(oldText, newText, prefix);
+  if (bounds.end <= prefix) return bounds;
+  if (bounds.start < oldText.length - suffix) return null;
+  const delta = newText.length - oldText.length;
+  return { start: bounds.start + delta, end: bounds.end + delta };
+}
+
+function commonPrefixLength(a, b) {
+  const limit = Math.min(a.length, b.length);
+  let length = 0;
+  while (length < limit && a[length] === b[length]) length++;
+  return length;
+}
+
+function commonSuffixLength(a, b, prefix) {
+  const limit = Math.min(a.length, b.length) - prefix;
+  let length = 0;
+  while (length < limit && a[a.length - 1 - length] === b[b.length - 1 - length]) {
+    length++;
   }
-  return ranges;
+  return length;
+}
+
+function isWholeWordAt(text, bounds, word) {
+  if (!word || bounds.end > text.length) return false;
+  const isBoundedBefore = bounds.start === 0 || !WORD_CHAR.test(text[bounds.start - 1]);
+  const isBoundedAfter = bounds.end === text.length || !WORD_CHAR.test(text[bounds.end]);
+  const isSameWord = text.slice(bounds.start, bounds.end).toLowerCase() === word;
+  return isBoundedBefore && isBoundedAfter && isSameWord;
 }
 
 // A hover that overlaps a picked word is dropped: the pick already has the
@@ -365,9 +412,10 @@ function hoverableWordAt(x, y) {
   if (offset < 0) return null;
   const bounds = wordBoundsAt(text, offset);
   if (!bounds || !isPointOverWord(bounds, x, y)) return null;
-  // The picked word is already in full accent; a half tint over it adds nothing.
-  const word = text.slice(bounds.start, bounds.end).toLowerCase();
-  return word === currentHighlightWord ? null : bounds;
+  // The picked occurrence is already amber; hovering it changes nothing.
+  const isPicked = pickedBounds !== null &&
+    bounds.start === pickedBounds.start && bounds.end === pickedBounds.end;
+  return isPicked ? null : bounds;
 }
 
 function currentHoverRange() {
@@ -487,7 +535,7 @@ function handleSelection() {
     if (word.length < MIN_WORD_LENGTH) return;
 
     clearWordHover();
-    updateHighlight(word);
+    pickHighlightWord(word, pickedBoundsForSelection(text, start, end));
     selectedContextEl.textContent = getWordContext(text, start);
     flashWordBar();
 
@@ -842,14 +890,14 @@ textareaEl.addEventListener('input', function handleInput() {
   ensureRhymeData();
   updateGutters();
   clearWordHover();
-  updateHighlight(currentHighlightWord);
+  renderHighlight();
 });
 textareaEl.addEventListener('mousemove', handleEditorPointerMove);
 textareaEl.addEventListener('mouseleave', hideWordHover);
 lyricsAreaEl.addEventListener('scroll', hideWordHover, { passive: true });
 // A browser can restore the textarea's text on reload without an input
 // event, and nothing would draw those letters until the next edit.
-updateHighlight(currentHighlightWord);
+renderHighlight();
 
 // Line heights cached before the editor webfont finishes loading are
 // measured with the fallback font; re-measure once fonts settle.
@@ -1218,7 +1266,7 @@ setInterval(function pollTextChanges() {
   if (textareaEl.value !== lastTextValue) {
     lastTextValue = textareaEl.value;
     updateGutters();
-    updateHighlight(currentHighlightWord);
+    renderHighlight();
   }
 }, POLL_INTERVAL_MS);
 
