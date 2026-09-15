@@ -57,6 +57,7 @@
   --margin-line: #3b4553;       /* where chrome meets paper: header, tabs, bar */
   --accent: #e9b45f;            /* amber lamp accents (grips, focus, marks) */
   --accent-wash: rgba(233, 180, 95, 0.10);  /* active-page tint */
+  --accent-wash-strong: rgba(233, 180, 95, 0.16);  /* behind the picked word */
   --ink: #e2e7ef;               /* cool off-white writing ink (12.9:1 on the card) */
   --ink-faded: #8b96a6;         /* pencil: marginalia, placeholders (5.3:1 on the card) */
   --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
@@ -74,7 +75,7 @@
   --duration-slow: 0.28s;
   --duration-flash: 0.4s;
   /* A word under the pointer warms to amber and cools back at one pace. */
-  --duration-hover: 1s;
+  --duration-hover: 0.4s;
 
   /* Stacking. Only two things ever lift off the page: the bar above the
      lyrics, and a panel over everything. */
@@ -193,8 +194,8 @@
   /* Effects. The selection washes are cool, not amber, and this is not an
      oversight: a warm wash has to stay dark enough for light ink to read on
      top of it, and every amber dark enough to do that composites to khaki
-     over the slate card. The picked word takes amber as its ink instead of a
-     wash behind it, which reads clearly on the card. */
+     over the slate card. The picked word takes amber as its ink, so the
+     amber wash behind it only has to hold amber letters, which it does. */
   --selection: rgba(124, 184, 255, 0.30);
   --flash: rgba(124, 184, 255, 0.20);
   --scrim: rgba(0, 0, 0, 0.66);                /* dimmed desk */
@@ -574,6 +575,9 @@ body.signed-in #notebook-btn {
   color: var(--ink);
   pointer-events: none;
   overflow: hidden;
+  /* Its own stacking context, so a word's wash can sit behind its letters
+     without dropping behind the card. */
+  isolation: isolate;
 }
 
 #line-measure {
@@ -601,6 +605,34 @@ body.signed-in #notebook-btn {
   /* Vertical padding on an inline box leaves the layout alone but stretches
      what the pointer can hit to the full line pitch. */
   padding-block: calc((var(--line-pitch) - 1em) / 2);
+  position: relative;
+}
+
+/* The picked word sits on a rounded amber wash. It is drawn behind the word
+   rather than as padding, so the letters stay exactly over the textarea's.
+   Its edges come in from the hit padding to hug the type. */
+#lyrics-highlight .lyric-word::before {
+  content: '';
+  position: absolute;
+  inset-block: calc((var(--line-pitch) - 1em) / 2 - var(--hairline) * 2);
+  inset-inline: calc(var(--space-1) * -1);
+  z-index: -1;
+  border-radius: var(--radius-sm);
+  background: var(--accent-wash-strong);
+  opacity: 0;
+  transition: opacity var(--duration-slow) ease-out;
+}
+
+/* Picking lands at once, letters and wash together; only letting go of a
+   word fades, since adding a class takes the new state's transition and
+   removing it takes the base one. */
+#lyrics-highlight .lyric-word.highlight-word {
+  transition: none;
+}
+
+#lyrics-highlight .lyric-word.highlight-word::before {
+  opacity: 1;
+  transition: none;
 }
 
 /* Desktop only: the word under the pointer. */
