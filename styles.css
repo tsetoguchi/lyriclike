@@ -296,13 +296,14 @@ header h1 img {
   color: var(--ink-faded);
 }
 
-/* Tool buttons: printed labels on the paper. */
+/* Tool buttons: labels read as written rather than in capitals. Lowercase
+   sets smaller and looser than capitals at the same size, so they sit a
+   size up with the tracking closed to match. */
 .toggle-btn {
   font-family: var(--font-display);
-  font-size: var(--text-caption-2);
+  font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-normal);
-  text-transform: uppercase;
+  letter-spacing: var(--tracking-tight);
   padding: var(--space-2) var(--space-3);
   background: transparent;
   border: var(--hairline) solid var(--ink-border);
@@ -315,15 +316,6 @@ header h1 img {
 
 .toggle-btn:hover {
   background: var(--ink-wash);
-}
-
-/* The header's buttons read as written rather than in capitals. Lowercase
-   sets smaller and looser than capitals at the same size, so they step up a
-   size and close the tracking to match. */
-header .toggle-btn {
-  font-size: var(--text-footnote);
-  letter-spacing: var(--tracking-tight);
-  text-transform: none;
 }
 
 .nav-icon {
