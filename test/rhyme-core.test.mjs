@@ -116,15 +116,21 @@ describe('classifyRhyme', () => {
 });
 
 describe('findRhymes', () => {
-  it('groups rhymes by type, filtered and sorted', () => {
+  it('groups rhymes by type, filtered and ranked', () => {
     assert.deepEqual(findRhymes(INDEX, 'cat', FILTERS), {
       perfect: ['hat', 'sat'],
       family: [],
       additive: ['cast'],
       subtractive: [],
       assonance: ['cap', 'ham', 'happy'],
-      consonance: ['caught', 'cut', 'hot']
+      consonance: ['cut', 'hot', 'caught']
     });
+  });
+
+  it('ranks the words nearest the target first', () => {
+    const results = findRhymes(INDEX, 'cat', FILTERS);
+    // "cap" and "ham" are the target's own one syllable; "happy" has two.
+    assert.deepEqual(results.assonance, ['cap', 'ham', 'happy']);
   });
 
   it('returns one list per rhyme type, in display order', () => {

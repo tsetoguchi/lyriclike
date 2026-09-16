@@ -15,6 +15,8 @@
   // Cot-caught merger: AA (got/hot) ≈ AO (lost/caught)
   const MERGED_VOWELS = new Map([['AA', 'AO'], ['AO', 'AA']]);
   const PRIMARY_STRESS = 1;
+  // The vowel a rhyme part is split at, which no phoneme list of its own holds.
+  const STRESSED_VOWEL_COUNT = 1;
   const NO_STRESS_MARK = -1;
   const NOT_FOUND = -1;
 
@@ -227,9 +229,9 @@
     return !filters.englishWords || filters.englishWords.has(word);
   }
 
-  function filterAndSort(results, filters) {
+  function filterResults(results, filters) {
     for (const { key } of RHYME_TYPES) {
-      results[key] = results[key].filter((word) => isListable(word, filters)).sort();
+      results[key] = results[key].filter((word) => isListable(word, filters));
     }
   }
 
@@ -246,8 +248,74 @@
       const codaWords = index.codaBuckets[target.coda.join(' ')] || [];
       classifyBucket(index, target, codaWords, seen, results);
     }
-    filterAndSort(results, filters);
+    filterResults(results, filters);
+    rankResults(index, target, results);
     return results;
+  }
+
+  // ── Result ranking ──
+
+  // Every word in a group already rhymes the same way, so what orders them is
+  // how close they land. Plain alphabetical order buried the usable matches
+  // under whatever happened to start with an "a".
+
+  function countPartSyllables(part) {
+    return part.onset.filter(isVowel).length
+      + part.coda.filter(isVowel).length + STRESSED_VOWEL_COUNT;
+  }
+
+  function countSharedCodaStart(coda1, coda2) {
+    const limit = Math.min(coda1.length, coda2.length);
+    let shared = 0;
+    while (shared < limit && coda1[shared] === coda2[shared]) shared++;
+    return shared;
+  }
+
+  function countSharedCodaEnd(coda1, coda2) {
+    const limit = Math.min(coda1.length, coda2.length);
+    let shared = 0;
+    while (shared < limit
+      && coda1[coda1.length - shared - 1] === coda2[coda2.length - shared - 1]) shared++;
+    return shared;
+  }
+
+  // "cast" against "mask" shares the S opening its coda; "night" against
+  // "iced" shares the T closing it. Either one is a sound the ear catches.
+  function countSharedCoda(coda1, coda2) {
+    return Math.max(countSharedCodaStart(coda1, coda2), countSharedCodaEnd(coda1, coda2));
+  }
+
+  // Short words are the common ones far more often than not, which is the
+  // closest thing to a frequency list the shipped data allows.
+  function compareCloseness(entry1, entry2) {
+    if (entry1.sharedCoda !== entry2.sharedCoda) return entry2.sharedCoda - entry1.sharedCoda;
+    if (entry1.syllableGap !== entry2.syllableGap) return entry1.syllableGap - entry2.syllableGap;
+    if (entry1.word.length !== entry2.word.length) return entry1.word.length - entry2.word.length;
+    if (entry1.word !== entry2.word) return entry1.word < entry2.word ? -1 : 1;
+    return 0;
+  }
+
+  function toClosenessEntry(index, target, targetSyllables, word) {
+    const part = index.rhymeIndex[word];
+    return {
+      word,
+      sharedCoda: countSharedCoda(target.coda, part.coda),
+      syllableGap: Math.abs(targetSyllables - countPartSyllables(part))
+    };
+  }
+
+  function rankByCloseness(index, target, words) {
+    const targetSyllables = countPartSyllables(target);
+    return words
+      .map((word) => toClosenessEntry(index, target, targetSyllables, word))
+      .sort(compareCloseness)
+      .map((entry) => entry.word);
+  }
+
+  function rankResults(index, target, results) {
+    for (const { key } of RHYME_TYPES) {
+      results[key] = rankByCloseness(index, target, results[key]);
+    }
   }
 
   // ── Pronunciation facts ──

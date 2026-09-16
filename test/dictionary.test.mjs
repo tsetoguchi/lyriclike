@@ -52,15 +52,20 @@ describe('shipped dictionary', () => {
     }
   });
 
-  it('lists each word under one type at most, in alphabetical order', () => {
+  it('lists each word under one type at most', () => {
     for (const word of SAMPLE_WORDS) {
-      const results = findRhymes(index, word, filters);
-      const listed = listAll(results);
+      const listed = listAll(findRhymes(index, word, filters));
       assert.equal(new Set(listed).size, listed.length, `${word} repeats a rhyme`);
-      for (const { key } of RHYME_TYPES) {
-        assert.deepEqual(results[key], [...results[key]].sort(), `${word} ${key} unsorted`);
-      }
     }
+  });
+
+  it('ranks the closest rhymes first', () => {
+    const perfect = findRhymes(index, 'night', filters).perfect;
+    assert.ok(perfect.indexOf('bite') < perfect.indexOf('tonight'), 'one syllable first');
+
+    // "iced" keeps the T that ends "night"; "biked" does not.
+    const additive = findRhymes(index, 'night', filters).additive;
+    assert.ok(additive.indexOf('iced') < additive.indexOf('biked'), 'shared ending first');
   });
 
   it('labels a real verse', () => {
