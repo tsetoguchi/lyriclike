@@ -2,7 +2,7 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cloudflareinsights.com
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com
 
 # Fonts and icons are versioned by filename, so they can be cached forever.
 /fonts/*
@@ -44,6 +44,9 @@
   Cache-Control: no-cache
 
 /storage.js
+  Cache-Control: no-cache
+
+/analytics.js
   Cache-Control: no-cache
 
 /styles.css
