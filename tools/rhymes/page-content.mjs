@@ -4,39 +4,18 @@
 
 import rhymeCore from '../../rhyme-core.js';
 
-const { RHYME_TYPES, countSyllables, getStressedSyllable } = rhymeCore;
+const { RHYME_TYPES, countSyllables, getStressedSyllable, rankRhymeWords } = rhymeCore;
 
 const MAX_WORDS_PER_TYPE = 100;
 const SUMMARY_EXAMPLE_COUNT = 5;
 // Strongest first, so the answer at the top draws from the closest sounds.
 const NEAR_RHYME_TYPES = ['family', 'additive', 'subtractive'];
 const LOOSE_RHYME_TYPES = ['assonance', 'consonance'];
-const UNRANKED = Number.POSITIVE_INFINITY;
-
-// Closest sound first, then commonest word. The editor's categories treat the
-// AA/AO vowels as one, which lets "heart" list "sort" as perfect; putting
-// exact vowel matches ahead keeps "start" and "part" at the top of the page.
-function compareRhymes(a, b, context) {
-  const { index, ranks, target, targetSyllables } = context;
-  const partA = index.rhymeIndex[a];
-  const partB = index.rhymeIndex[b];
-  const vowelMissA = partA.vowel === target.vowel ? 0 : 1;
-  const vowelMissB = partB.vowel === target.vowel ? 0 : 1;
-  const codaGapA = Math.abs(partA.coda.length - target.coda.length);
-  const codaGapB = Math.abs(partB.coda.length - target.coda.length);
-  const syllableGapA = Math.abs(countSyllables(index, a) - targetSyllables);
-  const syllableGapB = Math.abs(countSyllables(index, b) - targetSyllables);
-  const rankA = ranks.get(a) ?? UNRANKED;
-  const rankB = ranks.get(b) ?? UNRANKED;
-  return (vowelMissA - vowelMissB)
-    || (codaGapA - codaGapB)
-    || (syllableGapA - syllableGapB)
-    || (rankA === rankB ? 0 : rankA < rankB ? -1 : 1)
-    || a.localeCompare(b);
-}
-
+// Closest sound first, then commonest word — the same order the editor's
+// panel puts its results in, so a page and the app never disagree about which
+// rhyme is the best one.
 function rankRhymes(words, context) {
-  return [...words].sort((a, b) => compareRhymes(a, b, context));
+  return rankRhymeWords(context.index, context.word, words, context.ranks);
 }
 
 function groupBySyllables(words, index) {
@@ -87,7 +66,7 @@ export function countListedRhymes(results) {
 
 export function buildPageModel({ word, results, index, ranks, related }) {
   const targetSyllables = countSyllables(index, word);
-  const context = { index, ranks, target: index.rhymeIndex[word], targetSyllables };
+  const context = { index, ranks, word };
   return {
     word,
     syllables: targetSyllables,
