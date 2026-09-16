@@ -1,9 +1,11 @@
-// Turns page models into HTML. The pages are static and script-free, so all
+// Turns page models into HTML. The pages are static and carry no script of
+// their own — analytics.js is the only one they load — so all
 // they need from the site is the stylesheet and the fonts it points at.
 
 export const SITE_ORIGIN = 'https://lyriclike.com';
 export const RHYMES_PATH = '/rhymes/';
 const STYLESHEET_PATH = '/rhymes/rhymes.css';
+const ANALYTICS_PATH = '/analytics.js';
 const SITE_NAME = 'LyricLike';
 // The card shown when any page is shared; the homepage uses the same image.
 const PREVIEW_IMAGE_URL = `${SITE_ORIGIN}/assets/lyriclike.png`;
@@ -64,6 +66,7 @@ function renderHead({ title, description, path }) {
 <meta name="theme-color" content="#141922">
 <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">
+<script src="${ANALYTICS_PATH}"></script>
 </head>`;
 }
 
