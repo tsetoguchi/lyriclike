@@ -46,7 +46,13 @@ into the public domain under the Unlicense.
 
 Modified: reduced to the 57,800 entries that also appear in the CMU
 Pronouncing Dictionary, since rhyme results are only ever drawn from
-CMUdict. No other changes.
+CMUdict, and reordered commonest word first.
+
+The ordering is taken from tools/rhymes/word-frequency.txt (see below),
+which is licensed CC BY-SA 4.0. That ordering, and this file as it
+stands, are therefore available under CC BY-SA 4.0; the underlying word
+list remains public domain. Regenerate the order with
+`node tools/sort-english-words.mjs`.
 
 Source: https://github.com/dwyl/english-words
 Upstream revision: 20f5cc9b3f0ccc8ce45d814c532b7c2031bba31c
@@ -82,8 +88,9 @@ Copyright (c) 2016 Hermit Dave
 Licensed under a Creative Commons Attribution-ShareAlike 4.0 International
 License: https://creativecommons.org/licenses/by-sa/4.0/
 
-Unmodified. Used only at build time to order rhyme-page results by how
-common each word is; the list itself is not served by the site.
+Unmodified. Used to order rhyme results by how common each word is: at
+build time for the rhyme pages, and to order english-words.json above,
+which the site does serve. The frequency list itself is not served.
 
 Source: https://github.com/hermitdave/FrequencyWords
 Upstream revision: 525f9b560de45753a5ea01069454e72e9aa541c6

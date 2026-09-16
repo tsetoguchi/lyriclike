@@ -19,6 +19,9 @@ const RHYME_TYPES = RhymeCore.RHYME_TYPES;
 // whether rhyme data is available yet.
 let rhymeIndex = null;
 let englishWords = null;
+// Word -> position in english-words.json, which is ordered commonest first.
+// Null until that list lands; rhyme ranking falls back to word length.
+let wordRanks = null;
 // English-only filtering is always on. Its button was removed from the UI,
 // so this is state rather than a constant only because setEnglishOnly()
 // keeps it reachable for a settings page.
@@ -120,7 +123,11 @@ function findRhymes(targetWord) {
   if (!blocklist) return null;
   // Fail closed the same way while the index is still loading.
   if (!rhymeIndex) return null;
-  const filters = { englishWords: englishOnly ? englishWords : null, blocklist: blocklist };
+  const filters = {
+    englishWords: englishOnly ? englishWords : null,
+    blocklist: blocklist,
+    wordRanks: wordRanks
+  };
   return RhymeCore.findRhymes(rhymeIndex, RhymeCore.normalizeWord(targetWord), filters);
 }
 
@@ -1185,16 +1192,33 @@ setInterval(function pollTextChanges() {
 }, POLL_INTERVAL_MS);
 
 // ── Init ──
-async function loadWordSet(path, label) {
+async function fetchWordArray(path, label) {
   const resp = await fetch(path);
   if (!resp.ok) throw new Error(label + ': failed to fetch ' + path);
   const words = await resp.json();
   console.assert(Array.isArray(words), label + ': words must be an array');
-  return new Set(words);
+  return words;
 }
 
+async function loadWordSet(path, label) {
+  return new Set(await fetchWordArray(path, label));
+}
+
+// The list's order is its frequency ranking, so a word's index is its rank.
+function buildWordRanks(words) {
+  const ranks = new Map();
+  for (let rank = 0; rank < words.length; rank++) {
+    if (!ranks.has(words[rank])) ranks.set(words[rank], rank);
+  }
+  return ranks;
+}
+
+// Ranking is wanted whether or not the English filter is on, so the ranks are
+// built here rather than beside the filter that shares the file.
 async function loadEnglishWords() {
-  englishWords = await loadWordSet('english-words.json', 'loadEnglishWords');
+  const words = await fetchWordArray('english-words.json', 'loadEnglishWords');
+  englishWords = new Set(words);
+  wordRanks = buildWordRanks(words);
 }
 
 async function loadBlocklist() {

@@ -17,6 +17,8 @@
   const PRIMARY_STRESS = 1;
   // The vowel a rhyme part is split at, which no phoneme list of its own holds.
   const STRESSED_VOWEL_COUNT = 1;
+  // Where a word with no frequency rank sorts: behind every word that has one.
+  const UNRANKED = Number.POSITIVE_INFINITY;
   const NO_STRESS_MARK = -1;
   const NOT_FOUND = -1;
 
@@ -235,8 +237,9 @@
     }
   }
 
-  // filters.englishWords may be null: the editor searches before that list has
-  // arrived rather than making the writer wait for it.
+  // filters.englishWords and filters.wordRanks may both be null: the editor
+  // searches before those lists have arrived rather than making the writer
+  // wait for them.
   function findRhymes(index, targetWord, filters) {
     if (!hasRhymeEntry(index, targetWord)) return null;
     const target = index.rhymeIndex[targetWord];
@@ -249,7 +252,7 @@
       classifyBucket(index, target, codaWords, seen, results);
     }
     filterResults(results, filters);
-    rankResults(index, target, results);
+    rankResults(index, target, results, filters.wordRanks);
     return results;
   }
 
@@ -285,37 +288,55 @@
     return Math.max(countSharedCodaStart(coda1, coda2), countSharedCodaEnd(coda1, coda2));
   }
 
-  // Short words are the common ones far more often than not, which is the
-  // closest thing to a frequency list the shipped data allows.
+  // The categories treat AA and AO as one vowel, which is what lets "heart"
+  // list "sort" as a perfect rhyme. Putting exact matches first keeps "start"
+  // and "part" ahead of it without dropping it.
   function compareCloseness(entry1, entry2) {
+    if (entry1.vowelMiss !== entry2.vowelMiss) return entry1.vowelMiss - entry2.vowelMiss;
     if (entry1.sharedCoda !== entry2.sharedCoda) return entry2.sharedCoda - entry1.sharedCoda;
     if (entry1.syllableGap !== entry2.syllableGap) return entry1.syllableGap - entry2.syllableGap;
+    if (entry1.rank !== entry2.rank) return entry1.rank < entry2.rank ? -1 : 1;
     if (entry1.word.length !== entry2.word.length) return entry1.word.length - entry2.word.length;
     if (entry1.word !== entry2.word) return entry1.word < entry2.word ? -1 : 1;
     return 0;
   }
 
-  function toClosenessEntry(index, target, targetSyllables, word) {
-    const part = index.rhymeIndex[word];
+  // ranks may be null: the editor searches before the word list has arrived,
+  // and word length stands in for commonness until it does.
+  function toClosenessEntry(context, word) {
+    const part = context.index.rhymeIndex[word];
     return {
       word,
-      sharedCoda: countSharedCoda(target.coda, part.coda),
-      syllableGap: Math.abs(targetSyllables - countPartSyllables(part))
+      vowelMiss: part.vowel === context.target.vowel ? 0 : 1,
+      sharedCoda: countSharedCoda(context.target.coda, part.coda),
+      syllableGap: Math.abs(context.targetSyllables - countPartSyllables(part)),
+      rank: context.ranks ? context.ranks.get(word) ?? UNRANKED : UNRANKED
     };
   }
 
-  function rankByCloseness(index, target, words) {
-    const targetSyllables = countPartSyllables(target);
+  function rankByCloseness(context, words) {
     return words
-      .map((word) => toClosenessEntry(index, target, targetSyllables, word))
+      .map((word) => toClosenessEntry(context, word))
       .sort(compareCloseness)
       .map((entry) => entry.word);
   }
 
-  function rankResults(index, target, results) {
+  function toRankingContext(index, target, ranks) {
+    return { index, target, ranks: ranks || null, targetSyllables: countPartSyllables(target) };
+  }
+
+  function rankResults(index, target, results, ranks) {
+    const context = toRankingContext(index, target, ranks);
     for (const { key } of RHYME_TYPES) {
-      results[key] = rankByCloseness(index, target, results[key]);
+      results[key] = rankByCloseness(context, results[key]);
     }
+  }
+
+  // Exposed for the rhyme-page build, which ranks its own word lists with the
+  // order the editor uses rather than one of its own.
+  function rankRhymeWords(index, targetWord, words, ranks) {
+    if (!hasRhymeEntry(index, targetWord)) return [...words];
+    return rankByCloseness(toRankingContext(index, index.rhymeIndex[targetWord], ranks), words);
   }
 
   // ── Pronunciation facts ──
@@ -514,6 +535,7 @@
     buildRhymeIndex,
     hasRhymeEntry,
     findRhymes,
+    rankRhymeWords,
     countSyllables,
     getStressedSyllable,
     countSyllablesForLine,
