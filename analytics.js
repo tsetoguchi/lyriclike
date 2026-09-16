@@ -7,7 +7,7 @@
 (function loadAnalytics() {
   'use strict';
 
-  const MEASUREMENT_ID = 'G-XXXXXXXXXX';
+  const MEASUREMENT_ID = 'G-L7J9BRE65Q';
   const TAG_URL = 'https://www.googletagmanager.com/gtag/js?id=' + MEASUREMENT_ID;
   const PLACEHOLDER_ID = 'G-XXXXXXXXXX';
 
