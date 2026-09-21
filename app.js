@@ -28,6 +28,7 @@ let wordRanks = null;
 let englishOnly = true;
 let syllablesVisible = sessionStorage.getItem('syllablesVisible') === '1';
 let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') === '1';
+let internalRhymesVisible = sessionStorage.getItem('internalRhymesVisible') === '1';
 let blocklist = null;
 let debounceTimer = null;
 let lastTextValue = '';
@@ -49,6 +50,7 @@ const selectedContextEl = document.getElementById('selected-context');
 const wordBarEl = document.querySelector('.selected-word-bar');
 const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
+const internalRhymeToggleEl = document.getElementById('internal-rhyme-toggle');
 const lyricsAreaEl = document.querySelector('.lyrics-area');
 const tabRhymeWordEl = document.getElementById('tab-rhyme-word');
 const bottomNavEl = document.getElementById('bottom-nav');
@@ -66,6 +68,9 @@ if (syllablesVisible) {
 if (rhymeSchemeVisible) {
   rhymeSchemeToggleEl.classList.add('active');
   rhymeSchemeGutterEl.classList.add('visible');
+}
+if (internalRhymesVisible) {
+  internalRhymeToggleEl.classList.add('active');
 }
 
 // ── Dictionary loading ──
@@ -99,6 +104,10 @@ function onRhymeDataReady() {
   statusEl.textContent = '';
   updateGutters();
   refreshCurrentResults();
+  // Internal marks may have been waiting on the dictionary; the text itself
+  // has not changed, so renderHighlight() needs telling it is dirty anyway.
+  invalidateInternalRhymeMarks();
+  renderHighlight();
 }
 
 // Clearing the promise lets the next interaction retry, which matters now that
@@ -225,7 +234,7 @@ function escapeHtml(text) {
 // Only the clicked occurrence of the word is coloured, so its place in the
 // text is kept as well as the word. Picking toggles classes rather than
 // redrawing, so no word's colour transition is cut off.
-function pickHighlightWord(word, bounds) {
+function pickHighlightWord(word, bounds, isPointerPick) {
   console.assert(typeof word === 'string', 'pickHighlightWord: word must be a string');
   if (typeof word !== 'string') return;
   renderHighlight();
@@ -234,6 +243,34 @@ function pickHighlightWord(word, bounds) {
     isWholeWordAt(highlightedText, bounds, currentHighlightWord);
   pickedBounds = isWholeWord ? bounds : null;
   markPickedWord();
+  // Amber means "this word"; focus means "this sound" — a keyboard pick (the
+  // caret moving while typing) must never trigger it, or the layer would wash
+  // to faint ink on almost every keystroke-pause. See updateRhymeFocus().
+  if (isPointerPick) updateRhymeFocus();
+}
+
+// A pick with no family leaves the resting layer exactly as it is — this is
+// what stops the feature from feeling like it is fighting the writer over
+// words that simply do not rhyme with anything nearby.
+function updateRhymeFocus() {
+  if (!pickedBounds) return;
+  const selector = '.lyric-word[data-start="' + pickedBounds.start + '"]';
+  const picked = highlightEl.querySelector(selector);
+  const family = picked ? readMarkColorSlot(picked) : null;
+  if (family === null) return;
+  highlightEl.dataset.focusFamily = family;
+}
+
+// Reads the colour slot straight off the span's own class rather than
+// recomputing marks a second time. Overflow marks have no slot of their own
+// to focus toward — every overflow word shares one class — so picking one
+// behaves like picking a word with no family.
+function readMarkColorSlot(wordEl) {
+  for (const className of wordEl.classList) {
+    const match = /^mark-(\d+)$/.exec(className);
+    if (match) return match[1];
+  }
+  return null;
 }
 
 function pickedBoundsForSelection(text, start, end) {
@@ -251,21 +288,31 @@ function wordBoundsAt(text, offset) {
   return { start: start, end: end };
 }
 
+// Set whenever the marks need recomputing without the text itself having
+// changed — the toggle flipping, or the dictionary landing while it was on.
+let internalRhymeMarksDirty = false;
+
+function invalidateInternalRhymeMarks() {
+  internalRhymeMarksDirty = true;
+}
+
 // The textarea's own letters are transparent, so this layer draws every one of
-// them. It is rebuilt only when the text changes; hovering and picking toggle
-// classes on the word elements it holds.
+// them. It is rebuilt only when the text changes (or the marks need it);
+// hovering and picking toggle classes on the word elements it holds.
 function renderHighlight() {
   const text = textareaEl.value;
-  if (text === highlightedText && highlightEl.firstChild) return;
+  if (text === highlightedText && highlightEl.firstChild && !internalRhymeMarksDirty) return;
+  internalRhymeMarksDirty = false;
   followTextEdit(text);
-  highlightEl.innerHTML = wordsToHtml(text) + '\n';
+  highlightEl.innerHTML = wordsToHtml(text, buildInternalRhymeMarkMap(text)) + '\n';
   hoveredWordEl = null;
   markPickedWord();
 }
 
 // Each word long enough to rhyme becomes its own element, found again by the
-// offset it starts at.
-function wordsToHtml(text) {
+// offset it starts at. `marks`, when given, maps that same offset to the
+// family index internal-rhyme underlines should draw it in.
+function wordsToHtml(text, marks) {
   const pattern = new RegExp(WORD_CHAR.source + '+', 'g');
   let html = '';
   let lastIndex = 0;
@@ -274,12 +321,26 @@ function wordsToHtml(text) {
     if (match[0].length >= MIN_WORD_LENGTH) {
       const word = escapeHtml(match[0]);
       html += escapeHtml(text.slice(lastIndex, match.index));
-      html += '<span class="lyric-word" data-start="' + match.index + '">' + word + '</span>';
+      const family = marks ? marks.get(match.index) : undefined;
+      const markClass = family === undefined ? '' : markClassFor(family);
+      html += '<span class="lyric-word' + markClass + '" data-start="' + match.index + '">' + word + '</span>';
       lastIndex = match.index + match[0].length;
     }
     match = pattern.exec(text);
   }
   return html + escapeHtml(text.slice(lastIndex));
+}
+
+// A class, not an inline style="--mark: …" — colour values live in
+// styles.css :root, so the theme owns them (app.js:596 already states this
+// rule for the gutter's SCHEME_COLORS). style-N gives each family a line
+// style too, since hue alone is not distinguishable enough under
+// deuteranopia at 2px; overflow families get a plain solid underline instead.
+function markClassFor(family) {
+  if (family === RhymeCore.OVERFLOW_FAMILY) return ' rhyme-mark mark-overflow';
+  const colorSlot = family % SCHEME_COLORS.length;
+  const styleSlot = family % 4;
+  return ' rhyme-mark mark-' + colorSlot + ' style-' + styleSlot;
 }
 
 function markPickedWord() {
@@ -429,7 +490,11 @@ function showPendingRhymes(word) {
   resultsEl.innerHTML = '<div class="empty-state">' + RHYMES_PENDING_MESSAGE + '</div>';
 }
 
-function handleSelection() {
+// pickHighlightWord() has no way to know what triggered it once this is
+// debounced, so the event type is read now, synchronously, and carried
+// through the closure to where the pick actually happens.
+function handleSelection(event) {
+  const isPointerPick = event.type === 'mouseup' || event.type === 'touchend';
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function processSelection() {
     const text = textareaEl.value;
@@ -441,7 +506,7 @@ function handleSelection() {
     word = word.replace(/[^a-zA-Z']/g, '');
     if (word.length < MIN_WORD_LENGTH) return;
 
-    pickHighlightWord(word, pickedBoundsForSelection(text, start, end));
+    pickHighlightWord(word, pickedBoundsForSelection(text, start, end), isPointerPick);
     selectedContextEl.textContent = getWordContext(text, start);
     flashWordBar();
 
@@ -670,6 +735,44 @@ function updateRhymeSchemeGutter() {
   rhymeSchemeGutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';
 }
 
+// The character offset each line starts at within the whole text, so a mark
+// expressed in a stanza's line-local offsets (what groupRhymeMarks() returns)
+// can be placed against the same global offsets wordsToHtml() keys its spans
+// by.
+function lineStartOffsets(allLines) {
+  const offsets = [];
+  let offset = 0;
+  for (const line of allLines) {
+    offsets.push(offset);
+    offset += line.length + 1; // account for the '\n' split() dropped
+  }
+  return offsets;
+}
+
+// Map<globalOffset, familyIndex> for every internal-rhyme mark in the text,
+// or null when there is nothing to draw. Computed per stanza, like the
+// scheme gutter, since groupRhymeMarks() only ever sees one stanza at a time.
+function buildInternalRhymeMarkMap(text) {
+  if (!internalRhymesVisible || !rhymeIndex || isMobileView()) return null;
+  const allLines = text.split('\n');
+  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
+  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
+  const starts = lineStartOffsets(allLines);
+
+  const map = new Map();
+  for (let s = 0; s < stanzas.length; s++) {
+    const { marks } = RhymeCore.groupRhymeMarks(rhymeIndex, stanzas[s]);
+    const startIdx = stanzaStartIndices[s];
+    for (let lineIdx = 0; lineIdx < marks.length; lineIdx++) {
+      const lineStart = starts[startIdx + lineIdx];
+      for (const mark of marks[lineIdx]) {
+        map.set(lineStart + mark.start, mark.family);
+      }
+    }
+  }
+  return map;
+}
+
 function invalidateLineHeightCache() {
   cachedLineHeights = null;
   cachedLineHeightsText = null;
@@ -702,6 +805,31 @@ function toggleSyllables() {
   sessionStorage.setItem('syllablesVisible', syllablesVisible ? '1' : '0');
   toggleBtn.classList.toggle('active', syllablesVisible);
   openGutter(gutterEl, syllablesVisible);
+}
+
+// Marks draw inside #lyrics-highlight itself rather than a margin, so there is
+// no gutter to open — only the dirty flag that makes renderHighlight() redraw
+// with the same text.
+function toggleInternalRhymes() {
+  internalRhymesVisible = !internalRhymesVisible;
+  sessionStorage.setItem('internalRhymesVisible', internalRhymesVisible ? '1' : '0');
+  internalRhymeToggleEl.classList.toggle('active', internalRhymesVisible);
+  if (internalRhymesVisible) ensureRhymeData();
+  invalidateInternalRhymeMarks();
+  renderHighlight();
+}
+
+// The bottom nav has no room for a fifth column (§8 of the plan), so the
+// feature is desktop/tablet only. Called only on an actual transition into
+// mobile — see its guard in placeControlsForViewport() — so this never fights
+// a click on the toggle at that width; there is none, since CSS hides it.
+function disableInternalRhymesForMobile() {
+  if (!internalRhymesVisible) return;
+  internalRhymesVisible = false;
+  sessionStorage.setItem('internalRhymesVisible', '0');
+  internalRhymeToggleEl.classList.remove('active');
+  invalidateInternalRhymeMarks();
+  renderHighlight();
 }
 
 // ── Resize handle ──
@@ -762,6 +890,7 @@ function setEnglishOnly(isEnabled) {
 
 toggleBtn.addEventListener('click', toggleSyllables);
 rhymeSchemeToggleEl.addEventListener('click', toggleRhymeScheme);
+internalRhymeToggleEl.addEventListener('click', toggleInternalRhymes);
 textareaEl.addEventListener('mouseup', handleSelection);
 textareaEl.addEventListener('touchend', handleSelection);
 textareaEl.addEventListener('keyup', handleSelection);
@@ -1029,6 +1158,7 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
+    disableInternalRhymesForMobile();
     // Create rides along but stays hidden until sign-in; CSS owns that, so
     // placement does not have to know about auth.
     bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, notebookBtn, createBtn);
@@ -1142,6 +1272,7 @@ function resetRhymesPanel() {
   const pointer = isTouchPrimary() ? EMPTY_RESULTS_TOUCH : EMPTY_RESULTS_POINTER;
   resultsEl.innerHTML = '<div class="empty-state">' + pointer + '</div>';
   markPickedWord();
+  delete highlightEl.dataset.focusFamily;
 }
 
 window.resetRhymesPanel = resetRhymesPanel;
@@ -1229,4 +1360,4 @@ async function loadBlocklist() {
 // it is fetched now rather than on the next interaction. A first visit to an
 // empty pad fetches nothing until the writer reaches for it. A restored draft
 // arrives through storage.js, which dispatches an input event of its own.
-if (syllablesVisible || rhymeSchemeVisible) ensureRhymeData();
+if (syllablesVisible || rhymeSchemeVisible || internalRhymesVisible) ensureRhymeData();

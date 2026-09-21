@@ -627,6 +627,78 @@ header h1 img {
   color: var(--accent);
 }
 
+/* ── Internal rhyme marks ──
+   Underlines on words that rhyme with another word nearby, not just line
+   endings — plans/internal-rhyme-marks.md. text-decoration, not a positioned
+   ::before: it skips descenders correctly (text-decoration-skip-ink), is
+   measured from the baseline the way this word's hit-padding is not,
+   fragments with the wrap #lyrics already uses, and survives forced-colours
+   mode. ::before stays free for the picked-word wash above. */
+
+.mark-0 { --mark: var(--scheme-0); }
+.mark-1 { --mark: var(--scheme-1); }
+.mark-2 { --mark: var(--scheme-2); }
+.mark-3 { --mark: var(--scheme-3); }
+.mark-4 { --mark: var(--scheme-4); }
+.mark-5 { --mark: var(--scheme-5); }
+.mark-6 { --mark: var(--scheme-6); }
+.mark-7 { --mark: var(--scheme-7); }
+.mark-8 { --mark: var(--scheme-8); }
+.mark-9 { --mark: var(--scheme-9); }
+
+/* Hue is not the only channel: two of the scheme colours sit ~2 ΔE apart
+   under deuteranopia at this weight, so each family also takes a line
+   style. Free with text-decoration, and reads as pencil convention. */
+.style-0 { text-decoration-style: solid; }
+.style-1 { text-decoration-style: dotted; }
+.style-2 { text-decoration-style: dashed; }
+.style-3 { text-decoration-style: double; }
+
+/* More rhyming families in a stanza than the four-colour budget allows —
+   marked rather than dropped, so "no underline" still means "does not
+   rhyme" and never means "ran out of colours". */
+.mark-overflow {
+  --mark: var(--ink-faded);
+  text-decoration-style: solid;
+}
+
+#lyrics-highlight .rhyme-mark {
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: auto;
+  /* 0.7, not a lighter resting opacity: at 0.55 the scheme colours sit right
+     on WCAG 1.4.11's 3:1 floor for a graphical object, and --scheme-7 fails
+     it outright. At 0.7 they clear 4.4:1. */
+  text-decoration-color: color-mix(in srgb, var(--mark) 70%, transparent);
+  transition: text-decoration-color var(--duration-hover) ease-out;
+}
+
+/* Picking a word in a family raises that family to full strength and fades
+   every other mark to plain ink, so the page quiets the moment one sound is
+   traced. This is what makes the resting layer safe to leave on at density —
+   see app.js's updateRhymeFocus(), which sets data-focus-family only on a
+   pointer or touch pick, never while the caret is merely moving. */
+#lyrics-highlight[data-focus-family="0"] .rhyme-mark:not(.mark-0),
+#lyrics-highlight[data-focus-family="1"] .rhyme-mark:not(.mark-1),
+#lyrics-highlight[data-focus-family="2"] .rhyme-mark:not(.mark-2),
+#lyrics-highlight[data-focus-family="3"] .rhyme-mark:not(.mark-3),
+#lyrics-highlight[data-focus-family="4"] .rhyme-mark:not(.mark-4),
+#lyrics-highlight[data-focus-family="5"] .rhyme-mark:not(.mark-5),
+#lyrics-highlight[data-focus-family="6"] .rhyme-mark:not(.mark-6),
+#lyrics-highlight[data-focus-family="7"] .rhyme-mark:not(.mark-7),
+#lyrics-highlight[data-focus-family="8"] .rhyme-mark:not(.mark-8),
+#lyrics-highlight[data-focus-family="9"] .rhyme-mark:not(.mark-9) {
+  text-decoration-color: color-mix(in srgb, var(--ink-faded) 70%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  #lyrics-highlight .rhyme-mark {
+    text-decoration-color: var(--mark);
+    text-decoration-thickness: 3px;
+  }
+}
+
 #lyrics {
   position: relative;
   /* Block, or the inline baseline leaves a few pixels under the textarea and
@@ -1532,6 +1604,15 @@ header h1 img {
   header .header-right {
     grid-column: 3;
     width: auto;
+  }
+
+  /* Desktop/tablet only (plan §8): the bottom nav is exactly four columns
+     already, with no room for a fifth, and a narrower editor wraps more per
+     line, which lands more marks per visual row than the density rules were
+     tuned against. app.js forces the feature off at this width too, so a
+     window dragged narrower never leaves it stuck on with its control gone. */
+  #internal-rhyme-toggle {
+    display: none;
   }
 
   .toggle-btn {

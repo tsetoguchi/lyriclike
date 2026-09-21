@@ -9,8 +9,10 @@ import { before, describe, it } from 'node:test';
 
 import rhymeCore from '../rhyme-core.js';
 
-const { RHYME_TYPES, buildRhymeIndex, computeRhymeScheme, countSyllablesForLine, findRhymes } =
-  rhymeCore;
+const {
+  RHYME_TYPES, buildRhymeIndex, computeRhymeScheme, countSyllablesForLine, findRhymes,
+  groupRhymeMarks, FUNCTION_WORDS
+} = rhymeCore;
 
 const REPO_ROOT = new URL('../', import.meta.url);
 const SAMPLE_WORDS = ['love', 'heart', 'night', 'fire', 'money', 'time', 'away'];
@@ -110,5 +112,35 @@ describe('shipped dictionary', () => {
 
   it('counts syllables in a real line', () => {
     assert.equal(countSyllablesForLine(index, 'Twinkle twinkle little star'), 7);
+  });
+
+  it('marks internal rhymes in a real verse and never marks a function word', () => {
+    const verse = [
+      "I've been waiting all night for the light",
+      'holding on so tight through the fight',
+      'money is nothing but the way that I feel',
+      'this is real, this is the deal'
+    ];
+    const { labels, marks } = groupRhymeMarks(index, verse);
+    assert.deepEqual(labels, ['A', 'A', 'B', 'B']);
+
+    const markedWords = marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.deepEqual(new Set(markedWords), new Set([
+      'night', 'light', 'tight', 'fight', 'money', 'feel', 'real', 'deal',
+      'waiting', 'holding', 'nothing'
+    ]));
+
+    for (const word of markedWords) {
+      assert.equal(FUNCTION_WORDS.has(word), false, `"${word}" is a function word and should not be marked`);
+    }
+
+    // The end-rhyme families keep the same colour as their gutter letter.
+    const nightFamily = marks[0].find((m) => verse[0].slice(m.start, m.end) === 'night').family;
+    const lightFamily = marks[0].find((m) => verse[0].slice(m.start, m.end) === 'light').family;
+    const tightFamily = marks[1].find((m) => verse[1].slice(m.start, m.end) === 'tight').family;
+    assert.equal(nightFamily, 0);
+    assert.equal(lightFamily, 0);
+    assert.equal(tightFamily, 0);
   });
 });

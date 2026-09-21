@@ -11,7 +11,7 @@ import rhymeCore from '../rhyme-core.js';
 const {
   RHYME_TYPES, buildRhymeIndex, classifyRhyme, computeRhymeScheme, countSyllables,
   countSyllablesForLine, extractEndRhymePart, extractRhymePart, findRhymes,
-  getStressedSyllable, normalizeWord
+  getStressedSyllable, normalizeWord, groupRhymeMarks, FUNCTION_WORDS, OVERFLOW_FAMILY
 } = rhymeCore;
 
 const DICTIONARY = {
@@ -251,5 +251,145 @@ describe('computeRhymeScheme', () => {
     const scheme = computeRhymeScheme(INDEX, lines);
     assert.equal(scheme[25], 'Z');
     assert.equal(scheme[26], 'A');
+  });
+});
+
+describe('FUNCTION_WORDS', () => {
+  it('is a closed grammatical class, not a frequency cutoff', () => {
+    for (const word of ['a', 'the', 'and', 'is', 'to', 'it', 'my', 'he']) {
+      assert.ok(FUNCTION_WORDS.has(word), `${word} should be a function word`);
+    }
+    // Common words that must stay markable — the whole reason the list is
+    // hand-written rather than a frequency threshold.
+    assert.equal(FUNCTION_WORDS.has('night'), false);
+    assert.equal(FUNCTION_WORDS.has('love'), false);
+  });
+
+  it('lists contractions without their apostrophe', () => {
+    for (const word of ['aint', 'cant', 'dont', 'im', 'ill', 'gonna', 'wanna', 'em', 'ya', 'imma']) {
+      assert.ok(FUNCTION_WORDS.has(word), `${word} should be listed unapostrophised`);
+    }
+  });
+});
+
+describe('groupRhymeMarks', () => {
+  // A dictionary of its own: findRhymes' expectations above are exact lists
+  // scoped to `cat`, and adding words that share its vowel would change them.
+  const MARK_DICTIONARY = {
+    cat: [['K', 'AE1', 'T']],
+    hat: [['HH', 'AE1', 'T']],
+    sea: [['S', 'IY1']],
+    me: [['M', 'IY1']],
+    free: [['F', 'R', 'IY1']],
+    he: [['HH', 'IY1']],
+    hand: [['HH', 'AE1', 'N', 'D']],
+    man: [['M', 'AE1', 'N']],
+    tan: [['T', 'AE1', 'N']],
+    night: [['N', 'AY1', 'T']],
+    sky: [['S', 'K', 'AY1']],
+    light: [['L', 'AY1', 'T']],
+    sight: [['S', 'AY1', 'T']],
+    day: [['D', 'EY1']],
+    way: [['W', 'EY1']],
+    hot: [['HH', 'AA1', 'T']],
+    caught: [['K', 'AO1', 'T']],
+    wont: [['W', 'OW1', 'N', 'T']],
+    dont: [['D', 'OW1', 'N', 'T']]
+  };
+  const MARK_INDEX = buildRhymeIndex(MARK_DICTIONARY);
+
+  function textOf(line, mark) {
+    return line.slice(mark.start, mark.end);
+  }
+
+  it('never marks a function word, even when it anchors a real family', () => {
+    const lines = ['out on the sea', 'he ran so free'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.ok(marks[0].some((m) => textOf(lines[0], m) === 'sea'));
+    assert.ok(marks[1].some((m) => textOf(lines[1], m) === 'free'));
+    assert.equal(marks[1].some((m) => textOf(lines[1], m) === 'he'), false);
+  });
+
+  it('strips the apostrophe before checking the function-word list', () => {
+    // If the strip were missing, "don't" would slip through as a normal
+    // candidate and perfect-rhyme with "wont", marking both.
+    const lines = ['it will not be wont', "but still you don't care"];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(marks[0], []);
+    assert.deepEqual(marks[1], []);
+  });
+
+  it('never marks a word with no rhyme partner', () => {
+    const lines = ['a lonely cat walked here'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(marks[0], []);
+  });
+
+  it('does not mark two occurrences of the same word by themselves', () => {
+    const lines = ['the night was long and the night was still'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(marks[0], []);
+  });
+
+  it('rescues a subtractive pair that shares a coda edge', () => {
+    const lines = ['I raised my hand up high', 'and called out to the man'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const handMark = marks[0].find((m) => textOf(lines[0], m) === 'hand');
+    const manMark = marks[1].find((m) => textOf(lines[1], m) === 'man');
+    assert.ok(handMark && manMark, 'hand and man should both be marked');
+    assert.equal(handMark.family, manMark.family);
+  });
+
+  it('does not rescue a subtractive pair without a shared coda edge', () => {
+    const lines = ['all through the night I walked', 'gazing up at the sky above'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(marks[0], []);
+    assert.deepEqual(marks[1], []);
+  });
+
+  it('excludes a rhyme outside the line window', () => {
+    const lines = ['a kite drifted in the wind', 'zzyzx', 'zzyzx', 'zzyzx', 'zzyzx', 'a bite of cake'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.equal(marks[0].some((m) => textOf(lines[0], m) === 'kite'), false);
+    assert.equal(marks[5].some((m) => textOf(lines[5], m) === 'bite'), false);
+  });
+
+  it("colours an end-rhyme family with its own gutter letter's index", () => {
+    const lines = ['I saw a cat', 'wearing a hat'];
+    const { labels, marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(labels, ['A', 'A']);
+    const catMark = marks[0].find((m) => textOf(lines[0], m) === 'cat');
+    const hatMark = marks[1].find((m) => textOf(lines[1], m) === 'hat');
+    assert.ok(catMark && hatMark);
+    assert.equal(catMark.family, 0);
+    assert.equal(hatMark.family, 0);
+  });
+
+  it('marks the fifth family of a stanza in overflow rather than dropping it', () => {
+    const lines = [
+      'a cat and a hat sat down',
+      'a man in a tan coat walked',
+      'the light and the sight glowed',
+      'a day and a way appeared',
+      'it was hot and caught somehow'
+    ];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    for (let i = 0; i < 4; i++) {
+      assert.ok(marks[i].every((m) => m.family !== OVERFLOW_FAMILY), `line ${i} should have a real colour`);
+      assert.ok(marks[i].length > 0, `line ${i} should still be marked`);
+    }
+    assert.ok(marks[4].length > 0, 'the fifth family is marked, not dropped');
+    assert.ok(marks[4].every((m) => m.family === OVERFLOW_FAMILY));
+  });
+
+  it("keeps a family's colour index stable as the stanza grows", () => {
+    const base = ['a cat and a hat sat down', 'a man in a tan coat walked'];
+    const grown = base.concat(['the light and the sight glowed']);
+    const before = groupRhymeMarks(MARK_INDEX, base).marks;
+    const after = groupRhymeMarks(MARK_INDEX, grown).marks;
+    const familyOf = (marks, lineIdx, line, word) =>
+      marks[lineIdx].find((m) => textOf(line, m) === word).family;
+    assert.equal(familyOf(before, 0, base[0], 'cat'), familyOf(after, 0, grown[0], 'cat'));
+    assert.equal(familyOf(before, 1, base[1], 'man'), familyOf(after, 1, grown[1], 'man'));
   });
 });
