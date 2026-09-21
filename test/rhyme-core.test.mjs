@@ -308,7 +308,11 @@ describe('groupRhymeMarks', () => {
     dont: [['D', 'OW1', 'N', 'T']],
     tonight: [['T', 'AH0', 'N', 'AY1', 'T']],
     away: [['AH0', 'W', 'EY1']],
-    yeah: [['Y', 'AE1']]
+    yeah: [['Y', 'AE1']],
+    o: [['OW1']],
+    show: [['SH', 'OW1']],
+    // Two pronunciations, one rhyming with cat and one with sea.
+    xat: [['B', 'AE1', 'T'], ['B', 'IY1']]
   };
   const MARK_INDEX = buildRhymeIndex(MARK_DICTIONARY);
 
@@ -388,11 +392,43 @@ describe('groupRhymeMarks', () => {
     assert.equal(marks[0].some((m) => textOf(lines[0], m) === 'yeah'), false);
   });
 
-  it('excludes a rhyme outside the line window', () => {
-    const lines = ['a kite drifted in the wind', 'zzyzx', 'zzyzx', 'zzyzx', 'zzyzx', 'a bite of cake'];
+  it('marks a rhyme four lines away but not five', () => {
+    const filler = ['zzyzx', 'zzyzx', 'zzyzx'];
+    const near = ['the light went out', ...filler, 'a sight to see'];
+    const far = ['the light went out', ...filler, 'zzyzx', 'a sight to see'];
+    const nearMarks = groupRhymeMarks(MARK_INDEX, near).marks;
+    const farMarks = groupRhymeMarks(MARK_INDEX, far).marks;
+    assert.ok(nearMarks[0].some((m) => textOf(near[0], m) === 'light'));
+    assert.ok(nearMarks[4].some((m) => textOf(near[4], m) === 'sight'));
+    assert.deepEqual(farMarks[0], []);
+    assert.deepEqual(farMarks[5], []);
+  });
+
+  it('never marks a word inside brackets or parentheses', () => {
+    const lines = ['the light (a sight) went out', '[light] we saw it go'];
     const { marks } = groupRhymeMarks(MARK_INDEX, lines);
-    assert.equal(marks[0].some((m) => textOf(lines[0], m) === 'kite'), false);
-    assert.equal(marks[5].some((m) => textOf(lines[5], m) === 'bite'), false);
+    assert.deepEqual(marks, [[], []]);
+  });
+
+  it('never marks a one-letter word, so its partner is not left alone', () => {
+    // The page draws no word shorter than two letters; marking "O" would
+    // underline "show" with no visible partner.
+    const lines = ['O we went to the show', 'and saw a cat'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(marks, [[], []]);
+  });
+
+  it('never lets one word join two rhyme-scheme letters', () => {
+    // xat ends line 3 on cat's letter, but "free" beside it rhymes with sea.
+    const lines = ['a cat', 'the sea', 'so free the xat'];
+    const { labels, marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(labels, ['A', 'B', 'A']);
+    const familyOf = (lineIdx, word) =>
+      marks[lineIdx].find((m) => textOf(lines[lineIdx], m) === word).family;
+    assert.equal(familyOf(0, 'cat'), 0);
+    assert.equal(familyOf(2, 'xat'), 0);
+    assert.equal(familyOf(1, 'sea'), 1);
+    assert.equal(familyOf(2, 'free'), 1);
   });
 
   it("colours an end-rhyme family with its own gutter letter's index", () => {

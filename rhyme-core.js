@@ -589,6 +589,9 @@
   // end-rhyme family in the same stanza is already drawn in.
   const MARK_COLOR_COUNT = 10;
   const OVERFLOW_FAMILY = -1;
+  // app.js draws no word shorter than this (its MIN_WORD_LENGTH), so a mark on
+  // "O" or "u" would leave its partner underlined alone.
+  const MIN_MARK_LETTERS = 2;
 
   // A closed grammatical class, not merely common words: "night" and "love"
   // are common too and must stay markable. Contractions are listed without
@@ -628,6 +631,11 @@
     return FUNCTION_WORDS.has(word) || FUNCTION_WORDS.has(word.replace(/'/g, ''));
   }
 
+  // A word that may anchor a family but never takes a mark of its own.
+  function isUnmarkable(word) {
+    return word.length < MIN_MARK_LETTERS || isFunctionWord(word);
+  }
+
   function findMaskedRanges(line) {
     const pattern = /\[[^\]]*\]|\([^)]*\)/g;
     const ranges = [];
@@ -665,21 +673,28 @@
     return words;
   }
 
+  // Split once per word, not once per pair: the pair loop is what runs on
+  // every keystroke.
+  function splitCandidatePronunciations(index, word) {
+    const pronunciations = lookupPronunciations(index, word);
+    return pronunciations ? pronunciations.map(splitPronunciation) : null;
+  }
+
   // One candidate per markable word: every line's last word (however it
   // pronounces, even a function word — it may anchor another word's family,
-  // see seedFamilies()), plus every other word that is not a function word.
+  // see seedFamilies()), plus every other word that is not unmarkable.
   function collectCandidates(index, lines, labels) {
     const candidates = [];
     for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
       const words = tokenizeLine(lines[lineIdx]);
       for (let w = 0; w < words.length; w++) {
         const isEnd = w === words.length - 1;
-        if (!isEnd && isFunctionWord(words[w].text)) continue;
+        if (!isEnd && isUnmarkable(words[w].text)) continue;
         const hasLabel = isEnd && labels[lineIdx] !== UNLABELLED;
         const labelIndex = hasLabel ? labels[lineIdx] : null;
         candidates.push({
           lineIdx, start: words[w].start, end: words[w].end, text: words[w].text,
-          isEnd, labelIndex, pronunciations: lookupPronunciations(index, words[w].text)
+          isEnd, labelIndex, splits: splitCandidatePronunciations(index, words[w].text)
         });
       }
     }
@@ -696,9 +711,7 @@
     return part.onset.slice(start).join(' ');
   }
 
-  function hasSameStressedOpening(phonemes1, phonemes2) {
-    const part1 = extractRhymePart(phonemes1);
-    const part2 = extractRhymePart(phonemes2);
+  function hasSameStressedOpening(part1, part2) {
     if (!part1 || !part2) return false;
     return vowelsMatch(part1.vowel, part2.vowel)
       && stressedOnsetCluster(part1) === stressedOnsetCluster(part2);
@@ -709,17 +722,15 @@
   // the call classifyRhyme() already makes for "knight/night".
   function isRepeat(a, b) {
     if (a.text === b.text) return true;
-    if (!a.pronunciations || !b.pronunciations) return false;
-    return a.pronunciations.some((phonemes1) => b.pronunciations.some(
-      (phonemes2) => hasSameStressedOpening(phonemes1, phonemes2)));
+    if (!a.splits || !b.splits) return false;
+    return a.splits.some((split1) => b.splits.some(
+      (split2) => hasSameStressedOpening(split1.stressed, split2.stressed)));
   }
 
   // The strongest pairing of one pronunciation of each word, with which ones.
-  function bestPronunciationMatch(entries1, entries2) {
+  function bestPronunciationMatch(splits1, splits2) {
     let best = { strength: 0, first: NOT_FOUND, second: NOT_FOUND };
-    const splits2 = entries2.map(splitPronunciation);
-    entries1.forEach((phonemes1, first) => {
-      const split1 = splitPronunciation(phonemes1);
+    splits1.forEach((split1, first) => {
       splits2.forEach((split2, second) => {
         const strength = scoreStressedPronunciations(split1, split2);
         if (strength > best.strength) best = { strength, first, second };
@@ -731,8 +742,8 @@
   // null when the pair does not rhyme well enough to mark; otherwise the
   // match, whose strength feeds the ranking in assignFloatingColors().
   function findMarkableMatch(a, b) {
-    if (!a.pronunciations || !b.pronunciations) return null;
-    const match = bestPronunciationMatch(a.pronunciations, b.pronunciations);
+    if (!a.splits || !b.splits) return null;
+    const match = bestPronunciationMatch(a.splits, b.splits);
     return match.strength >= MIN_MARK_STRENGTH ? match : null;
   }
 
@@ -797,8 +808,8 @@
   // A word is said one way, so once it links it keeps that pronunciation —
   // otherwise "re" (ray/ree) would join "say" and "feel" into one family.
   function pinPronunciations(a, b, match) {
-    a.pronunciations = [a.pronunciations[match.first]];
-    b.pronunciations = [b.pronunciations[match.second]];
+    a.splits = [a.splits[match.first]];
+    b.splits = [b.splits[match.second]];
   }
 
   function linkPair(families, candidates, i, j, linkStrength) {
@@ -833,7 +844,7 @@
     const texts = new Set();
     for (const i of members) {
       const c = candidates[i];
-      if (!isFunctionWord(c.text)) texts.add(c.text);
+      if (!isUnmarkable(c.text)) texts.add(c.text);
     }
     return texts.size >= 2;
   }
@@ -892,7 +903,7 @@
   function projectGroup(members, candidates, family, marks) {
     for (const i of members) {
       const c = candidates[i];
-      if (isFunctionWord(c.text)) continue;
+      if (isUnmarkable(c.text)) continue;
       marks[c.lineIdx].push({ start: c.start, end: c.end, family });
     }
   }
