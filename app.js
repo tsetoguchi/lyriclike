@@ -249,16 +249,37 @@ function pickHighlightWord(word, bounds, isPointerPick) {
   if (isPointerPick) updateRhymeFocus();
 }
 
-// A pick with no family leaves the resting layer exactly as it is — this is
-// what stops the feature from feeling like it is fighting the writer over
-// words that simply do not rhyme with anything nearby.
+// { family, stanza } of the traced family, or null. Kept apart from the DOM
+// because renderHighlight() rebuilds every span on each edit.
+let focusedMark = null;
+
+// Picking a word with no family clears the focus, so clicking plain text is
+// how the writer gets back to the resting layer.
 function updateRhymeFocus() {
-  if (!pickedBounds) return;
-  const selector = '.lyric-word[data-start="' + pickedBounds.start + '"]';
-  const picked = highlightEl.querySelector(selector);
-  const family = picked ? readMarkColorSlot(picked) : null;
-  if (family === null) return;
-  highlightEl.dataset.focusFamily = family;
+  const selector = pickedBounds ? '.lyric-word[data-start="' + pickedBounds.start + '"]' : null;
+  const picked = selector ? highlightEl.querySelector(selector) : null;
+  focusedMark = picked ? readMarkFocus(picked) : null;
+  applyRhymeFocus();
+}
+
+// Colour slots are numbered per stanza, so the stanza is matched too — slot 0
+// in the verse is an unrelated sound from slot 0 in the chorus.
+function applyRhymeFocus() {
+  for (const el of highlightEl.querySelectorAll('.is-focus-mark')) {
+    el.classList.remove('is-focus-mark');
+  }
+  if (!focusedMark) {
+    delete highlightEl.dataset.focus;
+    return;
+  }
+  highlightEl.dataset.focus = '';
+  const selector = '.mark-' + focusedMark.family + '[data-stanza="' + focusedMark.stanza + '"]';
+  for (const el of highlightEl.querySelectorAll(selector)) el.classList.add('is-focus-mark');
+}
+
+function readMarkFocus(wordEl) {
+  const family = readMarkColorSlot(wordEl);
+  return family === null ? null : { family, stanza: wordEl.dataset.stanza };
 }
 
 // Reads the colour slot straight off the span's own class rather than
@@ -307,11 +328,12 @@ function renderHighlight() {
   highlightEl.innerHTML = wordsToHtml(text, buildInternalRhymeMarkMap(text)) + '\n';
   hoveredWordEl = null;
   markPickedWord();
+  applyRhymeFocus();
 }
 
 // Each word long enough to rhyme becomes its own element, found again by the
 // offset it starts at. `marks`, when given, maps that same offset to the
-// family index internal-rhyme underlines should draw it in.
+// { family, stanza } internal-rhyme underlines should draw it in.
 function wordsToHtml(text, marks) {
   const pattern = new RegExp(WORD_CHAR.source + '+', 'g');
   let html = '';
@@ -321,9 +343,11 @@ function wordsToHtml(text, marks) {
     if (match[0].length >= MIN_WORD_LENGTH) {
       const word = escapeHtml(match[0]);
       html += escapeHtml(text.slice(lastIndex, match.index));
-      const family = marks ? marks.get(match.index) : undefined;
-      const markClass = family === undefined ? '' : markClassFor(family);
-      html += '<span class="lyric-word' + markClass + '" data-start="' + match.index + '">' + word + '</span>';
+      const mark = marks ? marks.get(match.index) : undefined;
+      const markClass = mark === undefined ? '' : markClassFor(mark.family);
+      const stanzaAttr = mark === undefined ? '' : ' data-stanza="' + mark.stanza + '"';
+      html += '<span class="lyric-word' + markClass + '"' + stanzaAttr +
+        ' data-start="' + match.index + '">' + word + '</span>';
       lastIndex = match.index + match[0].length;
     }
     match = pattern.exec(text);
@@ -749,7 +773,7 @@ function lineStartOffsets(allLines) {
   return offsets;
 }
 
-// Map<globalOffset, familyIndex> for every internal-rhyme mark in the text,
+// Map<globalOffset, { family, stanza }> for every internal-rhyme mark in the text,
 // or null when there is nothing to draw. Computed per stanza, like the
 // scheme gutter, since groupRhymeMarks() only ever sees one stanza at a time.
 function buildInternalRhymeMarkMap(text) {
@@ -766,7 +790,7 @@ function buildInternalRhymeMarkMap(text) {
     for (let lineIdx = 0; lineIdx < marks.length; lineIdx++) {
       const lineStart = starts[startIdx + lineIdx];
       for (const mark of marks[lineIdx]) {
-        map.set(lineStart + mark.start, mark.family);
+        map.set(lineStart + mark.start, { family: mark.family, stanza: s });
       }
     }
   }
@@ -1272,7 +1296,8 @@ function resetRhymesPanel() {
   const pointer = isTouchPrimary() ? EMPTY_RESULTS_TOUCH : EMPTY_RESULTS_POINTER;
   resultsEl.innerHTML = '<div class="empty-state">' + pointer + '</div>';
   markPickedWord();
-  delete highlightEl.dataset.focusFamily;
+  focusedMark = null;
+  applyRhymeFocus();
 }
 
 window.resetRhymesPanel = resetRhymesPanel;

@@ -126,9 +126,10 @@ describe('shipped dictionary', () => {
 
     const markedWords = marks.flatMap((lineMarks, i) =>
       lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    // waiting/holding/nothing share only an unstressed "-ing", which is not
+    // heard as a rhyme inside a line.
     assert.deepEqual(new Set(markedWords), new Set([
-      'night', 'light', 'tight', 'fight', 'money', 'feel', 'real', 'deal',
-      'waiting', 'holding', 'nothing'
+      'night', 'light', 'tight', 'fight', 'money', 'feel', 'real', 'deal'
     ]));
 
     for (const word of markedWords) {

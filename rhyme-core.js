@@ -440,11 +440,19 @@
     return crossScore >= MIN_CROSS_STRENGTH ? Math.max(sameTypeScore, crossScore) : sameTypeScore;
   }
 
+  // Ending-against-ending is left out: inside a line, two shared suffixes
+  // ("starting"/"staying") are not heard as a rhyme the way two line endings are.
+  function scoreStressedPronunciations(parts1, parts2) {
+    const stressedScore = scoreRhyme(parts1.stressed, parts2.stressed);
+    const crossScore = scoreCrossRhyme(parts1, parts2);
+    return crossScore >= MIN_CROSS_STRENGTH ? Math.max(stressedScore, crossScore) : stressedScore;
+  }
+
   function splitPronunciation(phonemes) {
     return { stressed: extractRhymePart(phonemes), end: extractEndRhymePart(phonemes) };
   }
 
-  function bestRhymeStrength(index, word1, word2) {
+  function bestRhymeStrength(index, word1, word2, scorer = scorePronunciations) {
     if (!word1 || !word2) return 0;
     if (word1 === word2) return SAME_WORD_STRENGTH;
     const entries1 = lookupPronunciations(index, word1);
@@ -454,7 +462,7 @@
     let best = 0;
     for (const phonemes of entries1) {
       const split1 = splitPronunciation(phonemes);
-      for (const split2 of splits2) best = Math.max(best, scorePronunciations(split1, split2));
+      for (const split2 of splits2) best = Math.max(best, scorer(split1, split2));
     }
     return best;
   }
@@ -701,7 +709,7 @@
   function linkStrengthFor(index, a, b) {
     if (Math.abs(a.lineIdx - b.lineIdx) > MARK_WINDOW_LINES) return 0;
     if (a.text === b.text) return 0; // a refrain, not a rhyme, by itself
-    const strength = bestRhymeStrength(index, a.text, b.text);
+    const strength = bestRhymeStrength(index, a.text, b.text, scoreStressedPronunciations);
     if (strength >= MIN_MARK_STRENGTH) return strength;
     if (strength === RHYME_STRENGTH.subtractive && sharesCodaEdge(index, a.text, b.text)) {
       return strength;

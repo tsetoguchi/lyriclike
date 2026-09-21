@@ -675,21 +675,18 @@ header h1 img {
 }
 
 /* Picking a word in a family raises that family to full strength and fades
-   every other mark to plain ink, so the page quiets the moment one sound is
+   every other mark to faint ink, so the page quiets the moment one sound is
    traced. This is what makes the resting layer safe to leave on at density —
-   see app.js's updateRhymeFocus(), which sets data-focus-family only on a
-   pointer or touch pick, never while the caret is merely moving. */
-#lyrics-highlight[data-focus-family="0"] .rhyme-mark:not(.mark-0),
-#lyrics-highlight[data-focus-family="1"] .rhyme-mark:not(.mark-1),
-#lyrics-highlight[data-focus-family="2"] .rhyme-mark:not(.mark-2),
-#lyrics-highlight[data-focus-family="3"] .rhyme-mark:not(.mark-3),
-#lyrics-highlight[data-focus-family="4"] .rhyme-mark:not(.mark-4),
-#lyrics-highlight[data-focus-family="5"] .rhyme-mark:not(.mark-5),
-#lyrics-highlight[data-focus-family="6"] .rhyme-mark:not(.mark-6),
-#lyrics-highlight[data-focus-family="7"] .rhyme-mark:not(.mark-7),
-#lyrics-highlight[data-focus-family="8"] .rhyme-mark:not(.mark-8),
-#lyrics-highlight[data-focus-family="9"] .rhyme-mark:not(.mark-9) {
-  text-decoration-color: color-mix(in srgb, var(--ink-faded) 70%, transparent);
+   see app.js's applyRhymeFocus(), which sets data-focus only on a pointer or
+   touch pick, never while the caret is merely moving. The fade has to be
+   well below the resting 70%, or the pale dotted families look unchanged. */
+#lyrics-highlight[data-focus] .rhyme-mark:not(.is-focus-mark) {
+  text-decoration-color: color-mix(in srgb, var(--ink-faded) 35%, transparent);
+}
+
+#lyrics-highlight[data-focus] .rhyme-mark.is-focus-mark {
+  text-decoration-color: var(--mark);
+  text-decoration-thickness: 3px;
 }
 
 @media (prefers-contrast: more) {
