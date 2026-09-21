@@ -96,7 +96,6 @@
   --drawer-width: 320px;
   --dialog-width: 400px;
   --resize-handle-width: 10px;
-  --nav-icon-size: 24px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
   --dot-size: 8px;
@@ -316,10 +315,6 @@ header h1 img {
 
 .toggle-btn:hover {
   background: var(--ink-wash);
-}
-
-.nav-icon {
-  display: none;
 }
 
 /* Create needs an account behind it, so it waits for sign-in. The notebook
@@ -1806,9 +1801,8 @@ header h1 img {
     bottom: 0;
     z-index: var(--z-bar);
     display: flex;
-    /* Stretch, so a label that wraps to two lines doesn't leave its
-       neighbours short. */
-    align-items: stretch;
+    flex-direction: column;
+    align-items: center;
     padding-top: var(--space-2);
     /* The labels rest on the home indicator's inset, with a small floor on
        screens that have none. */
@@ -1827,63 +1821,30 @@ header h1 img {
     opacity: 0;
   }
 
-  .bottom-nav > .toggle-btn {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-
-  /* Bar items read as icon-and-label targets rather than buttons: no box, no
-     fill, just the mark and its name. Separation comes from the icons and the
-     even columns, which run edge to edge. Labels drop the printed caps of the
-     desktop tools for plain body text, which reads smaller and quieter. */
+  /* Bar items stack as a centred list of plain labels, like a site footer:
+     no box, no fill, no icon, just the name in small printed caps. */
   .bottom-nav .toggle-btn {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: var(--space-1);
-    padding: var(--space-1) 0 0;
+    display: block;
+    /* Padding rather than a gap between rows, so the space counts as part of
+       each tap target. */
+    padding: var(--space-1) var(--space-4);
     background: transparent;
     border: none;
     border-radius: 0;
     color: var(--ink-faded);
-    font-family: var(--font-editor);
-    font-size: var(--text-caption-2);
+    font-size: var(--text-caption-1);
     font-weight: var(--weight-regular);
-    letter-spacing: normal;
-    text-transform: none;
-    line-height: 1.2;
-    /* Five columns on a phone: a two-word label wraps rather than overruns
-       its neighbour. */
-    white-space: normal;
-    text-align: center;
+    letter-spacing: var(--tracking-normal);
+    text-transform: uppercase;
+    line-height: 1.4;
+    white-space: nowrap;
   }
 
   body.signed-in .bottom-nav #create-btn {
-    display: flex;
-  }
-
-  .bottom-nav .nav-icon {
     display: block;
-    width: var(--nav-icon-size);
-    height: var(--nav-icon-size);
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
   }
 
-  /* Filled dots read as marks on the page; the strokes are the lines they
-     annotate. */
-  .bottom-nav .nav-icon circle {
-    fill: currentColor;
-    stroke: none;
-  }
-
-  /* Active is a colour change on icon and label together, since there is no
-     longer a box to fill. */
+  /* Active is a colour change on the label, since there is no box to fill. */
   .bottom-nav .toggle-btn.active {
     background: transparent;
     border: none;
