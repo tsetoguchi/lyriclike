@@ -1595,15 +1595,6 @@ header h1 img {
     width: auto;
   }
 
-  /* Desktop/tablet only (plan §8): the bottom nav is exactly four columns
-     already, with no room for a fifth, and a narrower editor wraps more per
-     line, which lands more marks per visual row than the density rules were
-     tuned against. app.js forces the feature off at this width too, so a
-     window dragged narrower never leaves it stuck on with its control gone. */
-  #internal-rhyme-toggle {
-    display: none;
-  }
-
   .toggle-btn {
     font-size: var(--text-caption-2);
     padding: var(--space-2) var(--space-2);
@@ -1863,7 +1854,7 @@ header h1 img {
     letter-spacing: normal;
     text-transform: none;
     line-height: 1.2;
-    /* Four columns on a phone: a two-word label wraps rather than overruns
+    /* Five columns on a phone: a two-word label wraps rather than overruns
        its neighbour. */
     white-space: normal;
     text-align: center;

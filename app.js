@@ -770,7 +770,7 @@ function lineStartOffsets(allLines) {
 // or null when there is nothing to draw. Computed per stanza, like the
 // scheme gutter, since groupRhymeMarks() only ever sees one stanza at a time.
 function buildInternalRhymeMarkMap(text) {
-  if (!internalRhymesVisible || !rhymeIndex || isMobileView()) return null;
+  if (!internalRhymesVisible || !rhymeIndex) return null;
   const allLines = text.split('\n');
   const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
   const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
@@ -832,19 +832,6 @@ function toggleInternalRhymes() {
   sessionStorage.setItem('internalRhymesVisible', internalRhymesVisible ? '1' : '0');
   internalRhymeToggleEl.classList.toggle('active', internalRhymesVisible);
   if (internalRhymesVisible) ensureRhymeData();
-  invalidateInternalRhymeMarks();
-  renderHighlight();
-}
-
-// The bottom nav has no room for a fifth column (§8 of the plan), so the
-// feature is desktop/tablet only. Called only on an actual transition into
-// mobile — see its guard in placeControlsForViewport() — so this never fights
-// a click on the toggle at that width; there is none, since CSS hides it.
-function disableInternalRhymesForMobile() {
-  if (!internalRhymesVisible) return;
-  internalRhymesVisible = false;
-  sessionStorage.setItem('internalRhymesVisible', '0');
-  internalRhymeToggleEl.classList.remove('active');
   invalidateInternalRhymeMarks();
   renderHighlight();
 }
@@ -1175,14 +1162,15 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
-    disableInternalRhymesForMobile();
     // Create rides along but stays hidden until sign-in; CSS owns that, so
     // placement does not have to know about auth.
-    bottomNavEl.append(toggleBtn, rhymeSchemeToggleEl, notebookBtn, createBtn);
+    bottomNavEl.append(
+      toggleBtn, rhymeSchemeToggleEl, internalRhymeToggleEl, notebookBtn, createBtn);
     headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
   } else {
     headerEl.insertBefore(toggleBtn, headerRightEl);
     headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
+    headerEl.insertBefore(internalRhymeToggleEl, headerRightEl);
     headerEl.insertBefore(notebookBtn, headerRightEl);
     headerEl.insertBefore(createBtn, headerRightEl);
     headerRightEl.appendChild(userAreaEl);
