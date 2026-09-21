@@ -444,10 +444,22 @@
     return crossScore >= MIN_CROSS_STRENGTH ? Math.max(sameTypeScore, crossScore) : sameTypeScore;
   }
 
+  function countCodaVowels(part) {
+    return part.coda.filter(isVowel).length;
+  }
+
+  // "yeah/rather" share a vowel, but "-ther" is a whole extra syllable, so
+  // the two are not heard as a rhyme; "okay/take" add only a consonant.
+  function hasSameTailSyllables(part1, part2) {
+    if (!part1 || !part2) return true;
+    return countCodaVowels(part1) === countCodaVowels(part2);
+  }
+
   // Ending-against-ending is left out: inside a line, two shared suffixes
   // ("starting"/"staying") are not heard as a rhyme the way two line endings are.
   function scoreStressedPronunciations(parts1, parts2) {
-    const stressedScore = scoreRhyme(parts1.stressed, parts2.stressed);
+    const stressedScore = hasSameTailSyllables(parts1.stressed, parts2.stressed)
+      ? scoreRhyme(parts1.stressed, parts2.stressed) : 0;
     const crossScore = scoreCrossRhyme(parts1, parts2);
     return crossScore >= MIN_CROSS_STRENGTH ? Math.max(stressedScore, crossScore) : stressedScore;
   }

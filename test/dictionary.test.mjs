@@ -156,6 +156,15 @@ describe('shipped dictionary', () => {
     );
   });
 
+  it('does not mark a rhyme that only adds a whole syllable', () => {
+    const verse = ["It's only a matter of time yeah", 'I would rather be okay', 'take it slow'];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.equal(markedWords.includes('rather'), false);
+    assert.equal(markedWords.includes('okay'), true);
+    assert.equal(markedWords.includes('take'), true);
+  });
+
   it('keeps a word with two pronunciations in one family', () => {
     // "re" is both "ray" and "ree"; it must not join "say" to "feel".
     const verse = ['I know you re not around', 'I feel nothing wrong', 'They say what is done'];
