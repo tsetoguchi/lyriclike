@@ -127,9 +127,10 @@ describe('shipped dictionary', () => {
     const markedWords = marks.flatMap((lineMarks, i) =>
       lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
     // waiting/holding/nothing share only an unstressed "-ing", which is not
-    // heard as a rhyme inside a line.
+    // heard as a rhyme inside a line; neither is money's unstressed "-ey"
+    // against feel.
     assert.deepEqual(new Set(markedWords), new Set([
-      'night', 'light', 'tight', 'fight', 'money', 'feel', 'real', 'deal'
+      'night', 'light', 'tight', 'fight', 'feel', 'real', 'deal'
     ]));
 
     for (const word of markedWords) {
@@ -163,6 +164,14 @@ describe('shipped dictionary', () => {
     assert.equal(markedWords.includes('rather'), false);
     assert.equal(markedWords.includes('okay'), true);
     assert.equal(markedWords.includes('take'), true);
+  });
+
+  it('reads a word in single quotes', () => {
+    const verse = ["she whispered 'goodnight'", 'and turned out the light'];
+    assert.deepEqual(computeRhymeScheme(index, verse), ['A', 'A']);
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.ok(markedWords.includes("'goodnight'"));
   });
 
   it('keeps a word with two pronunciations in one family', () => {

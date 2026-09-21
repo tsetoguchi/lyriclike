@@ -52,6 +52,9 @@
   // A word's unstressed ending against another's stressed syllable is weaker
   // evidence, so assonance alone does not pair the lines.
   const MIN_CROSS_STRENGTH = 2;
+  // Inside a line only an exact match counts: "happy/me" is heard, but
+  // "money/feel" and "morning/win" are not.
+  const MIN_MARK_CROSS_STRENGTH = RHYME_STRENGTH.perfect;
   const FIRST_LABEL_CODE = 'A'.charCodeAt(0);
   const LABEL_COUNT = 26;
   const UNLABELLED = -1;
@@ -364,7 +367,8 @@
     return phonemes.slice(0, stressedIdx + 1).filter(isVowel).length;
   }
 
-  // Lyrics drop letters the dictionary keeps: "runnin'" is "running".
+  // Lyrics drop letters the dictionary keeps: "runnin'" is "running", and
+  // "'round" is "round". A word in single quotes ('goodnight') reads the same.
   function lookupPronunciations(index, word) {
     if (hasPronunciation(index, word)) return index.dictionary[word];
     if (word.endsWith("in'")) {
@@ -375,7 +379,8 @@
       const trimmed = word.slice(0, -1);
       if (hasPronunciation(index, trimmed)) return index.dictionary[trimmed];
     }
-    return null;
+    if (!word.startsWith("'")) return null;
+    return lookupPronunciations(index, word.replace(/^'+/, ''));
   }
 
   // ── Syllable counting ──
@@ -455,13 +460,21 @@
     return countCodaVowels(part1) === countCodaVowels(part2);
   }
 
+  // classifyRhyme() calls "sky" against "night" additive and "night" against
+  // "sky" subtractive; whether a pair is marked must not depend on which word
+  // the writer happened to use first.
+  function scoreRhymeEitherOrder(part1, part2) {
+    return Math.max(scoreRhyme(part1, part2), scoreRhyme(part2, part1));
+  }
+
   // Ending-against-ending is left out: inside a line, two shared suffixes
   // ("starting"/"staying") are not heard as a rhyme the way two line endings are.
   function scoreStressedPronunciations(parts1, parts2) {
     const stressedScore = hasSameTailSyllables(parts1.stressed, parts2.stressed)
-      ? scoreRhyme(parts1.stressed, parts2.stressed) : 0;
+      ? scoreRhymeEitherOrder(parts1.stressed, parts2.stressed) : 0;
     const crossScore = scoreCrossRhyme(parts1, parts2);
-    return crossScore >= MIN_CROSS_STRENGTH ? Math.max(stressedScore, crossScore) : stressedScore;
+    return crossScore >= MIN_MARK_CROSS_STRENGTH
+      ? Math.max(stressedScore, crossScore) : stressedScore;
   }
 
   function splitPronunciation(phonemes) {
@@ -532,6 +545,12 @@
   // One letter per line ("A", "B", ...) grouping lines whose last words rhyme;
   // lines with no word get ''. Words the dictionary lacks start a new group.
   function computeRhymeScheme(index, lines) {
+    return computeRhymeLabels(index, lines).map(toLabelLetter);
+  }
+
+  // The same grouping as numbers, which unlike letters never wrap: the marks
+  // pass needs "A" and the 27th group, also printed "A", kept apart.
+  function computeRhymeLabels(index, lines) {
     const earlierEndings = new Map();
     const labels = [];
     let nextLabel = 0;
@@ -547,16 +566,18 @@
       labels.push(label);
       recordEnding(earlierEndings, pronunciations, { word, label });
     }
-    return labels.map(toLabelLetter);
+    return labels;
   }
 
   // ── Internal rhyme marks ──
-  // Marks the rhymes inside a line, not just its last word. Plan:
-  // plans/internal-rhyme-marks.md. Called once per stanza, mirroring how the
+  // Marks the rhymes inside a line, not just its last word. Design:
+  // plans/internal-rhyme-marks.md; the rules as they now stand:
+  // plans/internal-rhyme-rules.md. Called once per stanza, mirroring how the
   // caller already calls computeRhymeScheme() per stanza.
 
-  // Additive (3) and above qualify outright; subtractive (2) needs the rescue
-  // in sharesCodaEdge() below. Consonance and unrescued assonance never do.
+  // Additive (3) and above. Pairs are scored in both orders
+  // (scoreRhymeEitherOrder()), so subtractive never decides one; assonance
+  // and consonance never qualify.
   const MIN_MARK_STRENGTH = 3;
   // Two words form a family only if their lines are this close; a rhyme
   // thirty lines up is not heard as one.
@@ -564,12 +585,16 @@
   // Per stanza. Ranked by member count, then by summed strength; the rest
   // still get a mark, in faded ink, rather than being silently dropped.
   const MAX_MARKED_FAMILIES = 4;
+  // The page's --scheme-N colours. A floating family never takes a colour an
+  // end-rhyme family in the same stanza is already drawn in.
+  const MARK_COLOR_COUNT = 10;
   const OVERFLOW_FAMILY = -1;
 
   // A closed grammatical class, not merely common words: "night" and "love"
-  // are common too and must stay markable. Includes the contractions lyrics
-  // are actually written in, spelled without the apostrophe — see
-  // isFunctionWord(), which strips it from the word under test.
+  // are common too and must stay markable. Contractions are listed without
+  // their apostrophe, except where that spelling is a word of its own ("we'll"
+  // is not "well") — see isFunctionWord(). Sung fillers are here too: "yeah"
+  // against "there" is not a rhyme anyone wrote.
   const FUNCTION_WORDS = new Set([
     'a', 'an', 'the',
     'i', 'me', 'my', 'mine', 'myself', 'you', 'your', 'yours', 'yourself',
@@ -577,6 +602,8 @@
     'it', 'its', 'itself', 'we', 'us', 'our', 'ours', 'ourselves',
     'they', 'them', 'their', 'theirs', 'themselves',
     'this', 'that', 'these', 'those', 'who', 'whom', 'whose', 'what', 'which',
+    'when', 'where', 'why', 'how', 'then', 'there', 'here',
+    'no', 'not', 'all', 'some', 'any', 'each', 'both', 'just', 'too', 'very',
     'in', 'on', 'at', 'by', 'for', 'with', 'about', 'against', 'between',
     'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to',
     'from', 'up', 'down', 'of', 'off', 'over', 'under', 'again', 'further', 'out',
@@ -585,13 +612,20 @@
     'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
     'have', 'has', 'had', 'do', 'does', 'did',
     'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could',
-    'aint', 'cant', 'dont', 'im', 'ill', 'gonna', 'wanna', 'em', 'ya', 'imma'
+    'aint', 'cant', 'dont', 'im', 'ill', 'gonna', 'wanna', 'em', 'ya', 'imma',
+    'youre', 'theyre', 'ive', 'youve', 'weve', 'theyve', 'id', 'youd', 'hed', 'theyd',
+    'youll', 'theyll', 'itll', 'hes', 'shes', 'thats', 'theres', 'whats', 'whos',
+    'isnt', 'arent', 'wasnt', 'werent', 'doesnt', 'didnt', 'hasnt', 'havent',
+    'wouldnt', 'couldnt', 'shouldnt', 'gotta', 'tryna', 'yall', 'cause', 'cuz', 'til',
+    "we'll", "he'll", "she'll", "we'd", "she'd", "won't", "let's",
+    'oh', 'ooh', 'ah', 'yeah', 'yea', 'hey', 'whoa', 'woah', 'uh', 'huh',
+    'mm', 'hmm', 'na', 'la', 'da', 'ay', 'eh', 'yo'
   ]);
 
-  // normalizeWord() keeps apostrophes, so "don't" normalises to "don't", not
-  // "dont" — strip them here or the set misses every contraction in it.
+  // Checked as written, for the contractions listed with their apostrophe,
+  // then stripped, for the rest ("don't" as "dont", "'cause" as "cause").
   function isFunctionWord(word) {
-    return FUNCTION_WORDS.has(word.replace(/'/g, ''));
+    return FUNCTION_WORDS.has(word) || FUNCTION_WORDS.has(word.replace(/'/g, ''));
   }
 
   function findMaskedRanges(line) {
@@ -633,7 +667,7 @@
 
   // One candidate per markable word: every line's last word (however it
   // pronounces, even a function word — it may anchor another word's family,
-  // see seedAnchors()), plus every other word that is not a function word.
+  // see seedFamilies()), plus every other word that is not a function word.
   function collectCandidates(index, lines, labels) {
     const candidates = [];
     for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
@@ -641,8 +675,8 @@
       for (let w = 0; w < words.length; w++) {
         const isEnd = w === words.length - 1;
         if (!isEnd && isFunctionWord(words[w].text)) continue;
-        const labelIndex = isEnd && labels[lineIdx]
-          ? labels[lineIdx].charCodeAt(0) - FIRST_LABEL_CODE : null;
+        const hasLabel = isEnd && labels[lineIdx] !== UNLABELLED;
+        const labelIndex = hasLabel ? labels[lineIdx] : null;
         candidates.push({
           lineIdx, start: words[w].start, end: words[w].end, text: words[w].text,
           isEnd, labelIndex, pronunciations: lookupPronunciations(index, words[w].text)
@@ -652,68 +686,32 @@
     return candidates;
   }
 
-  // ── Union-find over candidates ──
+  // ── Pair tests ──
 
-  function find(parent, i) {
-    while (parent[i] !== i) {
-      parent[i] = parent[parent[i]];
-      i = parent[i];
-    }
-    return i;
+  // The consonants that open the stressed syllable: L for both "light" and
+  // "delight", S T for both "stand" and "understand".
+  function stressedOnsetCluster(part) {
+    let start = part.onset.length;
+    while (start > 0 && !isVowel(part.onset[start - 1])) start--;
+    return part.onset.slice(start).join(' ');
   }
 
-  function union(parent, a, b) {
-    const rootA = find(parent, a);
-    const rootB = find(parent, b);
-    if (rootA !== rootB) parent[rootA] = rootB;
-  }
-
-  // Lines sharing a scheme letter start already unioned, each set carrying
-  // that letter's index as its anchor. computeRhymeScheme() is called
-  // unchanged for this, so turning marks on never moves a letter.
-  function seedAnchors(candidates) {
-    const parent = candidates.map((_, i) => i);
-    const byLabel = new Map();
-    candidates.forEach((c, i) => {
-      if (c.labelIndex === null) return;
-      if (!byLabel.has(c.labelIndex)) byLabel.set(c.labelIndex, []);
-      byLabel.get(c.labelIndex).push(i);
-    });
-    const anchorOf = new Map();
-    for (const [labelIndex, indices] of byLabel) {
-      for (let k = 1; k < indices.length; k++) union(parent, indices[0], indices[k]);
-      anchorOf.set(find(parent, indices[0]), labelIndex);
-    }
-    return { parent, anchorOf };
-  }
-
-  // A word bridging two different end-rhyme families would make the gutter
-  // and the underlines disagree about which lines rhyme, so that merge is
-  // refused rather than taken; the two ends of that pair simply are not
-  // joined into one family.
-  // True when a and b end up in one family, whether or not this call joined them.
-  function tryLink(parent, anchorOf, a, b) {
-    const rootA = find(parent, a);
-    const rootB = find(parent, b);
-    if (rootA === rootB) return true;
-    const anchorA = anchorOf.get(rootA);
-    const anchorB = anchorOf.get(rootB);
-    if (anchorA !== undefined && anchorB !== undefined && anchorA !== anchorB) return false;
-    parent[rootA] = rootB;
-    const keptAnchor = anchorA !== undefined ? anchorA : anchorB;
-    if (keptAnchor !== undefined) anchorOf.set(rootB, keptAnchor);
-    return true;
-  }
-
-  // "hand/man", "world/girl" and "friends/end" share a coda edge; "night/my"
-  // does not. Without this, a blanket exclusion of subtractive would drop the
-  // near-rhyme family this app's audience is built on. Stressed parts only:
-  // additive/subtractive are a consonant-coda relationship.
-  function sharesCodaEdge(phonemes1, phonemes2) {
+  function hasSameStressedOpening(phonemes1, phonemes2) {
     const part1 = extractRhymePart(phonemes1);
     const part2 = extractRhymePart(phonemes2);
     if (!part1 || !part2) return false;
-    return countSharedCoda(part1.coda, part2.coda) >= 1;
+    return vowelsMatch(part1.vowel, part2.vowel)
+      && stressedOnsetCluster(part1) === stressedOnsetCluster(part2);
+  }
+
+  // The same word twice is a refrain, and so is the same stressed syllable
+  // under a prefix or suffix ("way/away", "night/tonight", "keep/keeps") —
+  // the call classifyRhyme() already makes for "knight/night".
+  function isRepeat(a, b) {
+    if (a.text === b.text) return true;
+    if (!a.pronunciations || !b.pronunciations) return false;
+    return a.pronunciations.some((phonemes1) => b.pronunciations.some(
+      (phonemes2) => hasSameStressedOpening(phonemes1, phonemes2)));
   }
 
   // The strongest pairing of one pronunciation of each word, with which ones.
@@ -730,20 +728,70 @@
     return best;
   }
 
-  function isMarkableMatch(a, b, match) {
-    if (match.strength >= MIN_MARK_STRENGTH) return true;
-    return match.strength === RHYME_STRENGTH.subtractive &&
-      sharesCodaEdge(a.pronunciations[match.first], b.pronunciations[match.second]);
-  }
-
-  // null when the pair does not qualify; otherwise the match that qualified
-  // it, whose strength feeds the ranking in assignFloatingColors().
-  function linkMatchFor(a, b) {
-    if (Math.abs(a.lineIdx - b.lineIdx) > MARK_WINDOW_LINES) return null;
-    if (a.text === b.text) return null; // a refrain, not a rhyme, by itself
+  // null when the pair does not rhyme well enough to mark; otherwise the
+  // match, whose strength feeds the ranking in assignFloatingColors().
+  function findMarkableMatch(a, b) {
     if (!a.pronunciations || !b.pronunciations) return null;
     const match = bestPronunciationMatch(a.pronunciations, b.pronunciations);
-    return isMarkableMatch(a, b, match) ? match : null;
+    return match.strength >= MIN_MARK_STRENGTH ? match : null;
+  }
+
+  // ── Families: union-find over candidates ──
+
+  function find(parent, i) {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  }
+
+  function joinRoots(families, rootA, rootB) {
+    families.parent[rootA] = rootB;
+    families.members.get(rootB).push(...families.members.get(rootA));
+    families.members.delete(rootA);
+    const anchorA = families.anchorOf.get(rootA);
+    if (anchorA === undefined) return;
+    families.anchorOf.set(rootB, anchorA);
+    families.anchorOf.delete(rootA);
+  }
+
+  // Lines sharing a scheme letter start already joined, each family carrying
+  // that letter's index as its anchor. computeRhymeLabels() is called
+  // unchanged for this, so turning marks on never moves a letter.
+  function seedFamilies(candidates) {
+    const families = {
+      parent: candidates.map((_, i) => i),
+      members: new Map(candidates.map((_, i) => [i, [i]])),
+      anchorOf: new Map()
+    };
+    const firstWithLabel = new Map();
+    candidates.forEach(({ labelIndex }, i) => {
+      if (labelIndex === null) return;
+      if (!firstWithLabel.has(labelIndex)) firstWithLabel.set(labelIndex, i);
+      const root = find(families.parent, firstWithLabel.get(labelIndex));
+      if (root !== i) joinRoots(families, i, root);
+      families.anchorOf.set(root, labelIndex);
+    });
+    return families;
+  }
+
+  // A word bridging two different end-rhyme families would make the gutter
+  // and the underlines disagree about which lines rhyme.
+  function hasConflictingAnchors(families, rootA, rootB) {
+    const anchorA = families.anchorOf.get(rootA);
+    const anchorB = families.anchorOf.get(rootB);
+    return anchorA !== undefined && anchorB !== undefined && anchorA !== anchorB;
+  }
+
+  // True when a and b end up in one family, whether or not this call joined them.
+  function tryLink(families, a, b) {
+    const rootA = find(families.parent, a);
+    const rootB = find(families.parent, b);
+    if (rootA === rootB) return true;
+    if (hasConflictingAnchors(families, rootA, rootB)) return false;
+    joinRoots(families, rootA, rootB);
+    return true;
   }
 
   // A word is said one way, so once it links it keeps that pronunciation —
@@ -753,36 +801,34 @@
     b.pronunciations = [b.pronunciations[match.second]];
   }
 
+  function linkPair(families, candidates, i, j, linkStrength) {
+    const a = candidates[i];
+    const b = candidates[j];
+    if (isRepeat(a, b)) return;
+    const match = findMarkableMatch(a, b);
+    if (!match || !tryLink(families, i, j)) return;
+    pinPronunciations(a, b, match);
+    linkStrength[i] = Math.max(linkStrength[i], match.strength);
+    linkStrength[j] = Math.max(linkStrength[j], match.strength);
+  }
+
   // Candidates are in line order, so once a pair is further apart than the
   // window every later pair started from the same left side is too.
-  function linkCandidates(candidates, parent, anchorOf, linkStrength) {
+  function linkCandidates(candidates, families, linkStrength) {
     for (let i = 0; i < candidates.length; i++) {
       for (let j = i + 1; j < candidates.length; j++) {
         if (candidates[j].lineIdx - candidates[i].lineIdx > MARK_WINDOW_LINES) break;
-        const match = linkMatchFor(candidates[i], candidates[j]);
-        if (!match) continue;
-        if (tryLink(parent, anchorOf, i, j)) pinPronunciations(candidates[i], candidates[j], match);
-        linkStrength[i] = Math.max(linkStrength[i], match.strength);
-        linkStrength[j] = Math.max(linkStrength[j], match.strength);
+        linkPair(families, candidates, i, j, linkStrength);
       }
     }
   }
 
-  function collectGroups(candidates, parent) {
-    const groups = new Map();
-    for (let i = 0; i < candidates.length; i++) {
-      const root = find(parent, i);
-      if (!groups.has(root)) groups.set(root, []);
-      groups.get(root).push(i);
-    }
-    return groups;
-  }
+  // ── Colours and projection ──
 
-  // Two occurrences of the same word are a refrain, not a rhyme, and a
-  // function word doesn't count as something to rhyme with either — a word
-  // whose only partner in the group is "me" or "the" is not marked, even
-  // though "me" or "the" may still sit in the group as its anchor. So a
-  // group needs at least two distinct *non-function* words to be a family.
+  // A function word doesn't count as something to rhyme with — a word whose
+  // only partner in the group is "me" or "the" is not marked, even though
+  // "me" or "the" may still sit in the group as its anchor. So a group needs
+  // at least two distinct *non-function* words to be a family.
   function groupQualifies(members, candidates) {
     const texts = new Set();
     for (const i of members) {
@@ -803,22 +849,24 @@
     return best;
   }
 
-  // The smallest colour slot not already spoken for by a *marked* end-rhyme
-  // family. A pass-1 label that never turns into a mark (a lone line ending
-  // nothing else rhymes with) reserves nothing — it draws no colour in the
-  // text, so leaving its number free is what keeps floating families' colours
-  // from shifting every time an unrelated new line is appended.
-  function nextAvailableColorIndex(usedAnchorLabels, taken) {
-    let i = 0;
-    while (usedAnchorLabels.has(i) || taken.has(i)) i++;
-    taken.add(i);
-    return i;
+  // The smallest colour not already drawn by a *marked* end-rhyme family. A
+  // pass-1 label that never turns into a mark (a lone line ending nothing
+  // else rhymes with) reserves nothing, which is what keeps floating
+  // families' colours from shifting every time an unrelated line is appended.
+  // With every colour spoken for, the family is marked as overflow.
+  function nextAvailableColorIndex(usedColors, taken) {
+    for (let i = 0; i < MARK_COLOR_COUNT; i++) {
+      if (usedColors.has(i) || taken.has(i)) continue;
+      taken.add(i);
+      return i;
+    }
+    return OVERFLOW_FAMILY;
   }
 
   // Rank decides which floating families get a colour at all; it does not
   // decide which colour. A family growing by one word could otherwise
   // overtake its neighbour and swap two colours across the whole stanza.
-  function assignFloatingColors(floatingGroups, usedAnchorLabels) {
+  function assignFloatingColors(floatingGroups, usedColors) {
     const ranked = floatingGroups.slice().sort((a, b) => {
       if (b.rank.memberCount !== a.rank.memberCount) return b.rank.memberCount - a.rank.memberCount;
       return b.rank.summedStrength - a.rank.summedStrength;
@@ -831,13 +879,15 @@
       .slice()
       .sort((a, b) => a.firstAppearance.lineIdx - b.firstAppearance.lineIdx
         || a.firstAppearance.start - b.firstAppearance.start)
-      .forEach((group) => { group.family = nextAvailableColorIndex(usedAnchorLabels, taken); });
+      .forEach((group) => {
+        group.family = nextAvailableColorIndex(usedColors, taken);
+      });
 
     overflow.forEach((group) => { group.family = OVERFLOW_FAMILY; });
   }
 
   // Function words never take a mark, even as a family's largest member —
-  // they may still anchor the family (seedAnchors()) so the words that do
+  // they may still anchor the family (seedFamilies()) so the words that do
   // rhyme with them keep the right colour.
   function projectGroup(members, candidates, family, marks) {
     for (const i of members) {
@@ -847,15 +897,15 @@
     }
   }
 
-  function assignAndProjectMarks(candidates, groups, anchorOf, linkStrength, marks) {
+  function assignAndProjectMarks(candidates, families, linkStrength, marks) {
     const floatingGroups = [];
-    const usedAnchorLabels = new Set();
+    const usedColors = new Set();
     const anchoredQualifying = [];
-    for (const [root, members] of groups) {
+    for (const [root, members] of families.members) {
       if (!groupQualifies(members, candidates)) continue;
-      const anchorLabel = anchorOf.get(root);
+      const anchorLabel = families.anchorOf.get(root);
       if (anchorLabel !== undefined) {
-        usedAnchorLabels.add(anchorLabel);
+        usedColors.add(anchorLabel % MARK_COLOR_COUNT);
         anchoredQualifying.push({ members, anchorLabel });
         continue;
       }
@@ -869,26 +919,27 @@
     for (const { members, anchorLabel } of anchoredQualifying) {
       projectGroup(members, candidates, anchorLabel, marks);
     }
-    assignFloatingColors(floatingGroups, usedAnchorLabels);
+    assignFloatingColors(floatingGroups, usedColors);
     for (const group of floatingGroups) {
       projectGroup(group.members, candidates, group.family, marks);
     }
   }
 
   // Lines in, marks out. Offsets are within their line; the caller knows
-  // where its lines start. Pass 1 is computeRhymeScheme(), unchanged, which
-  // both supplies the returned labels and seeds the anchors pass 2 grows
-  // from — see seedAnchors() and tryLink().
+  // where its lines start. Pass 1 is the rhyme scheme, unchanged, which both
+  // supplies the returned labels and seeds the families pass 2 grows from —
+  // see seedFamilies() and tryLink(). A mark's family is its own number, which
+  // can run past MARK_COLOR_COUNT for end-rhyme families; the page wraps it
+  // onto its colours the way the gutter does.
   function groupRhymeMarks(index, lines) {
-    const labels = computeRhymeScheme(index, lines);
+    const labels = computeRhymeLabels(index, lines);
     const candidates = collectCandidates(index, lines, labels);
-    const { parent, anchorOf } = seedAnchors(candidates);
+    const families = seedFamilies(candidates);
     const linkStrength = new Array(candidates.length).fill(0);
-    linkCandidates(candidates, parent, anchorOf, linkStrength);
-    const groups = collectGroups(candidates, parent);
+    linkCandidates(candidates, families, linkStrength);
     const marks = lines.map(() => []);
-    assignAndProjectMarks(candidates, groups, anchorOf, linkStrength, marks);
-    return { labels, marks };
+    assignAndProjectMarks(candidates, families, linkStrength, marks);
+    return { labels: labels.map(toLabelLetter), marks };
   }
 
   const RhymeCore = {

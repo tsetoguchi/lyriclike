@@ -262,8 +262,9 @@ function updateRhymeFocus() {
   applyRhymeFocus();
 }
 
-// Colour slots are numbered per stanza, so the stanza is matched too — slot 0
-// in the verse is an unrelated sound from slot 0 in the chorus.
+// Families are numbered per stanza, so the stanza is matched too — family 0
+// in the verse is an unrelated sound from family 0 in the chorus. The family
+// number, not the colour class, since families 0 and 10 share a colour.
 function applyRhymeFocus() {
   for (const el of highlightEl.querySelectorAll('.is-focus-mark')) {
     el.classList.remove('is-focus-mark');
@@ -273,25 +274,19 @@ function applyRhymeFocus() {
     return;
   }
   highlightEl.dataset.focus = '';
-  const selector = '.mark-' + focusedMark.family + '[data-stanza="' + focusedMark.stanza + '"]';
+  const selector = '[data-family="' + focusedMark.family + '"][data-stanza="' +
+    focusedMark.stanza + '"]';
   for (const el of highlightEl.querySelectorAll(selector)) el.classList.add('is-focus-mark');
 }
 
+// Read straight off the span rather than recomputing marks a second time.
+// Overflow marks have no family of their own to focus toward — every
+// overflow word shares one number — so picking one behaves like picking a
+// word with no family.
 function readMarkFocus(wordEl) {
-  const family = readMarkColorSlot(wordEl);
-  return family === null ? null : { family, stanza: wordEl.dataset.stanza };
-}
-
-// Reads the colour slot straight off the span's own class rather than
-// recomputing marks a second time. Overflow marks have no slot of their own
-// to focus toward — every overflow word shares one class — so picking one
-// behaves like picking a word with no family.
-function readMarkColorSlot(wordEl) {
-  for (const className of wordEl.classList) {
-    const match = /^mark-(\d+)$/.exec(className);
-    if (match) return match[1];
-  }
-  return null;
+  const family = wordEl.dataset.family;
+  if (family === undefined || Number(family) === RhymeCore.OVERFLOW_FAMILY) return null;
+  return { family, stanza: wordEl.dataset.stanza };
 }
 
 function pickedBoundsForSelection(text, start, end) {
@@ -345,8 +340,9 @@ function wordsToHtml(text, marks) {
       html += escapeHtml(text.slice(lastIndex, match.index));
       const mark = marks ? marks.get(match.index) : undefined;
       const markClass = mark === undefined ? '' : markClassFor(mark.family);
-      const stanzaAttr = mark === undefined ? '' : ' data-stanza="' + mark.stanza + '"';
-      html += '<span class="lyric-word' + markClass + '"' + stanzaAttr +
+      const markAttrs = mark === undefined ? ''
+        : ' data-stanza="' + mark.stanza + '" data-family="' + mark.family + '"';
+      html += '<span class="lyric-word' + markClass + '"' + markAttrs +
         ' data-start="' + match.index + '">' + word + '</span>';
       lastIndex = match.index + match[0].length;
     }

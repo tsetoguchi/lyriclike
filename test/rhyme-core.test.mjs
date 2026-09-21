@@ -265,6 +265,17 @@ describe('FUNCTION_WORDS', () => {
     assert.equal(FUNCTION_WORDS.has('love'), false);
   });
 
+  it('lists wh-words and sung fillers', () => {
+    for (const word of ['when', 'where', 'why', 'how', 'yeah', 'oh', 'hey']) {
+      assert.ok(FUNCTION_WORDS.has(word), `${word} should be a function word`);
+    }
+  });
+
+  it('lists a contraction with its apostrophe when stripped it spells a word', () => {
+    assert.ok(FUNCTION_WORDS.has("we'll"));
+    assert.equal(FUNCTION_WORDS.has('well'), false);
+  });
+
   it('lists contractions without their apostrophe', () => {
     for (const word of ['aint', 'cant', 'dont', 'im', 'ill', 'gonna', 'wanna', 'em', 'ya', 'imma']) {
       assert.ok(FUNCTION_WORDS.has(word), `${word} should be listed unapostrophised`);
@@ -294,7 +305,10 @@ describe('groupRhymeMarks', () => {
     hot: [['HH', 'AA1', 'T']],
     caught: [['K', 'AO1', 'T']],
     wont: [['W', 'OW1', 'N', 'T']],
-    dont: [['D', 'OW1', 'N', 'T']]
+    dont: [['D', 'OW1', 'N', 'T']],
+    tonight: [['T', 'AH0', 'N', 'AY1', 'T']],
+    away: [['AH0', 'W', 'EY1']],
+    yeah: [['Y', 'AE1']]
   };
   const MARK_INDEX = buildRhymeIndex(MARK_DICTIONARY);
 
@@ -331,20 +345,37 @@ describe('groupRhymeMarks', () => {
     assert.deepEqual(marks[0], []);
   });
 
-  it('rescues a subtractive pair that shares a coda edge', () => {
-    const lines = ['I raised my hand up high', 'and called out to the man'];
-    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
-    const handMark = marks[0].find((m) => textOf(lines[0], m) === 'hand');
-    const manMark = marks[1].find((m) => textOf(lines[1], m) === 'man');
-    assert.ok(handMark && manMark, 'hand and man should both be marked');
-    assert.equal(handMark.family, manMark.family);
+  it('marks a pair the same whichever word comes first', () => {
+    const orders = [
+      ['hand', 'man'], ['man', 'hand'], ['night', 'sky'], ['sky', 'night']
+    ];
+    for (const [first, second] of orders) {
+      const lines = [`I saw the ${first} go`, `and then the ${second} went`];
+      const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+      const firstMark = marks[0].find((m) => textOf(lines[0], m) === first);
+      const secondMark = marks[1].find((m) => textOf(lines[1], m) === second);
+      assert.ok(firstMark && secondMark, `${first}/${second} should both be marked`);
+      assert.equal(firstMark.family, secondMark.family);
+    }
   });
 
-  it('does not rescue a subtractive pair without a shared coda edge', () => {
-    const lines = ['all through the night I walked', 'gazing up at the sky above'];
+  it('does not mark the same stressed syllable under a prefix', () => {
+    const lines = [
+      'out tonight we go', 'under the night we went',
+      'we ran away to go', 'find a way we went'
+    ];
     const { marks } = groupRhymeMarks(MARK_INDEX, lines);
-    assert.deepEqual(marks[0], []);
-    assert.deepEqual(marks[1], []);
+    const marked = marks.flatMap((lineMarks, i) =>
+      lineMarks.map((m) => textOf(lines[i], m)));
+    for (const word of ['tonight', 'night', 'away', 'way']) {
+      assert.equal(marked.includes(word), false, `${word} should not be marked`);
+    }
+  });
+
+  it('never marks a sung filler', () => {
+    const lines = ['yeah the cat sat down', 'a hat went by'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.equal(marks[0].some((m) => textOf(lines[0], m) === 'yeah'), false);
   });
 
   it('excludes a rhyme outside the line window', () => {
@@ -363,6 +394,32 @@ describe('groupRhymeMarks', () => {
     assert.ok(catMark && hatMark);
     assert.equal(catMark.family, 0);
     assert.equal(hatMark.family, 0);
+  });
+
+  it('keeps the 27th end-rhyme group apart from the first', () => {
+    // Letters wrap after Z, so group 26 is printed "A" too; it must not be
+    // joined to group 0, since cat and day do not rhyme.
+    const unknownEndings = Array.from({ length: 25 }, (_, i) => 'q'.repeat(i + 1));
+    const lines = ['a cat', ...unknownEndings, 'a day'];
+    const { labels, marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.equal(labels[26], 'A');
+    assert.deepEqual(marks[0], []);
+    assert.deepEqual(marks[26], []);
+  });
+
+  it("never gives a floating family a colour an end-rhyme family already shows", () => {
+    // Ten lone endings use up groups 0-9, so cat/hat is group 10 and is drawn
+    // in the same colour as group 0 would be; light/sight must take another.
+    const unknownEndings = Array.from({ length: 10 }, (_, i) => 'q'.repeat(i + 1));
+    const lines = [
+      ...unknownEndings, 'the light fell on the cat', 'a sight under a hat'
+    ];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const familyOf = (lineIdx, word) =>
+      marks[lineIdx].find((m) => textOf(lines[lineIdx], m) === word).family;
+    assert.equal(familyOf(10, 'cat'), 10);
+    assert.notEqual(familyOf(10, 'light') % 10, 0);
+    assert.equal(familyOf(10, 'light'), familyOf(11, 'sight'));
   });
 
   it('marks the fifth family of a stanza in overflow rather than dropping it', () => {
