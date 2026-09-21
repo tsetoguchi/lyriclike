@@ -357,14 +357,10 @@ function wordsToHtml(text, marks) {
 
 // A class, not an inline style="--mark: …" — colour values live in
 // styles.css :root, so the theme owns them (app.js:596 already states this
-// rule for the gutter's SCHEME_COLORS). style-N gives each family a line
-// style too, since hue alone is not distinguishable enough under
-// deuteranopia at 2px; overflow families get a plain solid underline instead.
+// rule for the gutter's SCHEME_COLORS).
 function markClassFor(family) {
   if (family === RhymeCore.OVERFLOW_FAMILY) return ' rhyme-mark mark-overflow';
-  const colorSlot = family % SCHEME_COLORS.length;
-  const styleSlot = family % 4;
-  return ' rhyme-mark mark-' + colorSlot + ' style-' + styleSlot;
+  return ' rhyme-mark mark-' + (family % SCHEME_COLORS.length);
 }
 
 function markPickedWord() {

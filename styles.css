@@ -646,24 +646,16 @@ header h1 img {
 .mark-8 { --mark: var(--scheme-8); }
 .mark-9 { --mark: var(--scheme-9); }
 
-/* Hue is not the only channel: two of the scheme colours sit ~2 ΔE apart
-   under deuteranopia at this weight, so each family also takes a line
-   style. Free with text-decoration, and reads as pencil convention. */
-.style-0 { text-decoration-style: solid; }
-.style-1 { text-decoration-style: dotted; }
-.style-2 { text-decoration-style: dashed; }
-.style-3 { text-decoration-style: double; }
-
 /* More rhyming families in a stanza than the four-colour budget allows —
    marked rather than dropped, so "no underline" still means "does not
    rhyme" and never means "ran out of colours". */
 .mark-overflow {
   --mark: var(--ink-faded);
-  text-decoration-style: solid;
 }
 
 #lyrics-highlight .rhyme-mark {
   text-decoration-line: underline;
+  text-decoration-style: solid;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
   text-decoration-skip-ink: auto;
