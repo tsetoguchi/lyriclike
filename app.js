@@ -56,6 +56,9 @@ const tabRhymeWordEl = document.getElementById('tab-rhyme-word');
 const bottomNavEl = document.getElementById('bottom-nav');
 const notebookBtn = document.getElementById('notebook-btn');
 const createBtn = document.getElementById('create-btn');
+const rhymesMenuEl = document.getElementById('rhymes-menu');
+const rhymesMenuBtn = document.getElementById('rhymes-menu-btn');
+const rhymesMenuPopoverEl = document.getElementById('rhymes-menu-popover');
 const headerEl = document.querySelector('header');
 const headerRightEl = document.querySelector('.header-right');
 const userAreaEl = document.getElementById('user-area');
@@ -72,6 +75,7 @@ if (rhymeSchemeVisible) {
 if (internalRhymesVisible) {
   internalRhymeToggleEl.classList.add('active');
 }
+syncRhymesMenuButton();
 
 // ── Dictionary loading ──
 
@@ -800,6 +804,7 @@ function toggleRhymeScheme() {
   rhymeSchemeVisible = !rhymeSchemeVisible;
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
   rhymeSchemeToggleEl.classList.toggle('active', rhymeSchemeVisible);
+  syncRhymesMenuButton();
   // Showing or hiding either margin changes the editor's width, so the text
   // re-wraps for both of them; openGutter() re-measures both.
   openGutter(rhymeSchemeGutterEl, rhymeSchemeVisible);
@@ -831,6 +836,7 @@ function toggleInternalRhymes() {
   internalRhymesVisible = !internalRhymesVisible;
   sessionStorage.setItem('internalRhymesVisible', internalRhymesVisible ? '1' : '0');
   internalRhymeToggleEl.classList.toggle('active', internalRhymesVisible);
+  syncRhymesMenuButton();
   if (internalRhymesVisible) ensureRhymeData();
   invalidateInternalRhymeMarks();
   renderHighlight();
@@ -1162,12 +1168,12 @@ function placeControlsForViewport() {
   if (wantsBottomNav === controlsAreInBottomNav) return;
 
   if (wantsBottomNav) {
-    // Create rides along but stays hidden until sign-in; CSS owns that, so
-    // placement does not have to know about auth.
-    bottomNavEl.append(
-      toggleBtn, rhymeSchemeToggleEl, internalRhymeToggleEl, notebookBtn, createBtn);
+    // The two rhyme overlays share one slot so the bar holds four columns.
+    rhymesMenuPopoverEl.append(rhymeSchemeToggleEl, internalRhymeToggleEl);
+    bottomNavEl.append(toggleBtn, rhymesMenuEl, notebookBtn, createBtn);
     headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
   } else {
+    setRhymesMenuOpen(false);
     headerEl.insertBefore(toggleBtn, headerRightEl);
     headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
     headerEl.insertBefore(internalRhymeToggleEl, headerRightEl);
@@ -1179,12 +1185,50 @@ function placeControlsForViewport() {
 }
 
 function setBottomNavDucked(isDucked) {
+  if (isDucked) setRhymesMenuOpen(false);
   bottomNavEl.classList.toggle('ducked', isDucked);
 }
 
 function setBottomNavOffScreen(isOffScreen) {
+  if (isOffScreen) setRhymesMenuOpen(false);
   bottomNavEl.classList.toggle('off-screen', isOffScreen);
 }
+
+// ── Rhymes menu (mobile) ──
+
+// The slot lights up while either overlay is on, so the page never shows
+// marks that the bar gives no sign of.
+function syncRhymesMenuButton() {
+  rhymesMenuBtn.classList.toggle('active', rhymeSchemeVisible || internalRhymesVisible);
+}
+
+function isRhymesMenuOpen() {
+  return !rhymesMenuPopoverEl.hidden;
+}
+
+function setRhymesMenuOpen(isOpen) {
+  rhymesMenuPopoverEl.hidden = !isOpen;
+  rhymesMenuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+// Choosing an overlay leaves the menu open, so both can be set in one visit.
+function handleOutsideRhymesMenu(event) {
+  if (!isRhymesMenuOpen()) return;
+  if (rhymesMenuEl.contains(event.target)) return;
+  setRhymesMenuOpen(false);
+}
+
+function handleRhymesMenuKey(event) {
+  if (event.key !== 'Escape' || !isRhymesMenuOpen()) return;
+  setRhymesMenuOpen(false);
+  rhymesMenuBtn.focus();
+}
+
+rhymesMenuBtn.addEventListener('click', function toggleRhymesMenu() {
+  setRhymesMenuOpen(!isRhymesMenuOpen());
+});
+document.addEventListener('pointerdown', handleOutsideRhymesMenu);
+document.addEventListener('keydown', handleRhymesMenuKey);
 
 // The bar belongs to the top of the page and nowhere else. Reading the scroll
 // direction instead looked the same until the keyboard arrived: iOS shrinks
