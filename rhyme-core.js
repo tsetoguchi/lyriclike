@@ -56,6 +56,10 @@
   const LABEL_COUNT = 26;
   const UNLABELLED = -1;
   const VOWEL_LETTER_RUNS = /[aeiouy]+/gi;
+  // Phones and word processors type ’ for an apostrophe; it has to read as '
+  // or "you’re" splits into "you" and "re".
+  const CURLY_APOSTROPHES = /[‘’]/g;
+  const WORD_RUNS_SOURCE = "[a-zA-Z'‘’]+";
 
   // ── Phoneme helpers ──
 
@@ -214,7 +218,7 @@
   // ── Rhyme search ──
 
   function normalizeWord(text) {
-    return text.toLowerCase().replace(/[^a-z']/g, '');
+    return text.toLowerCase().replace(CURLY_APOSTROPHES, "'").replace(/[^a-z']/g, '');
   }
 
   function classifyBucket(index, target, words, seen, results) {
@@ -404,7 +408,7 @@
   // ── Rhyme scheme ──
 
   function getLastWord(line) {
-    const words = stripBrackets(line).match(/[a-zA-Z']+/g);
+    const words = stripBrackets(line).match(new RegExp(WORD_RUNS_SOURCE, 'g'));
     return words ? normalizeWord(words[words.length - 1]) : '';
   }
 
@@ -452,7 +456,7 @@
     return { stressed: extractRhymePart(phonemes), end: extractEndRhymePart(phonemes) };
   }
 
-  function bestRhymeStrength(index, word1, word2, scorer = scorePronunciations) {
+  function bestRhymeStrength(index, word1, word2) {
     if (!word1 || !word2) return 0;
     if (word1 === word2) return SAME_WORD_STRENGTH;
     const entries1 = lookupPronunciations(index, word1);
@@ -462,7 +466,7 @@
     let best = 0;
     for (const phonemes of entries1) {
       const split1 = splitPronunciation(phonemes);
-      for (const split2 of splits2) best = Math.max(best, scorer(split1, split2));
+      for (const split2 of splits2) best = Math.max(best, scorePronunciations(split1, split2));
     }
     return best;
   }
@@ -600,7 +604,7 @@
   // parenthesised asides the same way getLastWord() does.
   function tokenizeLine(line) {
     const ranges = findMaskedRanges(line);
-    const pattern = /[a-zA-Z']+/g;
+    const pattern = new RegExp(WORD_RUNS_SOURCE, 'g');
     const words = [];
     let match = pattern.exec(line);
     while (match !== null) {
@@ -618,7 +622,7 @@
   // One candidate per markable word: every line's last word (however it
   // pronounces, even a function word — it may anchor another word's family,
   // see seedAnchors()), plus every other word that is not a function word.
-  function collectCandidates(lines, labels) {
+  function collectCandidates(index, lines, labels) {
     const candidates = [];
     for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
       const words = tokenizeLine(lines[lineIdx]);
@@ -629,7 +633,7 @@
           ? labels[lineIdx].charCodeAt(0) - FIRST_LABEL_CODE : null;
         candidates.push({
           lineIdx, start: words[w].start, end: words[w].end, text: words[w].text,
-          isEnd, labelIndex
+          isEnd, labelIndex, pronunciations: lookupPronunciations(index, words[w].text)
         });
       }
     }
@@ -675,59 +679,79 @@
   // and the underlines disagree about which lines rhyme, so that merge is
   // refused rather than taken; the two ends of that pair simply are not
   // joined into one family.
+  // True when a and b end up in one family, whether or not this call joined them.
   function tryLink(parent, anchorOf, a, b) {
     const rootA = find(parent, a);
     const rootB = find(parent, b);
-    if (rootA === rootB) return;
+    if (rootA === rootB) return true;
     const anchorA = anchorOf.get(rootA);
     const anchorB = anchorOf.get(rootB);
-    if (anchorA !== undefined && anchorB !== undefined && anchorA !== anchorB) return;
+    if (anchorA !== undefined && anchorB !== undefined && anchorA !== anchorB) return false;
     parent[rootA] = rootB;
     const keptAnchor = anchorA !== undefined ? anchorA : anchorB;
     if (keptAnchor !== undefined) anchorOf.set(rootB, keptAnchor);
-  }
-
-  // The stressed rhyme part only: additive/subtractive are a consonant-coda
-  // relationship, which is what the shared-coda rescue is measuring.
-  function firstRhymePart(index, word) {
-    const pronunciations = lookupPronunciations(index, word);
-    return pronunciations ? extractRhymePart(pronunciations[0]) : null;
+    return true;
   }
 
   // "hand/man", "world/girl" and "friends/end" share a coda edge; "night/my"
   // does not. Without this, a blanket exclusion of subtractive would drop the
-  // near-rhyme family this app's audience is built on.
-  function sharesCodaEdge(index, word1, word2) {
-    const part1 = firstRhymePart(index, word1);
-    const part2 = firstRhymePart(index, word2);
+  // near-rhyme family this app's audience is built on. Stressed parts only:
+  // additive/subtractive are a consonant-coda relationship.
+  function sharesCodaEdge(phonemes1, phonemes2) {
+    const part1 = extractRhymePart(phonemes1);
+    const part2 = extractRhymePart(phonemes2);
     if (!part1 || !part2) return false;
     return countSharedCoda(part1.coda, part2.coda) >= 1;
   }
 
-  // 0 when the pair does not qualify; otherwise the strength that qualified
-  // it, kept for the summed-strength ranking in assignFloatingColors().
-  function linkStrengthFor(index, a, b) {
-    if (Math.abs(a.lineIdx - b.lineIdx) > MARK_WINDOW_LINES) return 0;
-    if (a.text === b.text) return 0; // a refrain, not a rhyme, by itself
-    const strength = bestRhymeStrength(index, a.text, b.text, scoreStressedPronunciations);
-    if (strength >= MIN_MARK_STRENGTH) return strength;
-    if (strength === RHYME_STRENGTH.subtractive && sharesCodaEdge(index, a.text, b.text)) {
-      return strength;
-    }
-    return 0;
+  // The strongest pairing of one pronunciation of each word, with which ones.
+  function bestPronunciationMatch(entries1, entries2) {
+    let best = { strength: 0, first: NOT_FOUND, second: NOT_FOUND };
+    const splits2 = entries2.map(splitPronunciation);
+    entries1.forEach((phonemes1, first) => {
+      const split1 = splitPronunciation(phonemes1);
+      splits2.forEach((split2, second) => {
+        const strength = scoreStressedPronunciations(split1, split2);
+        if (strength > best.strength) best = { strength, first, second };
+      });
+    });
+    return best;
+  }
+
+  function isMarkableMatch(a, b, match) {
+    if (match.strength >= MIN_MARK_STRENGTH) return true;
+    return match.strength === RHYME_STRENGTH.subtractive &&
+      sharesCodaEdge(a.pronunciations[match.first], b.pronunciations[match.second]);
+  }
+
+  // null when the pair does not qualify; otherwise the match that qualified
+  // it, whose strength feeds the ranking in assignFloatingColors().
+  function linkMatchFor(a, b) {
+    if (Math.abs(a.lineIdx - b.lineIdx) > MARK_WINDOW_LINES) return null;
+    if (a.text === b.text) return null; // a refrain, not a rhyme, by itself
+    if (!a.pronunciations || !b.pronunciations) return null;
+    const match = bestPronunciationMatch(a.pronunciations, b.pronunciations);
+    return isMarkableMatch(a, b, match) ? match : null;
+  }
+
+  // A word is said one way, so once it links it keeps that pronunciation —
+  // otherwise "re" (ray/ree) would join "say" and "feel" into one family.
+  function pinPronunciations(a, b, match) {
+    a.pronunciations = [a.pronunciations[match.first]];
+    b.pronunciations = [b.pronunciations[match.second]];
   }
 
   // Candidates are in line order, so once a pair is further apart than the
   // window every later pair started from the same left side is too.
-  function linkCandidates(index, candidates, parent, anchorOf, linkStrength) {
+  function linkCandidates(candidates, parent, anchorOf, linkStrength) {
     for (let i = 0; i < candidates.length; i++) {
       for (let j = i + 1; j < candidates.length; j++) {
         if (candidates[j].lineIdx - candidates[i].lineIdx > MARK_WINDOW_LINES) break;
-        const strength = linkStrengthFor(index, candidates[i], candidates[j]);
-        if (strength === 0) continue;
-        tryLink(parent, anchorOf, i, j);
-        linkStrength[i] = Math.max(linkStrength[i], strength);
-        linkStrength[j] = Math.max(linkStrength[j], strength);
+        const match = linkMatchFor(candidates[i], candidates[j]);
+        if (!match) continue;
+        if (tryLink(parent, anchorOf, i, j)) pinPronunciations(candidates[i], candidates[j], match);
+        linkStrength[i] = Math.max(linkStrength[i], match.strength);
+        linkStrength[j] = Math.max(linkStrength[j], match.strength);
       }
     }
   }
@@ -845,10 +869,10 @@
   // from — see seedAnchors() and tryLink().
   function groupRhymeMarks(index, lines) {
     const labels = computeRhymeScheme(index, lines);
-    const candidates = collectCandidates(lines, labels);
+    const candidates = collectCandidates(index, lines, labels);
     const { parent, anchorOf } = seedAnchors(candidates);
     const linkStrength = new Array(candidates.length).fill(0);
-    linkCandidates(index, candidates, parent, anchorOf, linkStrength);
+    linkCandidates(candidates, parent, anchorOf, linkStrength);
     const groups = collectGroups(candidates, parent);
     const marks = lines.map(() => []);
     assignAndProjectMarks(candidates, groups, anchorOf, linkStrength, marks);

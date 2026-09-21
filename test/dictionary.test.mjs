@@ -144,4 +144,27 @@ describe('shipped dictionary', () => {
     assert.equal(lightFamily, 0);
     assert.equal(tightFamily, 0);
   });
+
+  it('reads a curly apostrophe as part of the word', () => {
+    const verse = ['I know you’re not around', 'They say it’s done'];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.equal(markedWords.includes('re'), false);
+    assert.equal(
+      countSyllablesForLine(index, 'you’re'),
+      countSyllablesForLine(index, "you're")
+    );
+  });
+
+  it('keeps a word with two pronunciations in one family', () => {
+    // "re" is both "ray" and "ree"; it must not join "say" to "feel".
+    const verse = ['I know you re not around', 'I feel nothing wrong', 'They say what is done'];
+    const { marks } = groupRhymeMarks(index, verse);
+    const familyOf = (lineIdx, word) => {
+      const mark = marks[lineIdx].find((m) => verse[lineIdx].slice(m.start, m.end) === word);
+      return mark ? mark.family : null;
+    };
+    assert.notEqual(familyOf(1, 'feel'), null);
+    assert.notEqual(familyOf(1, 'feel'), familyOf(2, 'say'));
+  });
 });

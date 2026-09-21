@@ -238,7 +238,7 @@ function pickHighlightWord(word, bounds, isPointerPick) {
   console.assert(typeof word === 'string', 'pickHighlightWord: word must be a string');
   if (typeof word !== 'string') return;
   renderHighlight();
-  currentHighlightWord = word.toLowerCase().replace(/[^a-z']/g, '');
+  currentHighlightWord = RhymeCore.normalizeWord(word);
   const isWholeWord = bounds !== null &&
     isWholeWordAt(highlightedText, bounds, currentHighlightWord);
   pickedBounds = isWholeWord ? bounds : null;
@@ -414,14 +414,15 @@ function isWholeWordAt(text, bounds, word) {
   if (!word || bounds.end > text.length) return false;
   const isBoundedBefore = bounds.start === 0 || !WORD_CHAR.test(text[bounds.start - 1]);
   const isBoundedAfter = bounds.end === text.length || !WORD_CHAR.test(text[bounds.end]);
-  const isSameWord = text.slice(bounds.start, bounds.end).toLowerCase() === word;
+  const isSameWord = RhymeCore.normalizeWord(text.slice(bounds.start, bounds.end)) === word;
   return isBoundedBefore && isBoundedAfter && isSameWord;
 }
 
 // ── Word hover (desktop) ──
 
 const HOVER_QUERY = window.matchMedia('(hover: hover) and (pointer: fine)');
-const WORD_CHAR = /[a-zA-Z']/;
+// ’ included so "you’re" is one word, as in rhyme-core.js.
+const WORD_CHAR = /[a-zA-Z'‘’]/;
 
 let hoveredWordEl = null;
 let hoverFrame = 0;
@@ -482,8 +483,8 @@ function extractWordAtCursor(text, start, end) {
   if (start !== end) {
     return text.substring(start, end).trim();
   }
-  const before = text.slice(0, start).match(/[a-zA-Z']+$/);
-  const after = text.slice(start).match(/^[a-zA-Z']+/);
+  const before = text.slice(0, start).match(new RegExp(WORD_CHAR.source + '+$'));
+  const after = text.slice(start).match(new RegExp('^' + WORD_CHAR.source + '+'));
   const prefix = before ? before[0] : '';
   const suffix = after ? after[0] : '';
   return prefix + suffix;
@@ -523,7 +524,7 @@ function handleSelection(event) {
 
     let word = extractWordAtCursor(text, start, end);
     if (/\s/.test(word)) return;
-    word = word.replace(/[^a-zA-Z']/g, '');
+    word = word.replace(/[^a-zA-Z'‘’]/g, '');
     if (word.length < MIN_WORD_LENGTH) return;
 
     pickHighlightWord(word, pickedBoundsForSelection(text, start, end), isPointerPick);
