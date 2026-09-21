@@ -9,8 +9,10 @@ import { before, describe, it } from 'node:test';
 
 import rhymeCore from '../rhyme-core.js';
 
-const { RHYME_TYPES, buildRhymeIndex, computeRhymeScheme, countSyllablesForLine, findRhymes } =
-  rhymeCore;
+const {
+  RHYME_TYPES, buildRhymeIndex, computeRhymeScheme, countSyllablesForLine, findRhymes,
+  groupRhymeMarks, FUNCTION_WORDS
+} = rhymeCore;
 
 const REPO_ROOT = new URL('../', import.meta.url);
 const SAMPLE_WORDS = ['love', 'heart', 'night', 'fire', 'money', 'time', 'away'];
@@ -110,5 +112,77 @@ describe('shipped dictionary', () => {
 
   it('counts syllables in a real line', () => {
     assert.equal(countSyllablesForLine(index, 'Twinkle twinkle little star'), 7);
+  });
+
+  it('marks internal rhymes in a real verse and never marks a function word', () => {
+    const verse = [
+      "I've been waiting all night for the light",
+      'holding on so tight through the fight',
+      'money is nothing but the way that I feel',
+      'this is real, this is the deal'
+    ];
+    const { labels, marks } = groupRhymeMarks(index, verse);
+    assert.deepEqual(labels, ['A', 'A', 'B', 'B']);
+
+    const markedWords = marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    // waiting/holding/nothing share only an unstressed "-ing", which is not
+    // heard as a rhyme inside a line; neither is money's unstressed "-ey"
+    // against feel.
+    assert.deepEqual(new Set(markedWords), new Set([
+      'night', 'light', 'tight', 'fight', 'feel', 'real', 'deal'
+    ]));
+
+    for (const word of markedWords) {
+      assert.equal(FUNCTION_WORDS.has(word), false, `"${word}" is a function word and should not be marked`);
+    }
+
+    // The end-rhyme families keep the same colour as their gutter letter.
+    const nightFamily = marks[0].find((m) => verse[0].slice(m.start, m.end) === 'night').family;
+    const lightFamily = marks[0].find((m) => verse[0].slice(m.start, m.end) === 'light').family;
+    const tightFamily = marks[1].find((m) => verse[1].slice(m.start, m.end) === 'tight').family;
+    assert.equal(nightFamily, 0);
+    assert.equal(lightFamily, 0);
+    assert.equal(tightFamily, 0);
+  });
+
+  it('reads a curly apostrophe as part of the word', () => {
+    const verse = ['I know you’re not around', 'They say it’s done'];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.equal(markedWords.includes('re'), false);
+    assert.equal(
+      countSyllablesForLine(index, 'you’re'),
+      countSyllablesForLine(index, "you're")
+    );
+  });
+
+  it('does not mark a rhyme that only adds a whole syllable', () => {
+    const verse = ["It's only a matter of time yeah", 'I would rather be okay', 'take it slow'];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.equal(markedWords.includes('rather'), false);
+    assert.equal(markedWords.includes('okay'), true);
+    assert.equal(markedWords.includes('take'), true);
+  });
+
+  it('reads a word in single quotes', () => {
+    const verse = ["she whispered 'goodnight'", 'and turned out the light'];
+    assert.deepEqual(computeRhymeScheme(index, verse), ['A', 'A']);
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.ok(markedWords.includes("'goodnight'"));
+  });
+
+  it('keeps a word with two pronunciations in one family', () => {
+    // "re" is both "ray" and "ree"; it must not join "say" to "feel".
+    const verse = ['I know you re not around', 'I feel nothing wrong', 'They say what is done'];
+    const { marks } = groupRhymeMarks(index, verse);
+    const familyOf = (lineIdx, word) => {
+      const mark = marks[lineIdx].find((m) => verse[lineIdx].slice(m.start, m.end) === word);
+      return mark ? mark.family : null;
+    };
+    assert.notEqual(familyOf(1, 'feel'), null);
+    assert.notEqual(familyOf(1, 'feel'), familyOf(2, 'say'));
   });
 });

@@ -130,18 +130,31 @@ function setNotebookButtonActive(isActive) {
 // Signed out, the notebook has nothing to show, so the button asks for an
 // account instead. currentUser is null only once the sign-in check has
 // answered; before that, the list opens and handles a signed-out reply.
-async function handleNotebookClick() {
-  const isSignedOut = window.currentUser === null;
-  if (!isSignedOut) {
-    openLyricsList();
-    return;
-  }
+async function promptForAccount() {
   const wantsAccount = await openDialog({
     heading: CREATE_ACCOUNT_HEADING,
     message: CREATE_ACCOUNT_MESSAGE,
     confirmLabel: CREATE_ACCOUNT_CONFIRM,
   });
   if (wantsAccount && window.startSignIn) window.startSignIn();
+}
+
+async function handleNotebookClick() {
+  if (window.currentUser === null) {
+    await promptForAccount();
+    return;
+  }
+  openLyricsList();
+}
+
+// Signed out, a new lyric would have no notebook to live in, so Create asks
+// for an account the same way the notebook does.
+async function handleCreateClick() {
+  if (window.currentUser === null) {
+    await promptForAccount();
+    return;
+  }
+  await createLyric();
 }
 
 async function loadLyricsList() {
@@ -400,7 +413,7 @@ titleEl.addEventListener('blur', () => {
   }
 });
 document.getElementById('notebook-btn').addEventListener('click', handleNotebookClick);
-document.getElementById('create-btn').addEventListener('click', createLyric);
+document.getElementById('create-btn').addEventListener('click', handleCreateClick);
 document.getElementById('new-lyric-btn').addEventListener('click', createLyric);
 document.getElementById('close-lyrics-list-btn').addEventListener('click', closeLyricsList);
 document.getElementById('lyrics-list-overlay').addEventListener('click', e => {
