@@ -359,6 +359,16 @@ describe('groupRhymeMarks', () => {
     }
   });
 
+  it('gives two nearby words that rhyme the same colour, chaining through them', () => {
+    // sky rhymes with night and with light; any two nearby words that rhyme
+    // share a colour, even when a third word is what links them.
+    const lines = ['the sky went on', 'a night went on', 'and light went on'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const families = ['sky', 'night', 'light'].map((word, i) =>
+      marks[i].find((m) => textOf(lines[i], m) === word).family);
+    assert.equal(new Set(families).size, 1);
+  });
+
   it('does not mark the same stressed syllable under a prefix', () => {
     const lines = [
       'out tonight we go', 'under the night we went',
