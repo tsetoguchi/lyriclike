@@ -67,7 +67,7 @@ document.getElementById('close-account-settings-btn').addEventListener('click', 
 document.getElementById('account-settings-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('account-settings-overlay')) closeAccountSettings();
 });
-// Deleting an account takes every lyric with it, so agreeing is not enough:
+// Deleting an account takes every page with it, so agreeing is not enough:
 // the address has to be typed back before the button will do anything.
 document.getElementById('settings-delete-account-btn').addEventListener('click', async () => {
   const email = window.currentUser?.email;
@@ -75,7 +75,7 @@ document.getElementById('settings-delete-account-btn').addEventListener('click',
 
   const typed = await openDialog({
     heading: 'Delete account',
-    message: `This deletes your account and every lyric saved to it. It cannot be undone. Type ${email} to confirm.`,
+    message: `This deletes your account and every page saved to it. It cannot be undone. Type ${email} to confirm.`,
     confirmLabel: 'Delete account',
     danger: true,
     field: { label: 'Email address', value: '', mustMatch: email },
