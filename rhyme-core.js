@@ -631,9 +631,11 @@
     return FUNCTION_WORDS.has(word) || FUNCTION_WORDS.has(word.replace(/'/g, ''));
   }
 
-  // A word that may anchor a family but never takes a mark of its own.
-  function isUnmarkable(word) {
-    return word.length < MIN_MARK_LETTERS || isFunctionWord(word);
+  // A function word only takes a mark as the last word of its line, where the
+  // writer means the rhyme ("drown/around/down"); mid-line it is filler. A word
+  // too short to draw may still anchor a family but never takes a mark.
+  function isUnmarkable(word, isLineEnd) {
+    return word.length < MIN_MARK_LETTERS || (!isLineEnd && isFunctionWord(word));
   }
 
   function findMaskedRanges(line) {
@@ -689,7 +691,7 @@
       const words = tokenizeLine(lines[lineIdx]);
       for (let w = 0; w < words.length; w++) {
         const isEnd = w === words.length - 1;
-        if (!isEnd && isUnmarkable(words[w].text)) continue;
+        if (!isEnd && isUnmarkable(words[w].text, isEnd)) continue;
         const hasLabel = isEnd && labels[lineIdx] !== UNLABELLED;
         const labelIndex = hasLabel ? labels[lineIdx] : null;
         candidates.push({
@@ -836,15 +838,15 @@
 
   // ── Colours and projection ──
 
-  // A function word doesn't count as something to rhyme with — a word whose
-  // only partner in the group is "me" or "the" is not marked, even though
-  // "me" or "the" may still sit in the group as its anchor. So a group needs
-  // at least two distinct *non-function* words to be a family.
+  // A word that can't be marked doesn't count as something to rhyme with — a
+  // word whose only partner in the group is a one-letter word is not marked,
+  // even though that word may still sit in the group as its anchor. So a
+  // group needs at least two distinct markable words to be a family.
   function groupQualifies(members, candidates) {
     const texts = new Set();
     for (const i of members) {
       const c = candidates[i];
-      if (!isUnmarkable(c.text)) texts.add(c.text);
+      if (!isUnmarkable(c.text, c.isEnd)) texts.add(c.text);
     }
     return texts.size >= 2;
   }
@@ -897,13 +899,13 @@
     overflow.forEach((group) => { group.family = OVERFLOW_FAMILY; });
   }
 
-  // Function words never take a mark, even as a family's largest member —
+  // Unmarkable words never take a mark, even as a family's largest member —
   // they may still anchor the family (seedFamilies()) so the words that do
   // rhyme with them keep the right colour.
   function projectGroup(members, candidates, family, marks) {
     for (const i of members) {
       const c = candidates[i];
-      if (isUnmarkable(c.text)) continue;
+      if (isUnmarkable(c.text, c.isEnd)) continue;
       marks[c.lineIdx].push({ start: c.start, end: c.end, family });
     }
   }
