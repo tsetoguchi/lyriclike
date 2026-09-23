@@ -631,11 +631,17 @@
     return FUNCTION_WORDS.has(word) || FUNCTION_WORDS.has(word.replace(/'/g, ''));
   }
 
-  // A function word only takes a mark as the last word of its line, where the
-  // writer means the rhyme ("drown/around/down"); mid-line it is filler. A word
-  // too short to draw may still anchor a family but never takes a mark.
-  function isUnmarkable(word, isLineEnd) {
-    return word.length < MIN_MARK_LETTERS || (!isLineEnd && isFunctionWord(word));
+  // A function word only takes a mark as the last word of its line, and only
+  // when it rhymes with a word nearby ("drown/around/down"); being grouped
+  // with the line by the rhyme scheme alone is not enough, or a line ending
+  // "yeah" would be underlined against a scheme letter it barely matches.
+  // A word too short to draw may still anchor a family but never takes a mark.
+  function isUnmarkable(word, isEarned) {
+    return word.length < MIN_MARK_LETTERS || (!isEarned && isFunctionWord(word));
+  }
+
+  function isUnmarkableCandidate(candidate) {
+    return isUnmarkable(candidate.text, candidate.isEnd && candidate.isLinked);
   }
 
   function findMaskedRanges(line) {
@@ -691,12 +697,13 @@
       const words = tokenizeLine(lines[lineIdx]);
       for (let w = 0; w < words.length; w++) {
         const isEnd = w === words.length - 1;
-        if (!isEnd && isUnmarkable(words[w].text, isEnd)) continue;
+        if (!isEnd && isUnmarkable(words[w].text, false)) continue;
         const hasLabel = isEnd && labels[lineIdx] !== UNLABELLED;
         const labelIndex = hasLabel ? labels[lineIdx] : null;
         candidates.push({
           lineIdx, start: words[w].start, end: words[w].end, text: words[w].text,
-          isEnd, labelIndex, splits: splitCandidatePronunciations(index, words[w].text)
+          isEnd, labelIndex, isLinked: false,
+          splits: splitCandidatePronunciations(index, words[w].text)
         });
       }
     }
@@ -821,6 +828,8 @@
     const match = findMarkableMatch(a, b);
     if (!match || !tryLink(families, i, j)) return;
     pinPronunciations(a, b, match);
+    a.isLinked = true;
+    b.isLinked = true;
     linkStrength[i] = Math.max(linkStrength[i], match.strength);
     linkStrength[j] = Math.max(linkStrength[j], match.strength);
   }
@@ -846,7 +855,7 @@
     const texts = new Set();
     for (const i of members) {
       const c = candidates[i];
-      if (!isUnmarkable(c.text, c.isEnd)) texts.add(c.text);
+      if (!isUnmarkableCandidate(c)) texts.add(c.text);
     }
     return texts.size >= 2;
   }
@@ -905,7 +914,7 @@
   function projectGroup(members, candidates, family, marks) {
     for (const i of members) {
       const c = candidates[i];
-      if (isUnmarkable(c.text, c.isEnd)) continue;
+      if (isUnmarkableCandidate(c)) continue;
       marks[c.lineIdx].push({ start: c.start, end: c.end, family });
     }
   }

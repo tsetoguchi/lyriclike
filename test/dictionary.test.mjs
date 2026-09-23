@@ -166,6 +166,25 @@ describe('shipped dictionary', () => {
     assert.equal(markedWords.includes('take'), true);
   });
 
+  it('does not underline a line-final "yeah" that only shares a scheme letter', () => {
+    const verse = [
+      'it’s okay to be unhappy', 'it’s okay to show that I’m lonely',
+      'I’ll just take my time living for me', 'It’s only a matter of time yeah',
+      'I’ll just keep loving myself yeah'
+    ];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.equal(markedWords.includes('yeah'), false);
+    assert.equal(markedWords.includes('unhappy'), true);
+  });
+
+  it('marks a line-final "down" that rhymes with drown and around', () => {
+    const verse = ['Falling upside down', 'Trying not to drown', 'I know you’re not around'];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.deepEqual(markedWords, ['down', 'drown', 'around']);
+  });
+
   it('reads a word in single quotes', () => {
     const verse = ["she whispered 'goodnight'", 'and turned out the light'];
     assert.deepEqual(computeRhymeScheme(index, verse), ['A', 'A']);
