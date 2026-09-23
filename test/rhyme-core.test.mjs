@@ -311,6 +311,9 @@ describe('groupRhymeMarks', () => {
     yeah: [['Y', 'AE1']],
     o: [['OW1']],
     show: [['SH', 'OW1']],
+    down: [['D', 'AW1', 'N']],
+    drown: [['D', 'R', 'AW1', 'N']],
+    around: [['AH0', 'R', 'AW1', 'N', 'D']],
     // Two pronunciations, one rhyming with cat and one with sea.
     xat: [['B', 'AE1', 'T'], ['B', 'IY1']]
   };
@@ -320,7 +323,24 @@ describe('groupRhymeMarks', () => {
     return line.slice(mark.start, mark.end);
   }
 
-  it('never marks a function word, even when it anchors a real family', () => {
+  it('marks a function word that ends its line, like "down" with drown/around', () => {
+    const lines = ['falling upside down', 'trying not to drown', 'you are not around'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const families = ['down', 'drown', 'around'].map((word, i) => {
+      const mark = marks[i].find((m) => textOf(lines[i], m) === word);
+      assert.ok(mark, `${word} should be marked`);
+      return mark.family;
+    });
+    assert.equal(new Set(families).size, 1);
+  });
+
+  it('does not mark a function word in the middle of a line', () => {
+    const lines = ['we sat down to drown around'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.equal(marks[0].some((m) => textOf(lines[0], m) === 'down'), false);
+  });
+
+  it('never marks a mid-line function word, even when it anchors a real family', () => {
     const lines = ['out on the sea', 'he ran so free'];
     const { marks } = groupRhymeMarks(MARK_INDEX, lines);
     assert.ok(marks[0].some((m) => textOf(lines[0], m) === 'sea'));
