@@ -35,8 +35,7 @@
     TOO_SHORT: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
     HAS_EMAIL: "Don't use your email address in your password.",
-    LOGIN_HINT: 'Signed up with Google? Use Continue with Google, or reset your password '
-      + 'to add one. Just signed up? Open the link we emailed you first.',
+    LOGIN_HINT: 'Signed up with Google? Use the Google button above.',
     SIGNED_IN: "You're signed in",
     PASSWORD_SET: "Password set. You're signed in",
     SENT: 'Sent',
