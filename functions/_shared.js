@@ -10,6 +10,8 @@ export const SESSION_COOKIE_MAX_AGE = SESSION_LIFETIME_MS / 1000;
 const SESSION_COOKIE = 'sid';
 const SESSION_TOKEN_BYTES = 32;
 
+const MAX_EMAIL_LENGTH = 254;
+
 const IPV4_KEPT_OCTETS = 3;
 const IPV6_KEPT_GROUPS = 3;
 const IPV6_GROUP_COUNT = 8;
@@ -44,6 +46,19 @@ export function parseCookies(request) {
       .filter(([k]) => k)
       .map(([k, ...v]) => [k, v.join('=')])
   );
+}
+
+// The key accounts are matched on. Only case and surrounding spaces are folded:
+// Gmail dots and "+" tags are left alone, since treating them as the same
+// address is a known cause of accounts merging that should not. Returns null
+// for anything that cannot be an address.
+export function normalizeEmail(raw) {
+  if (typeof raw !== 'string') return null;
+  const email = raw.trim().toLowerCase();
+  if (email.length > MAX_EMAIL_LENGTH) return null;
+
+  const parts = email.split('@');
+  return parts.length === 2 && parts[0] && parts[1] ? email : null;
 }
 
 export function randomHex(bytes) {
