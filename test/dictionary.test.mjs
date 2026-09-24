@@ -247,6 +247,12 @@ describe('shipped dictionary', () => {
       }
     });
 
+    it('ignores a weak-form pronunciation, so good does not rhyme with lit', () => {
+      // The dictionary also lists "good" as G IH0 D; only the stressed UH1 counts.
+      const { found } = marksOf(['the moon is lit like the sky', 'turned tears into diamonds, got good']);
+      assert.equal(found.some((m) => m.text === 'good' || m.text === 'lit'), false);
+    });
+
     it('does not put paint and shade in one family through way', () => {
       const { found } = marksOf(['I paint a shade today', 'we play and I stay', 'a way to say']);
       const family = (word) => found.find((m) => m.text === word)?.family;
