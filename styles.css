@@ -1089,10 +1089,31 @@ header h1 img {
   gap: var(--space-2);
 }
 
-#user-email {
-  font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
-  color: var(--ink-faded);
+#signed-out-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Log in takes the amber, like a dialog's confirm: it is the one account
+   button every screen size shows. */
+.toggle-btn.accent-btn {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.toggle-btn.accent-btn:hover {
+  background: var(--accent-wash-strong);
+}
+
+/* A narrow desktop window has no room for it beside the five tools; it runs
+   off the edge below about 900px. Log in's modal links to sign up. Phones
+   hide it too, in their own block. */
+@media (max-width: 900px) {
+  #sign-up-btn {
+    display: none;
+  }
 }
 
 /* ── Account settings overlay ── */
@@ -1785,16 +1806,20 @@ header h1 img {
     margin-left: 0;
   }
 
+  /* Log in, or Account once signed in, sits on the right, where phone apps
+     keep the account. */
   header #user-area {
-    grid-column: 1;
+    grid-column: 3;
     grid-row: 1;
-    justify-self: start;
+    justify-self: end;
     width: auto;
   }
 
+  /* The account controls move out of it on phones, and the status line is
+     hidden, so it is empty. Left in the grid it would take the same cell and
+     sit on top of Log in. */
   header .header-right {
-    grid-column: 3;
-    width: auto;
+    display: none;
   }
 
   .toggle-btn {
@@ -1802,14 +1827,15 @@ header h1 img {
     padding: var(--space-2) var(--space-2);
   }
 
-  /* The account controls occupy the header's left cell, so they stay on one
+  /* The account controls occupy the header's right cell, so they stay on one
      line and shrink rather than push the wordmark off centre. */
   #user-area {
     width: auto;
     min-width: 0;
   }
 
-  #user-info {
+  #user-info,
+  #signed-out-actions {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
@@ -1824,8 +1850,9 @@ header h1 img {
     letter-spacing: var(--tracking-tight);
   }
 
-  /* No room beside a centred wordmark; the account panel carries the email. */
-  #user-email {
+  /* No room for two buttons either. Log in's modal links to sign up, and the
+     bottom bar's Notebook and Create open the sign-up view. */
+  #sign-up-btn {
     display: none;
   }
 
