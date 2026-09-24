@@ -25,6 +25,7 @@
     TOO_MANY: 'Too many tries. Wait a few minutes, then try again.',
   });
 
+  const panel = document.getElementById('account-settings-panel');
   const section = document.getElementById('security-section');
   const changeButton = document.getElementById('change-password-btn');
   const addButton = document.getElementById('add-password-btn');
@@ -110,7 +111,9 @@
     if (field === newInput && text === TEXT.TOO_SHORT) newHint.classList.add('is-error');
   }
 
+  // While the form is open the panel shows only the email and the form.
   function setFormOpen(open) {
+    panel.classList.toggle('is-changing-password', open);
     form.hidden = !open;
     changeButton.hidden = open;
     changeButton.setAttribute('aria-expanded', String(open));
