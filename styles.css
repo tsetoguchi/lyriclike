@@ -1106,6 +1106,15 @@ header h1 img {
   background: var(--accent-wash-strong);
 }
 
+/* A narrow desktop window has no room for it beside the five tools; it runs
+   off the edge below about 900px. Log in's modal links to sign up. Phones
+   hide it too, in their own block. */
+@media (max-width: 900px) {
+  #sign-up-btn {
+    display: none;
+  }
+}
+
 #user-email {
   font-family: var(--font-editor);
   font-size: var(--text-caption-1);
