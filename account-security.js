@@ -1,6 +1,5 @@
-// The Security part of the Account panel: how the account signs in, changing
-// the password, emailing a Google-only account a link to set one, and
-// deleting the account.
+// The Security part of the Account panel: changing the password, emailing a
+// Google-only account a link to set one, and deleting the account.
 
 (function initAccountSecurity() {
   const MIN_PASSWORD_LENGTH = 8;
@@ -11,10 +10,6 @@
   const NETWORK_FAILURE = 0;
 
   const TEXT = Object.freeze({
-    CONNECTED: 'Connected',
-    NOT_CONNECTED: 'Not connected',
-    SET: 'Set',
-    NOT_SET: 'Not set',
     ENTER_CURRENT: 'Enter your current password.',
     TOO_SHORT: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
@@ -30,8 +25,7 @@
     TOO_MANY: 'Too many tries. Wait a few minutes, then try again.',
   });
 
-  const googleValue = document.getElementById('security-google');
-  const passwordValue = document.getElementById('security-password');
+  const section = document.getElementById('security-section');
   const changeButton = document.getElementById('change-password-btn');
   const addButton = document.getElementById('add-password-btn');
   const addHint = document.getElementById('add-password-hint');
@@ -126,22 +120,19 @@
     }
   }
 
-  // The buttons only show when passwords are switched on. Without the answer
-  // from the server yet, the rows are filled in and the buttons stay hidden.
+  // The section only shows when passwords are switched on: with them off it
+  // would have nothing in it. An account with a password can change it; one
+  // with only Google can add one.
   async function showAccountSecurity(user) {
     if (!user) return;
-    const hasGoogle = Array.isArray(user.providers) && user.providers.includes('google');
-    googleValue.textContent = hasGoogle ? TEXT.CONNECTED : TEXT.NOT_CONNECTED;
-    passwordValue.textContent = user.has_password ? TEXT.SET : TEXT.NOT_SET;
     usernameInput.value = user.email || '';
     setFormOpen(false);
     showStatus('');
-    changeButton.hidden = true;
-    addButton.hidden = true;
-    addHint.hidden = true;
+    section.hidden = true;
 
     const methods = window.loadAuthMethods ? await window.loadAuthMethods() : { password: false };
     if (!methods.password || window.currentUser !== user) return;
+    section.hidden = false;
     changeButton.hidden = !user.has_password;
     addButton.hidden = user.has_password;
     addHint.hidden = user.has_password;

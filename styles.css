@@ -1295,7 +1295,8 @@ header .nav-icon circle {
   color: var(--ink-faded);
 }
 
-/* The change-password form opens in place, under the Security rows. */
+/* The change-password form opens in place, under its button. */
+.settings-section[hidden],
 .security-form[hidden],
 .settings-hint[hidden] {
   display: none;
