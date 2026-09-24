@@ -467,12 +467,21 @@
     return Math.max(scoreRhyme(part1, part2), scoreRhyme(part2, part1));
   }
 
+  // An unstressed ending is heard against a stressed word only where it lands
+  // on the beat, at the end of its line: "happy" / "me" rhymes, but the
+  // "-ery" of a mid-line "every" is just a weak syllable ("every" / "sea").
+  function scoreMarkCrossRhyme(parts1, parts2, isEnd1, isEnd2) {
+    if (parts1.end && !parts2.end && isEnd1) return scoreRhyme(parts1.end, parts2.stressed);
+    if (!parts1.end && parts2.end && isEnd2) return scoreRhyme(parts1.stressed, parts2.end);
+    return 0;
+  }
+
   // Ending-against-ending is left out: inside a line, two shared suffixes
   // ("starting"/"staying") are not heard as a rhyme the way two line endings are.
-  function scoreStressedPronunciations(parts1, parts2) {
+  function scoreStressedPronunciations(parts1, parts2, isEnd1, isEnd2) {
     const stressedScore = hasSameTailSyllables(parts1.stressed, parts2.stressed)
       ? scoreRhymeEitherOrder(parts1.stressed, parts2.stressed) : 0;
-    const crossScore = scoreCrossRhyme(parts1, parts2);
+    const crossScore = scoreMarkCrossRhyme(parts1, parts2, isEnd1, isEnd2);
     return crossScore >= MIN_MARK_CROSS_STRENGTH
       ? Math.max(stressedScore, crossScore) : stressedScore;
   }
@@ -631,11 +640,17 @@
     return FUNCTION_WORDS.has(word) || FUNCTION_WORDS.has(word.replace(/'/g, ''));
   }
 
-  // A function word only takes a mark as the last word of its line, where the
-  // writer means the rhyme ("drown/around/down"); mid-line it is filler. A word
-  // too short to draw may still anchor a family but never takes a mark.
-  function isUnmarkable(word, isLineEnd) {
-    return word.length < MIN_MARK_LETTERS || (!isLineEnd && isFunctionWord(word));
+  // A function word only takes a mark as the last word of its line, and only
+  // when it rhymes with a word nearby ("drown/around/down"); being grouped
+  // with the line by the rhyme scheme alone is not enough, or a line ending
+  // "yeah" would be underlined against a scheme letter it barely matches.
+  // A word too short to draw may still anchor a family but never takes a mark.
+  function isUnmarkable(word, isEarned) {
+    return word.length < MIN_MARK_LETTERS || (!isEarned && isFunctionWord(word));
+  }
+
+  function isUnmarkableCandidate(candidate) {
+    return isUnmarkable(candidate.text, candidate.isEnd && candidate.isLinked);
   }
 
   function findMaskedRanges(line) {
@@ -675,11 +690,24 @@
     return words;
   }
 
+  function hasPrimaryStress(phonemes) {
+    return phonemes.some((phoneme) => isVowel(phoneme) && getStress(phoneme) === PRIMARY_STRESS);
+  }
+
+  // A pronunciation with no stressed vowel is a word mumbled in passing ("good"
+  // as G IH0 D, which would rhyme with "lit"), not how a writer hears it. It
+  // is only used for a word that has no other.
+  function pronunciationsWorthRhyming(pronunciations) {
+    const stressed = pronunciations.filter(hasPrimaryStress);
+    return stressed.length > 0 ? stressed : pronunciations;
+  }
+
   // Split once per word, not once per pair: the pair loop is what runs on
   // every keystroke.
   function splitCandidatePronunciations(index, word) {
     const pronunciations = lookupPronunciations(index, word);
-    return pronunciations ? pronunciations.map(splitPronunciation) : null;
+    if (!pronunciations) return null;
+    return pronunciationsWorthRhyming(pronunciations).map(splitPronunciation);
   }
 
   // One candidate per markable word: every line's last word (however it
@@ -691,12 +719,13 @@
       const words = tokenizeLine(lines[lineIdx]);
       for (let w = 0; w < words.length; w++) {
         const isEnd = w === words.length - 1;
-        if (!isEnd && isUnmarkable(words[w].text, isEnd)) continue;
+        if (!isEnd && isUnmarkable(words[w].text, false)) continue;
         const hasLabel = isEnd && labels[lineIdx] !== UNLABELLED;
         const labelIndex = hasLabel ? labels[lineIdx] : null;
         candidates.push({
           lineIdx, start: words[w].start, end: words[w].end, text: words[w].text,
-          isEnd, labelIndex, splits: splitCandidatePronunciations(index, words[w].text)
+          isEnd, labelIndex, isLinked: false,
+          splits: splitCandidatePronunciations(index, words[w].text)
         });
       }
     }
@@ -730,11 +759,11 @@
   }
 
   // The strongest pairing of one pronunciation of each word, with which ones.
-  function bestPronunciationMatch(splits1, splits2) {
+  function bestPronunciationMatch(a, b) {
     let best = { strength: 0, first: NOT_FOUND, second: NOT_FOUND };
-    splits1.forEach((split1, first) => {
-      splits2.forEach((split2, second) => {
-        const strength = scoreStressedPronunciations(split1, split2);
+    a.splits.forEach((split1, first) => {
+      b.splits.forEach((split2, second) => {
+        const strength = scoreStressedPronunciations(split1, split2, a.isEnd, b.isEnd);
         if (strength > best.strength) best = { strength, first, second };
       });
     });
@@ -745,8 +774,21 @@
   // match, whose strength feeds the ranking in assignFloatingColors().
   function findMarkableMatch(a, b) {
     if (!a.splits || !b.splits) return null;
-    const match = bestPronunciationMatch(a.splits, b.splits);
+    const match = bestPronunciationMatch(a, b);
     return match.strength >= MIN_MARK_STRENGTH ? match : null;
+  }
+
+  // Words further apart than the window are never compared, so they are
+  // neither a rhyme nor a clash.
+  function isWithinWindow(a, b) {
+    return Math.abs(a.lineIdx - b.lineIdx) <= MARK_WINDOW_LINES;
+  }
+
+  // Whether two words may sit in one family: they rhyme, or they are a repeat
+  // of one another (which never counts as a clash), or they are too far apart
+  // to be heard together.
+  function isCompatible(a, b) {
+    return !isWithinWindow(a, b) || isRepeat(a, b) || findMarkableMatch(a, b) !== null;
   }
 
   // ── Families: union-find over candidates ──
@@ -797,12 +839,28 @@
     return anchorA !== undefined && anchorB !== undefined && anchorA !== anchorB;
   }
 
+  // Chaining is transitive but rhyme is not: way ~ paint and way ~ shade are
+  // each a rhyme, paint ~ shade is only assonance. A family is only ever
+  // joined to another when every word in one that is close enough to be heard
+  // with a word in the other also rhymes with it.
+  function areFamiliesCompatible(candidates, membersA, membersB) {
+    for (const i of membersA) {
+      for (const j of membersB) {
+        if (!isCompatible(candidates[i], candidates[j])) return false;
+      }
+    }
+    return true;
+  }
+
   // True when a and b end up in one family, whether or not this call joined them.
-  function tryLink(families, a, b) {
+  function tryLink(families, candidates, a, b) {
     const rootA = find(families.parent, a);
     const rootB = find(families.parent, b);
     if (rootA === rootB) return true;
     if (hasConflictingAnchors(families, rootA, rootB)) return false;
+    const membersA = families.members.get(rootA);
+    const membersB = families.members.get(rootB);
+    if (!areFamiliesCompatible(candidates, membersA, membersB)) return false;
     joinRoots(families, rootA, rootB);
     return true;
   }
@@ -817,23 +875,41 @@
   function linkPair(families, candidates, i, j, linkStrength) {
     const a = candidates[i];
     const b = candidates[j];
-    if (isRepeat(a, b)) return;
     const match = findMarkableMatch(a, b);
-    if (!match || !tryLink(families, i, j)) return;
+    if (!match || !tryLink(families, candidates, i, j)) return;
     pinPronunciations(a, b, match);
+    a.isLinked = true;
+    b.isLinked = true;
     linkStrength[i] = Math.max(linkStrength[i], match.strength);
     linkStrength[j] = Math.max(linkStrength[j], match.strength);
   }
 
   // Candidates are in line order, so once a pair is further apart than the
   // window every later pair started from the same left side is too.
-  function linkCandidates(candidates, families, linkStrength) {
+  function collectMarkablePairs(candidates) {
+    const pairs = [];
     for (let i = 0; i < candidates.length; i++) {
       for (let j = i + 1; j < candidates.length; j++) {
         if (candidates[j].lineIdx - candidates[i].lineIdx > MARK_WINDOW_LINES) break;
-        linkPair(families, candidates, i, j, linkStrength);
+        if (isRepeat(candidates[i], candidates[j])) continue;
+        const match = findMarkableMatch(candidates[i], candidates[j]);
+        if (!match) continue;
+        pairs.push({
+          i, j, strength: match.strength,
+          distance: candidates[j].lineIdx - candidates[i].lineIdx
+        });
       }
     }
+    return pairs;
+  }
+
+  // Strongest rhymes first, then nearest: when a family would have to give up
+  // a word to stay consistent, it is the one with the weaker or further link.
+  // Array.sort is stable, so equal pairs stay in the order they were read.
+  function linkCandidates(candidates, families, linkStrength) {
+    const pairs = collectMarkablePairs(candidates)
+      .sort((p, q) => q.strength - p.strength || p.distance - q.distance);
+    for (const { i, j } of pairs) linkPair(families, candidates, i, j, linkStrength);
   }
 
   // ── Colours and projection ──
@@ -846,7 +922,7 @@
     const texts = new Set();
     for (const i of members) {
       const c = candidates[i];
-      if (!isUnmarkable(c.text, c.isEnd)) texts.add(c.text);
+      if (!isUnmarkableCandidate(c)) texts.add(c.text);
     }
     return texts.size >= 2;
   }
@@ -899,14 +975,31 @@
     overflow.forEach((group) => { group.family = OVERFLOW_FAMILY; });
   }
 
+  // How well a word rhymes with the least good match among the family words it
+  // is heard against — a repeat of its own sound does not count. A word with
+  // no such partner in range keeps the strength it was linked with.
+  function weakestLinkStrength(i, members, candidates, linkStrength) {
+    const word = candidates[i];
+    let weakest = Infinity;
+    for (const j of members) {
+      const other = candidates[j];
+      if (j === i || !word.splits || !other.splits) continue;
+      if (!isWithinWindow(word, other) || isRepeat(word, other)) continue;
+      weakest = Math.min(weakest, bestPronunciationMatch(word, other).strength);
+    }
+    return weakest === Infinity ? linkStrength[i] : weakest;
+  }
+
   // Unmarkable words never take a mark, even as a family's largest member —
   // they may still anchor the family (seedFamilies()) so the words that do
-  // rhyme with them keep the right colour.
-  function projectGroup(members, candidates, family, marks) {
+  // rhyme with them keep the right colour. A mark is slant unless the word
+  // rhymes perfectly with everything it is heard against.
+  function projectGroup(members, candidates, family, linkStrength, marks) {
     for (const i of members) {
       const c = candidates[i];
-      if (isUnmarkable(c.text, c.isEnd)) continue;
-      marks[c.lineIdx].push({ start: c.start, end: c.end, family });
+      if (isUnmarkableCandidate(c)) continue;
+      const isSlant = weakestLinkStrength(i, members, candidates, linkStrength) < RHYME_STRENGTH.perfect;
+      marks[c.lineIdx].push({ start: c.start, end: c.end, family, isSlant });
     }
   }
 
@@ -930,16 +1023,17 @@
       });
     }
     for (const { members, anchorLabel } of anchoredQualifying) {
-      projectGroup(members, candidates, anchorLabel, marks);
+      projectGroup(members, candidates, anchorLabel, linkStrength, marks);
     }
     assignFloatingColors(floatingGroups, usedColors);
     for (const group of floatingGroups) {
-      projectGroup(group.members, candidates, group.family, marks);
+      projectGroup(group.members, candidates, group.family, linkStrength, marks);
     }
   }
 
-  // Lines in, marks out. Offsets are within their line; the caller knows
-  // where its lines start. Pass 1 is the rhyme scheme, unchanged, which both
+  // Lines in, marks out ({ start, end, family, isSlant }: isSlant when the word
+  // does not rhyme perfectly with every word it is heard against). Offsets are
+  // within their line; the caller knows where its lines start. Pass 1 is the rhyme scheme, unchanged, which both
   // supplies the returned labels and seeds the families pass 2 grows from —
   // see seedFamilies() and tryLink(). A mark's family is its own number, which
   // can run past MARK_COLOR_COUNT for end-rhyme families; the page wraps it

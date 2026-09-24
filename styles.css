@@ -666,6 +666,12 @@ header h1 img {
   transition: text-decoration-color var(--duration-hover) ease-out;
 }
 
+/* A near rhyme (night / like) rather than an exact one (night / light): same
+   family colour, so the group still reads as one, but dashed. */
+#lyrics-highlight .rhyme-mark.mark-slant {
+  text-decoration-style: dashed;
+}
+
 /* Picking a word in a family raises that family to full strength and fades
    every other mark to faint ink, so the page quiets the moment one sound is
    traced. This is what makes the resting layer safe to leave on at density —

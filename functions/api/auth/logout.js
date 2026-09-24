@@ -1,4 +1,6 @@
-import { parseCookies, getUser, writeLog } from '../../_shared.js';
+import {
+  parseCookies, clearedSessionCookie, getUser, sha256Hex, writeLog,
+} from '../../_shared.js';
 
 export async function onRequestPost({ request, env }) {
   const user = await getUser(request, env);
@@ -6,10 +8,11 @@ export async function onRequestPost({ request, env }) {
 
   const cookies = parseCookies(request);
   if (cookies.sid) {
-    await env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE id = ?').bind(cookies.sid).run();
+    await env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE id = ?')
+      .bind(await sha256Hex(cookies.sid)).run();
   }
 
   const headers = new Headers();
-  headers.append('Set-Cookie', 'sid=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/');
+  headers.append('Set-Cookie', clearedSessionCookie(new URL(request.url)));
   return new Response(null, { status: 200, headers });
 }

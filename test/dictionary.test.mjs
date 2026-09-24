@@ -166,6 +166,25 @@ describe('shipped dictionary', () => {
     assert.equal(markedWords.includes('take'), true);
   });
 
+  it('does not underline a line-final "yeah" that only shares a scheme letter', () => {
+    const verse = [
+      'it’s okay to be unhappy', 'it’s okay to show that I’m lonely',
+      'I’ll just take my time living for me', 'It’s only a matter of time yeah',
+      'I’ll just keep loving myself yeah'
+    ];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.equal(markedWords.includes('yeah'), false);
+    assert.equal(markedWords.includes('unhappy'), true);
+  });
+
+  it('marks a line-final "down" that rhymes with drown and around', () => {
+    const verse = ['Falling upside down', 'Trying not to drown', 'I know you’re not around'];
+    const markedWords = groupRhymeMarks(index, verse).marks.flatMap((lineMarks, i) =>
+      lineMarks.map(({ start, end }) => verse[i].slice(start, end)));
+    assert.deepEqual(markedWords, ['down', 'drown', 'around']);
+  });
+
   it('reads a word in single quotes', () => {
     const verse = ["she whispered 'goodnight'", 'and turned out the light'];
     assert.deepEqual(computeRhymeScheme(index, verse), ['A', 'A']);
@@ -182,7 +201,72 @@ describe('shipped dictionary', () => {
       const mark = marks[lineIdx].find((m) => verse[lineIdx].slice(m.start, m.end) === word);
       return mark ? mark.family : null;
     };
-    assert.notEqual(familyOf(1, 'feel'), null);
+    // The stronger rhyme claims "re" first (ray/say is perfect, ree/feel is
+    // not), and once "re" is said one way it cannot also be said the other.
+    assert.notEqual(familyOf(0, 're'), null);
+    assert.equal(familyOf(0, 're'), familyOf(2, 'say'));
     assert.notEqual(familyOf(1, 'feel'), familyOf(2, 'say'));
+  });
+
+  describe('internal rhymes on a realistic stanza', () => {
+    // Regression checks from plans/internal-rhyme-evaluation.md, run against
+    // the real dictionary rather than hand-written phonemes.
+    function marksOf(verse) {
+      const { labels, marks } = groupRhymeMarks(index, verse);
+      const found = marks.flatMap((lineMarks, i) => lineMarks.map((m) => ({
+        text: verse[i].slice(m.start, m.end), line: i, family: m.family, isSlant: m.isSlant
+      })));
+      return { labels, found };
+    }
+
+    it('puts a line-ending word and a mid-line word that rhyme with it in one family', () => {
+      const { found } = marksOf([
+        'I watch the night, beneath the starry sky',
+        'I dream of love that will never die'
+      ]);
+      const family = (word) => found.find((m) => m.text === word)?.family;
+      assert.notEqual(family('night'), undefined);
+      assert.equal(family('sky'), family('night'));
+      assert.equal(family('die'), family('night'));
+    });
+
+    it('does not mark the stock word "every" against me or sea', () => {
+      const { found } = marksOf([
+        'In every note and rhyme, there is a part of you and me',
+        'With every word I sing, with every chord I play',
+        'In every shade and way, from the mountains to the sea'
+      ]);
+      assert.equal(found.some((m) => m.text === 'every'), false);
+    });
+
+    it('draws end rhymes in the colour of their gutter letter', () => {
+      const { labels, found } = marksOf(['I see your face', 'in a silent space']);
+      assert.deepEqual(labels, ['A', 'A']);
+      for (const word of ['face', 'space']) {
+        assert.equal(found.find((m) => m.text === word)?.family, 0);
+      }
+    });
+
+    it('ignores a weak-form pronunciation, so good does not rhyme with lit', () => {
+      // The dictionary also lists "good" as G IH0 D; only the stressed UH1 counts.
+      const { found } = marksOf(['the moon is lit like the sky', 'turned tears into diamonds, got good']);
+      assert.equal(found.some((m) => m.text === 'good' || m.text === 'lit'), false);
+    });
+
+    it('does not put paint and shade in one family through way', () => {
+      const { found } = marksOf(['I paint a shade today', 'we play and I stay', 'a way to say']);
+      const family = (word) => found.find((m) => m.text === word)?.family;
+      const shared = family('paint') !== undefined && family('paint') === family('shade');
+      assert.equal(shared, false);
+    });
+
+    it('draws an exact rhyme solid and a near rhyme slant', () => {
+      const exact = marksOf(['a quiet night', 'a golden light']).found;
+      assert.ok(exact.length > 0);
+      assert.ok(exact.every((m) => m.isSlant === false));
+
+      const near = marksOf(['a quiet night', 'a golden like']).found;
+      assert.ok(near.every((m) => m.isSlant === true));
+    });
   });
 });

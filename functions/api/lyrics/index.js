@@ -1,8 +1,8 @@
-import { getUser } from '../../_shared.js';
+import { requireUser } from '../../_shared.js';
 
 export async function onRequestGet({ request, env }) {
-  const user = await getUser(request, env);
-  if (!user) return new Response(null, { status: 401 });
+  const { user, response } = await requireUser(request, env);
+  if (response) return response;
 
   const { results } = await env.lyricalmiracle_db.prepare(
     'SELECT id, title, updated_at, created_at FROM lyrics WHERE user_id = ? ' +

@@ -11,6 +11,7 @@ import * as logout from '../functions/api/auth/logout.js';
 import * as lyricById from '../functions/api/lyrics/[id].js';
 import * as lyricList from '../functions/api/lyrics/index.js';
 import * as me from '../functions/api/me.js';
+import { sha256Hex } from '../functions/_shared.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 
 const BASE_URL = 'https://lyriclike.com';
@@ -29,17 +30,25 @@ function database() {
 
 async function addSession(userId, expiresAt) {
   const sid = crypto.randomUUID();
+  // The cookie holds the token; the table holds its hash.
   await database().prepare(
     'INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)'
-  ).bind(sid, userId, expiresAt, Date.now()).run();
+  ).bind(await sha256Hex(sid), userId, expiresAt, Date.now()).run();
   return sid;
 }
 
 async function addUser(name) {
   const id = crypto.randomUUID();
-  await database().prepare(
-    'INSERT INTO users (id, google_sub, email, name, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(id, `sub-${name}`, `${name}@example.com`, name, Date.now()).run();
+  const email = `${name}@example.com`;
+  await database().batch([
+    database().prepare(
+      'INSERT INTO users (id, email, email_normalized, name, created_at) VALUES (?, ?, ?, ?, ?)'
+    ).bind(id, email, email, name, Date.now()),
+    database().prepare(
+      'INSERT INTO identities (id, user_id, provider, provider_subject, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?)'
+    ).bind(crypto.randomUUID(), id, 'google', `sub-${name}`, Date.now()),
+  ]);
   const sid = await addSession(id, Date.now() + HOUR_MS);
   return { id, sid };
 }
@@ -286,18 +295,30 @@ describe('account deletion', () => {
     assert.equal(await readStoredLyric(ALICE_LYRIC_ID), null);
     assert.equal((await getMe(secondSid)).status, 401);
   });
+
+  it('removes its sign-in identities and leaves other accounts alone', async () => {
+    await deleteAccount(alice.sid);
+    const { results } = await database().prepare('SELECT user_id FROM identities').all();
+    assert.deepEqual(results.map(row => row.user_id), [bob.id]);
+  });
 });
 
 describe('API caching headers', () => {
   it('keep answers that depend on the session out of shared caches', async () => {
-    const response = await apiMiddleware({ next: async () => Response.json({ ok: true }) });
+    const response = await apiMiddleware({
+      request: makeRequest('/api/me'),
+      next: async () => Response.json({ ok: true })
+    });
     assert.equal(response.headers.get('Cache-Control'), 'private, no-store');
     assert.equal(response.headers.get('Vary'), 'Cookie');
   });
 
   it("leave a route's own caching choice alone", async () => {
     const cached = new Response('{}', { headers: { 'Cache-Control': 'public, max-age=60' } });
-    const response = await apiMiddleware({ next: async () => cached });
+    const response = await apiMiddleware({
+      request: makeRequest('/api/define/word'),
+      next: async () => cached
+    });
     assert.equal(response.headers.get('Cache-Control'), 'public, max-age=60');
   });
 });

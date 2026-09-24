@@ -7,3 +7,12 @@ binding = "lyricalmiracle_db"
 database_name = "lyricalmiracle-db"
 database_id = "581d1db7-8372-4f83-a375-693388712173"
 migrations_dir = "migrations"
+
+# Preview deployments (any branch or PR build) get their own database, so
+# testing a migration never touches real accounts or lyrics. Pages does not
+# inherit bindings between environments, so the binding is repeated.
+[[env.preview.d1_databases]]
+binding = "lyricalmiracle_db"
+database_name = "lyricalmiracle-db-preview"
+database_id = "1f06dc81-fde4-46f4-b958-65d7b8bd13ef"
+migrations_dir = "migrations"
