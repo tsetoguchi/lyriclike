@@ -55,9 +55,12 @@ describe('the PASSWORD_AUTH_ENABLED flag', () => {
   }
 
   it('tells the modal what to offer, and always answers', async () => {
-    assert.deepEqual(await methods.onRequestGet({ env }).json(), { password: true });
+    const keyed = makeEnv({ TURNSTILE_SITE_KEY: 'site-key' });
+    assert.deepEqual(await methods.onRequestGet({ env: keyed }).json(),
+      { password: true, turnstileSiteKey: 'site-key' });
     const off = makeEnv({ PASSWORD_AUTH_ENABLED: undefined });
-    assert.deepEqual(await methods.onRequestGet({ env: off }).json(), { password: false });
+    assert.deepEqual(await methods.onRequestGet({ env: off }).json(),
+      { password: false, turnstileSiteKey: null });
   });
 
   it('leaves the existing routes working with the flag off', async () => {

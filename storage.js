@@ -11,11 +11,9 @@ const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
 const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
 const LOAD_FAILED_MESSAGE = 'Could not open your notebook';
-const CREATE_ACCOUNT_HEADING = 'Create an account';
 const CREATE_ACCOUNT_MESSAGE =
   'Your notebook saves every page you write, so you can pick it up again on '
-  + 'any device. Continue with Google to create your account.';
-const CREATE_ACCOUNT_CONFIRM = 'Continue with Google';
+  + 'any device.';
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -128,15 +126,15 @@ function setNotebookButtonActive(isActive) {
 }
 
 // Signed out, the notebook has nothing to show, so the button asks for an
-// account instead. currentUser is null only once the sign-in check has
-// answered; before that, the list opens and handles a signed-out reply.
+// account instead, in the sign-in modal's Create account view. currentUser is
+// null only once the sign-in check has answered; before that, the list opens
+// and handles a signed-out reply.
 async function promptForAccount() {
-  const wantsAccount = await openDialog({
-    heading: CREATE_ACCOUNT_HEADING,
-    message: CREATE_ACCOUNT_MESSAGE,
-    confirmLabel: CREATE_ACCOUNT_CONFIRM,
-  });
-  if (wantsAccount && window.startSignIn) window.startSignIn();
+  if (window.openAuthModal) {
+    await window.openAuthModal({ view: 'sign-up', message: CREATE_ACCOUNT_MESSAGE });
+  } else if (window.startSignIn) {
+    window.startSignIn();
+  }
 }
 
 async function handleNotebookClick() {

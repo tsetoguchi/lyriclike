@@ -24,6 +24,7 @@
   <meta name="apple-mobile-web-app-title" content="LyricLike">
   <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
   <link rel="stylesheet" href="styles.css">
+  <script src="auth-link.js"></script>
   <script src="analytics.js"></script>
 </head>
 <body>
@@ -112,20 +113,68 @@
       </div>
     </div>
   </div>
-  <div id="dialog-overlay" hidden>
-    <div id="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-      <div id="dialog-header"><span id="dialog-title">New page</span></div>
-      <div id="dialog-body">
-        <p id="dialog-message" hidden></p>
-        <div id="dialog-field">
-          <label id="dialog-label" for="dialog-input">Title</label>
-          <input id="dialog-input" type="text" maxlength="300"
+  <div id="dialog-overlay" class="modal-overlay" hidden>
+    <div id="dialog-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div id="dialog-header" class="modal-header"><span id="dialog-title">New page</span></div>
+      <div id="dialog-body" class="modal-body">
+        <p id="dialog-message" class="modal-message" hidden></p>
+        <div id="dialog-field" class="modal-field">
+          <label id="dialog-label" class="modal-label" for="dialog-input">Title</label>
+          <input id="dialog-input" class="modal-input" type="text" maxlength="300"
                  autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
       </div>
-      <div id="dialog-actions">
+      <div id="dialog-actions" class="modal-actions">
         <button id="dialog-cancel" class="toggle-btn">Cancel</button>
-        <button id="dialog-confirm" class="toggle-btn">Create</button>
+        <button id="dialog-confirm" class="toggle-btn modal-confirm">Create</button>
+      </div>
+    </div>
+  </div>
+  <div id="auth-overlay" class="modal-overlay" hidden>
+    <div id="auth-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <div class="modal-header auth-header">
+        <span id="auth-title">Sign in</span>
+        <button id="auth-close" class="icon-btn" aria-label="Close">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <p id="auth-message" class="modal-message" aria-live="polite" hidden></p>
+        <button id="auth-google" class="google-btn" type="button">
+          <img src="assets/icons/google-g.svg" alt="" width="18" height="18">
+          <span>Continue with Google</span>
+        </button>
+        <div id="auth-divider" class="auth-divider" aria-hidden="true"><span>or</span></div>
+        <form id="auth-form" class="auth-form" novalidate>
+          <div id="auth-email-field" class="modal-field">
+            <label class="modal-label" for="auth-email">Email</label>
+            <input id="auth-email" class="modal-input" type="email" name="email" maxlength="254"
+                   autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+          </div>
+          <div id="auth-password-field" class="modal-field">
+            <label class="modal-label" for="auth-password">Password</label>
+            <div class="password-wrap">
+              <input id="auth-password" class="modal-input" type="password" name="password"
+                     maxlength="256" autocomplete="current-password" aria-describedby="auth-password-hint">
+              <button id="auth-password-toggle" class="password-toggle" type="button"
+                      aria-pressed="false" aria-label="Show password">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <p id="auth-password-hint" class="auth-hint">At least 8 characters</p>
+          </div>
+          <div id="auth-turnstile" class="auth-turnstile"></div>
+          <div id="auth-error" class="auth-error" aria-live="polite"></div>
+          <button id="auth-submit" class="toggle-btn modal-confirm auth-submit" type="submit">Sign in</button>
+        </form>
+        <div id="auth-links" class="auth-links">
+          <button class="auth-link" type="button" data-auth-link="to-sign-up">Create an account</button>
+          <button class="auth-link" type="button" data-auth-link="to-sign-in">Have an account? Sign in</button>
+          <button class="auth-link" type="button" data-auth-link="forgot">Forgot password?</button>
+          <button class="auth-link" type="button" data-auth-link="resend">Send it again</button>
+          <button class="auth-link" type="button" data-auth-link="different-email">Use a different email</button>
+          <button class="auth-link" type="button" data-auth-link="back">Back to sign in</button>
+          <button class="auth-link" type="button" data-auth-link="sign-up-again">Sign up again</button>
+          <button class="auth-link" type="button" data-auth-link="new-reset-link">Send a new link</button>
+        </div>
       </div>
     </div>
   </div>
@@ -142,6 +191,7 @@
   <script src="rhyme-core.js"></script>
   <script src="app.js"></script>
   <script src="auth.js"></script>
+  <script src="auth-forms.js"></script>
   <script src="storage.js"></script>
 </body>
 </html>

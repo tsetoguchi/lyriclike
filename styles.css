@@ -204,6 +204,10 @@
   --shadow-bottom-nav: 0 -2px 12px rgba(0, 0, 0, 0.45);
   --sheet-handle: rgba(226, 231, 239, 0.28);
   --scrollbar-thumb: rgba(226, 231, 239, 0.24);
+  /* Google's dark sign-in button, as their branding rules give it. */
+  --google-fill: #131314;
+  --google-border: #8e918f;
+  --google-text: #e3e3e3;
 
   /* Type */
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
@@ -1224,19 +1228,16 @@ header h1 img {
   color: var(--ink-faded);
 }
 
-/* ── Lyrics list overlay ── */
-
-/* Opening is a movement, not a state change, so the overlay stays in the
-   layout and hides behind opacity instead of display, which cannot animate.
-   visibility waits out the fade on the way closed, so nothing is clickable
-   once the drawer has gone. */
-/* Naming a new lyric. Same surface, motion and type as the account panel —
-   it sits above the notebook, which is where it is opened from. */
-#dialog-overlay[hidden] {
+/* ── Modals ──
+   One surface for everything the app asks in a panel: naming a page, deleting
+   one, deleting an account, and signing in. Same surface, motion and type as
+   the account panel; raised, because a question can be asked from the
+   notebook. */
+.modal-overlay[hidden] {
   display: none;
 }
 
-#dialog-overlay {
+.modal-overlay {
   display: flex;
   position: fixed;
   inset: 0;
@@ -1250,13 +1251,13 @@ header h1 img {
   transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
 }
 
-#dialog-overlay.open {
+.modal-overlay.open {
   opacity: 1;
   visibility: visible;
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
-#dialog-panel {
+.modal-panel {
   width: var(--dialog-width);
   max-width: 100%;
   background: var(--paper-card);
@@ -1268,11 +1269,11 @@ header h1 img {
   flex-direction: column;
 }
 
-#dialog-overlay.open #dialog-panel {
+.modal-overlay.open .modal-panel {
   transform: none;
 }
 
-#dialog-header {
+.modal-header {
   padding: var(--space-4);
   border-bottom: var(--hairline) solid var(--rule);
   font-family: var(--font-display);
@@ -1282,21 +1283,21 @@ header h1 img {
   color: var(--ink);
 }
 
-#dialog-label {
+.modal-label {
   font-family: var(--font-editor);
   font-style: italic;
   font-size: var(--text-footnote);
   color: var(--ink-faded);
 }
 
-#dialog-body {
+.modal-body {
   padding: var(--space-5) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-#dialog-message {
+.modal-message {
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
   line-height: 1.5;
@@ -1304,18 +1305,18 @@ header h1 img {
 }
 
 /* A display of its own outranks the attribute, so say it again here. */
-#dialog-field[hidden] {
+.modal-field[hidden] {
   display: none;
 }
 
-#dialog-field {
+.modal-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
 /* Callout size, because a field below it makes iOS zoom the page. */
-#dialog-input {
+.modal-input {
   width: 100%;
   padding: var(--space-3);
   background: transparent;
@@ -1328,44 +1329,239 @@ header h1 img {
   transition: border-color var(--duration-base);
 }
 
-#dialog-input:focus {
+.modal-input:focus {
   border-color: var(--accent);
 }
 
-#dialog-input::placeholder {
+.modal-input::placeholder {
   color: var(--ink-faded);
 }
 
-#dialog-actions {
+.modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
   padding: 0 var(--space-4) var(--space-4);
 }
 
-#dialog-actions .toggle-btn {
+.modal-actions .toggle-btn {
   min-height: var(--tap-target);
   padding: var(--space-2) var(--space-4);
 }
 
-#dialog-confirm {
+/* Two classes, so hovering keeps the accent instead of taking the plain
+   button's wash. */
+.toggle-btn.modal-confirm {
   background: var(--accent-wash);
   border-color: var(--accent);
   color: var(--accent);
 }
 
 /* Losing work should look like it. */
-#dialog-confirm.danger-btn {
+.toggle-btn.modal-confirm.danger-btn {
   background: var(--danger-bg);
   border-color: var(--danger-border-hover);
   color: var(--danger);
 }
 
 /* Held shut until what was asked for has been typed. */
-#dialog-confirm:disabled {
+.toggle-btn.modal-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ── Sign-in modal ──
+   The modal surface above, with Google first, then email and password. Its
+   views show and hide parts through the hidden attribute, which any display
+   of their own would otherwise outrank. */
+#auth-panel [hidden] {
+  display: none;
+}
+
+.auth-header {
+  display: flex;
+  align-items: center;
+}
+
+.auth-header span {
+  flex: 1;
+}
+
+/* A full tap target, pulled into the header's padding so the header stays
+   as tall as the other dialogs'. */
+.auth-header .icon-btn {
+  margin: calc(var(--space-3) * -1) calc(var(--space-2) * -1) calc(var(--space-3) * -1) 0;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  background: var(--google-fill);
+  border: var(--hairline) solid var(--google-border);
+  border-radius: var(--radius-sm);
+  color: var(--google-text);
+  font-family: var(--font-editor);
+  font-size: var(--text-subhead);
+  cursor: pointer;
+}
+
+.google-btn:hover {
+  background-image: linear-gradient(var(--ink-wash), var(--ink-wash));
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-top: var(--hairline) solid var(--rule);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .modal-input {
+  padding-right: var(--tap-target);
+}
+
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-toggle[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+.password-toggle svg {
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The policy hint stays quiet while typing and only turns red after a
+   submit it failed. */
+.auth-hint {
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.auth-hint.is-error {
+  color: var(--danger);
+}
+
+/* After the focus rule, so a field with a problem stays red while it is
+   being fixed. */
+.modal-input.has-error {
+  border-color: var(--danger-border-hover);
+}
+
+.auth-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.auth-error:empty,
+.auth-turnstile:empty {
+  display: none;
+}
+
+.auth-error-hint {
+  color: var(--ink-faded);
+}
+
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.toggle-btn.auth-submit {
+  width: 100%;
+  min-height: var(--tap-target);
+}
+
+.auth-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-links:not(:has(.auth-link:not([hidden]))) {
+  display: none;
+}
+
+.auth-link {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  background: none;
+  border: none;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+
+.auth-link:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.auth-link:disabled {
+  cursor: default;
+}
+
+/* ── Lyrics list overlay ── */
+
+/* Opening is a movement, not a state change, so the overlay stays in the
+   layout and hides behind opacity instead of display, which cannot animate.
+   visibility waits out the fade on the way closed, so nothing is clickable
+   once the drawer has gone. */
 
 #lyrics-list-overlay {
   display: flex;
