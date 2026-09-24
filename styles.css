@@ -1116,12 +1116,6 @@ header h1 img {
   }
 }
 
-#user-email {
-  font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
-  color: var(--ink-faded);
-}
-
 /* ── Account settings overlay ── */
 
 #account-settings-overlay {
@@ -1854,11 +1848,6 @@ header h1 img {
     font-size: var(--text-caption-2);
     padding: var(--space-1) var(--space-2);
     letter-spacing: var(--tracking-tight);
-  }
-
-  /* No room beside a centred wordmark; the account panel carries the email. */
-  #user-email {
-    display: none;
   }
 
   /* No room for two buttons either. Log in's modal links to sign up, and the

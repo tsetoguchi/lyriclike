@@ -12,7 +12,6 @@
   const TURNSTILE_WAIT_MS = 60000;
   const FOCUS_DELAY_MS = 50;
   const CLOSE_DELAY_MS = 250;
-  const STATUS_NOTICE_MS = 4000;
   const MIN_PASSWORD_LENGTH = 8;
   const MAX_PASSWORD_LENGTH = 256;
   const MAX_EMAIL_LENGTH = 254;
@@ -36,8 +35,6 @@
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
     HAS_EMAIL: "Don't use your email address in your password.",
     LOGIN_HINT: 'Signed up with Google? Use the Google button above.',
-    SIGNED_IN: "You're signed in",
-    PASSWORD_SET: "Password set. You're signed in",
     SENT: 'Sent',
     SIGNUP_LINK_LIFETIME: 'The link works for 24 hours.',
     RESET_LINK_LIFETIME: 'The link works for 30 minutes.',
@@ -411,7 +408,7 @@
       result = await attemptLogin(payload);
     }
 
-    if (result.status === HTTP_OK) return finishSignIn(result.data, TEXT.SIGNED_IN);
+    if (result.status === HTTP_OK) return finishSignIn(result.data);
     if (result.status === HTTP_UNAUTHORIZED) {
       return showError(failureMessage(result), passwordInput, TEXT.LOGIN_HINT);
     }
@@ -473,7 +470,7 @@
     if (!password) return showError(TEXT.NEED_PASSWORD, passwordInput);
 
     const result = await postJson('/api/auth/signup/confirm', { token: linkToken, password });
-    if (result.status === HTTP_CREATED) return finishSignIn(result.data, TEXT.SIGNED_IN);
+    if (result.status === HTTP_CREATED) return finishSignIn(result.data);
 
     const code = errorCode(result);
     if (code === 'invalid_token') return endLinkView(['sign-up-again'], failureMessage(result));
@@ -487,7 +484,7 @@
     if (problem) return showError(problem, passwordInput);
 
     const result = await postJson('/api/auth/password/reset', { token: linkToken, password });
-    if (result.status === HTTP_OK) return finishSignIn(result.data, TEXT.PASSWORD_SET);
+    if (result.status === HTTP_OK) return finishSignIn(result.data);
 
     const code = errorCode(result);
     if (code === 'invalid_token') return endLinkView(['new-reset-link'], failureMessage(result));
@@ -527,16 +524,10 @@
 
   // ── Signed in ──
 
-  function showStatusNotice(text) {
-    const status = document.getElementById('status');
-    if (!status || status.textContent) return;
-    status.textContent = text;
-    setTimeout(() => { if (status.textContent === text) status.textContent = ''; }, STATUS_NOTICE_MS);
-  }
-
   // The response carries the account, so there is no second /api/me call.
   // showUser sets window.currentUser, which autosave checks before every save.
-  function finishSignIn(data, notice) {
+  // The header switching to Account is the only sign; nothing is announced.
+  function finishSignIn(data) {
     const user = data && data.user;
     if (!user || typeof user.email !== 'string') {
       showError(TEXT.FAILED);
@@ -546,7 +537,6 @@
     linkToken = null;
     showUser(user);
     closeAuthModal();
-    showStatusNotice(notice);
   }
 
   // ── Opening and closing ──

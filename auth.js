@@ -19,7 +19,6 @@ function showUser(user) {
   document.body.classList.add('signed-in');
   document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
-  document.getElementById('user-email').textContent = user.email;
 }
 
 function showSignIn() {
