@@ -1089,6 +1089,23 @@ header h1 img {
   gap: var(--space-2);
 }
 
+#signed-out-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Signing up is the ask, so it takes the amber, like a dialog's confirm. */
+.toggle-btn.sign-up-btn {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.toggle-btn.sign-up-btn:hover {
+  background: var(--accent-wash-strong);
+}
+
 #user-email {
   font-family: var(--font-editor);
   font-size: var(--text-caption-1);
@@ -1809,7 +1826,8 @@ header h1 img {
     min-width: 0;
   }
 
-  #user-info {
+  #user-info,
+  #signed-out-actions {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
@@ -1826,6 +1844,12 @@ header h1 img {
 
   /* No room beside a centred wordmark; the account panel carries the email. */
   #user-email {
+    display: none;
+  }
+
+  /* No room for two buttons either. Log in's modal links to sign up, and the
+     bottom bar's Notebook and Create open the sign-up view. */
+  #sign-up-btn {
     display: none;
   }
 

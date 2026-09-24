@@ -17,7 +17,7 @@ async function initAuth() {
 function showUser(user) {
   window.currentUser = user;
   document.body.classList.add('signed-in');
-  document.getElementById('sign-in-btn').style.display = 'none';
+  document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
   document.getElementById('user-email').textContent = user.email;
 }
@@ -25,7 +25,7 @@ function showUser(user) {
 function showSignIn() {
   window.currentUser = null;
   document.body.classList.remove('signed-in');
-  document.getElementById('sign-in-btn').style.display = '';
+  document.getElementById('signed-out-actions').style.display = '';
   document.getElementById('user-info').style.display = 'none';
 }
 
@@ -45,13 +45,20 @@ function startSignIn() {
 }
 
 // The modal (auth-forms.js) offers Google and, when it is switched on, email
-// and password. Without it, Sign in still goes straight to Google.
+// and password. Without it, both buttons still go straight to Google, which
+// is also how an account is made.
 function openSignIn() {
   if (window.openAuthModal) window.openAuthModal();
   else startSignIn();
 }
 
+function openSignUp() {
+  if (window.openAuthModal) window.openAuthModal({ view: 'sign-up' });
+  else startSignIn();
+}
+
 document.getElementById('sign-in-btn').addEventListener('click', openSignIn);
+document.getElementById('sign-up-btn').addEventListener('click', openSignUp);
 
 // An explicit sign-out or a deleted account leaves nothing of the account on
 // screen. An expired session does not come through here, so writing that
