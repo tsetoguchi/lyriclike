@@ -342,7 +342,7 @@ header .toggle-btn:has(> .nav-icon) {
   border: none;
   color: var(--ink-faded);
   font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
+  font-size: var(--text-caption-2);
   font-weight: var(--weight-regular);
   letter-spacing: normal;
 }
