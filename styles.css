@@ -376,12 +376,6 @@ header .nav-icon circle {
   stroke: none;
 }
 
-/* Desktop keeps Create out of the header. The mobile bar shows it either way:
-   signed out, it asks for an account, as the notebook does. */
-#create-btn {
-  display: none;
-}
-
 .danger-btn {
   border-color: var(--danger-border);
   color: var(--danger);
@@ -2116,10 +2110,6 @@ header .nav-icon circle {
        overruns its neighbour. */
     white-space: normal;
     text-align: center;
-  }
-
-  .bottom-nav #create-btn {
-    display: flex;
   }
 
   .bottom-nav .nav-icon {
