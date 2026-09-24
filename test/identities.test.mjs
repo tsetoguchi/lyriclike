@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import * as callback from '../functions/api/auth/google/callback.js';
-import { normalizeEmail } from '../functions/_shared.js';
+import { normalizeEmail, sha256Hex } from '../functions/_shared.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 
 const BASE_URL = 'https://lyriclike.com';
@@ -130,6 +130,7 @@ describe('migration 0004', () => {
 describe('Google sign-in callback: linking ladder', () => {
   const originalFetch = globalThis.fetch;
   let profile;
+  let sentMail;
 
   beforeEach(() => {
     env = {
@@ -137,11 +138,21 @@ describe('Google sign-in callback: linking ladder', () => {
       GOOGLE_CLIENT_ID: 'client-id',
       GOOGLE_CLIENT_SECRET: 'client-secret',
       OAUTH_REDIRECT_URL: BASE_URL + '/api/auth/google/callback',
+      RESEND_API_KEY: 'resend-key',
+      EMAIL_FROM: 'LyricLike <noreply@lyriclike.com>',
+      APP_BASE_URL: BASE_URL,
     };
     profile = { sub: 'sub-a', email: 'Ann@Example.com', email_verified: true, name: 'Ann' };
-    globalThis.fetch = async (url) => String(url).includes('oauth2.googleapis.com')
-      ? Response.json({ access_token: 'access' })
-      : Response.json(profile);
+    sentMail = [];
+    globalThis.fetch = async (url, init) => {
+      if (String(url).includes('api.resend.com')) {
+        sentMail.push(JSON.parse(init.body));
+        return Response.json({ id: 'email-id' });
+      }
+      return String(url).includes('oauth2.googleapis.com')
+        ? Response.json({ access_token: 'access' })
+        : Response.json(profile);
+    };
   });
 
   afterEach(() => {
@@ -152,11 +163,14 @@ describe('Google sign-in callback: linking ladder', () => {
   const events = async () => (await query('SELECT event FROM logs ORDER BY rowid'))
     .map(row => row.event);
 
-  function signIn() {
+  async function signIn() {
     const request = new Request(`${BASE_URL}/api/auth/google/callback?code=abc&state=s`, {
       headers: { Cookie: 'oauth_state=s; oauth_verifier=v' },
     });
-    return callback.onRequestGet({ request, env });
+    const pending = [];
+    const response = await callback.onRequestGet({ request, env, waitUntil: p => pending.push(p) });
+    await Promise.all(pending);
+    return response;
   }
 
   async function addLocalAccount({ email = 'ann@example.com', passwordHash = null } = {}) {
@@ -270,6 +284,21 @@ describe('Google sign-in callback: linking ladder', () => {
       [{ user_id: 'local', provider_subject: 'sub-a' }]);
     assert.equal((await query('SELECT user_id FROM sessions'))[0].user_id, 'local');
     assert.deepEqual(await events(), ['oauth_linked']);
+    assert.deepEqual(sentMail, []);
+  });
+
+  it('4. tells the owner of a password account, with a live reset link', async () => {
+    await addLocalAccount({ passwordHash: HASH });
+    await signIn();
+
+    assert.equal(sentMail.length, 1);
+    assert.deepEqual(sentMail[0].to, ['ann@example.com']);
+    assert.match(sentMail[0].subject, /Google sign-in was added/);
+    const [, token] = /#reset_token=([0-9a-f]{64})/.exec(sentMail[0].text);
+    const stored = await query('SELECT token_hash, user_id, expires_at FROM reset_tokens');
+    assert.deepEqual(stored.map(row => row.user_id), ['local']);
+    assert.equal(stored[0].token_hash, await sha256Hex(token));
+    assert.ok(stored[0].expires_at > Date.now());
   });
 
   it('4. matches the address whatever its case, and keeps the stored copy', async () => {

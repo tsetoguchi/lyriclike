@@ -1,3 +1,6 @@
+import { findUserByEmail, issueResetToken } from '../../../_accounts.js';
+import { sendGoogleAddedEmail } from '../../../_email.js';
+import { runInBackground } from '../../../_request.js';
 import {
   SESSION_COOKIE_MAX_AGE, cookieHeader, createSession, normalizeEmail, parseCookies, sessionCookie,
   writeLog,
@@ -35,11 +38,6 @@ function findIdentityUser(env, sub) {
   `).bind(PROVIDER, sub).first();
 }
 
-function findUserByEmail(env, emailNormalized) {
-  return sql(env, 'SELECT id, password_hash FROM users WHERE email_normalized = ?')
-    .bind(emailNormalized).first();
-}
-
 function insertIdentity(env, userId, sub) {
   return sql(env, `
     INSERT INTO identities (id, user_id, provider, provider_subject, created_at)
@@ -68,15 +66,23 @@ async function signInKnownIdentity(env, request, known, profile) {
   return known.id;
 }
 
+// Tells the owner of a password account that Google sign-in was added, with a
+// reset link in case it was not them.
+async function notifyGoogleAdded(context, local) {
+  const token = await issueResetToken(context.env, local.id, local.email_normalized);
+  await sendGoogleAddedEmail(context, { to: local.email, token });
+}
+
 // A local account holds this address and has no Google identity yet. Every
 // local account has a proven email, so adding the identity hands the account to
 // the one person who controls that mailbox.
-async function linkToLocalAccount(env, request, local, sub) {
+async function linkToLocalAccount(context, local, sub) {
+  const { env, request } = context;
   await insertIdentity(env, local.id, sub).run();
   await writeLog(env, request, { userId: local.id, event: 'oauth_linked' });
-  // When the account has a password (local.password_hash), the owner should be
-  // told Google sign-in was added. That mail is sent from _email.js, which
-  // arrives with password accounts; until then no account can have one.
+  if (local.password_hash) {
+    runInBackground(context, 'google added email', () => notifyGoogleAdded(context, local));
+  }
   return local.id;
 }
 
@@ -93,7 +99,8 @@ async function createGoogleUser(env, request, profile, sub) {
 // Works out which account this Google sign-in belongs to and returns its id,
 // or null when Google has not verified the address and there is no identity yet
 // to vouch for the person instead.
-async function resolveUser(env, request, profile, sub) {
+async function resolveUser(context, profile, sub) {
+  const { env, request } = context;
   const known = await findIdentityUser(env, sub);
   if (known) return signInKnownIdentity(env, request, known, profile);
   if (!profile.emailVerified || !profile.emailNormalized) return null;
@@ -101,7 +108,7 @@ async function resolveUser(env, request, profile, sub) {
   const local = await findUserByEmail(env, profile.emailNormalized);
   try {
     return local
-      ? await linkToLocalAccount(env, request, local, sub)
+      ? await linkToLocalAccount(context, local, sub)
       : await createGoogleUser(env, request, profile, sub);
   } catch (err) {
     // A concurrent sign-in for the same person got there first, so the identity
@@ -112,7 +119,8 @@ async function resolveUser(env, request, profile, sub) {
   }
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -151,7 +159,7 @@ export async function onRequestGet({ request, env }) {
   const profile = {
     email, name, emailNormalized: normalizeEmail(email), emailVerified: emailVerified === true,
   };
-  const userId = await resolveUser(env, request, profile, sub);
+  const userId = await resolveUser(context, profile, sub);
   if (!userId) return unverifiedEmailPage(url);
 
   const sessionToken = await createSession(env, userId);

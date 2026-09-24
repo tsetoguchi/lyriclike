@@ -14,6 +14,7 @@ const MAX_EMAIL_LENGTH = 254;
 
 const IPV4_KEPT_OCTETS = 3;
 const IPV6_KEPT_GROUPS = 3;
+const IPV6_RATE_LIMIT_GROUPS = 4;
 const IPV6_GROUP_COUNT = 8;
 
 // Browsers reject Secure cookies over plain HTTP, which is what `wrangler
@@ -81,6 +82,12 @@ export async function sha256Hex(value) {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// The uniform body of every failure from the password routes. Existing routes
+// keep their empty bodies; only the new auth routes use this.
+export function jsonError(status, code, message, headers) {
+  return Response.json({ error: { code, message } }, { status, headers });
+}
+
 // Turns "2001:db8::1" into its eight groups. Returns null for anything that is
 // not an IPv6 address.
 function expandIpv6(ip) {
@@ -97,23 +104,44 @@ function expandIpv6(ip) {
   return groups.every(g => /^[0-9a-f]{1,4}$/i.test(g)) ? groups : null;
 }
 
-// Logs keep most of the abuse signal at a fraction of the identifiability:
-// the /24 of an IPv4 address, the /48 of an IPv6 one.
-export function truncateIp(ip) {
-  if (typeof ip !== 'string' || !ip) return null;
-
-  // An IPv4-mapped IPv6 address ("::ffff:203.0.113.7") is an IPv4 client.
+// Splits an address into { v4: octets } or { v6: groups }, or null when it is
+// neither. An IPv4-mapped IPv6 address ("::ffff:203.0.113.7") is an IPv4 client.
+function parseIp(ip) {
   const mapped = ip.match(/^[0-9a-f:]*:(\d+\.\d+\.\d+\.\d+)$/i);
   const address = mapped ? mapped[1] : ip;
 
   const octets = address.split('.');
   if (octets.length === 4 && octets.every(o => /^\d{1,3}$/.test(o) && Number(o) <= 255)) {
-    return [...octets.slice(0, IPV4_KEPT_OCTETS), '0'].join('.');
+    return { v4: octets };
   }
 
   const groups = expandIpv6(address);
-  if (!groups) return null;
-  return groups.slice(0, IPV6_KEPT_GROUPS).join(':').toLowerCase() + '::';
+  return groups ? { v6: groups } : null;
+}
+
+// Logs keep most of the abuse signal at a fraction of the identifiability:
+// the /24 of an IPv4 address, the /48 of an IPv6 one.
+export function truncateIp(ip) {
+  if (typeof ip !== 'string' || !ip) return null;
+
+  const parsed = parseIp(ip);
+  if (!parsed) return null;
+  if (parsed.v4) return [...parsed.v4.slice(0, IPV4_KEPT_OCTETS), '0'].join('.');
+  return parsed.v6.slice(0, IPV6_KEPT_GROUPS).join(':').toLowerCase() + '::';
+}
+
+// Rate limits are the opposite trade. Truncating an IPv4 address to /24 would
+// let a whole office or carrier NAT lock each other out, so the full address is
+// the key. One IPv6 client holds a whole /64 and can rotate through it, so
+// that is the key for IPv6.
+export function rateLimitIp(ip) {
+  if (typeof ip !== 'string' || !ip) return null;
+
+  const parsed = parseIp(ip);
+  if (!parsed) return null;
+  if (parsed.v4) return parsed.v4.map(Number).join('.');
+  const groups = parsed.v6.slice(0, IPV6_RATE_LIMIT_GROUPS).map(g => parseInt(g, 16).toString(16));
+  return groups.join(':') + '::/64';
 }
 
 export async function writeLog(env, request, { userId, event }) {
