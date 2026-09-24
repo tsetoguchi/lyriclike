@@ -9,7 +9,7 @@ const DELETE_LYRIC_HEADING = 'Delete page';
 const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
-const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
+const SIGNED_OUT_MESSAGE = 'Log in to see your notebook';
 const LOAD_FAILED_MESSAGE = 'Could not open your notebook';
 const CREATE_ACCOUNT_MESSAGE =
   'Your notebook saves every page you write, so you can pick it up again on '
@@ -340,7 +340,7 @@ async function performSave() {
     });
 
     if (res.status === 401) {
-      setSaveIndicator('Sign in to save');
+      setSaveIndicator('Log in to save');
       if (window.handleSessionExpired) window.handleSessionExpired();
       return;
     }
