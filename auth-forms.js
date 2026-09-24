@@ -60,8 +60,8 @@
   // null for no password field; `turnstile` is the action the widget runs for.
   const VIEWS = Object.freeze({
     [VIEW.SIGN_IN]: {
-      title: 'Sign in', google: true, email: true, password: 'current-password',
-      passwordLabel: 'Password', hint: false, submit: 'Sign in', links: ['to-sign-up', 'forgot'],
+      title: 'Log in', google: true, email: true, password: 'current-password',
+      passwordLabel: 'Password', hint: false, submit: 'Log in', links: ['to-sign-up', 'forgot'],
       turnstile: null,
     },
     [VIEW.SIGN_UP]: {
