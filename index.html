@@ -112,20 +112,20 @@
       </div>
     </div>
   </div>
-  <div id="dialog-overlay" hidden>
-    <div id="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-      <div id="dialog-header"><span id="dialog-title">New page</span></div>
-      <div id="dialog-body">
-        <p id="dialog-message" hidden></p>
-        <div id="dialog-field">
-          <label id="dialog-label" for="dialog-input">Title</label>
-          <input id="dialog-input" type="text" maxlength="300"
+  <div id="dialog-overlay" class="modal-overlay" hidden>
+    <div id="dialog-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div id="dialog-header" class="modal-header"><span id="dialog-title">New page</span></div>
+      <div id="dialog-body" class="modal-body">
+        <p id="dialog-message" class="modal-message" hidden></p>
+        <div id="dialog-field" class="modal-field">
+          <label id="dialog-label" class="modal-label" for="dialog-input">Title</label>
+          <input id="dialog-input" class="modal-input" type="text" maxlength="300"
                  autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
       </div>
-      <div id="dialog-actions">
+      <div id="dialog-actions" class="modal-actions">
         <button id="dialog-cancel" class="toggle-btn">Cancel</button>
-        <button id="dialog-confirm" class="toggle-btn">Create</button>
+        <button id="dialog-confirm" class="toggle-btn modal-confirm">Create</button>
       </div>
     </div>
   </div>
