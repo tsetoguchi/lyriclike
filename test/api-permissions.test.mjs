@@ -11,6 +11,7 @@ import * as logout from '../functions/api/auth/logout.js';
 import * as lyricById from '../functions/api/lyrics/[id].js';
 import * as lyricList from '../functions/api/lyrics/index.js';
 import * as me from '../functions/api/me.js';
+import { sha256Hex } from '../functions/_shared.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 
 const BASE_URL = 'https://lyriclike.com';
@@ -29,9 +30,10 @@ function database() {
 
 async function addSession(userId, expiresAt) {
   const sid = crypto.randomUUID();
+  // The cookie holds the token; the table holds its hash.
   await database().prepare(
     'INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)'
-  ).bind(sid, userId, expiresAt, Date.now()).run();
+  ).bind(await sha256Hex(sid), userId, expiresAt, Date.now()).run();
   return sid;
 }
 
@@ -290,14 +292,20 @@ describe('account deletion', () => {
 
 describe('API caching headers', () => {
   it('keep answers that depend on the session out of shared caches', async () => {
-    const response = await apiMiddleware({ next: async () => Response.json({ ok: true }) });
+    const response = await apiMiddleware({
+      request: makeRequest('/api/me'),
+      next: async () => Response.json({ ok: true })
+    });
     assert.equal(response.headers.get('Cache-Control'), 'private, no-store');
     assert.equal(response.headers.get('Vary'), 'Cookie');
   });
 
   it("leave a route's own caching choice alone", async () => {
     const cached = new Response('{}', { headers: { 'Cache-Control': 'public, max-age=60' } });
-    const response = await apiMiddleware({ next: async () => cached });
+    const response = await apiMiddleware({
+      request: makeRequest('/api/define/word'),
+      next: async () => cached
+    });
     assert.equal(response.headers.get('Cache-Control'), 'public, max-age=60');
   });
 });

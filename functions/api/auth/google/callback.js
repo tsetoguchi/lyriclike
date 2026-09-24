@@ -1,5 +1,5 @@
 import {
-  parseCookies, randomHex, secureCookieAttribute, writeLog,
+  SESSION_COOKIE_MAX_AGE, cookieHeader, createSession, parseCookies, sessionCookie, writeLog,
 } from '../../../_shared.js';
 
 export async function onRequestGet({ request, env }) {
@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   const state = url.searchParams.get('state');
   const cookies = parseCookies(request);
 
-  if (!code || !state || state !== cookies.oauth_state) {
+  if (!code || !state || state !== cookies.oauth_state || !cookies.oauth_verifier) {
     return new Response('Invalid state', { status: 400 });
   }
 
@@ -21,6 +21,7 @@ export async function onRequestGet({ request, env }) {
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
       redirect_uri: env.OAUTH_REDIRECT_URL,
+      code_verifier: cookies.oauth_verifier,
       grant_type: 'authorization_code',
     }),
   });
@@ -54,22 +55,13 @@ export async function onRequestGet({ request, env }) {
 
   await writeLog(env, request, { userId: user.id, event: existing ? 'login' : 'signup' });
 
-  // Create a 30-day session.
-  const sessionId = randomHex(32);
-  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  await env.lyricalmiracle_db.prepare(
-    'INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)'
-  ).bind(sessionId, user.id, expiresAt, Date.now()).run();
-
-  const secure = secureCookieAttribute(url);
+  const sessionToken = await createSession(env, user.id);
 
   const headers = new Headers({ Location: '/' });
   headers.append('Set-Cookie',
-    `sid=${sessionId}; HttpOnly${secure}; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}; Path=/`
-  );
-  headers.append('Set-Cookie',
-    `oauth_state=; HttpOnly${secure}; SameSite=Lax; Max-Age=0; Path=/`
-  );
+    sessionCookie(sessionToken, url, { maxAge: SESSION_COOKIE_MAX_AGE }));
+  headers.append('Set-Cookie', cookieHeader('oauth_state', '', url, { maxAge: 0 }));
+  headers.append('Set-Cookie', cookieHeader('oauth_verifier', '', url, { maxAge: 0 }));
 
   return new Response(null, { status: 302, headers });
 }
