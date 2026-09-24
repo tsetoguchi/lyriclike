@@ -1,5 +1,6 @@
-import { describeAccount } from '../_accounts.js';
+import { checkCurrentPassword, describeAccount } from '../_accounts.js';
 import { DAY_MS } from '../_ratelimit.js';
+import { readJsonBody } from '../_request.js';
 import {
   clearedSessionCookie, parseCookies, requireUser, sessionCookie, writeLog,
 } from '../_shared.js';
@@ -34,9 +35,28 @@ export async function onRequestGet({ request, env, waitUntil }) {
   return Response.json(account, { headers });
 }
 
+// An account with a password has to give it again: a session left open on a
+// shared computer must not be enough to wipe everything. An account with only
+// Google has no password to ask for; the client makes the person type the
+// address instead. This check runs even with the password flag off, since the
+// password it checks already exists.
+async function refuseWithoutPassword(request, env, userId) {
+  const row = await env.lyricalmiracle_db.prepare(
+    'SELECT password_hash IS NOT NULL AS has_password FROM users WHERE id = ?'
+  ).bind(userId).first();
+  if (!row || !row.has_password) return null;
+
+  const body = await readJsonBody(request);
+  const { response } = await checkCurrentPassword(env, userId, body && body.password);
+  return response || null;
+}
+
 export async function onRequestDelete({ request, env }) {
   const { user, response } = await requireUser(request, env);
   if (response) return response;
+
+  const refused = await refuseWithoutPassword(request, env, user.id);
+  if (refused) return refused;
 
   await writeLog(env, request, { userId: user.id, event: 'delete_account' });
 

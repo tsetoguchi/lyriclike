@@ -162,7 +162,11 @@ describe('deleting an account', () => {
       'INSERT INTO logs (id, user_id, event, ip, created_at) VALUES (?, ?, ?, ?, ?)'
     ).bind('g1', 'user-1', 'login_password', null, 1).run();
 
-    const request = new Request(BASE_URL + '/api/me', { method: 'DELETE', headers: { Cookie: 'sid=tok' } });
+    const request = new Request(BASE_URL + '/api/me', {
+      method: 'DELETE',
+      headers: { Cookie: 'sid=tok', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: GOOD_PASSWORD }),
+    });
     const response = await me.onRequestDelete({ request, env });
     assert.equal(response.status, 200);
 

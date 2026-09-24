@@ -636,6 +636,7 @@
   });
 
   window.openAuthModal = openAuthModal;
+  window.loadAuthMethods = loadMethods;
 
   // An emailed link opens its view straight away. Nothing is sent until the
   // person enters their password, so a mail scanner fetching the link does

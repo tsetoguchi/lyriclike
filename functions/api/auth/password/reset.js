@@ -4,12 +4,9 @@
 // account that has only Google is allowed: it is how a Google user adds a
 // password, and it already needs the mailbox.
 
-import { isTokenShaped, signedInResponse } from '../../../_accounts.js';
+import { isTokenShaped, rejectNewPassword, signedInResponse } from '../../../_accounts.js';
 import { sendPasswordChangedEmail } from '../../../_email.js';
-import {
-  PASSWORD_PROBLEM, PASSWORD_PROBLEM_MESSAGE, checkPasswordPolicy, hashPassword,
-  isBreachedPassword,
-} from '../../../_password.js';
+import { hashPassword } from '../../../_password.js';
 import {
   HOUR_MS, checkRateLimit, clientIpKey, rateLimitedResponse,
 } from '../../../_ratelimit.js';
@@ -66,12 +63,6 @@ async function applyReset(env, row, tokenHash, passwordHash) {
   return update.meta.changes === 1;
 }
 
-async function passwordProblem(password, email) {
-  const problem = checkPasswordPolicy(password, email)
-    || (await isBreachedPassword(password) ? PASSWORD_PROBLEM.BREACHED : null);
-  return problem ? jsonError(HTTP_BAD_REQUEST, problem, PASSWORD_PROBLEM_MESSAGE[problem]) : null;
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context;
   const off = gatePasswordAuth(env);
@@ -91,7 +82,7 @@ export async function onRequestPost(context) {
   if (!row) return invalidToken();
 
   // A weak or breached password leaves the token usable for another try.
-  const rejected = await passwordProblem(body.password, row.email);
+  const rejected = await rejectNewPassword(body.password, row.email);
   if (rejected) return rejected;
 
   const passwordHash = await hashPassword(body.password, env);
