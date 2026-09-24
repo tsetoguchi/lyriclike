@@ -66,6 +66,14 @@ describe('forgot password', () => {
     assert.equal(known.headers.get('Set-Cookie'), null);
   });
 
+  it('logs forgot_requested for a known and an unknown address', async () => {
+    await addPasswordUser(env);
+    await forgotFor('ann@example.com', {}, { ip: '198.51.100.1' });
+    await forgotFor('nobody@example.com', {}, { ip: '198.51.100.2' });
+    const rows = await query(env, "SELECT user_id FROM logs WHERE event = 'forgot_requested' ORDER BY rowid");
+    assert.deepEqual(rows.map(row => row.user_id), ['user-1', null]);
+  });
+
   it('issues a 30 minute token and emails a fragment link for a known address only', async () => {
     await addPasswordUser(env);
     await forgotFor('nobody@example.com', {}, { ip: '198.51.100.2' });

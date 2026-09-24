@@ -84,6 +84,9 @@ export async function onRequestPost(context) {
   if (!await passwordMatches(env, user, credentials.password)) {
     await hitRateLimit(env, accountKey, FAILURE_WINDOW_MS);
     await hitRateLimit(env, emailKey, HOUR_MS);
+    // Every kind of failure writes this one row, so the log costs the same
+    // whether or not the address has an account.
+    await writeLog(env, request, { userId: user ? user.id : null, event: 'login_failed' });
     return invalidCredentials();
   }
 

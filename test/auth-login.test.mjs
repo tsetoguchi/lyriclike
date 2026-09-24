@@ -115,6 +115,19 @@ describe('login', () => {
     assert.deepEqual(await query(env, 'SELECT id FROM sessions'), []);
   });
 
+  it('logs login_failed for every kind of failure, and nothing for a limited attempt', async () => {
+    await addPasswordUser(env);
+    await logIn({ password: 'wrong password!' });
+    await logIn({ email: 'nobody@example.com' });
+    const failed = await query(env, "SELECT user_id FROM logs WHERE event = 'login_failed' ORDER BY rowid");
+    assert.deepEqual(failed.map(row => row.user_id), ['user-1', null]);
+
+    for (let i = 0; i < 5; i++) await logIn({ password: 'wrong password!' }, { ip: '198.51.100.50' });
+    const limited = await logIn({ password: 'wrong password!' }, { ip: '198.51.100.50' });
+    assert.equal(limited.status, 429);
+    assert.equal((await events(env)).filter(event => event === 'login_failed').length, 7);
+  });
+
   it('answers a malformed request with 400, saying nothing about accounts', async () => {
     for (const body of [{ email: 'no-at-sign', password: 'x' }, { email: 'a@b.co' }, { password: 'x' }, '[]', 'nope']) {
       const response = await post(login, env, LOGIN, body);

@@ -10,7 +10,7 @@ import {
 } from '../../../_ratelimit.js';
 import { gatePasswordAuth, readJsonBody, runInBackground } from '../../../_request.js';
 import { TURNSTILE_ACTION, verifyTurnstile } from '../../../_turnstile.js';
-import { jsonError, normalizeEmail } from '../../../_shared.js';
+import { jsonError, normalizeEmail, writeLog } from '../../../_shared.js';
 
 const IP_LIMIT_PER_HOUR = 10;
 const EMAIL_LIMIT_PER_HOUR = 3;
@@ -52,6 +52,8 @@ export async function onRequestPost(context) {
   if (!emailLimit.allowed) return rateLimitedResponse(emailLimit.retryAfterSeconds);
 
   const user = await findUserByEmail(env, emailNormalized);
+  // Logged for a known and an unknown address alike, so it takes the same time.
+  await writeLog(env, request, { userId: user ? user.id : null, event: 'forgot_requested' });
   if (user) runInBackground(context, 'forgot', () => sendResetLink(context, user));
   return Response.json({ message: CHECK_YOUR_EMAIL }, { status: HTTP_ACCEPTED });
 }
