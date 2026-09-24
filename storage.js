@@ -4,16 +4,16 @@ const DRAFT_STORAGE_KEY = 'swag_draft';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
-const NEW_LYRIC_HEADING = 'New lyric';
-const DELETE_LYRIC_HEADING = 'Delete lyric';
-const RENAME_HEADING = 'Rename lyric';
+const NEW_LYRIC_HEADING = 'New page';
+const DELETE_LYRIC_HEADING = 'Delete page';
+const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
-const EMPTY_NOTEBOOK_MESSAGE = 'You have no lyrics';
+const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
 const SIGNED_OUT_MESSAGE = 'Sign in to see your notebook';
 const LOAD_FAILED_MESSAGE = 'Could not open your notebook';
 const CREATE_ACCOUNT_HEADING = 'Create an account';
 const CREATE_ACCOUNT_MESSAGE =
-  'Your notebook saves every lyric you write, so you can pick it up again on '
+  'Your notebook saves every page you write, so you can pick it up again on '
   + 'any device. Continue with Google to create your account.';
 const CREATE_ACCOUNT_CONFIRM = 'Continue with Google';
 
@@ -25,8 +25,8 @@ let saveTimer = null;
 // ── Dialog ──
 
 // One panel for everything the app needs to ask. It comes in three shapes:
-// a question with a field (naming a lyric), a question without one (deleting
-// a lyric), and a question whose field has to be typed correctly before the
+// a question with a field (naming a page), a question without one (deleting
+// a page), and a question whose field has to be typed correctly before the
 // answer counts (deleting an account). Resolves with the field's contents, or
 // true when there is no field, or null if the person backed out.
 let resolveDialog = null;

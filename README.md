@@ -12,13 +12,13 @@ built.
 - Counts syllables per line as you type
 - Detects and labels rhyme scheme (A/B/C...) across the lyric
 - Finds rhymes by phoneme match, including near-rhymes, not just exact spelling
-- Optional Google sign-in to save lyrics and sync them across devices
+- Optional Google sign-in to save pages and sync them across devices
 
 ## Stack
 
 - Frontend: plain HTML/CSS/JS, no build step
 - Backend: Cloudflare Pages Functions
-- Database: Cloudflare D1 (SQLite) for accounts and saved lyrics
+- Database: Cloudflare D1 (SQLite) for accounts and saved pages
 - Auth: Google OAuth
 
 ## Running it locally
