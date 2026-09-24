@@ -97,6 +97,7 @@
   --dialog-width: 400px;
   --resize-handle-width: 10px;
   --nav-icon-size: 24px;
+  --header-icon-size: 20px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
   --dot-size: 8px;
@@ -252,8 +253,10 @@ body {
 
 /* The pad's printed header: ink on the same paper, like the
    letterpress title block on the reference notepad. */
+/* Tighter top and bottom than the sides: the tools stack an icon over their
+   name, and the header keeps its old height. */
 header {
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-2) var(--space-6);
   background: var(--paper);
   display: flex;
   align-items: center;
@@ -324,6 +327,53 @@ header h1 img {
 
 .nav-icon {
   display: none;
+}
+
+/* Desktop's tools read like the phone's bottom bar: the icon with its name
+   underneath, no box. On phones the buttons move into that bar, which has
+   its own rules, so these only reach the header. */
+header .toggle-btn:has(> .nav-icon) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  color: var(--ink-faded);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  letter-spacing: normal;
+}
+
+header .toggle-btn:has(> .nav-icon):hover {
+  background: transparent;
+  color: var(--ink);
+}
+
+/* Active is a colour change on icon and name together, as in the bar. */
+header .toggle-btn:has(> .nav-icon).active {
+  background: transparent;
+  color: var(--accent);
+}
+
+header .nav-icon {
+  display: block;
+  flex-shrink: 0;
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Filled dots, as in the bottom bar. */
+header .nav-icon circle {
+  fill: currentColor;
+  stroke: none;
 }
 
 /* Desktop keeps Create out of the header. The mobile bar shows it either way:
