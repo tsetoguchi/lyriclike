@@ -690,11 +690,24 @@
     return words;
   }
 
+  function hasPrimaryStress(phonemes) {
+    return phonemes.some((phoneme) => isVowel(phoneme) && getStress(phoneme) === PRIMARY_STRESS);
+  }
+
+  // A pronunciation with no stressed vowel is a word mumbled in passing ("good"
+  // as G IH0 D, which would rhyme with "lit"), not how a writer hears it. It
+  // is only used for a word that has no other.
+  function pronunciationsWorthRhyming(pronunciations) {
+    const stressed = pronunciations.filter(hasPrimaryStress);
+    return stressed.length > 0 ? stressed : pronunciations;
+  }
+
   // Split once per word, not once per pair: the pair loop is what runs on
   // every keystroke.
   function splitCandidatePronunciations(index, word) {
     const pronunciations = lookupPronunciations(index, word);
-    return pronunciations ? pronunciations.map(splitPronunciation) : null;
+    if (!pronunciations) return null;
+    return pronunciationsWorthRhyming(pronunciations).map(splitPronunciation);
   }
 
   // One candidate per markable word: every line's last word (however it
