@@ -332,7 +332,7 @@ function renderHighlight() {
 
 // Each word long enough to rhyme becomes its own element, found again by the
 // offset it starts at. `marks`, when given, maps that same offset to the
-// { family, stanza } internal-rhyme underlines should draw it in.
+// { family, stanza, isSlant } internal-rhyme underlines should draw it in.
 function wordsToHtml(text, marks) {
   const pattern = new RegExp(WORD_CHAR.source + '+', 'g');
   let html = '';
@@ -343,7 +343,7 @@ function wordsToHtml(text, marks) {
       const word = escapeHtml(match[0]);
       html += escapeHtml(text.slice(lastIndex, match.index));
       const mark = marks ? marks.get(match.index) : undefined;
-      const markClass = mark === undefined ? '' : markClassFor(mark.family);
+      const markClass = mark === undefined ? '' : markClassFor(mark.family, mark.isSlant);
       const markAttrs = mark === undefined ? ''
         : ' data-stanza="' + mark.stanza + '" data-family="' + mark.family + '"';
       html += '<span class="lyric-word' + markClass + '"' + markAttrs +
@@ -358,9 +358,12 @@ function wordsToHtml(text, marks) {
 // A class, not an inline style="--mark: …" — colour values live in
 // styles.css :root, so the theme owns them (app.js:596 already states this
 // rule for the gutter's SCHEME_COLORS).
-function markClassFor(family) {
-  if (family === RhymeCore.OVERFLOW_FAMILY) return ' rhyme-mark mark-overflow';
-  return ' rhyme-mark mark-' + (family % SCHEME_COLORS.length);
+// A slant mark keeps its family's colour and is drawn dashed, so a near rhyme
+// (night / like) is not read as an exact one (night / light).
+function markClassFor(family, isSlant) {
+  const slant = isSlant ? ' mark-slant' : '';
+  if (family === RhymeCore.OVERFLOW_FAMILY) return ' rhyme-mark mark-overflow' + slant;
+  return ' rhyme-mark mark-' + (family % SCHEME_COLORS.length) + slant;
 }
 
 function markPickedWord() {
@@ -770,7 +773,7 @@ function lineStartOffsets(allLines) {
   return offsets;
 }
 
-// Map<globalOffset, { family, stanza }> for every internal-rhyme mark in the text,
+// Map<globalOffset, { family, stanza, isSlant }> for every internal-rhyme mark in the text,
 // or null when there is nothing to draw. Computed per stanza, like the
 // scheme gutter, since groupRhymeMarks() only ever sees one stanza at a time.
 function buildInternalRhymeMarkMap(text) {
@@ -787,7 +790,9 @@ function buildInternalRhymeMarkMap(text) {
     for (let lineIdx = 0; lineIdx < marks.length; lineIdx++) {
       const lineStart = starts[startIdx + lineIdx];
       for (const mark of marks[lineIdx]) {
-        map.set(lineStart + mark.start, { family: mark.family, stanza: s });
+        map.set(lineStart + mark.start, {
+          family: mark.family, stanza: s, isSlant: mark.isSlant
+        });
       }
     }
   }
