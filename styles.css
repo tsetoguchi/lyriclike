@@ -98,6 +98,7 @@
   --resize-handle-width: 10px;
   --nav-icon-size: 24px;
   --header-icon-size: 20px;
+  --user-email-max-width: 220px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
   --dot-size: 8px;
@@ -1133,10 +1134,25 @@ header .nav-icon circle {
   gap: var(--space-2);
 }
 
+/* A long address is cut short rather than pushing Account off the header;
+   the account panel shows it in full. */
 #user-email {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: var(--user-email-max-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-editor);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
+}
+
+/* A narrow desktop window has no room for it beside the five tools at all. */
+@media (max-width: 900px) {
+  #user-email {
+    display: none;
+  }
 }
 
 /* ── Account settings overlay ── */
