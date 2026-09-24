@@ -44,7 +44,14 @@ function startSignIn() {
   window.location.href = GOOGLE_SIGN_IN_URL;
 }
 
-document.getElementById('sign-in-btn').addEventListener('click', startSignIn);
+// The modal (auth-forms.js) offers Google and, when it is switched on, email
+// and password. Without it, Sign in still goes straight to Google.
+function openSignIn() {
+  if (window.openAuthModal) window.openAuthModal();
+  else startSignIn();
+}
+
+document.getElementById('sign-in-btn').addEventListener('click', openSignIn);
 
 // An explicit sign-out or a deleted account leaves nothing of the account on
 // screen. An expired session does not come through here, so writing that

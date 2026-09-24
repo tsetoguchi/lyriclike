@@ -204,6 +204,10 @@
   --shadow-bottom-nav: 0 -2px 12px rgba(0, 0, 0, 0.45);
   --sheet-handle: rgba(226, 231, 239, 0.28);
   --scrollbar-thumb: rgba(226, 231, 239, 0.24);
+  /* Google's dark sign-in button, as their branding rules give it. */
+  --google-fill: #131314;
+  --google-border: #8e918f;
+  --google-text: #e3e3e3;
 
   /* Type */
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
@@ -1364,6 +1368,192 @@ header h1 img {
 .toggle-btn.modal-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ── Sign-in modal ──
+   The modal surface above, with Google first, then email and password. Its
+   views show and hide parts through the hidden attribute, which any display
+   of their own would otherwise outrank. */
+#auth-panel [hidden] {
+  display: none;
+}
+
+.auth-header {
+  display: flex;
+  align-items: center;
+}
+
+.auth-header span {
+  flex: 1;
+}
+
+/* A full tap target, pulled into the header's padding so the header stays
+   as tall as the other dialogs'. */
+.auth-header .icon-btn {
+  margin: calc(var(--space-3) * -1) calc(var(--space-2) * -1) calc(var(--space-3) * -1) 0;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  background: var(--google-fill);
+  border: var(--hairline) solid var(--google-border);
+  border-radius: var(--radius-sm);
+  color: var(--google-text);
+  font-family: var(--font-editor);
+  font-size: var(--text-subhead);
+  cursor: pointer;
+}
+
+.google-btn:hover {
+  background-image: linear-gradient(var(--ink-wash), var(--ink-wash));
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-top: var(--hairline) solid var(--rule);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .modal-input {
+  padding-right: var(--tap-target);
+}
+
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-toggle[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+.password-toggle svg {
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The policy hint stays quiet while typing and only turns red after a
+   submit it failed. */
+.auth-hint {
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.auth-hint.is-error {
+  color: var(--danger);
+}
+
+/* After the focus rule, so a field with a problem stays red while it is
+   being fixed. */
+.modal-input.has-error {
+  border-color: var(--danger-border-hover);
+}
+
+.auth-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.auth-error:empty,
+.auth-turnstile:empty {
+  display: none;
+}
+
+.auth-error-hint {
+  color: var(--ink-faded);
+}
+
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.toggle-btn.auth-submit {
+  width: 100%;
+  min-height: var(--tap-target);
+}
+
+.auth-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-links:not(:has(.auth-link:not([hidden]))) {
+  display: none;
+}
+
+.auth-link {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  background: none;
+  border: none;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+
+.auth-link:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.auth-link:disabled {
+  cursor: default;
 }
 
 /* ── Lyrics list overlay ── */

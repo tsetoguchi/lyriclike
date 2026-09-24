@@ -8,6 +8,16 @@ database_name = "lyricalmiracle-db"
 database_id = "581d1db7-8372-4f83-a375-693388712173"
 migrations_dir = "migrations"
 
+# Public values only; secrets are set in the Pages dashboard. The Turnstile site
+# key is public (the browser sees it), but each environment has its own
+# Turnstile site, because the server checks the token's hostname against
+# APP_BASE_URL.
+[vars]
+TURNSTILE_SITE_KEY = "0x4AAAAAAFCbadlyB2I-_tMz"
+
+[env.preview.vars]
+TURNSTILE_SITE_KEY = "0x4AAAAAAFCbfbMHBxSFR0Yk"
+
 # Preview deployments (any branch or PR build) get their own database, so
 # testing a migration never touches real accounts or lyrics. Pages does not
 # inherit bindings between environments, so the binding is repeated.
