@@ -1812,16 +1812,20 @@ header h1 img {
     margin-left: 0;
   }
 
+  /* Log in, or Account once signed in, sits on the right, where phone apps
+     keep the account. */
   header #user-area {
-    grid-column: 1;
+    grid-column: 3;
     grid-row: 1;
-    justify-self: start;
+    justify-self: end;
     width: auto;
   }
 
+  /* The account controls move out of it on phones, and the status line is
+     hidden, so it is empty. Left in the grid it would take the same cell and
+     sit on top of Log in. */
   header .header-right {
-    grid-column: 3;
-    width: auto;
+    display: none;
   }
 
   .toggle-btn {
@@ -1829,7 +1833,7 @@ header h1 img {
     padding: var(--space-2) var(--space-2);
   }
 
-  /* The account controls occupy the header's left cell, so they stay on one
+  /* The account controls occupy the header's right cell, so they stay on one
      line and shrink rather than push the wordmark off centre. */
   #user-area {
     width: auto;
