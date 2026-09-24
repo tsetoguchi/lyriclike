@@ -56,6 +56,9 @@
 /auth-forms.js
   Cache-Control: no-cache
 
+/account-security.js
+  Cache-Control: no-cache
+
 /storage.js
   Cache-Control: no-cache
 

@@ -2,12 +2,25 @@
 // Google callback and /api/me.
 
 import {
-  SESSION_COOKIE_MAX_AGE, createSession, parseCookies, randomHex, sessionCookie, sha256Hex,
+  PASSWORD_PROBLEM, PASSWORD_PROBLEM_MESSAGE, checkPasswordPolicy, isBreachedPassword,
+  verifyPassword,
+} from './_password.js';
+import {
+  MINUTE_MS, hitRateLimit, peekRateLimit, rateLimitedResponse,
+} from './_ratelimit.js';
+import {
+  SESSION_COOKIE_MAX_AGE, createSession, jsonError, parseCookies, randomHex, sessionCookie,
+  sha256Hex,
 } from './_shared.js';
 
 const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 const TOKEN_HEX_LENGTH = RESET_TOKEN_BYTES * 2;
+const WRONG_PASSWORDS_ALLOWED = 5;
+const WRONG_PASSWORD_WINDOW_MS = 15 * MINUTE_MS;
+const HTTP_BAD_REQUEST = 400;
+const HTTP_FORBIDDEN = 403;
+const HTTP_CONFLICT = 409;
 
 // Emailed tokens are 32 random bytes as hex. Anything else cannot be one, so
 // it is refused before the database is asked.
@@ -72,4 +85,37 @@ export async function issueResetToken(env, userId, emailNormalized) {
     `).bind(await sha256Hex(token), userId, emailNormalized, now + RESET_TOKEN_LIFETIME_MS, now),
   ]);
   return token;
+}
+
+// A new password has to pass the length rules and must not be a known
+// breached one. Returns the 400 to send, or null when it is fine.
+export async function rejectNewPassword(password, email) {
+  const problem = checkPasswordPolicy(password, email)
+    || (await isBreachedPassword(password) ? PASSWORD_PROBLEM.BREACHED : null);
+  return problem ? jsonError(HTTP_BAD_REQUEST, problem, PASSWORD_PROBLEM_MESSAGE[problem]) : null;
+}
+
+// Asks a signed-in person for their password again before a change that locks
+// others out or cannot be undone. Wrong answers are counted per account, not
+// per IP, so a stolen session gets 5 guesses per 15 minutes wherever it is
+// used from. The 403 is not a 401: the session is fine, and the client must
+// not treat it as signed out. Returns { response } to send back, or
+// { passwordHash } (the stored hash that matched).
+export async function checkCurrentPassword(env, userId, password) {
+  const key = `reauth:${userId}`;
+  const limit = await peekRateLimit(env, key, WRONG_PASSWORDS_ALLOWED, WRONG_PASSWORD_WINDOW_MS);
+  if (!limit.allowed) return { response: rateLimitedResponse(limit.retryAfterSeconds) };
+
+  const row = await env.lyricalmiracle_db.prepare(
+    'SELECT password_hash FROM users WHERE id = ?'
+  ).bind(userId).first();
+  if (!row || !row.password_hash) {
+    return { response: jsonError(HTTP_CONFLICT, 'no_password', "This account doesn't have a password.") };
+  }
+
+  if (typeof password === 'string' && await verifyPassword(password, row.password_hash, env)) {
+    return { passwordHash: row.password_hash };
+  }
+  await hitRateLimit(env, key, WRONG_PASSWORD_WINDOW_MS);
+  return { response: jsonError(HTTP_FORBIDDEN, 'wrong_password', "That password isn't right.") };
 }

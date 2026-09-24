@@ -1259,6 +1259,8 @@ header .nav-icon circle {
 
 .settings-value {
   color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere; /* a long email address wraps instead of widening the panel */
 }
 
 .settings-btn {
@@ -1291,6 +1293,38 @@ header .nav-icon circle {
 .settings-hint {
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
+}
+
+/* The change-password form opens in place, under its button. */
+.settings-section[hidden],
+.security-form[hidden],
+.settings-hint[hidden] {
+  display: none;
+}
+
+.security-form {
+  padding-top: var(--space-2);
+}
+
+/* Changing the password: only the email and the form stay in the panel. */
+.is-changing-password .settings-section:not(:first-child):not(#security-section),
+.is-changing-password #security-section .settings-section-title {
+  display: none;
+}
+
+.is-changing-password .security-form {
+  padding-top: 0;
+}
+
+.security-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.security-actions .toggle-btn {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
 }
 
 /* ── Modals ──

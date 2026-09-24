@@ -30,11 +30,13 @@ function showSignIn() {
 
 function openAccountSettings() {
   document.getElementById('settings-user-email').textContent = window.currentUser?.email || '';
+  if (window.showAccountSecurity) window.showAccountSecurity(window.currentUser);
   document.getElementById('account-settings-overlay').classList.add('open');
 }
 
 function closeAccountSettings() {
   document.getElementById('account-settings-overlay').classList.remove('open');
+  if (window.hideAccountSecurityForm) window.hideAccountSecurityForm();
 }
 
 // Signing in with Google is also how an account is made: the first visit
@@ -79,24 +81,6 @@ document.getElementById('account-settings-btn').addEventListener('click', openAc
 document.getElementById('close-account-settings-btn').addEventListener('click', closeAccountSettings);
 document.getElementById('account-settings-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('account-settings-overlay')) closeAccountSettings();
-});
-// Deleting an account takes every page with it, so agreeing is not enough:
-// the address has to be typed back before the button will do anything.
-document.getElementById('settings-delete-account-btn').addEventListener('click', async () => {
-  const email = window.currentUser?.email;
-  if (!email) return;
-
-  const typed = await openDialog({
-    heading: 'Delete account',
-    message: `This deletes your account and every page saved to it. It cannot be undone. Type ${email} to confirm.`,
-    confirmLabel: 'Delete account',
-    danger: true,
-    field: { label: 'Email address', value: '', mustMatch: email },
-  });
-  if (typed === null) return;
-
-  await fetch('/api/me', { method: 'DELETE' });
-  endSession();
 });
 
 window.handleSessionExpired = showSignIn;

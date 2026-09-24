@@ -25,7 +25,8 @@ let saveTimer = null;
 // One panel for everything the app needs to ask. It comes in three shapes:
 // a question with a field (naming a page), a question without one (deleting
 // a page), and a question whose field has to be typed correctly before the
-// answer counts (deleting an account). Resolves with the field's contents, or
+// answer counts (deleting an account with only Google). A field can also be a
+// password (deleting an account that has one). Resolves with the field's contents, or
 // true when there is no field, or null if the person backed out.
 let resolveDialog = null;
 let requiredAnswer = null;
@@ -49,6 +50,9 @@ function openDialog({ heading, message, confirmLabel, danger, field }) {
   if (field) {
     document.getElementById('dialog-label').textContent = field.label;
     input.value = field.value || '';
+    // A password field also tells password managers what to fill.
+    input.type = field.type || 'text';
+    input.autocomplete = field.type === 'password' ? 'current-password' : 'off';
   }
   updateDialogConfirmState();
 
