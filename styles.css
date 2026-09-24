@@ -1095,14 +1095,15 @@ header h1 img {
   gap: var(--space-2);
 }
 
-/* Signing up is the ask, so it takes the amber, like a dialog's confirm. */
-.toggle-btn.sign-up-btn {
+/* Log in takes the amber, like a dialog's confirm: it is the one account
+   button every screen size shows. */
+.toggle-btn.accent-btn {
   background: var(--accent-wash);
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.toggle-btn.sign-up-btn:hover {
+.toggle-btn.accent-btn:hover {
   background: var(--accent-wash-strong);
 }
 
