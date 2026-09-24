@@ -1,8 +1,8 @@
-import { getUser } from '../../_shared.js';
+import { requireUser } from '../../_shared.js';
 
 export async function onRequestGet({ request, env, params }) {
-  const user = await getUser(request, env);
-  if (!user) return new Response(null, { status: 401 });
+  const { user, response } = await requireUser(request, env);
+  if (response) return response;
 
   const lyric = await env.lyricalmiracle_db.prepare(
     'SELECT id, title, body, updated_at, created_at FROM lyrics WHERE id = ? AND user_id = ?'
@@ -24,8 +24,8 @@ async function readJsonObject(request) {
 }
 
 export async function onRequestPut({ request, env, params }) {
-  const user = await getUser(request, env);
-  if (!user) return new Response(null, { status: 401 });
+  const { user, response } = await requireUser(request, env);
+  if (response) return response;
 
   const payload = await readJsonObject(request);
   if (!payload) return new Response('Invalid payload', { status: 400 });
@@ -54,8 +54,8 @@ export async function onRequestPut({ request, env, params }) {
 }
 
 export async function onRequestDelete({ request, env, params }) {
-  const user = await getUser(request, env);
-  if (!user) return new Response(null, { status: 401 });
+  const { user, response } = await requireUser(request, env);
+  if (response) return response;
 
   await env.lyricalmiracle_db.prepare(
     'DELETE FROM lyrics WHERE id = ? AND user_id = ?'

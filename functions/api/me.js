@@ -1,10 +1,14 @@
-import { getUser, writeLog } from '../_shared.js';
+import {
+  clearedSessionCookie, parseCookies, requireUser, sessionCookie, writeLog,
+} from '../_shared.js';
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
 export async function onRequestGet({ request, env, waitUntil }) {
-  const user = await getUser(request, env);
-  if (!user) return new Response(null, { status: 401 });
+  // The page calls this on every load, so it is where a session that is close
+  // to running out gets its cookie renewed.
+  const { user, cookieMaxAge, response } = await requireUser(request, env, { refresh: true });
+  if (response) return response;
 
   // Clean up expired sessions and old logs in the background.
   const cutoff = Date.now() - NINETY_DAYS_MS;
@@ -13,12 +17,17 @@ export async function onRequestGet({ request, env, waitUntil }) {
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE created_at < ?').bind(cutoff),
   ]));
 
-  return Response.json(user);
+  const headers = new Headers();
+  if (cookieMaxAge !== null) {
+    const { sid } = parseCookies(request);
+    headers.append('Set-Cookie', sessionCookie(sid, new URL(request.url), { maxAge: cookieMaxAge }));
+  }
+  return Response.json(user, { headers });
 }
 
 export async function onRequestDelete({ request, env }) {
-  const user = await getUser(request, env);
-  if (!user) return new Response(null, { status: 401 });
+  const { user, response } = await requireUser(request, env);
+  if (response) return response;
 
   await writeLog(env, request, { userId: user.id, event: 'delete_account' });
 
@@ -30,6 +39,6 @@ export async function onRequestDelete({ request, env }) {
   ]);
 
   const headers = new Headers();
-  headers.append('Set-Cookie', 'sid=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/');
+  headers.append('Set-Cookie', clearedSessionCookie(new URL(request.url)));
   return new Response(null, { status: 200, headers });
 }
