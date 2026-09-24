@@ -314,6 +314,10 @@ describe('groupRhymeMarks', () => {
     down: [['D', 'AW1', 'N']],
     drown: [['D', 'R', 'AW1', 'N']],
     around: [['AH0', 'R', 'AW1', 'N', 'D']],
+    happy: [['HH', 'AE1', 'P', 'IY0']],
+    every: [['EH1', 'V', 'R', 'IY0']],
+    paint: [['P', 'EY1', 'N', 'T']],
+    shade: [['SH', 'EY1', 'D']],
     // Two pronunciations, one rhyming with cat and one with sea.
     xat: [['B', 'AE1', 'T'], ['B', 'IY1']]
   };
@@ -514,5 +518,53 @@ describe('groupRhymeMarks', () => {
       marks[lineIdx].find((m) => textOf(line, m) === word).family;
     assert.equal(familyOf(before, 0, base[0], 'cat'), familyOf(after, 0, grown[0], 'cat'));
     assert.equal(familyOf(before, 1, base[1], 'man'), familyOf(after, 1, grown[1], 'man'));
+  });
+
+  it('does not mark a mid-line word that only matches through its unstressed ending', () => {
+    // "every" ends on a weak "-ery"; against "sea" that is not a rhyme anyone
+    // wrote, and it would fire on every stock "-y" word in a chorus.
+    const lines = ['with every step', 'down by the sea'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.deepEqual(marks, [[], []]);
+  });
+
+  it('still marks an unstressed ending that ends its line, like happy / sea', () => {
+    const lines = ['I am so happy', 'down by the sea'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.ok(marks[0].some((m) => textOf(lines[0], m) === 'happy'));
+    assert.ok(marks[1].some((m) => textOf(lines[1], m) === 'sea'));
+  });
+
+  it('does not put two words that only chain through a third in one family', () => {
+    // day rhymes with paint and with shade, but paint / shade is only
+    // assonance: one of them joins day's family, never both.
+    const lines = ['we paint the day', 'a shade on the way'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const familyOf = (lineIdx, word) => {
+      const mark = marks[lineIdx].find((m) => textOf(lines[lineIdx], m) === word);
+      return mark ? mark.family : null;
+    };
+    assert.equal(familyOf(0, 'paint'), familyOf(0, 'day'));
+    assert.notEqual(familyOf(1, 'shade'), familyOf(0, 'day'));
+  });
+
+  it('flags a mark as slant unless it rhymes perfectly with every word it is heard with', () => {
+    const perfect = ['I saw a cat', 'wearing a hat'];
+    const perfectMarks = groupRhymeMarks(MARK_INDEX, perfect).marks;
+    assert.ok(perfectMarks.flat().length > 0);
+    assert.ok(perfectMarks.flat().every((m) => m.isSlant === false));
+
+    // sky / night: same vowel, but one adds a consonant.
+    const slant = ['the sky went on', 'a night went on'];
+    const slantMarks = groupRhymeMarks(MARK_INDEX, slant).marks;
+    assert.equal(slantMarks.flat().length, 2);
+    assert.ok(slantMarks.flat().every((m) => m.isSlant === true));
+  });
+
+  it('calls a word slant when even one word in its family is a loose match', () => {
+    // light / sight is perfect, but night is only additive against sky.
+    const lines = ['the sky went on', 'a night went on', 'and light went on'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    assert.ok(marks.flat().every((m) => m.isSlant === true));
   });
 });
