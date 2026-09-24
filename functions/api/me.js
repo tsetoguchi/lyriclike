@@ -35,6 +35,7 @@ export async function onRequestDelete({ request, env }) {
     env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM lyrics WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE user_id = ?').bind(user.id),
+    env.lyricalmiracle_db.prepare('DELETE FROM identities WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
 

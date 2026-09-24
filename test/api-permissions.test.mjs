@@ -39,9 +39,16 @@ async function addSession(userId, expiresAt) {
 
 async function addUser(name) {
   const id = crypto.randomUUID();
-  await database().prepare(
-    'INSERT INTO users (id, google_sub, email, name, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(id, `sub-${name}`, `${name}@example.com`, name, Date.now()).run();
+  const email = `${name}@example.com`;
+  await database().batch([
+    database().prepare(
+      'INSERT INTO users (id, email, email_normalized, name, created_at) VALUES (?, ?, ?, ?, ?)'
+    ).bind(id, email, email, name, Date.now()),
+    database().prepare(
+      'INSERT INTO identities (id, user_id, provider, provider_subject, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?)'
+    ).bind(crypto.randomUUID(), id, 'google', `sub-${name}`, Date.now()),
+  ]);
   const sid = await addSession(id, Date.now() + HOUR_MS);
   return { id, sid };
 }
@@ -287,6 +294,12 @@ describe('account deletion', () => {
     assert.match(response.headers.get('Set-Cookie'), /sid=;.*Max-Age=0/);
     assert.equal(await readStoredLyric(ALICE_LYRIC_ID), null);
     assert.equal((await getMe(secondSid)).status, 401);
+  });
+
+  it('removes its sign-in identities and leaves other accounts alone', async () => {
+    await deleteAccount(alice.sid);
+    const { results } = await database().prepare('SELECT user_id FROM identities').all();
+    assert.deepEqual(results.map(row => row.user_id), [bob.id]);
   });
 });
 

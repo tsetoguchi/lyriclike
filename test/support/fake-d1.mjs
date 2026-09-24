@@ -44,10 +44,22 @@ class FakeStatement {
 class FakeD1 {
   constructor(db) {
     this.db = db;
+    this.applied = new Set();
   }
 
   prepare(sql) {
     return new FakeStatement(this.db, sql);
+  }
+
+  // Applies every pending migration up to and including the one whose name
+  // starts with `through`, or all of them when it is omitted.
+  migrateTo(through) {
+    for (const name of listMigrations()) {
+      if (this.applied.has(name)) continue;
+      if (through && name.slice(0, through.length) > through) break;
+      applyMigration(this.db, name);
+      this.applied.add(name);
+    }
   }
 
   // D1 runs a batch as one transaction: all of it lands or none of it does.
@@ -68,12 +80,28 @@ function listMigrations() {
   return readdirSync(MIGRATIONS_DIR).filter((name) => name.endsWith('.sql')).sort();
 }
 
-export function createFakeD1() {
+// D1 applies each migration as one transaction. Without BEGIN/COMMIT here,
+// PRAGMA defer_foreign_keys does nothing and a table rebuild fails on the
+// tables that reference it.
+function applyMigration(db, name) {
+  db.exec('BEGIN');
+  try {
+    db.exec(readFileSync(new URL(name, MIGRATIONS_DIR), 'utf8'));
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+// Builds a database from the real migrations. `through` (a file name prefix
+// such as '0003') stops there, so a test can seed old-shaped data and then
+// call `migrateTo` to run the migration under test against it.
+export function createFakeD1({ through } = {}) {
   const db = new DatabaseSync(':memory:');
   // D1 enforces foreign keys; SQLite leaves them off unless asked.
   db.exec('PRAGMA foreign_keys = ON');
-  for (const name of listMigrations()) {
-    db.exec(readFileSync(new URL(name, MIGRATIONS_DIR), 'utf8'));
-  }
-  return new FakeD1(db);
+  const fake = new FakeD1(db);
+  fake.migrateTo(through);
+  return fake;
 }

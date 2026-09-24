@@ -31,9 +31,15 @@ function database() {
 
 async function addUser() {
   const id = crypto.randomUUID();
-  await database().prepare(
-    'INSERT INTO users (id, google_sub, email, name, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(id, `sub-${id}`, 'writer@example.com', 'writer', Date.now()).run();
+  await database().batch([
+    database().prepare(
+      'INSERT INTO users (id, email, email_normalized, name, created_at) VALUES (?, ?, ?, ?, ?)'
+    ).bind(id, 'writer@example.com', 'writer@example.com', 'writer', Date.now()),
+    database().prepare(
+      'INSERT INTO identities (id, user_id, provider, provider_subject, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?)'
+    ).bind(crypto.randomUUID(), id, 'google', `sub-${id}`, Date.now()),
+  ]);
   return id;
 }
 
@@ -375,7 +381,7 @@ describe('Google sign-in callback', () => {
         tokenRequestBody = new URLSearchParams(init.body);
         return Response.json({ access_token: 'access' });
       }
-      return Response.json({ sub: 'google-sub', email: 'g@example.com', name: 'G' });
+      return Response.json({ sub: 'google-sub', email: 'g@example.com', email_verified: true, name: 'G' });
     };
   });
 
