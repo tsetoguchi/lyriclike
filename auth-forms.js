@@ -42,6 +42,9 @@
     SENT: 'Sent',
     SIGNUP_LINK_LIFETIME: 'The link works for 24 hours.',
     RESET_LINK_LIFETIME: 'The link works for 30 minutes.',
+    // The sending domain is new, and some inboxes (Outlook first) file its
+    // mail as junk until it has a reputation.
+    CHECK_JUNK: 'Not there? Check your junk folder.',
   });
 
   const VIEW = Object.freeze({
@@ -432,7 +435,7 @@
       return showError(failureMessage(result), fieldForCode(errorCode(result)));
     }
     pendingSignup = { email, password };
-    showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME}`);
+    showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME} ${TEXT.CHECK_JUNK}`);
     return null;
   }
 
@@ -462,7 +465,7 @@
       return showError(failureMessage(result), fieldForCode(errorCode(result)));
     }
     const sent = result.data && typeof result.data.message === 'string' ? result.data.message : '';
-    showView(VIEW.FORGOT_SENT, `${sent} ${TEXT.RESET_LINK_LIFETIME}`.trim());
+    showView(VIEW.FORGOT_SENT, `${sent} ${TEXT.RESET_LINK_LIFETIME} ${TEXT.CHECK_JUNK}`.trim());
     return null;
   }
 
