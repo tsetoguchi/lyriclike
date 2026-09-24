@@ -1,0 +1,65 @@
+name: Function errors
+
+# Once a day, asks Cloudflare how every Pages Function run in the last day
+# ended. A run killed for using too much CPU (error 1102) or one that threw
+# shows up as a status other than success, and fails this job, so GitHub
+# emails the repo owner. The app cannot report a 1102 itself: the run is
+# killed before it can log anything.
+#
+# Needs the repo secret CLOUDFLARE_ANALYTICS_TOKEN: a Cloudflare API token
+# with only "Account Analytics: Read".
+
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Look for failed function runs in the last 24 hours
+        env:
+          CLOUDFLARE_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 2548933b4f272b70de5a6c50171000c3
+        run: |
+          cat > check.mjs <<'EOF'
+          // A client that hung up early is not the app's fault.
+          const FINE = new Set(['success', 'clientDisconnected']);
+          const DAY_MS = 24 * 60 * 60 * 1000;
+
+          const token = process.env.CLOUDFLARE_ANALYTICS_TOKEN;
+          if (!token) throw new Error('The CLOUDFLARE_ANALYTICS_TOKEN secret is not set.');
+
+          const since = new Date(Date.now() - DAY_MS).toISOString();
+          const query = `{ viewer { accounts(filter: { accountTag: "${process.env.CLOUDFLARE_ACCOUNT_ID}" }) {
+            pagesFunctionsInvocationsAdaptiveGroups(limit: 100, filter: { datetime_geq: "${since}" }) {
+              sum { requests } dimensions { status } } } } }`;
+
+          const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+          });
+          const body = await res.json();
+          if (!res.ok || body.errors) {
+            throw new Error(`Cloudflare query failed (${res.status}): ${JSON.stringify(body.errors)}`);
+          }
+
+          const groups = body.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups;
+          const counts = groups.map(g => [g.dimensions.status, g.sum.requests]);
+          for (const [status, requests] of counts) console.log(`${status}: ${requests}`);
+          if (counts.length === 0) console.log('No function runs in the last 24 hours.');
+
+          const bad = counts.filter(([status]) => !FINE.has(status));
+          if (bad.length > 0) {
+            console.log('::error::Failed function runs in the last 24 hours: '
+              + bad.map(([status, n]) => `${status} ${n}`).join(', ')
+              + '. exceededCpu or exceededResources means error 1102.');
+            process.exit(1);
+          }
+          EOF
+          node check.mjs
