@@ -11,7 +11,8 @@ import rhymeCore from '../rhyme-core.js';
 const {
   RHYME_TYPES, buildRhymeIndex, classifyRhyme, computeRhymeScheme, countSyllables,
   countSyllablesForLine, extractEndRhymePart, extractRhymePart, findRhymes,
-  getStressedSyllable, normalizeWord, groupRhymeMarks, FUNCTION_WORDS, OVERFLOW_FAMILY
+  getStressedSyllable, normalizeWord, groupRhymeMarks, tierRhymeWords, FUNCTION_WORDS,
+  OVERFLOW_FAMILY
 } = rhymeCore;
 
 const DICTIONARY = {
@@ -165,6 +166,32 @@ describe('findRhymes', () => {
     assert.equal(findRhymes(INDEX, 'zzyzx', FILTERS), null);
     assert.equal(findRhymes(INDEX, 'hmm', FILTERS), null);
     assert.equal(findRhymes(INDEX, '', FILTERS), null);
+  });
+});
+
+describe('tierRhymeWords', () => {
+  // Positions as english-words.json would give them, commonest first.
+  const RANKS = new Map([['pain', 700], ['wayne', 3100], ['slain', 12000], ['legerdemain', 46000]]);
+  const NAMES = new Set(['wayne']);
+  const WORDS = ['wayne', 'legerdemain', 'slain', 'pain', 'unknown'];
+
+  it('puts common words first and names and rare words last', () => {
+    assert.deepEqual(tierRhymeWords(WORDS, RANKS, NAMES), [
+      { word: 'pain', tier: 'common' },
+      { word: 'slain', tier: 'plain' },
+      { word: 'wayne', tier: 'buried' },
+      { word: 'legerdemain', tier: 'buried' },
+      { word: 'unknown', tier: 'buried' }
+    ]);
+  });
+
+  it('keeps the order it was given within a tier', () => {
+    const tiered = tierRhymeWords(['slain', 'pain', 'drain'], new Map([['pain', 1], ['drain', 2]]), null);
+    assert.deepEqual(tiered.map(({ word }) => word), ['pain', 'drain', 'slain']);
+  });
+
+  it('changes nothing before the word lists have loaded', () => {
+    assert.deepEqual(tierRhymeWords(WORDS, null, null).map(({ word }) => word), WORDS);
   });
 });
 

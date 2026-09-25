@@ -19,6 +19,13 @@
   const STRESSED_VOWEL_COUNT = 1;
   // Where a word with no frequency rank sorts: behind every word that has one.
   const UNRANKED = Number.POSITIVE_INFINITY;
+  // Tiers by frequency rank. The top ten thousand are words anyone would
+  // sing; past thirty thousand the frequency list is running out of words
+  // and what is left is "legerdemain".
+  const COMMON_RANK_LIMIT = 10000;
+  const RARE_RANK_LIMIT = 30000;
+  // Display order: common words first, names and rare words last.
+  const RHYME_TIERS = ['common', 'plain', 'buried'];
   const NO_STRESS_MARK = -1;
   const NOT_FOUND = -1;
 
@@ -344,6 +351,33 @@
   function rankRhymeWords(index, targetWord, words, ranks) {
     if (!hasRhymeEntry(index, targetWord)) return [...words];
     return rankByCloseness(toRankingContext(index, index.rhymeIndex[targetWord], ranks), words);
+  }
+
+  // ── Result tiers ──
+
+  // Closeness orders a group, but it cannot tell "pain" from "legerdemain" or
+  // "wayne". Tiers put the words a lyric can use first: common words, then the
+  // rest, then names and rare words, each tier keeping the closeness order.
+
+  function rhymeTier(word, ranks, names) {
+    if (names && names.has(word)) return 'buried';
+    // Before the word list lands nothing is known about commonness, and
+    // burying every word would be the same as burying none.
+    if (!ranks) return 'plain';
+    const rank = ranks.get(word) ?? UNRANKED;
+    if (rank < COMMON_RANK_LIMIT) return 'common';
+    return rank < RARE_RANK_LIMIT ? 'plain' : 'buried';
+  }
+
+  // ranks and names may be null, like findRhymes' filters. Returns
+  // { word, tier } so the panel can draw common words heavier.
+  function tierRhymeWords(words, ranks, names) {
+    const tiers = Object.fromEntries(RHYME_TIERS.map((tier) => [tier, []]));
+    for (const word of words) {
+      const tier = rhymeTier(word, ranks, names);
+      tiers[tier].push({ word, tier });
+    }
+    return RHYME_TIERS.flatMap((tier) => tiers[tier]);
   }
 
   // ── Pronunciation facts ──
@@ -1059,6 +1093,7 @@
     hasRhymeEntry,
     findRhymes,
     rankRhymeWords,
+    tierRhymeWords,
     countSyllables,
     getStressedSyllable,
     countSyllablesForLine,

@@ -864,7 +864,12 @@ header .nav-icon circle {
   margin-bottom: var(--space-1);
 }
 
+/* Sticky, so halfway down a long group the writer can still see which group
+   it is. The card colour is solid so chips scroll under it, not through it. */
 .rhyme-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: var(--space-3) var(--space-5);
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
@@ -874,11 +879,14 @@ header .nav-icon circle {
   align-items: center;
   justify-content: space-between;
   user-select: none;
+  background-color: var(--paper-card);
   transition: background var(--duration-fast);
 }
 
+/* The wash goes on as an image over the solid card, so a hovered header
+   that is stuck still hides the chips beneath it. */
 .rhyme-group-header:hover {
-  background: var(--ink-wash);
+  background-image: linear-gradient(var(--ink-wash), var(--ink-wash));
 }
 
 .rhyme-group-header .name {
@@ -895,9 +903,15 @@ header .nav-icon circle {
   border-radius: var(--radius-pill);
 }
 
+/* Drawn like the header's .nav-icon: a round-capped stroke in currentColor. */
 .rhyme-group-header .chevron {
-  font-size: var(--text-caption-2);
-  color: var(--ink-faded);
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: none;
+  stroke: var(--ink-faded);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   transition: transform var(--duration-base);
 }
 
@@ -926,8 +940,16 @@ header .nav-icon circle {
   transition: background var(--duration-fast);
 }
 
+/* A chip opens the word's meaning, so it answers the pointer like a button. */
 .rhyme-word:hover {
   background: var(--ink-wash-strong);
+}
+
+/* The words a lyric is most likely to use: one step bigger and heavier. The
+   rest stay as they are, since two weights is all the eye sorts at a glance. */
+.rhyme-word.common {
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-bold);
 }
 
 /* ── Definition popup (desktop) ── */
@@ -2081,6 +2103,10 @@ header .nav-icon circle {
     min-height: var(--tap-target);
     display: inline-flex;
     align-items: center;
+  }
+
+  .rhyme-word.common {
+    font-size: var(--text-callout);
   }
 
   .description {

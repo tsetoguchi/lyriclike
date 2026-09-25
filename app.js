@@ -3,7 +3,8 @@ const DEBOUNCE_DELAY_MS = 150;
 const POLL_INTERVAL_MS = 300;
 const PASTE_DELAY_MS = 0;
 const MIN_WORD_LENGTH = 2;
-const MAX_RESULTS_PER_GROUP = 500;
+// A group opens on its best words and keeps the rest behind "Show all".
+const INITIAL_RESULTS_PER_GROUP = 30;
 const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
@@ -22,6 +23,10 @@ let englishWords = null;
 // Word -> position in english-words.json, which is ordered commonest first.
 // Null until that list lands; rhyme ranking falls back to word length.
 let wordRanks = null;
+// Words English only spells capitalized ("wayne", "spain"), which the panel
+// lists last. Null until name-words.json lands; nothing is buried as a name
+// until then.
+let nameWords = null;
 // English-only filtering is always on. Its button was removed from the UI,
 // so this is state rather than a constant only because setEnglishOnly()
 // keeps it reachable for a settings page.
@@ -94,6 +99,10 @@ function ensureRhymeData() {
   loadEnglishWords().then(refreshCurrentResults).catch(function onEnglishWordsError(err) {
     console.error(err);
   });
+  // Names only reorder results, so they arrive on the same terms.
+  loadNameWords().then(refreshCurrentResults).catch(function onNameWordsError(err) {
+    console.error(err);
+  });
 
   // The blocklist gates rhyme results, so it is required alongside the
   // dictionary rather than after it.
@@ -141,22 +150,40 @@ function findRhymes(targetWord) {
     blocklist: blocklist,
     wordRanks: wordRanks
   };
-  return RhymeCore.findRhymes(rhymeIndex, RhymeCore.normalizeWord(targetWord), filters);
+  const results = RhymeCore.findRhymes(rhymeIndex, RhymeCore.normalizeWord(targetWord), filters);
+  if (!results) return null;
+  // Each group becomes { word, tier } entries, common words first and names
+  // and rare words last, so the panel can weight the chips it draws.
+  for (const { key } of RHYME_TYPES) {
+    results[key] = RhymeCore.tierRhymeWords(results[key], wordRanks, nameWords);
+  }
+  return results;
 }
 
 // ── Results rendering ──
 
-function buildGroupBodyHtml(key, words) {
-  if (words.length === 0) return '<span class="no-rhymes">No rhymes found</span>';
+// Common words are drawn a step heavier; every other tier looks the same.
+function buildChipsHtml(key, entries) {
+  return entries.map(function toChip(entry) {
+    const common = entry.tier === 'common' ? ' common' : '';
+    return `<span class="rhyme-word color-${key}${common}" title="Click for meaning">${entry.word}</span>`;
+  }).join('');
+}
 
-  const visible = words.slice(0, MAX_RESULTS_PER_GROUP);
-  let html = visible.map(word => `<span class="rhyme-word color-${key}">${word}</span>`).join('');
+function buildGroupBodyHtml(key, entries) {
+  if (entries.length === 0) return '<span class="no-rhymes">No rhymes found</span>';
 
-  if (words.length > MAX_RESULTS_PER_GROUP) {
-    const remaining = words.length - MAX_RESULTS_PER_GROUP;
-    html += `<button class="show-more-btn" data-type="${key}" data-page="1" data-total="${words.length}">Show more (${remaining} remaining)</button>`;
+  let html = buildChipsHtml(key, entries.slice(0, INITIAL_RESULTS_PER_GROUP));
+  if (entries.length > INITIAL_RESULTS_PER_GROUP) {
+    html += `<button class="show-more-btn" data-type="${key}">Show all ${entries.length}</button>`;
   }
   return html;
+}
+
+// Past the first screenful an exact count reads like a database total, not
+// something a writer needs, so the heading only says there is more.
+function formatGroupCount(total) {
+  return total > INITIAL_RESULTS_PER_GROUP ? INITIAL_RESULTS_PER_GROUP + '+' : String(total);
 }
 
 // Groups render as headers only. Filling every body up front put thousands of
@@ -175,8 +202,8 @@ function buildGroupHtml(key, name, desc, words) {
         ${name}
       </span>
       <span class="header-right">
-        <span class="count">${words.length}</span>
-        <span class="chevron">&#9654;</span>
+        <span class="count">${formatGroupCount(words.length)}</span>
+        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
       </span>
     </div>
     <div class="description">${desc}</div>
@@ -971,34 +998,13 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     return;
   }
 
-  // Show more pagination
+  // Show all: the rest of the group, names and rare words included
   const showMoreBtn = clicked.closest('.show-more-btn');
   if (showMoreBtn && currentResults) {
-    var type = showMoreBtn.dataset.type;
-    var page = parseInt(showMoreBtn.dataset.page);
-    var allWords = currentResults[type];
-    var start = (page) * MAX_RESULTS_PER_GROUP;
-    var end = start + MAX_RESULTS_PER_GROUP;
-    var nextWords = allWords.slice(start, end);
-    var remaining = allWords.length - end;
-
-    var fragment = document.createDocumentFragment();
-    for (var w = 0; w < nextWords.length; w++) {
-      var span = document.createElement('span');
-      span.className = 'rhyme-word color-' + type;
-      span.textContent = nextWords[w];
-      fragment.appendChild(span);
-    }
-
-    var body = showMoreBtn.parentElement;
-    body.insertBefore(fragment, showMoreBtn);
-
-    if (remaining > 0) {
-      showMoreBtn.dataset.page = page + 1;
-      showMoreBtn.textContent = 'Show more (' + remaining + ' remaining)';
-    } else {
-      showMoreBtn.remove();
-    }
+    const type = showMoreBtn.dataset.type;
+    const rest = currentResults[type].slice(INITIAL_RESULTS_PER_GROUP);
+    showMoreBtn.insertAdjacentHTML('beforebegin', buildChipsHtml(type, rest));
+    showMoreBtn.remove();
     return;
   }
 
@@ -1405,6 +1411,10 @@ async function loadEnglishWords() {
   const words = await fetchWordArray('english-words.json', 'loadEnglishWords');
   englishWords = new Set(words);
   wordRanks = buildWordRanks(words);
+}
+
+async function loadNameWords() {
+  nameWords = await loadWordSet('name-words.json', 'loadNameWords');
 }
 
 async function loadBlocklist() {

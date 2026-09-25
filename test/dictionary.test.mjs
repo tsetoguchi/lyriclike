@@ -11,7 +11,7 @@ import rhymeCore from '../rhyme-core.js';
 
 const {
   RHYME_TYPES, buildRhymeIndex, computeRhymeScheme, countSyllablesForLine, findRhymes,
-  groupRhymeMarks, FUNCTION_WORDS
+  groupRhymeMarks, tierRhymeWords, FUNCTION_WORDS
 } = rhymeCore;
 
 const REPO_ROOT = new URL('../', import.meta.url);
@@ -23,13 +23,16 @@ async function readRepoJson(relativePath) {
 
 let index;
 let filters;
+let nameWords;
 
 before(async () => {
-  const [dictionary, englishWords, blocklist] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json'),
-    readRepoJson('blocklist.json')
+    readRepoJson('blocklist.json'),
+    readRepoJson('name-words.json')
   ]);
+  nameWords = new Set(names);
   index = buildRhymeIndex(dictionary);
   const wordRanks = new Map();
   englishWords.forEach((word, rank) => {
@@ -92,6 +95,25 @@ describe('shipped dictionary', () => {
     const unranked = findRhymes(index, 'night', { ...filters, wordRanks: null });
     assert.notEqual(unranked.perfect[0], 'right');
     assert.ok(unranked.perfect.length > 0);
+  });
+
+  it('opens a group on usable words, with names and rare words behind them', () => {
+    const perfect = tierRhymeWords(findRhymes(index, 'rain', filters).perfect,
+      filters.wordRanks, nameWords);
+    // Roughly the first row of chips in the panel.
+    const firstRow = perfect.slice(0, 8).map(({ word }) => word);
+    for (const buried of ['wayne', 'dwayne', 'legerdemain', 'jane', 'spain']) {
+      assert.ok(!firstRow.includes(buried), `first row lists ${buried}`);
+    }
+    assert.ok(firstRow.includes('pain') && firstRow.includes('train'));
+    const buried = perfect.filter(({ tier }) => tier === 'buried').map(({ word }) => word);
+    assert.ok(buried.includes('wayne') && buried.includes('legerdemain'));
+  });
+
+  it('never lists an everyday word as a name', () => {
+    for (const word of ['will', 'chase', 'may', 'flowers', 'monday', 'grey']) {
+      assert.ok(!nameWords.has(word), `${word} is listed as a name`);
+    }
   });
 
   it('keeps english-words.json in frequency order', () => {
