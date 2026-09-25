@@ -65,7 +65,9 @@
   --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
   --ink-wash-strong: rgba(226, 231, 239, 0.14);
   --ink-border: rgba(226, 231, 239, 0.22); /* button borders on paper cards */
-  --paper-card: #1c222d;        /* the memo card (lyrics body, rhymes panel, overlays) */
+  --paper-card: #1c222d;        /* the memo card (lyrics body, overlays) */
+  --paper-panel: #181e28;       /* the rhymes panel: one step under the card, so
+                                   the page reads as two sheets, not one */
 
   --desk: #0a0d13;              /* surface the pad rests on */
 
@@ -257,10 +259,13 @@ body {
 /* The pad's printed header: ink on the same paper, like the
    letterpress title block on the reference notepad. */
 /* Tighter top and bottom than the sides: the tools stack an icon over their
-   name, and the header keeps its old height. */
+   name, and the header keeps its old height. The hairline is the pad's
+   binding: the header is only a shade off the page, and without it the two
+   ran together. */
 header {
   padding: var(--space-2) var(--space-6);
   background: var(--paper);
+  border-bottom: var(--hairline) solid var(--margin-line);
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -589,8 +594,9 @@ header .nav-icon circle {
   color: var(--ink);
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0 var(--space-2);
 }
 
 #lyrics-panel-title {
@@ -602,8 +608,20 @@ header .nav-icon circle {
   font-family: var(--font-editor);
 }
 
+/* A dotted rule under the title on hover says it can be written on, the way
+   a form marks its blanks. */
 #lyrics-panel-title:hover {
   background: var(--ink-wash);
+  text-decoration: underline dotted var(--ink-faded);
+  text-underline-offset: var(--space-1);
+}
+
+/* An unnamed page shows its placeholder in pencil. It is drawn by CSS, so it
+   is never part of the title's text and can never be saved as the name.
+   Hidden while typing, or the caret would sit after it. */
+#lyrics-panel-title:empty:not(:focus)::before {
+  content: attr(data-placeholder);
+  color: var(--ink-faded);
 }
 
 #lyrics-panel-title:focus {
@@ -810,14 +828,15 @@ header .nav-icon circle {
   background: var(--selection);
 }
 
-/* The white memo card on the desk: reference material beside the pad. */
+/* The memo card on the desk: reference material beside the pad, a step
+   darker than the sheet it sits beside. */
 .rhymes-panel {
   width: var(--rhymes-panel-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--paper-card);
+  background: var(--paper-panel);
 }
 
 .selected-word-bar {
@@ -891,10 +910,12 @@ header .nav-icon circle {
 }
 
 /* Sticky, so halfway down a long group the writer can still see which group
-   it is. The card colour is solid so chips scroll under it, not through it. */
+   it is. The panel colour is solid so chips scroll under it, not through it.
+   It sticks at the list's very top edge, above the list's own top padding;
+   at zero, a strip of chips showed through that padding above it. */
 .rhyme-group-header {
   position: sticky;
-  top: 0;
+  top: calc(-1 * var(--space-2));
   z-index: 1;
   padding: var(--space-3) var(--space-5);
   font-family: var(--font-editor);
@@ -905,11 +926,11 @@ header .nav-icon circle {
   align-items: center;
   justify-content: space-between;
   user-select: none;
-  background-color: var(--paper-card);
+  background-color: var(--paper-panel);
   transition: background var(--duration-fast);
 }
 
-/* The wash goes on as an image over the solid card, so a hovered header
+/* The wash goes on as an image over the solid panel, so a hovered header
    that is stuck still hides the chips beneath it. */
 .rhyme-group-header:hover {
   background-image: linear-gradient(var(--ink-wash), var(--ink-wash));
@@ -1246,9 +1267,12 @@ header .nav-icon circle {
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
+/* The shadow alone is lost on the dimmed desk, which is nearly as dark as it
+   is. A hairline at the edge, as the definition popup has, is what lifts the
+   panel off it. */
 #account-settings-panel {
   background: var(--paper-card);
-  border: none;
+  border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
   transform: translateY(var(--space-2)) scale(0.98);
@@ -1421,10 +1445,12 @@ header .nav-icon circle {
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
+/* Shadow and hairline, for the same reason as account settings above. */
 .modal-panel {
   width: var(--dialog-width);
   max-width: 100%;
   background: var(--paper-card);
+  border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
   transform: translateY(var(--space-2)) scale(0.98);
@@ -1900,6 +1926,43 @@ header .nav-icon circle {
   font-weight: var(--weight-regular);
 }
 
+/* Where a signed-out writer's page lives, said once and quietly at the end
+   of the title row. It is also the gentlest sign-up prompt the app has.
+   Signed in, the save indicator speaks for the page instead. Phones hide the
+   whole title row, so this goes with it. On a sheet too narrow for both it
+   drops under the title rather than squeeze it. */
+#local-save-note {
+  margin-left: auto;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  color: var(--ink-faded);
+}
+
+body.signed-in #local-save-note {
+  display: none;
+}
+
+#local-save-sign-up {
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--ink-border);
+  text-underline-offset: 2px;
+  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
+}
+
+#local-save-sign-up:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
 /* The word the rhymes tab is currently holding, written beside its name the
    way a note is written in the margin. */
 .tab-word {
@@ -1939,9 +2002,6 @@ header .nav-icon circle {
     gap: var(--space-2);
     flex-wrap: nowrap;
     padding-top: calc(var(--space-3) + env(safe-area-inset-top));
-    /* The tabs below share the header's paper, so only a rule tells the
-       two apart here. Desktop's title bar is a different shade. */
-    border-bottom: var(--hairline) solid var(--margin-line);
   }
 
   header h1 {
@@ -2126,7 +2186,7 @@ header .nav-icon circle {
   /* Rhyme results adjustments */
   .selected-word-bar {
     padding: var(--space-4) var(--space-4);
-    background: var(--paper-card);
+    background: var(--paper-panel);
   }
 
   .selected-word-bar .word {

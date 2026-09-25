@@ -374,9 +374,15 @@ function setSaveIndicator(text) {
   document.getElementById('save-indicator').textContent = text;
 }
 
+// The default name is stored as a real title, but on screen it is left blank
+// so the placeholder shows instead.
+function titleForDisplay(title) {
+  return title === DEFAULT_TITLE ? '' : title;
+}
+
 function updatePanelHeader() {
   const el = document.getElementById('lyrics-panel-title');
-  if (document.activeElement !== el) el.textContent = currentTitle;
+  if (document.activeElement !== el) el.textContent = titleForDisplay(currentTitle);
 }
 
 // escapeHtml lives in app.js. These three scripts share one global scope, so a
@@ -405,8 +411,8 @@ titleEl.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
 });
 titleEl.addEventListener('blur', () => {
-  const newTitle = titleEl.textContent.trim() || 'Untitled';
-  titleEl.textContent = newTitle;
+  const newTitle = titleEl.textContent.trim() || DEFAULT_TITLE;
+  titleEl.textContent = titleForDisplay(newTitle);
   if (newTitle !== currentTitle) {
     currentTitle = newTitle;
     saveDraft();
