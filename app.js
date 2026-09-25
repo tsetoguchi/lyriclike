@@ -574,6 +574,7 @@ const lineMeasureEl = document.getElementById('line-measure');
 let cachedLineHeights = null;
 let cachedLineHeightsText = null;
 let cachedLineHeightsWidth = null;
+let cachedLineEnds = null;
 
 function measureLineHeights(lines) {
   console.assert(Array.isArray(lines), 'measureLineHeights: lines must be an array');
@@ -590,7 +591,7 @@ function measureLineHeights(lines) {
   let html = '';
   for (let i = 0; i < lines.length; i++) {
     html += '<span data-ln="' + i + '">\u200b</span>';
-    html += (escapeHtml(lines[i]) || '\u200b') + '\n';
+    html += (escapeHtml(lines[i]) || '\u200b') + '<span data-end>\u200b</span>\n';
   }
   html += '<span data-ln="end">\u200b</span>';
   lineMeasureEl.innerHTML = html;
@@ -599,6 +600,11 @@ function measureLineHeights(lines) {
   for (let j = 0; j < markers.length - 1; j++) {
     heights.push(markers[j + 1].offsetTop - markers[j].offsetTop);
   }
+  // How far each line's last row runs from the text's left edge, so its
+  // rhyme letter can sit at the line's end instead of the column's.
+  const lineStart = markers[0].offsetLeft;
+  cachedLineEnds = Array.from(lineMeasureEl.querySelectorAll('span[data-end]'),
+    (end) => end.offsetLeft - lineStart);
   lineMeasureEl.innerHTML = '';
   cachedLineHeights = heights;
   cachedLineHeightsText = textKey;
@@ -747,13 +753,19 @@ function updateRhymeSchemeGutter() {
   }
 
   const heights = measureLineHeights(allLines.slice(0, lineCount));
+  const textStyle = getComputedStyle(textareaEl);
+  const textWidth = textareaEl.clientWidth
+    - parseFloat(textStyle.paddingLeft) - parseFloat(textStyle.paddingRight);
   const parts = [];
   for (let i = 0; i < lineCount; i++) {
     const lineHeight = heights[i];
     if (allLines[i].trim() === '') {
       parts.push('<div class="scheme-line empty-line" style="height:' + lineHeight + 'px">&middot;</div>');
     } else {
-      parts.push('<div class="scheme-line" style="height:' + lineHeight + 'px;color:' + (labelColors[i] || 'var(--ink-faded)') + '">' + (labels[i] || '&ndash;') + '</div>');
+      // The gutter starts past the text column; pull the letter back to
+      // just after this line's last word.
+      const pullBack = Math.max(0, textWidth - cachedLineEnds[i]);
+      parts.push('<div class="scheme-line" style="height:' + lineHeight + 'px;transform:translateX(-' + pullBack + 'px);color:' + (labelColors[i] || 'var(--ink-faded)') + '">' + (labels[i] || '&ndash;') + '</div>');
     }
   }
   rhymeSchemeGutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';

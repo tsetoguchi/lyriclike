@@ -92,6 +92,7 @@
   /* Fixed widths that hold the layout apart. */
   --gutter-syllables: 56px;
   --gutter-scheme: 44px;
+  --sheet-text: 720px;          /* longest lyric line before it wraps */
   --rhymes-panel-width: 380px;
   --drawer-width: 320px;
   --dialog-width: 400px;
@@ -418,6 +419,12 @@ header .nav-icon circle {
 }
 
 .lyrics-panel {
+  /* The sheet is the title, text and whichever gutters are open, centred as
+     one block. These track what is open so the title can match it. */
+  --sheet-syllables: 0px;
+  --sheet-scheme: 0px;
+  --sheet-width: calc(var(--sheet-syllables) + var(--sheet-text)
+    + var(--editor-pad) * 2 + var(--sheet-scheme));
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -425,6 +432,14 @@ header .nav-icon circle {
   /* The writing surface matches the rhymes panel: with no ruling left to make
      it read as a pad, the cream only made the two halves look mismatched. */
   background: var(--paper-card);
+}
+
+.lyrics-panel:has(.syllable-gutter.visible) {
+  --sheet-syllables: var(--gutter-syllables);
+}
+
+.lyrics-panel:has(.rhyme-scheme-gutter.visible) {
+  --sheet-scheme: var(--gutter-scheme);
 }
 
 /* The desk gap between pad and memo card; red when gripped. */
@@ -460,6 +475,7 @@ header .nav-icon circle {
 .lyrics-area {
   flex: 1;
   display: flex;
+  justify-content: center;
   align-items: flex-start;
   overflow-y: auto;
   overflow-x: hidden;
@@ -477,7 +493,6 @@ header .nav-icon circle {
   min-width: 0;
   flex-shrink: 0;
   border-right: 0 solid var(--rule);
-  min-height: 100%;
   overflow: hidden;
   user-select: none;
 }
@@ -533,6 +548,8 @@ header .nav-icon circle {
 
 .rhyme-scheme-gutter.visible {
   width: var(--gutter-scheme);
+  /* Each letter is pulled left to its own line's end, over the text column. */
+  overflow: visible;
 }
 
 .rhyme-scheme-gutter .scheme-line {
@@ -544,20 +561,26 @@ header .nav-icon circle {
   font-family: var(--font-editor);
   font-size: var(--text-callout);
   line-height: var(--line-pitch);
-  text-align: center;
   font-weight: var(--weight-bold);
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  /* A wrapped line ends on its last row, so its letter sits there. */
+  align-items: flex-end;
+  justify-content: flex-start;
+  pointer-events: none;
 }
 
 .rhyme-scheme-gutter .scheme-line.empty-line {
   color: transparent;
 }
 
-/* The pad's top edge: title written on the paper itself. */
+/* The pad's top edge: title written on the paper itself. It spans the sheet
+   and starts where the text does, less the title's own padding. */
 .panel-header {
-  padding: var(--space-3) var(--space-5) var(--space-3);
+  width: 100%;
+  max-width: var(--sheet-width);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-5) var(--space-3)
+    calc(var(--sheet-syllables) + var(--editor-pad) - var(--space-1));
   /* Above the lyrics' own size and bold, so the title reads as the heading. */
   font-size: var(--text-title-3);
   font-weight: var(--weight-bold);
@@ -590,6 +613,7 @@ header .nav-icon circle {
   position: relative;
   flex: 1;
   min-width: 0;
+  max-width: calc(var(--sheet-text) + var(--editor-pad) * 2);
   min-height: 100%;
 }
 
