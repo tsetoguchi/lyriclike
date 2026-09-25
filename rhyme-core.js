@@ -19,10 +19,11 @@
   const STRESSED_VOWEL_COUNT = 1;
   // Where a word with no frequency rank sorts: behind every word that has one.
   const UNRANKED = Number.POSITIVE_INFINITY;
-  // Tiers by frequency rank. The top ten thousand are words anyone would
-  // sing; past thirty thousand the frequency list is running out of words
+  // Tiers by frequency rank. The top five thousand are words anyone would
+  // sing, few enough that bolding them still picks some out; past thirty
+  // thousand the frequency list is running out of words
   // and what is left is "legerdemain".
-  const COMMON_RANK_LIMIT = 10000;
+  const COMMON_RANK_LIMIT = 5000;
   const RARE_RANK_LIMIT = 30000;
   // Display order: common words first, names and rare words last.
   const RHYME_TIERS = ['common', 'plain', 'buried'];
