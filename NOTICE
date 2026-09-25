@@ -59,6 +59,29 @@ Upstream revision: 20f5cc9b3f0ccc8ce45d814c532b7c2031bba31c
 License: https://unlicense.org/
 
 
+name-words.json — words spelled only as names
+-----------------------------------------------------------------
+Derived from the Hunspell en_US dictionary (SCOWL), as packaged by
+wooorm/dictionaries (dictionary-en 4.0.0).
+
+  Copyright 2000-2018 by Kevin Atkinson
+
+  Permission to use, copy, modify, distribute and sell these word
+  lists, the associated scripts, the output created from the scripts,
+  and its documentation for any purpose is hereby granted without fee,
+  provided that the above copyright notice appears in all copies and
+  that both that copyright notice and this permission notice appear in
+  supporting documentation. Kevin Atkinson makes no representations
+  about the suitability of this array for any purpose. It is provided
+  "as is" without express or implied warranty.
+
+Modified: reduced to the entries of english-words.json that the
+dictionary lists only capitalized. Regenerate with
+`node tools/build-name-words.mjs`.
+
+Source: http://wordlist.aspell.net/
+
+
 blocklist.json — slur blocklist
 -----------------------------------------------------------------
 Derived in part from "Our List of Dirty, Naughty, Obscene, and
