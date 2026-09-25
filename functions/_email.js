@@ -23,12 +23,11 @@ const INK = '#141922';
 const FADED_INK = '#5b6270';
 const PAGE_BACKGROUND = '#f4f1ea';
 
-// The app's own type: Montserrat Bold for headings, iA Writer Quattro for the
-// rest, with the same fallbacks as --font-display and --font-editor (minus
-// system-ui, which mail clients do not know). Clients that load web fonts
+// The app's own type: iA Writer Quattro throughout, bold for headings, with
+// the same fallbacks as --font-editor (minus system-ui, which mail clients do
+// not know). Clients that load web fonts
 // (Apple Mail, iOS Mail, Thunderbird) fetch the self-hosted files below; Gmail
 // and Outlook ignore @font-face and use the fallbacks.
-const FONT_DISPLAY = "'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', Arial, sans-serif";
 const FONT_BODY = "'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Arial, sans-serif";
 
 // Same-size box as the wordmark's 267x84 file, drawn for a light background:
@@ -41,7 +40,6 @@ const FONT_FACES = [
   ['iA Writer Quattro', 400, 'normal', 'iAWriterQuattroS-Regular'],
   ['iA Writer Quattro', 400, 'italic', 'iAWriterQuattroS-Italic'],
   ['iA Writer Quattro', 700, 'normal', 'iAWriterQuattroS-Bold'],
-  ['Montserrat', 700, 'normal', 'Montserrat-Bold'],
 ];
 
 function escapeHtml(text) {
@@ -76,8 +74,8 @@ ${fontFaceRules(env)}
 </style></head>
 <body style="margin:0;background:${PAGE_BACKGROUND};">
 <div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:${FONT_BODY};color:${INK};">
-<p style="margin:0 0 28px;"><a href="${escapeHtml(baseUrl(env))}/" style="text-decoration:none;"><img src="${escapeHtml(baseUrl(env))}/${LOGO_PATH}" alt="LyricLike" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" style="display:block;border:0;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;font-family:${FONT_DISPLAY};font-weight:700;font-size:20px;color:${INK};"></a></p>
-<h1 style="font-family:${FONT_DISPLAY};font-weight:700;font-size:20px;line-height:1.3;margin:0 0 16px;">${escapeHtml(heading)}</h1>
+<p style="margin:0 0 28px;"><a href="${escapeHtml(baseUrl(env))}/" style="text-decoration:none;"><img src="${escapeHtml(baseUrl(env))}/${LOGO_PATH}" alt="LyricLike" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" style="display:block;border:0;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;font-family:${FONT_BODY};font-weight:700;font-size:20px;color:${INK};"></a></p>
+<h1 style="font-family:${FONT_BODY};font-weight:700;font-size:20px;line-height:1.3;margin:0 0 16px;">${escapeHtml(heading)}</h1>
 ${paragraphs.map(p => `<p style="font-size:15px;line-height:1.5;margin:0 0 12px;">${escapeHtml(p)}</p>`).join('\n')}
 <p style="margin:24px 0;"><a href="${escapeHtml(button.url)}" style="display:inline-block;padding:12px 20px;background:${AMBER};color:${INK};text-decoration:none;border-radius:6px;font-family:${FONT_BODY};font-weight:700;font-size:15px;">${escapeHtml(button.label)}</a></p>
 <p style="font-family:${FONT_BODY};font-style:italic;font-size:13px;line-height:1.5;color:${FADED_INK};margin:0;">${escapeHtml(footer)}</p>

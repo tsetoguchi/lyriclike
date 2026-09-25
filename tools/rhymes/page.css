@@ -20,14 +20,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Montserrat';
-  src: url('/fonts/Montserrat-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
   --paper: #141922;
   --paper-card: #1c222d;
@@ -46,7 +38,6 @@
   --rhyme-assonance: #f58fc0;
   --rhyme-consonance: #a99bf7;
 
-  --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
 
   --space-1: 4px;
@@ -111,7 +102,7 @@ a { color: var(--ink); }
 }
 
 .wordmark {
-  font-family: var(--font-display);
+  font-family: var(--font-editor);
   font-weight: 700;
   letter-spacing: var(--tracking-wordmark);
   text-transform: uppercase;
