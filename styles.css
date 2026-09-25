@@ -58,6 +58,8 @@
   --accent: #e9b45f;            /* amber lamp accents (grips, focus, marks) */
   --accent-wash: rgba(233, 180, 95, 0.10);  /* active-page tint */
   --accent-wash-strong: rgba(233, 180, 95, 0.16);  /* behind the picked word */
+  --accent-hover: #f2c47a;      /* the solid amber button, hovered */
+  --on-accent: #141922;         /* text on solid amber (9.6:1) */
   --ink: #e2e7ef;               /* cool off-white writing ink (12.9:1 on the card) */
   --ink-faded: #8b96a6;         /* pencil: marginalia, placeholders (5.3:1 on the card) */
   --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
@@ -1139,24 +1141,41 @@ header .nav-icon circle {
   gap: var(--space-2);
 }
 
-/* Log in takes the amber, like a dialog's confirm: it is the one account
-   button every screen size shows. */
-.toggle-btn.accent-btn {
-  background: var(--accent-wash);
+/* The one solid button on a screen: the thing we most want pressed.
+   Sign up in the header, the confirm in a dialog. */
+.toggle-btn.primary-btn {
+  background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--on-accent);
 }
 
-.toggle-btn.accent-btn:hover {
-  background: var(--accent-wash-strong);
+.toggle-btn.primary-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
-/* A narrow desktop window has no room for it beside the five tools; it runs
-   off the edge below about 900px. Log in's modal links to sign up. Phones
-   hide it too, in their own block. */
+/* Beside Sign up, Log in steps back to a plain link. */
+#sign-in-btn {
+  border-color: transparent;
+}
+
+/* A narrow desktop window has no room for Sign up beside the five tools; it
+   runs off the edge below about 900px. Log in's modal links to sign up, so
+   Log in takes the solid amber there. Phones fall under this too. */
 @media (max-width: 900px) {
   #sign-up-btn {
     display: none;
+  }
+
+  #sign-in-btn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+
+  #sign-in-btn:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
   }
 }
 
@@ -1448,12 +1467,17 @@ header .nav-icon circle {
   padding: var(--space-2) var(--space-4);
 }
 
-/* Two classes, so hovering keeps the accent instead of taking the plain
-   button's wash. */
+/* A dialog's main button is solid amber. Two classes, so hovering keeps
+   the fill instead of taking the plain button's wash. */
 .toggle-btn.modal-confirm {
-  background: var(--accent-wash);
+  background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--on-accent);
+}
+
+.toggle-btn.modal-confirm:not(:disabled):not(.danger-btn):hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 /* Losing work should look like it. */
