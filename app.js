@@ -68,6 +68,8 @@ const rhymesMenuBtn = document.getElementById('rhymes-menu-btn');
 const rhymesMenuPopoverEl = document.getElementById('rhymes-menu-popover');
 const headerEl = document.querySelector('header');
 const headerRightEl = document.querySelector('.header-right');
+const headerActionsEl = document.querySelector('.header-actions');
+const headerToolsEl = document.querySelector('.header-tools');
 const userAreaEl = document.getElementById('user-area');
 
 // ── Restore session state ──
@@ -1202,11 +1204,8 @@ function placeControlsForViewport() {
     headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
   } else {
     setRhymesMenuOpen(false);
-    headerEl.insertBefore(toggleBtn, headerRightEl);
-    headerEl.insertBefore(rhymeSchemeToggleEl, headerRightEl);
-    headerEl.insertBefore(internalRhymeToggleEl, headerRightEl);
-    headerEl.insertBefore(notebookBtn, headerRightEl);
-    headerEl.insertBefore(createBtn, headerRightEl);
+    headerActionsEl.append(notebookBtn, createBtn);
+    headerToolsEl.append(toggleBtn, rhymeSchemeToggleEl, internalRhymeToggleEl);
     headerRightEl.appendChild(userAreaEl);
   }
   controlsAreInBottomNav = wantsBottomNav;
