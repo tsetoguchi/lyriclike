@@ -279,10 +279,66 @@ header h1 {
   letter-spacing: var(--tracking-wordmark);
   text-transform: uppercase;
   color: var(--ink);
-  /* Grows to match .header-right, so the tool buttons between them sit in
-     the centre of the header. Flex, so the link only covers the logo. */
+  /* Flex, so the link only covers the logo. */
+  display: flex;
+}
+
+/* The logo and the file actions, where Notion, Linear and Figma keep them.
+   Grows to match .header-right, so the view tools between them sit in the
+   centre of the header. */
+.header-left {
   flex: 1 1 0;
   display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Going somewhere or making something: icon beside its name, set off from
+   the logo by a hairline. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+  border-left: var(--hairline) solid var(--rule);
+}
+
+header .header-actions .toggle-btn:has(> .nav-icon) {
+  flex-direction: row;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-caption-1);
+}
+
+header .header-actions .toggle-btn:has(> .nav-icon):hover {
+  background: var(--ink-wash);
+}
+
+header .header-actions .nav-icon {
+  width: var(--space-4);
+  height: var(--space-4);
+}
+
+/* What the lyrics show: three switches held in one outlined group, so they
+   read as settings of the page rather than places to go. The buttons give
+   up the space the outline takes, so the header keeps its height. */
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: var(--hairline) solid var(--rule);
+  border-radius: var(--radius-md);
+}
+
+header .header-tools .toggle-btn:has(> .nav-icon) {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+header .header-tools .toggle-btn:has(> .nav-icon).active {
+  background: var(--accent-wash);
 }
 
 /* The wordmark is the way home: a full page load back to the index. It keeps
@@ -290,9 +346,6 @@ header h1 {
 header h1 a {
   color: inherit;
   text-decoration: none;
-  /* Starts on the syllable margin line below. A margin inside the h1, not
-     header padding, so the centred tool buttons stay centred. */
-  margin-left: calc(var(--gutter-syllables) - var(--space-6));
 }
 
 /* The logo replaces the typeset title. The h1's type rules stay so the alt
@@ -1281,6 +1334,17 @@ header .nav-icon circle {
    runs off the edge below about 900px. Log in's modal links to sign up, so
    Log in takes the solid amber there. Phones fall under this too. */
 @media (max-width: 900px) {
+  /* Notebook and Create keep only their icons; the names stay for screen
+     readers and show on hover. */
+  .header-actions .nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   #sign-up-btn {
     display: none;
   }
@@ -2055,14 +2119,20 @@ body.signed-in #local-save-note {
     padding-top: calc(var(--space-3) + env(safe-area-inset-top));
   }
 
-  header h1 {
+  .header-left {
     grid-column: 2;
+    justify-content: center;
+  }
+
+  header h1 {
     width: auto;
     text-align: center;
   }
 
-  header h1 a {
-    margin-left: 0;
+  /* Their buttons move to the bottom bar on phones, leaving these empty. */
+  .header-actions,
+  .header-tools {
+    display: none;
   }
 
   /* Log in, or Account once signed in, sits on the right, where phone apps
