@@ -484,6 +484,57 @@ header .nav-icon circle {
   position: relative;
 }
 
+/* While the sample verse is showing, its clear link sits in a strip across
+   the top of the scroller. The strip is padding on the scroller itself, so
+   the gutters and the text move down together and every mark stays beside
+   its line. */
+.lyrics-area:has(> .sample-bar:not([hidden])) {
+  padding-top: var(--space-8);
+}
+
+/* A full-height column under the strip would always overflow by its height.
+   The editor's measured floor already fills the pad (see
+   resizeEditorToContent), so these can be their content's height. */
+.lyrics-area:has(> .sample-bar:not([hidden])) > .lyrics-wrapper,
+.lyrics-area:has(> .sample-bar:not([hidden])) > .rhyme-scheme-gutter {
+  min-height: 0;
+}
+
+/* Spans the scroller, so the sheet's centring margin is worked into its
+   padding to start the link where the lyrics start, as the title does. */
+.sample-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--space-8);
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--editor-pad) 0
+    calc(max(0px, (100% - var(--sheet-width)) / 2) + var(--sheet-syllables)
+      + var(--editor-pad) - var(--space-2));
+}
+
+.sample-bar[hidden] {
+  display: none;
+}
+
+.sample-clear {
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+  cursor: pointer;
+}
+
+.sample-clear:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 /* The annotation margin is only ruled off when there is something to write in
    it. Closed it takes no width at all, so the lyrics start at the paper's
    edge; opening widens it and the margin line arrives with it. */

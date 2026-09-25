@@ -1,6 +1,18 @@
 const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_TITLE = 'Untitled';
 const DRAFT_STORAGE_KEY = 'swag_draft';
+// Set once a visitor has cleared the sample verse or written over it.
+const SAMPLE_SEEN_KEY = 'sample_seen';
+// Shown to a first-time visitor so the counts and rhyme letters are on screen
+// before they have written anything. ABAB, so the letters show the pattern.
+const SAMPLE_VERSE = [
+  'I left the porch light on for you',
+  'The way I did the year before',
+  'The tea is cold, the sky is blue',
+  'And still I listen for the door',
+].join('\n');
+// The word the rhymes panel opens on: the first line's last word.
+const SAMPLE_PICKED_WORD = 'you';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -333,6 +345,7 @@ function scheduleSave() {
 async function performSave() {
   const body = document.getElementById('lyrics').value;
   if (!body.trim()) return;
+  if (isSampleShowing()) return;
   if (body === lastSavedBody) return;
 
   setSaveIndicator('Saving...');
@@ -363,6 +376,9 @@ async function performSave() {
 }
 
 function saveDraft() {
+  // The sample is not the visitor's writing, and a draft holding it would
+  // make them look like a returning visitor next time.
+  if (isSampleShowing()) return;
   localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
     id: currentLyricId,
     title: currentTitle,
@@ -445,6 +461,62 @@ function clearLyricState() {
   if (window.resetRhymesPanel) window.resetRhymesPanel();
 }
 
+// ── Sample verse ──
+
+let sampleShowing = false;
+
+function isSampleShowing() {
+  return sampleShowing && document.getElementById('lyrics').value === SAMPLE_VERSE;
+}
+
+// A visitor is new when this device has never kept a draft of theirs, even an
+// empty one, and they have not already cleared the sample away. Storage that
+// cannot be read counts as not new, so nobody's pad is ever covered by it.
+function isFirstVisit() {
+  try {
+    return localStorage.getItem(DRAFT_STORAGE_KEY) === null
+      && localStorage.getItem(SAMPLE_SEEN_KEY) === null;
+  } catch {
+    return false;
+  }
+}
+
+function showSample() {
+  const textarea = document.getElementById('lyrics');
+  sampleShowing = true;
+  document.getElementById('sample-bar').hidden = false;
+  textarea.value = SAMPLE_VERSE;
+  textarea.dispatchEvent(new Event('input'));
+  if (window.showRhymesForWord) {
+    const start = SAMPLE_VERSE.indexOf(SAMPLE_PICKED_WORD);
+    window.showRhymesForWord(SAMPLE_PICKED_WORD, { start, end: start + SAMPLE_PICKED_WORD.length });
+  }
+}
+
+// Clearing it and writing over it both make the pad the visitor's own, so
+// the sample does not come back after either.
+function endSample() {
+  sampleShowing = false;
+  document.getElementById('sample-bar').hidden = true;
+  try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
+}
+
+function clearSample() {
+  const textarea = document.getElementById('lyrics');
+  textarea.value = '';
+  textarea.dispatchEvent(new Event('input'));
+  if (window.resetRhymesPanel) window.resetRhymesPanel();
+  textarea.focus();
+}
+
+// Listening on the scroller in the capture phase runs this before the
+// editor's own input handlers, so the link is gone by the time they measure
+// the page, and before the draft handler below decides whether to save.
+document.querySelector('.lyrics-area').addEventListener('input', () => {
+  if (sampleShowing && !isSampleShowing()) endSample();
+}, true);
+document.getElementById('sample-clear').addEventListener('click', clearSample);
+
 function restoreDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
@@ -460,4 +532,5 @@ function restoreDraft() {
   } catch {}
 }
 
-restoreDraft();
+if (isFirstVisit()) showSample();
+else restoreDraft();
