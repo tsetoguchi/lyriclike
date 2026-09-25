@@ -141,7 +141,6 @@
 
   /* Type scale — iOS Dynamic Type at the default size. Every label in the
      app is one of these; nothing sits between two steps. */
-  --text-caption-2: 11px;
   --text-caption-1: 12px;
   --text-footnote: 13px;
   --text-subhead: 15px;
@@ -216,6 +215,8 @@
   --google-text: #e3e3e3;
 
   /* Type */
+  /* Montserrat is the wordmark's face alone: every button, label and heading
+     sets in iA Writer with the lyrics, so the chrome reads as one app. */
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
 }
@@ -359,7 +360,6 @@ header h1 img {
 
 #status {
   font-family: var(--font-editor);
-  font-style: italic;
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
@@ -368,7 +368,7 @@ header h1 img {
    sets smaller and looser than capitals at the same size, so they sit a
    size up with the tracking closed to match. */
 .toggle-btn {
-  font-family: var(--font-display);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -403,7 +403,7 @@ header .toggle-btn:has(> .nav-icon) {
   border: none;
   color: var(--ink-faded);
   font-family: var(--font-editor);
-  font-size: var(--text-caption-2);
+  font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   letter-spacing: normal;
 }
@@ -1047,7 +1047,7 @@ header .nav-icon circle {
 }
 
 .rhyme-group-header .count {
-  font-size: var(--text-caption-2);
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
   background: var(--ink-wash);
   padding: var(--space-1) var(--space-2);
@@ -1264,7 +1264,6 @@ header .nav-icon circle {
   padding: var(--space-2) 0;
   color: var(--ink-faded);
   font-size: var(--text-footnote);
-  font-style: italic;
 }
 
 .empty-state {
@@ -1272,16 +1271,14 @@ header .nav-icon circle {
   text-align: center;
   color: var(--ink-faded);
   font-family: var(--font-editor);
-  font-style: italic;
   font-size: var(--text-footnote);
   line-height: 1.6;
 }
 
 .description {
-  font-size: var(--text-caption-2);
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
   padding: var(--space-1) var(--space-5) var(--space-2);
-  font-style: italic;
   display: none;
 }
 
@@ -1409,7 +1406,7 @@ header .nav-icon circle {
   align-items: center;
   padding: var(--space-4);
   border-bottom: var(--hairline) solid var(--rule);
-  font-family: var(--font-display);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -1581,7 +1578,7 @@ header .nav-icon circle {
 .modal-header {
   padding: var(--space-4);
   border-bottom: var(--hairline) solid var(--rule);
-  font-family: var(--font-display);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -1590,7 +1587,6 @@ header .nav-icon circle {
 
 .modal-label {
   font-family: var(--font-editor);
-  font-style: italic;
   font-size: var(--text-footnote);
   color: var(--ink-faded);
 }
@@ -1917,7 +1913,7 @@ header .nav-icon circle {
   gap: var(--space-2);
   padding: var(--space-4);
   border-bottom: var(--hairline) solid var(--rule);
-  font-family: var(--font-display);
+  font-family: var(--font-editor);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -1966,7 +1962,7 @@ header .nav-icon circle {
 
 .lyrics-list-date {
   font-family: var(--font-editor);
-  font-size: var(--text-caption-2);
+  font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
 
@@ -1977,7 +1973,7 @@ header .nav-icon circle {
 
 .lyrics-action-btn {
   font-family: var(--font-editor);
-  font-size: var(--text-caption-2);
+  font-size: var(--text-caption-1);
   padding: var(--space-1) var(--space-2);
   background: transparent;
   border: var(--hairline) solid var(--ink-border);
@@ -2000,7 +1996,6 @@ header .nav-icon circle {
   padding: var(--space-8) var(--space-4);
   color: var(--ink-faded);
   font-family: var(--font-editor);
-  font-style: italic;
   font-size: var(--text-footnote);
   text-align: center;
 }
@@ -2034,7 +2029,6 @@ header .nav-icon circle {
 
 #save-indicator {
   font-family: var(--font-editor);
-  font-style: italic;
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
   margin-left: var(--space-2);
@@ -2082,7 +2076,6 @@ body.signed-in #local-save-note {
    way a note is written in the margin. */
 .tab-word {
   font-family: var(--font-editor);
-  font-style: italic;
   font-weight: var(--weight-regular);
   text-transform: none;
   letter-spacing: 0;
@@ -2152,7 +2145,7 @@ body.signed-in #local-save-note {
   }
 
   .toggle-btn {
-    font-size: var(--text-caption-2);
+    font-size: var(--text-caption-1);
     padding: var(--space-2) var(--space-2);
   }
 
@@ -2174,7 +2167,7 @@ body.signed-in #local-save-note {
 
   /* Sized so both signed-in controls clear the centred wordmark. */
   #user-area .toggle-btn {
-    font-size: var(--text-caption-2);
+    font-size: var(--text-caption-1);
     padding: var(--space-1) var(--space-2);
     letter-spacing: var(--tracking-tight);
   }
@@ -2203,7 +2196,7 @@ body.signed-in #local-save-note {
     text-overflow: ellipsis;
     white-space: nowrap;
     padding: var(--space-3);
-    font-family: var(--font-display);
+    font-family: var(--font-editor);
     /* Written case, sized and tracked like the header's buttons. */
     font-size: var(--text-footnote);
     font-weight: var(--weight-bold);
@@ -2417,7 +2410,7 @@ body.signed-in #local-save-note {
     border-radius: 0;
     color: var(--ink-faded);
     font-family: var(--font-editor);
-    font-size: var(--text-caption-2);
+    font-size: var(--text-caption-1);
     font-weight: var(--weight-regular);
     letter-spacing: normal;
     text-transform: none;
