@@ -148,7 +148,7 @@ function readSidebarPreference() {
 
 function setSidebarOpen(isOpen, { remember = false } = {}) {
   document.body.classList.toggle('sidebar-open', isOpen);
-  document.getElementById('sidebar-open-btn').setAttribute('aria-expanded', String(isOpen));
+  document.getElementById('rail-open-btn').setAttribute('aria-expanded', String(isOpen));
   setNotebookButtonActive(isOpen);
   if (remember && isSidebarDocked()) {
     try {
@@ -540,7 +540,8 @@ titleEl.addEventListener('blur', () => {
 document.getElementById('notebook-btn').addEventListener('click', handleNotebookClick);
 document.getElementById('create-btn').addEventListener('click', handleCreateClick);
 document.getElementById('new-lyric-btn').addEventListener('click', handleCreateClick);
-document.getElementById('sidebar-open-btn').addEventListener('click', openLyricsList);
+document.getElementById('rail-open-btn').addEventListener('click', openLyricsList);
+document.getElementById('rail-new-btn').addEventListener('click', handleCreateClick);
 document.getElementById('sidebar-close-btn').addEventListener('click', hideSidebar);
 document.getElementById('sidebar-scrim').addEventListener('click', hideSidebar);
 document.addEventListener('keydown', e => {

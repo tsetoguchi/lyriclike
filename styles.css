@@ -100,6 +100,7 @@
   --rhymes-panel-width: 380px;
   --drawer-width: 320px;
   --sidebar-width: 260px;
+  --rail-width: 56px;
   --dialog-width: 400px;
   --resize-handle-width: 10px;
   --nav-icon-size: 24px;
@@ -285,8 +286,7 @@ header h1 {
   display: flex;
 }
 
-/* The sidebar's show button and the wordmark, both only while the sidebar
-   is hidden. Grows to match .header-right, so the view tools between them
+/* The wordmark, only while the sidebar is hidden. Grows to match .header-right, so the view tools between them
    sit in the centre of the header. */
 .header-left {
   flex: 1 1 0;
@@ -1905,9 +1905,36 @@ body.sidebar-open #sidebar-scrim {
     margin-left: var(--sidebar-width);
   }
 
-  body.sidebar-open #sidebar-open-btn,
   body.sidebar-open header h1 {
     display: none;
+  }
+}
+
+/* What stays of the sidebar while it is hidden, as in ChatGPT: a strip
+   with the show button and New page, so a new page never needs the sidebar
+   opened. It sits under the sidebar, which covers it when open. Phones have
+   the bottom bar's Notebook and Create instead. */
+#sidebar-rail {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  #sidebar-rail {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--rail-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding-top: var(--space-2);
+    background: var(--paper);
+    border-right: var(--hairline) solid var(--margin-line);
+    z-index: var(--z-bar);
+  }
+
+  #app-content {
+    margin-left: var(--rail-width);
   }
 }
 
@@ -2193,8 +2220,7 @@ body.signed-in .sidebar-bottom {
   /* Their buttons move to the bottom bar on phones, leaving these empty,
      and the bar's Notebook opens the sidebar. */
   .header-actions,
-  .header-tools,
-  #sidebar-open-btn {
+  .header-tools {
     display: none;
   }
 
