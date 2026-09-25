@@ -1322,11 +1322,13 @@ function isTouchPrimary() {
   return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
 
-// The intro line lives in index.html so the pad reads correctly before this
-// runs; only the rhyme hint is appended here, where the pointer is known.
+// The blank page's greeting lives in index.html so the pad reads correctly
+// before this runs; only its rhyme hint is set here, where the pointer is
+// known.
 function showFirstRunGuidance() {
   const isTouch = isTouchPrimary();
-  textareaEl.placeholder += '\n\n' + (isTouch ? RHYME_HINT_TOUCH : RHYME_HINT_POINTER);
+  document.getElementById('blank-greeting-hint').textContent =
+    isTouch ? RHYME_HINT_TOUCH : RHYME_HINT_POINTER;
 
   const emptyState = resultsEl.querySelector('.empty-state');
   if (emptyState) {

@@ -301,20 +301,15 @@ header h1 {
   display: none;
 }
 
-/* What the lyrics show: three switches held in one outlined group, so they
-   read as settings of the page rather than places to go. The buttons give
-   up the space the outline takes, so the header keeps its height. */
+/* What the lyrics show: three switches side by side, the ones that are on
+   washed amber, so they read as settings of the page. */
 .header-tools {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
-  border: var(--hairline) solid var(--rule);
-  border-radius: var(--radius-md);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon) {
-  padding: 1px var(--space-2);
   border-radius: var(--radius-sm);
 }
 
@@ -903,9 +898,43 @@ header .nav-icon circle {
   scrollbar-width: none;
 }
 
+/* The placeholder is kept for screen readers and to tell CSS the page is
+   blank; the greeting below is what shows. */
 #lyrics::placeholder {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* A blank page greets the writer, the way a new chat does in Gemini or
+   ChatGPT: a line where the lyrics will start and how to find rhymes under
+   it. It sits over the textarea without taking clicks, and goes the moment
+   there is a letter on the page. */
+#blank-greeting {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: var(--editor-pad);
+  pointer-events: none;
+  font-family: var(--font-editor);
   color: var(--ink-faded);
-  -webkit-text-fill-color: var(--ink-faded);
+}
+
+#lyrics:placeholder-shown + #blank-greeting {
+  display: block;
+}
+
+.blank-greeting-title {
+  font-size: var(--text-title-2);
+  line-height: var(--line-pitch);
+}
+
+.blank-greeting-hint {
+  margin-top: var(--space-2);
+  font-size: var(--text-subhead);
+  line-height: var(--line-pitch);
+  opacity: 0.8;
 }
 
 #lyrics::selection {

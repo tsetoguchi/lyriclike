@@ -96,9 +96,13 @@
         <div class="syllable-gutter" id="syllable-gutter"></div>
         <div class="lyrics-wrapper">
           <div id="lyrics-highlight" aria-hidden="true"></div>
-          <textarea id="lyrics" placeholder="Start writing your lyrics here..."
+          <textarea id="lyrics" placeholder="What are you writing today?"
                     autocomplete="off" autocorrect="on" autocapitalize="sentences"
                     spellcheck="false"></textarea>
+          <div id="blank-greeting" aria-hidden="true">
+            <p class="blank-greeting-title">What are you writing today?</p>
+            <p class="blank-greeting-hint" id="blank-greeting-hint">Click any word to see what rhymes with it.</p>
+          </div>
         </div>
         <div class="rhyme-scheme-gutter" id="rhyme-scheme-gutter"></div>
         <div id="line-measure"></div>
