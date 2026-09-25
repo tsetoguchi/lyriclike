@@ -450,11 +450,17 @@ function scheduleSave() {
   saveTimer = setTimeout(performSave, 1000);
 }
 
-async function performSave() {
-  const body = document.getElementById('lyrics').value;
-  if (!body.trim()) return;
-  if (isSampleShowing()) return;
-  if (body === lastSavedBody) return;
+// A renamed page is saved even when its words have not changed, and even
+// when it has none yet: the name is what the notebook lists it by. The sample
+// verse is not the visitor's writing, so it goes out as an empty page.
+async function performSave({ titleChanged = false } = {}) {
+  const typed = document.getElementById('lyrics').value;
+  if (!titleChanged) {
+    if (!typed.trim()) return;
+    if (isSampleShowing()) return;
+    if (typed === lastSavedBody) return;
+  }
+  const body = isSampleShowing() ? '' : typed;
 
   setSaveIndicator('Saving...');
   try {
@@ -542,8 +548,8 @@ titleEl.addEventListener('blur', () => {
     currentTitle = newTitle;
     saveDraft();
     clearTimeout(saveTimer);
-    performSave();
-    if (window.currentUser === null) loadLyricsList();
+    if (window.currentUser) performSave({ titleChanged: true });
+    else if (window.currentUser === null) loadLyricsList();
   }
 });
 document.getElementById('notebook-btn').addEventListener('click', handleNotebookClick);
@@ -649,12 +655,15 @@ function restoreDraft() {
     const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return;
     const { id, title, body } = JSON.parse(raw);
-    if (!body) return;
+    // A page with a name but no words yet still comes back under its name.
+    if (!body && (!title || title === DEFAULT_TITLE)) return;
     currentLyricId = id || currentLyricId;
-    currentTitle = title || 'Untitled';
-    const textarea = document.getElementById('lyrics');
-    textarea.value = body;
-    textarea.dispatchEvent(new Event('input'));
+    currentTitle = title || DEFAULT_TITLE;
+    if (body) {
+      const textarea = document.getElementById('lyrics');
+      textarea.value = body;
+      textarea.dispatchEvent(new Event('input'));
+    }
     updatePanelHeader();
   } catch {}
 }
