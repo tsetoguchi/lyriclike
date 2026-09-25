@@ -22,7 +22,7 @@ const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
 const SIGNED_OUT_MESSAGE = 'Log in to see your notebook';
-const PLACEHOLDER_TITLE = 'Untitled song';
+const PLACEHOLDER_TITLE = 'Untitled page';
 // Whether the docked sidebar was last left open, per device.
 const SIDEBAR_STORAGE_KEY = 'sidebar_open';
 // Wide enough for the sidebar, the sheet and the rhymes panel side by side.
