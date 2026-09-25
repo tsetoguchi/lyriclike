@@ -220,8 +220,17 @@ async function handleCreateClick() {
 // sidebar has fallen behind the title on screen.
 let listedTitles = new Map();
 
+// New page needs a notebook to add to, so it stays off until an account is
+// known. Runs whenever the list does, which is whenever sign-in changes.
+function setNewPageEnabled(isEnabled) {
+  for (const id of ['new-lyric-btn', 'rail-new-btn']) {
+    document.getElementById(id).disabled = !isEnabled;
+  }
+}
+
 async function loadLyricsList() {
   const container = document.getElementById('lyrics-list-items');
+  setNewPageEnabled(Boolean(window.currentUser));
 
   // Signed out, the only page is the one in this browser. Before the sign-in
   // check answers there is nothing to say yet.
