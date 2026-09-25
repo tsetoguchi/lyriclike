@@ -31,8 +31,10 @@ let nameWords = null;
 // so this is state rather than a constant only because setEnglishOnly()
 // keeps it reachable for a settings page.
 let englishOnly = true;
-let syllablesVisible = sessionStorage.getItem('syllablesVisible') === '1';
-let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') === '1';
+// Syllable counts and rhyme letters are what the app is for, so they start on.
+// Only a writer who has switched one off this session keeps it off.
+let syllablesVisible = sessionStorage.getItem('syllablesVisible') !== '0';
+let rhymeSchemeVisible = sessionStorage.getItem('rhymeSchemeVisible') !== '0';
 let internalRhymesVisible = sessionStorage.getItem('internalRhymesVisible') === '1';
 let blocklist = null;
 let debounceTimer = null;
@@ -662,7 +664,10 @@ function resizeEditorToContent() {
   // mid-page while the gutters beside it run on. The floor is measured
   // rather than declared: a percentage min-height resolves against the
   // wrapper, whose own height is content-driven, so it never applies.
-  textareaEl.style.height = Math.max(contentHeight, lyricsAreaEl.clientHeight) + 'px';
+  // The sample verse's clear link sits above the text in the same scroller,
+  // so the floor is what is left under it; otherwise the pad always scrolls.
+  const floor = lyricsAreaEl.clientHeight - textareaEl.parentElement.offsetTop;
+  textareaEl.style.height = Math.max(contentHeight, floor) + 'px';
 
   lyricsAreaEl.scrollTop = scrollTop;
 }
@@ -1350,6 +1355,22 @@ function resetRhymesPanel() {
 
 window.resetRhymesPanel = resetRhymesPanel;
 
+// Fills the rhymes panel for a word the writer did not pick, so the sample
+// verse arrives with the panel already at work. It leaves focus and the caret
+// alone: nothing should jump or raise a keyboard on first load.
+function showRhymesForWord(word, bounds) {
+  pickHighlightWord(word, bounds, false);
+  selectedContextEl.textContent = getWordContext(textareaEl.value, bounds.start);
+  if (!rhymeIndex) {
+    showPendingRhymes(word);
+    ensureRhymeData();
+    return;
+  }
+  renderResults(word, findRhymes(word));
+}
+
+window.showRhymesForWord = showRhymesForWord;
+
 let resizeRAF = null;
 
 function handleWindowResize() {
@@ -1433,8 +1454,9 @@ async function loadBlocklist() {
   blocklist = await loadWordSet('blocklist.json', 'loadBlocklist');
 }
 
-// A margin left open earlier in the session is already asking for the data, so
-// it is fetched now rather than on the next interaction. A first visit to an
-// empty pad fetches nothing until the writer reaches for it. A restored draft
-// arrives through storage.js, which dispatches an input event of its own.
+// An open margin is already asking for the data, so it is fetched now rather
+// than on the next interaction. Both margins start open, so this is every load
+// unless the writer has switched them off this session. A restored draft or
+// the sample verse arrives through storage.js, which dispatches an input
+// event of its own.
 if (syllablesVisible || rhymeSchemeVisible || internalRhymesVisible) ensureRhymeData();
