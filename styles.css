@@ -1989,6 +1989,14 @@ body.sidebar-open #sidebar-scrim {
   background: var(--ink-wash);
 }
 
+/* Signed out there is no notebook to add a page to, so New page reads as
+   out of reach. It still answers a click, with the sign-up view. */
+body:not(.signed-in) #new-lyric-btn,
+body:not(.signed-in) #rail-new-btn {
+  color: var(--ink-faded);
+  opacity: 0.55;
+}
+
 .sidebar-item svg {
   width: 18px;
   height: 18px;
