@@ -2140,43 +2140,6 @@ body.signed-in .sidebar-bottom {
   font-weight: var(--weight-regular);
 }
 
-/* Where a signed-out writer's page lives, said once and quietly at the end
-   of the title row. It is also the gentlest sign-up prompt the app has.
-   Signed in, the save indicator speaks for the page instead. Phones hide the
-   whole title row, so this goes with it. On a sheet too narrow for both it
-   drops under the title rather than squeeze it. */
-#local-save-note {
-  margin-left: auto;
-  min-width: 0;
-  text-align: right;
-  font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
-  font-weight: var(--weight-regular);
-  color: var(--ink-faded);
-}
-
-body.signed-in #local-save-note {
-  display: none;
-}
-
-#local-save-sign-up {
-  font: inherit;
-  color: var(--ink);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: var(--ink-border);
-  text-underline-offset: 2px;
-  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
-}
-
-#local-save-sign-up:hover {
-  color: var(--accent);
-  text-decoration-color: var(--accent);
-}
-
 /* The word the rhymes tab is currently holding, written beside its name the
    way a note is written in the margin. */
 .tab-word {
