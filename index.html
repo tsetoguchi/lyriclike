@@ -28,9 +28,29 @@
   <script src="analytics.js"></script>
 </head>
 <body>
+  <div id="sidebar-scrim"></div>
+  <aside id="sidebar" aria-label="My Notebook">
+    <div class="sidebar-top">
+      <a class="sidebar-wordmark" href="/"><img src="assets/wordmark.png" alt="LyricLike" width="89" height="28"></a>
+      <button id="sidebar-close-btn" class="icon-btn sidebar-toggle" aria-label="Hide sidebar" title="Hide sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
+    </div>
+    <div class="sidebar-nav">
+      <button id="new-lyric-btn" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New page</button>
+    </div>
+    <h2 class="sidebar-label">Pages</h2>
+    <div id="lyrics-list-items"></div>
+    <div class="sidebar-bottom">
+      <div id="sidebar-signup-card">
+        <p class="sidebar-card-title">Keep every song you write</p>
+        <p class="sidebar-card-text">Sign up to save pages to your notebook and open them on any device.</p>
+        <button id="sidebar-sign-up-btn" class="toggle-btn" type="button">Sign up</button>
+      </div>
+    </div>
+  </aside>
   <div id="app-content">
   <header>
     <div class="header-left">
+      <button id="sidebar-open-btn" class="icon-btn sidebar-toggle" aria-label="Show sidebar" title="Show sidebar" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button>
       <h1><a href="/"><img src="assets/wordmark.png" alt="LyricLike" width="89" height="28"></a></h1>
       <div class="header-actions">
         <button id="notebook-btn" class="toggle-btn" aria-expanded="false" title="My Notebook"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="13" height="18" rx="2"/><line x1="10" y1="3" x2="10" y2="21"/></svg><span class="nav-label">My Notebook</span></button>
@@ -216,16 +236,6 @@
           <button class="auth-link" type="button" data-auth-link="new-reset-link">Send a new link</button>
         </div>
       </div>
-    </div>
-  </div>
-  <div id="lyrics-list-overlay">
-    <div id="lyrics-list-panel">
-      <div id="lyrics-list-panel-header">
-        <span>My Notebook</span>
-        <button id="new-lyric-btn" class="icon-btn" aria-label="New page" title="New page">+</button>
-        <button id="close-lyrics-list-btn" class="icon-btn">&#x2715;</button>
-      </div>
-      <div id="lyrics-list-items"></div>
     </div>
   </div>
   <script src="rhyme-core.js"></script>

@@ -19,6 +19,8 @@ function showUser(user) {
   document.body.classList.add('signed-in');
   document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
+  // The sidebar shows the notebook's pages once it knows whose they are.
+  if (window.refreshNotebook) window.refreshNotebook();
 }
 
 function showSignIn() {
@@ -26,6 +28,7 @@ function showSignIn() {
   document.body.classList.remove('signed-in');
   document.getElementById('signed-out-actions').style.display = '';
   document.getElementById('user-info').style.display = 'none';
+  if (window.refreshNotebook) window.refreshNotebook();
 }
 
 function openAccountSettings() {
@@ -61,6 +64,7 @@ function openSignUp() {
 document.getElementById('sign-in-btn').addEventListener('click', openSignIn);
 document.getElementById('sign-up-btn').addEventListener('click', openSignUp);
 document.getElementById('local-save-sign-up').addEventListener('click', openSignUp);
+document.getElementById('sidebar-sign-up-btn').addEventListener('click', openSignUp);
 
 // An explicit sign-out or a deleted account leaves nothing of the account on
 // screen. An expired session does not come through here, so writing that

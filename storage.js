@@ -22,6 +22,12 @@ const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
 const SIGNED_OUT_MESSAGE = 'Log in to see your notebook';
+const PLACEHOLDER_TITLE = 'Untitled song';
+// Whether the docked sidebar was last left open, per device.
+const SIDEBAR_STORAGE_KEY = 'sidebar_open';
+// Wide enough for the sidebar, the sheet and the rhymes panel side by side.
+// Narrower, the sidebar slides over the page instead of pushing it.
+const SIDEBAR_DOCK_QUERY = window.matchMedia('(min-width: 1200px)');
 const LOAD_FAILED_MESSAGE = 'Could not open your notebook';
 const CREATE_ACCOUNT_MESSAGE =
   'Your notebook saves every page you write, so you can pick it up again on '
@@ -122,29 +128,70 @@ function askForLyricName({ heading, confirmLabel, value }) {
   });
 }
 
+// ── Sidebar ──
+
+// One sidebar at every size. Wide, it is docked beside the page, open until
+// the writer hides it, and remembered that way. Narrower, it slides over the
+// page and gets out of the way once a page is picked.
+function isSidebarDocked() {
+  return SIDEBAR_DOCK_QUERY.matches;
+}
+
+// Storage that cannot be read leaves it open: the notebook is the default.
+function readSidebarPreference() {
+  try {
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+function setSidebarOpen(isOpen, { remember = false } = {}) {
+  document.body.classList.toggle('sidebar-open', isOpen);
+  document.getElementById('sidebar-open-btn').setAttribute('aria-expanded', String(isOpen));
+  setNotebookButtonActive(isOpen);
+  if (remember && isSidebarDocked()) {
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, isOpen ? '1' : '0');
+    } catch {
+      // Not remembered this time; the sidebar still opens and closes.
+    }
+  }
+}
+
+function isSidebarOpen() {
+  return document.body.classList.contains('sidebar-open');
+}
+
 function openLyricsList() {
-  document.getElementById('lyrics-list-overlay').classList.add('open');
-  setNotebookButtonActive(true);
+  setSidebarOpen(true, { remember: true });
   loadLyricsList();
 }
 
+// Picking or making a page puts a sliding sidebar away. A docked one stays.
 function closeLyricsList() {
-  document.getElementById('lyrics-list-overlay').classList.remove('open');
-  setNotebookButtonActive(false);
+  if (!isSidebarDocked()) setSidebarOpen(false);
 }
 
-// The notebook button lights up amber while the notebook is open, like the
-// other tool buttons do while their tool is on.
+function hideSidebar() {
+  setSidebarOpen(false, { remember: true });
+}
+
+function placeSidebarForViewport() {
+  setSidebarOpen(isSidebarDocked() && readSidebarPreference());
+}
+
+// The phone bar's notebook button lights up amber while the sidebar is open,
+// like the other tool buttons do while their tool is on.
 function setNotebookButtonActive(isActive) {
   const button = document.getElementById('notebook-btn');
   button.classList.toggle('active', isActive);
   button.setAttribute('aria-expanded', String(isActive));
 }
 
-// Signed out, the notebook has nothing to show, so the button asks for an
-// account instead, in the sign-in modal's Create account view. currentUser is
-// null only once the sign-in check has answered; before that, the list opens
-// and handles a signed-out reply.
+// Signed out, a new page would have no notebook to live in, so New page asks
+// for an account instead, in the sign-in modal's Create account view.
+// currentUser is null only once the sign-in check has answered.
 async function promptForAccount() {
   if (window.openAuthModal) {
     await window.openAuthModal({ view: 'sign-up', message: CREATE_ACCOUNT_MESSAGE });
@@ -153,16 +200,14 @@ async function promptForAccount() {
   }
 }
 
-async function handleNotebookClick() {
-  if (window.currentUser === null) {
-    await promptForAccount();
-    return;
+function handleNotebookClick() {
+  if (isSidebarOpen()) {
+    hideSidebar();
+  } else {
+    openLyricsList();
   }
-  openLyricsList();
 }
 
-// Signed out, a new lyric would have no notebook to live in, so Create asks
-// for an account the same way the notebook does.
 async function handleCreateClick() {
   if (window.currentUser === null) {
     await promptForAccount();
@@ -171,9 +216,25 @@ async function handleCreateClick() {
   await createLyric();
 }
 
+// What the list last showed for each page, so a save can tell whether the
+// sidebar has fallen behind the title on screen.
+let listedTitles = new Map();
+
 async function loadLyricsList() {
   const container = document.getElementById('lyrics-list-items');
-  showListMessage(container, LOADING_MESSAGE);
+
+  // Signed out, the only page is the one in this browser. Before the sign-in
+  // check answers there is nothing to say yet.
+  if (window.currentUser === null) {
+    showLocalPage(container);
+    return;
+  }
+  if (window.currentUser === undefined) {
+    showListMessage(container, LOADING_MESSAGE);
+    return;
+  }
+
+  if (!container.querySelector('.lyrics-list-item')) showListMessage(container, LOADING_MESSAGE);
 
   try {
     const res = await fetch('/api/lyrics');
@@ -192,6 +253,7 @@ async function loadLyricsList() {
     }
 
     const lyrics = await res.json();
+    listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
     if (lyrics.length === 0) {
       showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
       return;
@@ -199,29 +261,64 @@ async function loadLyricsList() {
 
     container.innerHTML = '';
     for (const lyric of lyrics) {
-      const item = document.createElement('div');
-      item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
-
-      item.innerHTML = `
-        <div class="lyrics-list-item-main">
-          <span class="lyrics-list-title">${escapeHtml(lyric.title)}</span>
-          <span class="lyrics-list-date">${formatDate(lyric.created_at)}</span>
-        </div>
-        <div class="lyrics-list-actions">
-          <button class="lyrics-action-btn">Rename</button>
-          <button class="lyrics-action-btn lyrics-delete-btn">Delete</button>
-        </div>
-      `;
-
-      item.querySelector('.lyrics-list-item-main').addEventListener('click', () => loadLyric(lyric.id));
-      item.querySelectorAll('.lyrics-action-btn')[0].addEventListener('click', e => { e.stopPropagation(); renameLyric(lyric.id, lyric.title); });
-      item.querySelectorAll('.lyrics-action-btn')[1].addEventListener('click', e => { e.stopPropagation(); deleteLyric(lyric.id, lyric.title); });
-
-      container.appendChild(item);
+      container.appendChild(buildListItem(lyric));
     }
   } catch {
     showListMessage(container, LOAD_FAILED_MESSAGE);
   }
+}
+
+const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
+
+// A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
+// wait at the end of the row until it is hovered or focused.
+function buildListItem(lyric) {
+  const item = document.createElement('div');
+  item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
+  item.dataset.id = lyric.id;
+  const title = escapeHtml(lyric.title);
+
+  item.innerHTML = `
+    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}">${title}</button>
+    <div class="lyrics-list-actions">
+      <button class="lyrics-action-btn" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
+      <button class="lyrics-action-btn lyrics-delete-btn" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>
+    </div>
+  `;
+
+  item.querySelector('.lyrics-list-open').addEventListener('click', () => loadLyric(lyric.id));
+  const [renameBtn, deleteBtn] = item.querySelectorAll('.lyrics-action-btn');
+  renameBtn.addEventListener('click', () => renameLyric(lyric.id, lyric.title));
+  deleteBtn.addEventListener('click', () => deleteLyric(lyric.id, lyric.title));
+  return item;
+}
+
+// The page a signed-out writer has, shown the way a saved one would be so
+// the notebook they would get is already in view.
+function showLocalPage(container) {
+  const title = escapeHtml(titleForDisplay(currentTitle) || PLACEHOLDER_TITLE);
+  container.innerHTML = `
+    <div class="lyrics-list-item active">
+      <button class="lyrics-list-open" title="Saved in this browser">${title}</button>
+    </div>
+  `;
+  container.querySelector('.lyrics-list-open').addEventListener('click', () => {
+    closeLyricsList();
+    document.getElementById('lyrics').focus();
+  });
+}
+
+function markActiveListItem() {
+  for (const item of document.querySelectorAll('#lyrics-list-items .lyrics-list-item[data-id]')) {
+    item.classList.toggle('active', item.dataset.id === currentLyricId);
+  }
+}
+
+// After a save, the list is only fetched again if it shows this page under
+// another title, or not at all.
+function refreshListIfBehind() {
+  if (listedTitles.get(currentLyricId) !== currentTitle) loadLyricsList();
 }
 
 function showListMessage(container, message) {
@@ -243,6 +340,7 @@ async function loadLyric(id) {
 
   setSaveIndicator('');
   updatePanelHeader();
+  markActiveListItem();
   closeLyricsList();
 }
 
@@ -284,6 +382,7 @@ async function saveNewLyric() {
     lastSavedBody = '';
     setSaveIndicator('Saved');
     setTimeout(() => setSaveIndicator(''), 3000);
+    refreshListIfBehind();
   } catch {
     setSaveIndicator('Save failed');
   }
@@ -370,6 +469,7 @@ async function performSave() {
     lastSavedBody = body;
     setSaveIndicator('Saved');
     setTimeout(() => setSaveIndicator(''), 3000);
+    refreshListIfBehind();
   } catch {
     setSaveIndicator('Save failed');
   }
@@ -434,15 +534,25 @@ titleEl.addEventListener('blur', () => {
     saveDraft();
     clearTimeout(saveTimer);
     performSave();
+    if (window.currentUser === null) loadLyricsList();
   }
 });
 document.getElementById('notebook-btn').addEventListener('click', handleNotebookClick);
 document.getElementById('create-btn').addEventListener('click', handleCreateClick);
-document.getElementById('new-lyric-btn').addEventListener('click', createLyric);
-document.getElementById('close-lyrics-list-btn').addEventListener('click', closeLyricsList);
-document.getElementById('lyrics-list-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('lyrics-list-overlay')) closeLyricsList();
+document.getElementById('new-lyric-btn').addEventListener('click', handleCreateClick);
+document.getElementById('sidebar-open-btn').addEventListener('click', openLyricsList);
+document.getElementById('sidebar-close-btn').addEventListener('click', hideSidebar);
+document.getElementById('sidebar-scrim').addEventListener('click', hideSidebar);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && isSidebarOpen() && !isSidebarDocked()) hideSidebar();
 });
+SIDEBAR_DOCK_QUERY.addEventListener('change', placeSidebarForViewport);
+placeSidebarForViewport();
+// Two frames: the first paints the sidebar where it was placed, the second
+// lets later changes animate.
+requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('sidebar-animate')));
+window.refreshNotebook = loadLyricsList;
+loadLyricsList();
 
 // Expose state for autosave (step 6).
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
@@ -463,6 +573,7 @@ function clearLyricState() {
   setSaveIndicator('');
   updatePanelHeader();
   closeLyricsList();
+  listedTitles = new Map();
   document.getElementById('lyrics-list-items').innerHTML = '';
   if (window.resetRhymesPanel) window.resetRhymesPanel();
 }
