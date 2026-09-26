@@ -76,17 +76,19 @@ const headerToolsEl = document.querySelector('.header-tools');
 const userAreaEl = document.getElementById('user-area');
 
 // ── Restore session state ──
-if (syllablesVisible) {
-  toggleBtn.classList.add('active');
-  gutterEl.classList.add('visible');
+
+// aria-pressed is what tells a screen reader the switch is on; the class is
+// only how it looks.
+function setToggleState(button, isOn) {
+  button.classList.toggle('active', isOn);
+  button.setAttribute('aria-pressed', isOn ? 'true' : 'false');
 }
-if (rhymeSchemeVisible) {
-  rhymeSchemeToggleEl.classList.add('active');
-  rhymeSchemeGutterEl.classList.add('visible');
-}
-if (internalRhymesVisible) {
-  internalRhymeToggleEl.classList.add('active');
-}
+
+setToggleState(toggleBtn, syllablesVisible);
+setToggleState(rhymeSchemeToggleEl, rhymeSchemeVisible);
+setToggleState(internalRhymeToggleEl, internalRhymesVisible);
+gutterEl.classList.toggle('visible', syllablesVisible);
+rhymeSchemeGutterEl.classList.toggle('visible', rhymeSchemeVisible);
 syncRhymesMenuButton();
 
 // ── Dictionary loading ──
@@ -891,7 +893,7 @@ function invalidateLineHeightCache() {
 function toggleRhymeScheme() {
   rhymeSchemeVisible = !rhymeSchemeVisible;
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
-  rhymeSchemeToggleEl.classList.toggle('active', rhymeSchemeVisible);
+  setToggleState(rhymeSchemeToggleEl, rhymeSchemeVisible);
   syncRhymesMenuButton();
   // Showing or hiding either margin changes the editor's width, so the text
   // re-wraps for both of them; openGutter() re-measures both.
@@ -913,7 +915,7 @@ function openGutter(gutterElement, isVisible) {
 function toggleSyllables() {
   syllablesVisible = !syllablesVisible;
   sessionStorage.setItem('syllablesVisible', syllablesVisible ? '1' : '0');
-  toggleBtn.classList.toggle('active', syllablesVisible);
+  setToggleState(toggleBtn, syllablesVisible);
   openGutter(gutterEl, syllablesVisible);
 }
 
@@ -923,7 +925,7 @@ function toggleSyllables() {
 function toggleInternalRhymes() {
   internalRhymesVisible = !internalRhymesVisible;
   sessionStorage.setItem('internalRhymesVisible', internalRhymesVisible ? '1' : '0');
-  internalRhymeToggleEl.classList.toggle('active', internalRhymesVisible);
+  setToggleState(internalRhymeToggleEl, internalRhymesVisible);
   syncRhymesMenuButton();
   if (internalRhymesVisible) ensureRhymeData();
   invalidateInternalRhymeMarks();
