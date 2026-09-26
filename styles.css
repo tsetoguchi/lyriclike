@@ -1027,6 +1027,11 @@ header .nav-icon circle {
    It sticks at the list's very top edge, above the list's own top padding;
    at zero, a strip of chips showed through that padding above it. */
 .rhyme-group-header {
+  /* A button, so the keyboard reaches it; these undo the button look. */
+  width: 100%;
+  border: none;
+  color: inherit;
+  text-align: left;
   position: sticky;
   top: calc(-1 * var(--space-2));
   z-index: 1;
