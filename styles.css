@@ -538,7 +538,7 @@ header .nav-icon circle {
 }
 
 /* Spans the scroller, so the sheet's centring margin is worked into its
-   padding to start the link where the lyrics start, as the title does. */
+   padding to start the note where the lyrics start, as the title does. */
 .sample-bar {
   position: absolute;
   top: 0;
@@ -546,10 +546,46 @@ header .nav-icon circle {
   right: 0;
   height: var(--space-8);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  gap: var(--space-3);
   padding: 0 var(--editor-pad) 0
     calc(max(0px, (100% - var(--sheet-width)) / 2) + var(--sheet-syllables)
-      + var(--editor-pad) - var(--space-2));
+      + var(--editor-pad));
+}
+
+.sample-note {
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+  white-space: nowrap;
+}
+
+/* A phone has room for the button or the note, not both, and the button is
+   the one that says what to do. */
+@media (max-width: 480px) {
+  .sample-note {
+    display: none;
+  }
+
+  /* The button stays its drawn size; the finger gets a full tap target.
+     It reaches down into the gap above the first line, since the scroller
+     clips anything above its top edge. */
+  .sample-bar {
+    z-index: 1;
+  }
+
+  .sample-clear {
+    position: relative;
+  }
+
+  .sample-clear::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: var(--tap-target);
+  }
 }
 
 .sample-bar[hidden] {
@@ -557,19 +593,22 @@ header .nav-icon circle {
 }
 
 .sample-clear {
-  padding: var(--space-1) var(--space-2);
-  background: none;
-  border: none;
+  padding: var(--space-1) var(--space-3);
+  background: var(--accent-wash);
+  border: var(--hairline) solid var(--accent-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
-  color: var(--ink-faded);
+  font-weight: var(--weight-bold);
+  color: var(--accent);
   cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 
 .sample-clear:hover {
-  color: var(--ink);
-  text-decoration: underline;
+  background: var(--accent-wash-strong);
+  border-color: var(--accent);
 }
 
 /* The annotation margin is only ruled off when there is something to write in
