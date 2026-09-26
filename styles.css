@@ -296,8 +296,8 @@ header h1 {
   gap: var(--space-2);
 }
 
-/* The phone bar's Notebook and New page wait here on wider screens, where the
-   sidebar has New page and the pages instead. */
+/* The phone bar's Notebook and Create wait here on wider screens, where the
+   sidebar has Create page and the pages instead. */
 .header-actions {
   display: none;
 }
@@ -1949,9 +1949,9 @@ body.sidebar-open #sidebar-scrim {
 }
 
 /* What stays of the sidebar while it is hidden, as in ChatGPT: a strip
-   with the show button and New page, so a new page never needs the sidebar
+   with the show button and Create page, so a new page never needs the sidebar
    opened. It sits under the sidebar, which covers it when open. Phones have
-   the bottom bar's Notebook and New page instead. */
+   the bottom bar's Notebook and Create instead. */
 #sidebar-rail {
   display: none;
 }
@@ -2317,7 +2317,7 @@ body.signed-in .sidebar-bottom {
   }
 
   /* No room for two buttons either. Log in's modal links to sign up, and the
-     bottom bar's Notebook and New page open the sign-up view. */
+     bottom bar's Notebook and Create open the sign-up view. */
   #sign-up-btn {
     display: none;
   }
