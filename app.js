@@ -206,7 +206,7 @@ function buildGroupHtml(key, name, desc, words) {
   console.assert(Array.isArray(words), 'buildGroupHtml: words must be an array');
 
   return `<div class="rhyme-group" data-type="${key}">
-    <div class="rhyme-group-header">
+    <button type="button" class="rhyme-group-header" aria-expanded="false">
       <span class="name">
         <span class="dot dot-${key}"></span>
         ${name}
@@ -215,7 +215,7 @@ function buildGroupHtml(key, name, desc, words) {
         <span class="count">${formatGroupCount(words.length)}</span>
         <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
       </span>
-    </div>
+    </button>
     <div class="description">${desc}</div>
     <div class="rhyme-group-body"></div>
   </div>`;
@@ -232,6 +232,35 @@ function populateGroupBody(group) {
   group.dataset.populated = '1';
 }
 
+// The groups the writer has opened, by type, kept from word to word. The
+// strongest group with any words always opens as well, so a picked word shows
+// rhymes rather than a menu of headers.
+let openRhymeTypes = new Set();
+
+function listOpenTypes(keys) {
+  return keys.filter((key, i) => i === 0 || openRhymeTypes.has(key));
+}
+
+function openGroups(openKeys) {
+  for (const key of openKeys) {
+    const group = resultsEl.querySelector(`.rhyme-group[data-type="${key}"]`);
+    if (!group) continue;
+    populateGroupBody(group);
+    setGroupOpen(group, true);
+  }
+}
+
+function setGroupOpen(group, isOpen) {
+  group.classList.toggle('open', isOpen);
+  const header = group.querySelector('.rhyme-group-header');
+  if (header) header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function rememberOpenGroups() {
+  const open = resultsEl.querySelectorAll('.rhyme-group.open');
+  openRhymeTypes = new Set(Array.from(open, (group) => group.dataset.type));
+}
+
 function renderResults(word, results) {
   if (typeof word !== 'string') return;
   selectedWordEl.textContent = word;
@@ -245,14 +274,16 @@ function renderResults(word, results) {
     return;
   }
 
-  let html = '';
-  for (let i = 0; i < RHYME_TYPES.length; i++) {
-    const { key, name, desc } = RHYME_TYPES[i];
-    const words = results[key];
-    html += buildGroupHtml(key, name, desc, words);
+  // A group with no words is left out: a row reading "0" only says so.
+  const shown = RHYME_TYPES.filter(({ key }) => results[key].length > 0);
+  if (shown.length === 0) {
+    resultsEl.innerHTML = '<div class="empty-state">No rhymes for this word. Try a word near it in the line.</div>';
+    return;
   }
-
-  resultsEl.innerHTML = html || '<div class="empty-state">No rhymes found</div>';
+  resultsEl.innerHTML = shown
+    .map(({ key, name, desc }) => buildGroupHtml(key, name, desc, results[key]))
+    .join('');
+  openGroups(listOpenTypes(shown.map(({ key }) => key)));
 }
 
 // ── Word highlight overlay ──
@@ -1018,8 +1049,10 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   if (header) {
     const group = header.parentElement;
     if (!group) return;
-    if (!group.classList.contains('open')) populateGroupBody(group);
-    group.classList.toggle('open');
+    const isOpening = !group.classList.contains('open');
+    if (isOpening) populateGroupBody(group);
+    setGroupOpen(group, isOpening);
+    rememberOpenGroups();
     return;
   }
 
