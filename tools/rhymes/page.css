@@ -1,8 +1,10 @@
 /* Stylesheet for the static rhyme pages, copied to /rhymes/rhymes.css by
    build-pages.mjs. styles.css is built around the full-screen editor (a
    locked, non-scrolling body), so these reading pages carry their own layout.
-   The colors and faces repeat the app's Blue Hour tokens so both read as one
-   product; if the palette changes in styles.css, change it here too. */
+   The colors, faces and shapes repeat the app's so both read as one product:
+   the page is a printed copy of the editor's rhymes panel, under the same
+   header bar. If the palette or the panel's chips change in styles.css,
+   change them here too. */
 
 @font-face {
   font-family: 'iA Writer Quattro';
@@ -23,11 +25,15 @@
 :root {
   --paper: #141922;
   --paper-card: #1c222d;
-  --desk: #0a0d13;
+  --paper-panel: #181e28;
   --rule: #2c3441;
+  --margin-line: #3b4553;
   --accent: #e9b45f;
+  --accent-hover: #f2c47a;
+  --on-accent: #141922;
   --ink: #e2e7ef;
   --ink-faded: #8b96a6;
+  --ink-wash: rgba(226, 231, 239, 0.07);
   --ink-wash-strong: rgba(226, 231, 239, 0.14);
   --ink-border: rgba(226, 231, 239, 0.22);
 
@@ -48,18 +54,22 @@
   --space-8: 32px;
   --space-10: 40px;
 
+  --text-caption-1: 12px;
   --text-footnote: 13px;
   --text-subhead: 15px;
+  --text-callout: 16px;
   --text-body: 17px;
   --text-title-3: 20px;
   --text-title-1: 28px;
 
+  --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 12px;
   --radius-pill: 999px;
   --dot-size: 8px;
+  --hairline: 1px;
   --page-width: 760px;
-  --tracking-wordmark: 0.14em;
+  --gutter: var(--space-4);
+  --wordmark-height: 28px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -69,13 +79,13 @@ html {
   text-size-adjust: 100%;
 }
 
+/* The rhymes panel's surface, so a page reads as the panel laid flat. */
 body {
   font-family: var(--font-editor);
   font-size: var(--text-body);
   line-height: 1.55;
-  background: var(--desk);
+  background: var(--paper-panel);
   color: var(--ink);
-  padding-inline: var(--space-4);
 }
 
 a { color: var(--ink); }
@@ -85,34 +95,49 @@ a { color: var(--ink); }
   outline-offset: 2px;
 }
 
-.site-header,
+/* The app's header bar: full width, darker paper, one line under it. Its
+   contents line up with the reading column below. */
+.site-header {
+  background: var(--paper);
+  border-bottom: var(--hairline) solid var(--margin-line);
+  padding: var(--space-2) var(--gutter);
+}
+
+.site-header-inner,
 .page,
 .site-footer {
   max-width: var(--page-width);
   margin-inline: auto;
 }
 
-.site-header {
+.site-header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding-block: var(--space-4);
-  border-bottom: 1px solid var(--rule);
 }
 
-.wordmark {
-  font-family: var(--font-editor);
-  font-weight: 700;
-  letter-spacing: var(--tracking-wordmark);
-  text-transform: uppercase;
-  text-decoration: none;
+/* Padding sits outside the column's width, so the text lines up with the
+   header's contents at every size. */
+.page,
+.site-footer {
+  box-sizing: content-box;
+  padding-inline: var(--gutter);
+}
+
+.wordmark img {
+  display: block;
+  height: var(--wordmark-height);
+  width: auto;
 }
 
 .header-link {
   color: var(--ink-faded);
   font-size: var(--text-subhead);
+  text-decoration: none;
 }
+
+.header-link:hover { color: var(--ink); }
 
 .page {
   padding-block: var(--space-8);
@@ -127,7 +152,6 @@ a { color: var(--ink); }
 .breadcrumb a { color: var(--ink-faded); }
 
 h1 {
-  font-family: var(--font-editor);
   font-size: var(--text-title-1);
   line-height: 1.2;
   margin-bottom: var(--space-4);
@@ -135,6 +159,7 @@ h1 {
 
 .answer {
   font-size: var(--text-title-3);
+  line-height: 1.45;
   margin-bottom: var(--space-2);
 }
 
@@ -143,17 +168,23 @@ h1 {
   margin-bottom: var(--space-6);
 }
 
+/* The one call to act on the page, drawn as the app draws its own: a card
+   like its dialogs, and the solid amber button Sign up uses. */
 .cta {
   background: var(--paper-card);
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-lg);
+  border: var(--hairline) solid var(--margin-line);
+  border-radius: var(--radius-md);
   padding: var(--space-4);
   margin-bottom: var(--space-8);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3) var(--space-4);
+}
+
+/* The hub page has no fact line between its answer and the card. */
+.answer + .cta {
+  margin-top: var(--space-6);
 }
 
 .cta p {
@@ -164,39 +195,37 @@ h1 {
 .cta-button {
   display: inline-block;
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-pill);
-  color: var(--accent);
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--on-accent);
+  font-size: var(--text-subhead);
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
 }
 
-.cta-button:hover { background: rgba(233, 180, 95, 0.10); }
+.cta-button:hover { background: var(--accent-hover); }
 
+/* Sections stack like the panel's groups: no cards, a line between each. */
 .rhyme-section,
 .related,
 .letter-section {
-  background: var(--paper-card);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  margin-bottom: var(--space-4);
+  border-top: var(--hairline) solid var(--rule);
+  padding-block: var(--space-6);
 }
 
+/* Dot, name, then the count pushed to the far edge, as in a group header. */
 h2 {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-2);
   font-size: var(--text-title-3);
+  line-height: 1.3;
 }
 
 h3 {
   font-size: var(--text-footnote);
   font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--ink-faded);
   margin-top: var(--space-4);
   margin-bottom: var(--space-2);
@@ -217,12 +246,13 @@ h3 {
 .dot-consonance { background: var(--rhyme-consonance); }
 
 .count {
-  font-size: var(--text-footnote);
+  margin-left: auto;
+  font-size: var(--text-caption-1);
   font-weight: 400;
   color: var(--ink-faded);
-  border: 1px solid var(--ink-border);
+  background: var(--ink-wash);
   border-radius: var(--radius-pill);
-  padding: 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
 }
 
 .type-desc,
@@ -231,25 +261,36 @@ h3 {
   color: var(--ink-faded);
 }
 
-.more { margin-top: var(--space-3); }
+.type-desc { margin-top: var(--space-1); }
+.more { margin-top: var(--space-4); }
 
 .rhyme-list,
 .related-list {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
+  gap: var(--space-2);
 }
 
+/* The panel's chips: a faint wash, small corners, the type's colour. */
 .rhyme-word {
   display: inline-block;
-  font-family: var(--font-editor);
   font-size: var(--text-subhead);
+  line-height: 1.4;
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
+  background: var(--ink-wash);
+  border-radius: var(--radius-sm);
   text-decoration: none;
 }
 
+/* The words a lyric is most likely to use: a step bigger and heavier. */
+.rhyme-word.common {
+  font-size: var(--text-callout);
+  font-weight: 700;
+}
+
+/* A word with a page of its own keeps a faint underline, so the chips that
+   go somewhere can be told from the ones that do not. */
 a.rhyme-word {
   text-decoration: underline;
   text-decoration-color: var(--ink-border);
@@ -270,22 +311,25 @@ a.rhyme-word:hover { background: var(--ink-wash-strong); }
 
 .related-list a {
   display: inline-block;
-  font-family: var(--font-editor);
   font-size: var(--text-subhead);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--ink-wash);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
 }
+
+.related-list a:hover { background: var(--ink-wash-strong); }
 
 .letter-jump {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-3);
   margin-bottom: var(--space-4);
-  font-family: var(--font-editor);
 }
 
 .site-footer {
   padding-block: var(--space-6) var(--space-10);
-  border-top: 1px solid var(--rule);
+  border-top: var(--hairline) solid var(--rule);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
 }
