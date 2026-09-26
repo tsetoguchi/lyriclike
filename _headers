@@ -32,6 +32,9 @@
 /name-words.json
   Cache-Control: public, max-age=2592000
 
+/crude-words.json
+  Cache-Control: public, max-age=2592000
+
 # The blocklist gates rhyme results, so an update needs to propagate quickly.
 /blocklist.json
   Cache-Control: public, max-age=3600

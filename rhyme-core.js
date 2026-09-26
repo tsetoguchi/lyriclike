@@ -360,10 +360,23 @@
 
   // Closeness orders a group, but it cannot tell "pain" from "legerdemain" or
   // "wayne". Tiers put the words a lyric can use first: common words, then the
-  // rest, then names and rare words, each tier keeping the closeness order.
+  // rest, then names, rare words and crude words, each tier keeping the
+  // closeness order.
 
-  function rhymeTier(word, ranks, names) {
-    if (names && names.has(word)) return 'buried';
+  // Sounds, not words: "the" and "a" only rhyme in their rare stressed
+  // readings, and "uh" leading the list for "love" reads as noise.
+  const FILLER_WORDS = new Set(['a', 'an', 'the', 'uh', 'um', 'huh', 'hmm', 'mm', 'er', 'erm']);
+
+  // A word is buried for what it is before how common it is: "fuck" is
+  // common, and still not what a rhyme list should open on.
+  function isBuriedWord(word, buried) {
+    if (FILLER_WORDS.has(word)) return true;
+    if (buried.names && buried.names.has(word)) return true;
+    return Boolean(buried.crude && buried.crude.has(word));
+  }
+
+  function rhymeTier(word, ranks, buried) {
+    if (isBuriedWord(word, buried)) return 'buried';
     // Before the word list lands nothing is known about commonness, and
     // burying every word would be the same as burying none.
     if (!ranks) return 'plain';
@@ -372,12 +385,13 @@
     return rank < RARE_RANK_LIMIT ? 'plain' : 'buried';
   }
 
-  // ranks and names may be null, like findRhymes' filters. Returns
-  // { word, tier } so the panel can draw common words heavier.
-  function tierRhymeWords(words, ranks, names) {
+  // ranks, names and crude may each be null, like findRhymes' filters.
+  // Returns { word, tier } so the panel can draw common words heavier.
+  function tierRhymeWords(words, ranks, names, crude) {
+    const buried = { names: names || null, crude: crude || null };
     const tiers = Object.fromEntries(RHYME_TIERS.map((tier) => [tier, []]));
     for (const word of words) {
-      const tier = rhymeTier(word, ranks, names);
+      const tier = rhymeTier(word, ranks, buried);
       tiers[tier].push({ word, tier });
     }
     return RHYME_TIERS.flatMap((tier) => tiers[tier]);

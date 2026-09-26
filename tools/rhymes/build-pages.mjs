@@ -22,8 +22,11 @@ const STYLESHEET_SOURCE = new URL('./page.css', import.meta.url);
 
 // Autocomplete surfaces slang and fragments ("ty"), so a page also needs the
 // word to be on the same English list the editor filters results with.
-function isPageCandidate(word, index, filters) {
-  return filters.englishWords.has(word) && !filters.blocklist.has(word) && hasRhymeEntry(index, word);
+// A crude word gets no page of its own, the same as it never leads a list.
+function isPageCandidate(word, index, data) {
+  const { filters } = data;
+  if (!filters.englishWords.has(word) || filters.blocklist.has(word)) return false;
+  return !data.crude.has(word) && hasRhymeEntry(index, word);
 }
 
 function selectPages(index, data) {
@@ -31,7 +34,7 @@ function selectPages(index, data) {
   const seen = new Set();
   for (const word of data.popularWords) {
     if (pages.length >= MAX_PAGES) break;
-    if (seen.has(word) || !isPageCandidate(word, index, data.filters)) continue;
+    if (seen.has(word) || !isPageCandidate(word, index, data)) continue;
     seen.add(word);
     const results = findRhymes(index, word, data.filters);
     if (countListedRhymes(results) >= MIN_LISTED_RHYMES) pages.push({ word, results });
@@ -66,12 +69,13 @@ async function writePage(path, html) {
   await writeFile(new URL('index.html', dir), html);
 }
 
-async function writeRhymePages(pages, index, ranks) {
+async function writeRhymePages(pages, index, data) {
+  const { ranks, names, crude } = data;
   const pageWords = new Set(pages.map((page) => page.word));
   for (let position = 0; position < pages.length; position++) {
     const { word, results } = pages[position];
     const related = pickRelated(pages, position);
-    const model = buildPageModel({ word, results, index, ranks, related });
+    const model = buildPageModel({ word, results, index, ranks, names, crude, related });
     await writePage(rhymePagePath(word), renderRhymePage(model, pageWords));
   }
 }
@@ -87,7 +91,7 @@ async function main() {
   const pages = selectPages(index, data);
 
   await resetOutputDir();
-  await writeRhymePages(pages, index, data.ranks);
+  await writeRhymePages(pages, index, data);
   await writePage(RHYMES_PATH, renderHubPage(pages.map((page) => page.word)));
   await copyFile(STYLESHEET_SOURCE, new URL('rhymes.css', OUTPUT_DIR));
   await writeSitemap(pages);

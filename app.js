@@ -27,6 +27,9 @@ let wordRanks = null;
 // lists last. Null until name-words.json lands; nothing is buried as a name
 // until then.
 let nameWords = null;
+// Swear and sex words, listed last like names so no group opens on one.
+// Null until crude-words.json lands.
+let crudeWords = null;
 // English-only filtering is always on. Its button was removed from the UI,
 // so this is state rather than a constant only because setEnglishOnly()
 // keeps it reachable for a settings page.
@@ -107,6 +110,9 @@ function ensureRhymeData() {
   loadNameWords().then(refreshCurrentResults).catch(function onNameWordsError(err) {
     console.error(err);
   });
+  loadCrudeWords().then(refreshCurrentResults).catch(function onCrudeWordsError(err) {
+    console.error(err);
+  });
 
   // The blocklist gates rhyme results, so it is required alongside the
   // dictionary rather than after it.
@@ -159,7 +165,7 @@ function findRhymes(targetWord) {
   // Each group becomes { word, tier } entries, common words first and names
   // and rare words last, so the panel can weight the chips it draws.
   for (const { key } of RHYME_TYPES) {
-    results[key] = RhymeCore.tierRhymeWords(results[key], wordRanks, nameWords);
+    results[key] = RhymeCore.tierRhymeWords(results[key], wordRanks, nameWords, crudeWords);
   }
   return results;
 }
@@ -1449,6 +1455,10 @@ async function loadEnglishWords() {
 
 async function loadNameWords() {
   nameWords = await loadWordSet('name-words.json', 'loadNameWords');
+}
+
+async function loadCrudeWords() {
+  crudeWords = await loadWordSet('crude-words.json', 'loadCrudeWords');
 }
 
 async function loadBlocklist() {
