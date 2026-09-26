@@ -71,10 +71,10 @@ function renderHead({ title, description, path }) {
 }
 
 function renderSiteHeader() {
-  return `<header class="site-header">
-<a class="wordmark" href="/">${SITE_NAME}</a>
+  return `<header class="site-header"><div class="site-header-inner">
+<a class="wordmark" href="/"><img src="/assets/wordmark.png" alt="${SITE_NAME}" width="89" height="28"></a>
 <a class="header-link" href="${RHYMES_PATH}">Rhyming dictionary</a>
-</header>`;
+</div></header>`;
 }
 
 function renderCallToAction() {
@@ -106,15 +106,17 @@ ${renderFooter()}
 
 // ── Rhyme page ──
 
-function renderWordItem(word, typeKey, pageWords) {
+// Common words are drawn a step heavier, as in the editor's panel.
+function renderWordItem({ word, tier }, typeKey, pageWords) {
   const label = escapeHtml(word);
-  if (!pageWords.has(word)) return `<li class="rhyme-word color-${typeKey}">${label}</li>`;
-  return `<li><a class="rhyme-word color-${typeKey}" href="${rhymePagePath(word)}">${label}</a></li>`;
+  const classes = `rhyme-word color-${typeKey}${tier === 'common' ? ' common' : ''}`;
+  if (!pageWords.has(word)) return `<li class="${classes}">${label}</li>`;
+  return `<li><a class="${classes}" href="${rhymePagePath(word)}">${label}</a></li>`;
 }
 
 function renderSyllableGroup(group, typeKey, pageWords) {
   const label = group.syllables === 1 ? '1 syllable' : `${group.syllables} syllables`;
-  const items = group.words.map((word) => renderWordItem(word, typeKey, pageWords)).join('');
+  const items = group.words.map((entry) => renderWordItem(entry, typeKey, pageWords)).join('');
   return `<h3>${label}</h3>
 <ul class="rhyme-list">${items}</ul>`;
 }
@@ -125,7 +127,7 @@ function renderSection(section, pageWords) {
     ? `<p class="more">Showing ${section.shownCount} of ${section.total.toLocaleString('en-US')}. The editor lists them all.</p>`
     : '';
   return `<section class="rhyme-section">
-<h2><span class="dot dot-${section.key}"></span>${section.name} rhymes <span class="count">${section.total.toLocaleString('en-US')}</span></h2>
+<h2><span class="dot dot-${section.key}"></span>${section.name} rhymes<span class="count">${section.total.toLocaleString('en-US')}</span></h2>
 <p class="type-desc">${escapeHtml(section.desc)}</p>
 ${groups.join('\n')}
 ${note}

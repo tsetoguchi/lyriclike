@@ -15,19 +15,20 @@ const LOOSE_RHYME_TYPES = ['assonance', 'consonance'];
 // editor's panel uses, so a page and the app never disagree about which rhyme
 // is the best one. The editor lists names, rare words and crude words last; a
 // page leaves them out, since it is often the first thing a visitor sees.
+// Returns { word, tier }, so a page can draw common words heavier as the
+// panel does.
 function rankRhymes(words, context) {
   const ranked = rankRhymeWords(context.index, context.word, words, context.ranks);
   return tierRhymeWords(ranked, context.ranks, context.names, context.crude)
-    .filter(({ tier }) => tier !== 'buried')
-    .map(({ word }) => word);
+    .filter(({ tier }) => tier !== 'buried');
 }
 
-function groupBySyllables(words, index) {
+function groupBySyllables(entries, index) {
   const groups = new Map();
-  for (const word of words) {
-    const syllables = countSyllables(index, word);
+  for (const entry of entries) {
+    const syllables = countSyllables(index, entry.word);
     if (!groups.has(syllables)) groups.set(syllables, []);
-    groups.get(syllables).push(word);
+    groups.get(syllables).push(entry);
   }
   return [...groups].sort((a, b) => a[0] - b[0]).map(([syllables, list]) => ({ syllables, words: list }));
 }
@@ -57,7 +58,7 @@ function topWords(results, typeKeys, context) {
   for (const key of typeKeys) {
     const needed = SUMMARY_EXAMPLE_COUNT - examples.length;
     if (needed <= 0) break;
-    examples.push(...rankRhymes(results[key], context).slice(0, needed));
+    examples.push(...rankRhymes(results[key], context).slice(0, needed).map(({ word }) => word));
   }
   return examples;
 }
