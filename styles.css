@@ -2027,7 +2027,7 @@ body.sidebar-open #sidebar-scrim {
   background: var(--ink-wash);
 }
 
-/* Signed out there is no notebook to add a page to, so New page is switched
+/* Signed out there is no notebook to add a page to, so Create page is switched
    off until an account is known: faded, and no hover to suggest otherwise. */
 #new-lyric-btn:disabled,
 #rail-new-btn:disabled {
