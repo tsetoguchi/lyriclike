@@ -156,6 +156,10 @@ describe('findRhymes', () => {
     assert.equal(listed.includes('bat'), false);
   });
 
+  it('gives no rhymes for a blocked word typed as the target', () => {
+    assert.equal(findRhymes(INDEX, 'bat', FILTERS), null);
+  });
+
   it('never lists the word itself', () => {
     const results = findRhymes(INDEX, 'cat', FILTERS);
     const listed = RHYME_TYPES.flatMap(({ key }) => results[key]);
