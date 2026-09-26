@@ -255,7 +255,9 @@
   // filters.englishWords and filters.wordRanks may both be null: the editor
   // searches before those lists have arrived rather than making the writer
   // wait for them.
+  // A blocked word is never looked up either, so typing one gives no rhymes.
   function findRhymes(index, targetWord, filters) {
+    if (filters.blocklist.has(targetWord)) return null;
     if (!hasRhymeEntry(index, targetWord)) return null;
     const target = index.rhymeIndex[targetWord];
     const results = Object.fromEntries(RHYME_TYPES.map(({ key }) => [key, []]));
