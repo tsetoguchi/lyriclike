@@ -16,7 +16,7 @@ const SAMPLE_PICKED_WORD = 'you';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
-const NEW_LYRIC_HEADING = 'New page';
+const NEW_LYRIC_HEADING = 'Create page';
 const DELETE_LYRIC_HEADING = 'Delete page';
 const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
@@ -189,7 +189,7 @@ function setNotebookButtonActive(isActive) {
   button.setAttribute('aria-expanded', String(isActive));
 }
 
-// Signed out, a new page would have no notebook to live in, so New page asks
+// Signed out, a new page would have no notebook to live in, so Create page asks
 // for an account instead, in the sign-in modal's Create account view.
 // currentUser is null only once the sign-in check has answered.
 async function promptForAccount() {
@@ -220,7 +220,7 @@ async function handleCreateClick() {
 // sidebar has fallen behind the title on screen.
 let listedTitles = new Map();
 
-// New page needs a notebook to add to, so it stays off until an account is
+// Create page needs a notebook to add to, so it stays off until an account is
 // known. Runs whenever the list does, which is whenever sign-in changes.
 function setNewPageEnabled(isEnabled) {
   for (const id of ['new-lyric-btn', 'rail-new-btn']) {
@@ -354,7 +354,7 @@ async function loadLyric(id) {
 }
 
 async function createLyric() {
-  const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create page', value: '' });
+  const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create', value: '' });
   if (name === null) return;
 
   currentLyricId = crypto.randomUUID();
