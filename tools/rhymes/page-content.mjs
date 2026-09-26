@@ -4,18 +4,22 @@
 
 import rhymeCore from '../../rhyme-core.js';
 
-const { RHYME_TYPES, countSyllables, getStressedSyllable, rankRhymeWords } = rhymeCore;
+const { RHYME_TYPES, countSyllables, getStressedSyllable, rankRhymeWords, tierRhymeWords } = rhymeCore;
 
 const MAX_WORDS_PER_TYPE = 100;
 const SUMMARY_EXAMPLE_COUNT = 5;
 // Strongest first, so the answer at the top draws from the closest sounds.
 const NEAR_RHYME_TYPES = ['family', 'additive', 'subtractive'];
 const LOOSE_RHYME_TYPES = ['assonance', 'consonance'];
-// Closest sound first, then commonest word — the same order the editor's
-// panel puts its results in, so a page and the app never disagree about which
-// rhyme is the best one.
+// Common words first, then closest sound: the same tiers and order the
+// editor's panel uses, so a page and the app never disagree about which rhyme
+// is the best one. The editor lists names, rare words and crude words last; a
+// page leaves them out, since it is often the first thing a visitor sees.
 function rankRhymes(words, context) {
-  return rankRhymeWords(context.index, context.word, words, context.ranks);
+  const ranked = rankRhymeWords(context.index, context.word, words, context.ranks);
+  return tierRhymeWords(ranked, context.ranks, context.names, context.crude)
+    .filter(({ tier }) => tier !== 'buried')
+    .map(({ word }) => word);
 }
 
 function groupBySyllables(words, index) {
@@ -28,16 +32,22 @@ function groupBySyllables(words, index) {
   return [...groups].sort((a, b) => a[0] - b[0]).map(([syllables, list]) => ({ syllables, words: list }));
 }
 
+function buildSection(type, results, context) {
+  const shown = rankRhymes(results[type.key], context).slice(0, MAX_WORDS_PER_TYPE);
+  return {
+    ...type,
+    total: results[type.key].length,
+    shownCount: shown.length,
+    groups: groupBySyllables(shown, context.index)
+  };
+}
+
+// A type whose every word was left out gets no section, rather than a heading
+// over an empty list.
 function buildSections(results, context) {
-  return RHYME_TYPES.filter(({ key }) => results[key].length > 0).map((type) => {
-    const shown = rankRhymes(results[type.key], context).slice(0, MAX_WORDS_PER_TYPE);
-    return {
-      ...type,
-      total: results[type.key].length,
-      shownCount: shown.length,
-      groups: groupBySyllables(shown, context.index)
-    };
-  });
+  return RHYME_TYPES
+    .map((type) => buildSection(type, results, context))
+    .filter((section) => section.shownCount > 0);
 }
 
 // Fills from the strongest type before touching the next, so a handful of
@@ -64,9 +74,9 @@ export function countListedRhymes(results) {
   return RHYME_TYPES.reduce((sum, { key }) => sum + results[key].length, 0);
 }
 
-export function buildPageModel({ word, results, index, ranks, related }) {
+export function buildPageModel({ word, results, index, ranks, names, crude, related }) {
   const targetSyllables = countSyllables(index, word);
-  const context = { index, ranks, word };
+  const context = { index, ranks, names, crude, word };
   return {
     word,
     syllables: targetSyllables,

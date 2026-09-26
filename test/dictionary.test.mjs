@@ -24,15 +24,18 @@ async function readRepoJson(relativePath) {
 let index;
 let filters;
 let nameWords;
+let crudeWords;
 
 before(async () => {
-  const [dictionary, englishWords, blocklist, names] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names, crude] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json'),
     readRepoJson('blocklist.json'),
-    readRepoJson('name-words.json')
+    readRepoJson('name-words.json'),
+    readRepoJson('crude-words.json')
   ]);
   nameWords = new Set(names);
+  crudeWords = new Set(crude);
   index = buildRhymeIndex(dictionary);
   const wordRanks = new Map();
   englishWords.forEach((word, rank) => {
@@ -108,6 +111,21 @@ describe('shipped dictionary', () => {
     assert.ok(firstRow.includes('pain') && firstRow.includes('train'));
     const buried = perfect.filter(({ tier }) => tier === 'buried').map(({ word }) => word);
     assert.ok(buried.includes('wayne') && buried.includes('legerdemain'));
+  });
+
+  it('never opens a group on a crude word', () => {
+    const assonance = tierRhymeWords(findRhymes(index, 'love', filters).assonance,
+      filters.wordRanks, nameWords, crudeWords);
+    const unburied = assonance.filter(({ tier }) => tier !== 'buried').map(({ word }) => word);
+    for (const crude of ['fuck', 'fucked', 'slut']) {
+      assert.ok(!unburied.includes(crude), `love lists ${crude} ahead of the buried words`);
+    }
+  });
+
+  it('only lists real words as crude', () => {
+    for (const word of crudeWords) {
+      assert.ok(filters.englishWords.has(word), `${word} is not in english-words.json`);
+    }
   });
 
   it('never lists an everyday word as a name', () => {

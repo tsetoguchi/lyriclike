@@ -194,6 +194,17 @@ describe('tierRhymeWords', () => {
     assert.deepEqual(tiered.map(({ word }) => word), ['pain', 'drain', 'slain']);
   });
 
+  it('buries crude words and filler however common they are', () => {
+    const ranks = new Map([['the', 1], ['uh', 2], ['fuck', 3], ['glove', 900]]);
+    const tiered = tierRhymeWords(['the', 'uh', 'fuck', 'glove'], ranks, null, new Set(['fuck']));
+    assert.deepEqual(tiered, [
+      { word: 'glove', tier: 'common' },
+      { word: 'the', tier: 'buried' },
+      { word: 'uh', tier: 'buried' },
+      { word: 'fuck', tier: 'buried' }
+    ]);
+  });
+
   it('changes nothing before the word lists have loaded', () => {
     assert.deepEqual(tierRhymeWords(WORDS, null, null).map(({ word }) => word), WORDS);
   });

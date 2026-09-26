@@ -34,12 +34,14 @@ async function loadPopularWords() {
 }
 
 export async function loadBuildData() {
-  const [dictionary, englishWords, blocklist, ranks, popularWords] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names, crude, ranks, popularWords] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json').then((words) => new Set(words)),
     readRepoJson('blocklist.json').then((words) => new Set(words)),
+    readRepoJson('name-words.json').then((words) => new Set(words)),
+    readRepoJson('crude-words.json').then((words) => new Set(words)),
     loadFrequencyRanks(),
     loadPopularWords()
   ]);
-  return { dictionary, filters: { englishWords, blocklist }, ranks, popularWords };
+  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords };
 }

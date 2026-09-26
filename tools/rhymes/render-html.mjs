@@ -122,7 +122,7 @@ function renderSyllableGroup(group, typeKey, pageWords) {
 function renderSection(section, pageWords) {
   const groups = section.groups.map((group) => renderSyllableGroup(group, section.key, pageWords));
   const note = section.total > section.shownCount
-    ? `<p class="more">Showing the ${section.shownCount} closest of ${section.total.toLocaleString('en-US')}. The editor lists them all.</p>`
+    ? `<p class="more">Showing ${section.shownCount} of ${section.total.toLocaleString('en-US')}. The editor lists them all.</p>`
     : '';
   return `<section class="rhyme-section">
 <h2><span class="dot dot-${section.key}"></span>${section.name} rhymes <span class="count">${section.total.toLocaleString('en-US')}</span></h2>
