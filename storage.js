@@ -354,7 +354,7 @@ async function loadLyric(id) {
 }
 
 async function createLyric() {
-  const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create', value: '' });
+  const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create page', value: '' });
   if (name === null) return;
 
   currentLyricId = crypto.randomUUID();
