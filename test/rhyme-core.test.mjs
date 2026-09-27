@@ -603,6 +603,20 @@ describe('groupRhymeMarks', () => {
     assert.ok(slantMarks.flat().every((m) => m.isSlant === true));
   });
 
+  it('draws line endings that rhyme perfectly solid even when they are far apart', () => {
+    // cat and hat share a scheme letter six lines apart, past the window.
+    const perfect = ['cat', 'one', 'two', 'three', 'four', 'five', 'hat'];
+    const perfectMarks = groupRhymeMarks(MARK_INDEX, perfect).marks.flat();
+    assert.equal(perfectMarks.length, 2);
+    assert.ok(perfectMarks.every((m) => m.isSlant === false));
+
+    // sky / night far apart is still only additive.
+    const slant = ['sky', 'one', 'two', 'three', 'four', 'five', 'night'];
+    const slantMarks = groupRhymeMarks(MARK_INDEX, slant).marks.flat();
+    assert.equal(slantMarks.length, 2);
+    assert.ok(slantMarks.every((m) => m.isSlant === true));
+  });
+
   it('calls a word slant when even one word in its family is a loose match', () => {
     // light / sight is perfect, but night is only additive against sky.
     const lines = ['the sky went on', 'a night went on', 'and light went on'];

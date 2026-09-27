@@ -1027,18 +1027,24 @@
   }
 
   // How well a word rhymes with the least good match among the family words it
-  // is heard against — a repeat of its own sound does not count. A word with
-  // no such partner in range keeps the strength it was linked with.
+  // is heard against — a repeat of its own sound does not count. A line ending
+  // with no such partner in range sits in the family only through its scheme
+  // letter, so it is judged by its closest match among the far ones instead:
+  // "cat" ten lines above "hat" is still a perfect rhyme. A word with no
+  // partner at all keeps the strength it was linked with.
   function weakestLinkStrength(i, members, candidates, linkStrength) {
     const word = candidates[i];
     let weakest = Infinity;
+    let bestFar = -Infinity;
     for (const j of members) {
       const other = candidates[j];
-      if (j === i || !word.splits || !other.splits) continue;
-      if (!isWithinWindow(word, other) || isRepeat(word, other)) continue;
-      weakest = Math.min(weakest, bestPronunciationMatch(word, other).strength);
+      if (j === i || !word.splits || !other.splits || isRepeat(word, other)) continue;
+      const strength = bestPronunciationMatch(word, other).strength;
+      if (isWithinWindow(word, other)) weakest = Math.min(weakest, strength);
+      else bestFar = Math.max(bestFar, strength);
     }
-    return weakest === Infinity ? linkStrength[i] : weakest;
+    if (weakest !== Infinity) return weakest;
+    return bestFar === -Infinity ? linkStrength[i] : bestFar;
   }
 
   // Unmarkable words never take a mark, even as a family's largest member —
