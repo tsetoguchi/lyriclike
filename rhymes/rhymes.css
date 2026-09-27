@@ -61,6 +61,7 @@
   --text-body: 17px;
   --text-title-3: 20px;
   --text-title-1: 28px;
+  --text-pledge: clamp(18px, 3.4vw, 26px);
 
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -70,6 +71,7 @@
   --page-width: 760px;
   --gutter: var(--space-4);
   --wordmark-height: 28px;
+  --pledge-gutter: 40px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -330,27 +332,133 @@ a.rhyme-word:focus-visible {
 
 .site-footer a { color: var(--ink-faded); }
 
-/* Plain text pages such as /privacy/: paragraphs and headings need air that
-   the rhyme pages get from their own components. */
-.prose p,
-.prose ul {
-  margin-block: 0 var(--space-4);
+/* ── /privacy/ ── */
+
+/* The promise is written the way the editor shows a verse: counts in the
+   margin, a rule down the margin, the lines on the memo card. The counts are
+   what the app itself gives these lines, so they hold up if anyone checks. */
+.pledge {
+  margin-bottom: var(--space-8);
+  padding-block: var(--space-4);
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--margin-line);
+  border-radius: var(--radius-md);
+  font-size: var(--text-pledge);
+  line-height: 1.7;
 }
 
-.prose ul {
+.pledge-line {
+  display: grid;
+  grid-template-columns: var(--pledge-gutter) 1fr;
+  column-gap: var(--space-4);
+  padding-right: var(--space-4);
+}
+
+.pledge-count {
+  border-right: var(--hairline) solid var(--rule);
+  padding-right: var(--space-3);
+  color: var(--ink-faded);
+  font-size: var(--text-footnote);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  /* Centred on the first line, as the editor sets a wrapped line's count. */
+  line-height: calc(var(--text-pledge) * 1.7);
+}
+
+.privacy section {
+  border-top: var(--hairline) solid var(--rule);
+  padding-block: var(--space-6);
+}
+
+.privacy h2 {
+  margin-bottom: var(--space-3);
+}
+
+.privacy section p,
+.privacy section ul {
+  max-width: 64ch;
+}
+
+.privacy ul {
   padding-left: var(--space-6);
 }
 
-.prose li + li {
+.privacy li + li {
   margin-top: var(--space-2);
 }
 
-.prose h2 {
-  margin-block: var(--space-8) var(--space-3);
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-subhead);
+  line-height: 1.45;
 }
 
-.prose .updated {
-  margin-top: var(--space-8);
+.ledger th,
+.ledger td {
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  border-bottom: var(--hairline) solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ledger thead th {
+  padding-top: 0;
   color: var(--ink-faded);
   font-size: var(--text-footnote);
+  font-weight: 400;
+}
+
+.ledger tbody th {
+  width: 40%;
+  font-weight: 700;
+}
+
+.ledger td:last-child {
+  color: var(--ink-faded);
+}
+
+.ledger tr > :last-child {
+  padding-right: 0;
+}
+
+/* The next section's rule closes the table. */
+.ledger tbody tr:last-child > * {
+  border-bottom: none;
+}
+
+.updated {
+  padding-bottom: var(--space-2);
+  color: var(--ink-faded);
+  font-size: var(--text-footnote);
+}
+
+/* Three columns leave a phone a few words per line, so each row stacks:
+   what, then where, then for how long in the fainter ink. */
+@media (max-width: 560px) {
+  .ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .ledger tr {
+    display: block;
+    padding-block: var(--space-3);
+    border-bottom: var(--hairline) solid var(--rule);
+  }
+
+  .ledger tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .ledger tbody th,
+  .ledger td {
+    display: block;
+    width: auto;
+    padding: 0;
+    border: none;
+  }
 }
