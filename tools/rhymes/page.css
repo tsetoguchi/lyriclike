@@ -289,15 +289,15 @@ h3 {
   font-weight: 700;
 }
 
-/* A word with a page of its own keeps a faint underline, so the chips that
-   go somewhere can be told from the ones that do not. */
-a.rhyme-word {
+/* Every chip looks the same at rest; an underline on only some of them read
+   as random. A word with a page of its own shows it on hover or focus. */
+a.rhyme-word:hover,
+a.rhyme-word:focus-visible {
+  background: var(--ink-wash-strong);
   text-decoration: underline;
-  text-decoration-color: var(--ink-border);
+  text-decoration-color: currentColor;
   text-underline-offset: 3px;
 }
-
-a.rhyme-word:hover { background: var(--ink-wash-strong); }
 
 .color-perfect { color: var(--rhyme-perfect); }
 .color-family { color: var(--rhyme-family); }
