@@ -1,5 +1,8 @@
 // ── Constants ──
 const DEBOUNCE_DELAY_MS = 150;
+const LOOKUP_FOUND = 'rhymes';
+const LOOKUP_NO_RHYMES = 'no_rhymes';
+const LOOKUP_NOT_IN_DICTIONARY = 'not_in_dictionary';
 const POLL_INTERVAL_MS = 300;
 const PASTE_DELAY_MS = 0;
 const MIN_WORD_LENGTH = 2;
@@ -298,6 +301,21 @@ function renderResults(word, results) {
     .map(({ key, name, desc }) => buildGroupHtml(key, name, desc, results[key]))
     .join('');
   openGroups(listOpenTypes(shown.map(({ key }) => key)));
+}
+
+function describeLookupResult(results) {
+  if (!results) return LOOKUP_NOT_IN_DICTIONARY;
+  const hasRhymes = RHYME_TYPES.some(({ key }) => results[key].length > 0);
+  return hasRhymes ? LOOKUP_FOUND : LOOKUP_NO_RHYMES;
+}
+
+// The word goes along only when it came up empty: those are the dictionary's
+// gaps. A tapped word that did rhyme stays on the device.
+function trackRhymeLookup(word, results) {
+  const result = describeLookupResult(results);
+  const params = { result };
+  if (result !== LOOKUP_FOUND) params.word = RhymeCore.normalizeWord(word);
+  trackEvent('rhyme_lookup', params);
 }
 
 // ── Word highlight overlay ──
@@ -623,7 +641,10 @@ function handleSelection(event) {
       return;
     }
 
-    renderResults(word, findRhymes(word));
+    const results = findRhymes(word);
+    renderResults(word, results);
+    // Typing runs lookups too; only a tap is someone asking for rhymes.
+    if (isPointerPick) trackRhymeLookup(word, results);
   }, DEBOUNCE_DELAY_MS);
 }
 
@@ -906,6 +927,7 @@ function toggleRhymeScheme() {
   rhymeSchemeVisible = !rhymeSchemeVisible;
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
   setToggleState(rhymeSchemeToggleEl, rhymeSchemeVisible);
+  trackEvent('overlay_toggled', { overlay: 'rhyme_scheme', is_on: rhymeSchemeVisible });
   syncRhymesMenuButton();
   // Showing or hiding either margin changes the editor's width, so the text
   // re-wraps for both of them; openGutter() re-measures both.
@@ -928,6 +950,7 @@ function toggleSyllables() {
   syllablesVisible = !syllablesVisible;
   sessionStorage.setItem('syllablesVisible', syllablesVisible ? '1' : '0');
   setToggleState(toggleBtn, syllablesVisible);
+  trackEvent('overlay_toggled', { overlay: 'syllables', is_on: syllablesVisible });
   openGutter(gutterEl, syllablesVisible);
 }
 
@@ -938,6 +961,7 @@ function toggleInternalRhymes() {
   internalRhymesVisible = !internalRhymesVisible;
   sessionStorage.setItem('internalRhymesVisible', internalRhymesVisible ? '1' : '0');
   setToggleState(internalRhymeToggleEl, internalRhymesVisible);
+  trackEvent('overlay_toggled', { overlay: 'internal_rhymes', is_on: internalRhymesVisible });
   syncRhymesMenuButton();
   if (internalRhymesVisible) ensureRhymeData();
   invalidateInternalRhymeMarks();
@@ -1067,6 +1091,7 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     if (isOpening) populateGroupBody(group);
     setGroupOpen(group, isOpening);
     rememberOpenGroups();
+    if (isOpening) trackEvent('rhyme_group_opened', { group: group.dataset.type });
     return;
   }
 
@@ -1077,6 +1102,7 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     const rest = currentResults[type].slice(INITIAL_RESULTS_PER_GROUP);
     showMoreBtn.insertAdjacentHTML('beforebegin', buildChipsHtml(type, rest));
     showMoreBtn.remove();
+    trackEvent('rhyme_show_all', { group: type });
     return;
   }
 
@@ -1089,7 +1115,13 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     return;
   }
   const word = wordEl.textContent.trim();
-  if (!replacePickedWord(word)) showDefinition(word, wordEl, false);
+  const group = wordEl.closest('.rhyme-group');
+  if (replacePickedWord(word)) {
+    trackEvent('rhyme_inserted', { group: group ? group.dataset.type : '' });
+    return;
+  }
+  showDefinition(word, wordEl, false);
+  trackEvent('definition_opened', { trigger: 'tap' });
 });
 
 // ── Swapping a rhyme into the lyric ──
@@ -1181,6 +1213,7 @@ function handleChipTouchStart(event) {
   longPressTimer = setTimeout(function showHeldDefinition() {
     isLongPressClick = true;
     showDefinition(chip.textContent.trim(), chip, false);
+    trackEvent('definition_opened', { trigger: 'long_press' });
   }, DEFINITION_LONG_PRESS_MS);
 }
 

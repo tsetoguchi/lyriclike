@@ -329,3 +329,28 @@ a.rhyme-word:focus-visible {
 }
 
 .site-footer a { color: var(--ink-faded); }
+
+/* Plain text pages such as /privacy/: paragraphs and headings need air that
+   the rhyme pages get from their own components. */
+.prose p,
+.prose ul {
+  margin-block: 0 var(--space-4);
+}
+
+.prose ul {
+  padding-left: var(--space-6);
+}
+
+.prose li + li {
+  margin-top: var(--space-2);
+}
+
+.prose h2 {
+  margin-block: var(--space-8) var(--space-3);
+}
+
+.prose .updated {
+  margin-top: var(--space-8);
+  color: var(--ink-faded);
+  font-size: var(--text-footnote);
+}

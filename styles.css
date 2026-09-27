@@ -2387,6 +2387,46 @@ body.sidebar-open #sidebar-scrim {
   display: none;
 }
 
+/* One quiet line under the pad, where people look for the fine print. */
+.app-footer {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--paper-card);
+  color: var(--ink-faded);
+  font-size: var(--text-caption-1);
+  text-align: center;
+}
+
+.app-footer a,
+.sidebar-privacy {
+  color: var(--ink-faded);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-footer a:hover,
+.sidebar-privacy:hover {
+  color: var(--ink);
+}
+
+/* On a phone the bottom bar owns the foot of the screen, so the link moves
+   to the foot of the notebook drawer instead. */
+.sidebar-privacy {
+  display: none;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-caption-1);
+}
+
+@media (max-width: 768px) {
+  .app-footer {
+    display: none;
+  }
+
+  .sidebar-privacy {
+    display: block;
+  }
+}
+
 /* ── Mobile layout ── */
 
 @media (max-width: 768px) {
