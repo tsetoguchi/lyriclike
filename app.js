@@ -178,7 +178,7 @@ function findRhymes(targetWord) {
 function buildChipsHtml(key, entries) {
   return entries.map(function toChip(entry) {
     const common = entry.tier === 'common' ? ' common' : '';
-    return `<span class="rhyme-word color-${key}${common}">${entry.word}</span>`;
+    return `<span class="rhyme-word${common}">${entry.word}</span>`;
   }).join('');
 }
 
@@ -192,11 +192,6 @@ function buildGroupBodyHtml(key, entries) {
   return html;
 }
 
-// Past the first screenful an exact count reads like a database total, not
-// something a writer needs, so the heading only says there is more.
-function formatGroupCount(total) {
-  return total > INITIAL_RESULTS_PER_GROUP ? INITIAL_RESULTS_PER_GROUP + '+' : String(total);
-}
 
 // Groups render as headers only. Filling every body up front put thousands of
 // chips in the panel — five of the six groups invisible behind a collapsed
@@ -209,12 +204,9 @@ function buildGroupHtml(key, name, desc, words) {
 
   return `<div class="rhyme-group" data-type="${key}">
     <button type="button" class="rhyme-group-header" aria-expanded="false">
-      <span class="name">
-        <span class="dot dot-${key}"></span>
-        ${name}
-      </span>
+      <span class="name">${name}</span>
       <span class="header-right">
-        <span class="count">${formatGroupCount(words.length)}</span>
+        <span class="count">${words.length}</span>
         <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
       </span>
     </button>

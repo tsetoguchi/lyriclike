@@ -108,7 +108,6 @@
   --header-icon-size: 20px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
-  --dot-size: 8px;
 
   --sheet-handle-width: 36px;
   --sheet-handle-height: 4px;
@@ -176,18 +175,9 @@
   --danger-border-hover: #f0837a;
   --danger-bg: rgba(240, 131, 122, 0.14);
 
-  /* Rhyme categories: lifted off the dark card, six hues that stay apart
-     from each other at the 8px dot the panel draws them as */
-  --rhyme-perfect: #5ad19a;
-  --rhyme-family: #7cb8ff;
-  --rhyme-additive: #cfc06b;
-  --rhyme-subtractive: #ff9a6b;
-  --rhyme-assonance: #f58fc0;
-  --rhyme-consonance: #a99bf7;
-
-  /* Rhyme-scheme letter cycle (consumed by SCHEME_COLORS in app.js).
-     Re-inked for the dark margin: the six category hues first, so a
-     scheme letter and its category dot read as the same ink. */
+  /* Rhyme-scheme letter cycle (consumed by SCHEME_COLORS in app.js),
+     re-inked for the dark margin. Colour means one thing in the app — which
+     lines rhyme with each other — so nothing else borrows these hues. */
   --scheme-0: #5ad19a;
   --scheme-1: #7cb8ff;
   --scheme-2: #cfc06b;
@@ -303,8 +293,8 @@ header h1 {
 }
 
 /* What the lyrics show: three switches side by side. One that is on is lit
-   like a lamp, amber with an amber rim; one that is off has no box at all,
-   so on and off differ in shape as well as colour. */
+   like a lamp, amber with an amber rim; one that is off keeps a faint rim,
+   so it still reads as something to press rather than a caption. */
 .header-tools {
   display: flex;
   align-items: center;
@@ -314,6 +304,7 @@ header h1 {
 
 header .header-tools .toggle-btn:has(> .nav-icon) {
   border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 var(--hairline) var(--ink-border);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
@@ -1138,12 +1129,16 @@ header .nav-icon circle {
   display: flex;
 }
 
+/* Chips are ink, not colour: the colours belong to the rhyme scheme, and a
+   green chip beside a green "A" would read as the same rhyme. The group
+   heading names the kind of rhyme instead. Rarer words sit back in pencil. */
 .rhyme-word {
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
   padding: var(--space-1) var(--space-3);
   background: var(--ink-wash);
   border-radius: var(--radius-sm);
+  color: var(--ink-faded);
   cursor: pointer;
   transition: background var(--duration-fast);
 }
@@ -1158,6 +1153,7 @@ header .nav-icon circle {
 .rhyme-word.common {
   font-size: var(--text-subhead);
   font-weight: var(--weight-bold);
+  color: var(--ink);
 }
 
 /* ── Definition popup (desktop) ── */
@@ -1282,27 +1278,6 @@ header .nav-icon circle {
     margin: 0 auto var(--space-4);
   }
 }
-
-.color-perfect { color: var(--rhyme-perfect); }
-.color-family { color: var(--rhyme-family); }
-.color-additive { color: var(--rhyme-additive); }
-.color-subtractive { color: var(--rhyme-subtractive); }
-.color-assonance { color: var(--rhyme-assonance); }
-.color-consonance { color: var(--rhyme-consonance); }
-
-.dot {
-  width: var(--dot-size);
-  height: var(--dot-size);
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.dot-perfect { background: var(--rhyme-perfect); }
-.dot-family { background: var(--rhyme-family); }
-.dot-additive { background: var(--rhyme-additive); }
-.dot-subtractive { background: var(--rhyme-subtractive); }
-.dot-assonance { background: var(--rhyme-assonance); }
-.dot-consonance { background: var(--rhyme-consonance); }
 
 .show-more-btn {
   width: 100%;
