@@ -3,6 +3,8 @@ const DEFAULT_TITLE = 'Untitled';
 const DRAFT_STORAGE_KEY = 'swag_draft';
 // Set once a visitor has cleared the sample verse or written over it.
 const SAMPLE_SEEN_KEY = 'sample_seen';
+// Set once this device has reported its first typed word to analytics.
+const FIRST_WRITE_KEY = 'first_write_tracked';
 // Shown to a first-time visitor so the counts and rhyme letters are on screen
 // before they have written anything. ABAB, so the letters show the pattern.
 const SAMPLE_VERSE = [
@@ -298,7 +300,10 @@ function buildListItem(lyric) {
     </div>
   `;
 
-  item.querySelector('.lyrics-list-open').addEventListener('click', () => loadLyric(lyric.id));
+  item.querySelector('.lyrics-list-open').addEventListener('click', () => {
+    trackEvent('page_opened');
+    loadLyric(lyric.id);
+  });
   const [renameBtn, deleteBtn] = item.querySelectorAll('.lyrics-action-btn');
   renameBtn.addEventListener('click', () => renameLyric(lyric.id, lyric.title));
   deleteBtn.addEventListener('click', () => deleteLyric(lyric.id, lyric.title));
@@ -358,6 +363,7 @@ async function loadLyric(id) {
 async function createLyric() {
   const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create', value: '' });
   if (name === null) return;
+  trackEvent('page_created');
 
   currentLyricId = crypto.randomUUID();
   currentTitle = name.trim() || DEFAULT_TITLE;
@@ -657,7 +663,20 @@ function endSample() {
   try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
 }
 
+// The moment a visitor becomes a writer. Loading a page or the sample fires
+// input too, but only a person's typing is trusted, so those never count.
+function trackFirstWrite() {
+  try {
+    if (localStorage.getItem(FIRST_WRITE_KEY) !== null) return;
+    localStorage.setItem(FIRST_WRITE_KEY, '1');
+  } catch {
+    return;
+  }
+  trackEvent('first_write');
+}
+
 function clearSample() {
+  trackEvent('sample_cleared');
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
   textarea.dispatchEvent(new Event('input'));
@@ -668,8 +687,9 @@ function clearSample() {
 // Listening on the scroller in the capture phase runs this before the
 // editor's own input handlers, so the link is gone by the time they measure
 // the page, and before the draft handler below decides whether to save.
-document.querySelector('.lyrics-area').addEventListener('input', () => {
+document.querySelector('.lyrics-area').addEventListener('input', (event) => {
   if (sampleShowing && !isSampleShowing()) endSample();
+  if (event.isTrusted) trackFirstWrite();
 }, true);
 document.getElementById('sample-clear').addEventListener('click', clearSample);
 
