@@ -1453,60 +1453,52 @@ header .nav-icon circle {
   transform: none;
 }
 
+/* The address is the title: it is what the panel is about, and it tells
+   the writer which account they are in at a glance. */
 .account-settings-header {
   display: flex;
   align-items: center;
-  padding: var(--space-4);
-  border-bottom: var(--hairline) solid var(--rule);
-  font-family: var(--font-editor);
-  font-size: var(--text-footnote);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) 0 var(--space-5);
+}
+
+.account-settings-header .settings-value {
+  flex: 1;
+  font-size: var(--text-body);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
-  color: var(--ink);
 }
 
-.account-settings-header span {
-  flex: 1;
-}
-
+/* Space, not rules, groups the panel. The one wider gap sets deleting apart
+   from everything else. */
 .account-settings-body {
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-5);
 }
 
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-bottom: var(--space-5);
+  gap: var(--space-1);
 }
 
-.settings-section:not(:first-child) {
-  border-top: var(--hairline) solid var(--rule);
-  padding-top: var(--space-5);
-}
-
-/* Written case, so a size up and tight tracking, like the header's buttons. */
-.settings-section-title {
-  font-family: var(--font-editor);
-  font-size: var(--text-footnote);
-  font-weight: var(--weight-bold);
-  color: var(--ink-faded);
-  letter-spacing: var(--tracking-tight);
-  margin-bottom: var(--space-1);
+.settings-delete {
+  margin-top: var(--space-3);
+  align-items: flex-start;
 }
 
 .settings-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   font-size: var(--text-subhead);
 }
 
 .settings-label {
-  color: var(--ink-faded);
+  color: var(--ink);
   flex-shrink: 0;
 }
 
@@ -1516,30 +1508,55 @@ header .nav-icon circle {
   overflow-wrap: anywhere; /* a long email address wraps instead of widening the panel */
 }
 
+/* Signing out is the one thing most people open this panel to do, so it is
+   the only solid button in it. */
 .settings-btn {
+  min-height: var(--tap-target);
   padding: var(--space-3) var(--space-4);
-  background: transparent;
-  border: var(--hairline) solid var(--ink-faded);
+  background: var(--ink-wash-strong);
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--ink);
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: background var(--duration-fast);
 }
 
 .settings-btn:hover {
   background: var(--ink-wash);
 }
 
-.settings-btn.danger-btn {
-  border-color: var(--danger-border);
-  color: var(--danger);
+/* Small actions read as text, so they do not compete with signing out. The
+   padding keeps a finger-sized target without drawing a box. */
+.settings-link {
+  min-height: var(--tap-target);
+  margin: calc(var(--space-3) * -1) calc(var(--space-2) * -1);
+  padding: var(--space-3) var(--space-2);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
 }
 
-.settings-btn.danger-btn:hover {
-  background: var(--danger-bg);
-  border-color: var(--danger-border-hover);
+.settings-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Rare and final, so quiet: red text, and the confirm step does the warning. */
+.settings-link.danger-link {
+  color: var(--danger);
+  font-weight: var(--weight-regular);
+}
+
+.settings-link.danger-link:hover {
   color: var(--danger-hover);
 }
 
@@ -1560,13 +1577,12 @@ header .nav-icon circle {
 }
 
 /* Changing the password: only the email and the form stay in the panel. */
-.is-changing-password .settings-section:not(:first-child):not(#security-section),
-.is-changing-password #security-section .settings-section-title {
+.is-changing-password .settings-section:not(#security-section) {
   display: none;
 }
 
 .is-changing-password .security-form {
-  padding-top: 0;
+  padding-top: var(--space-3);
 }
 
 .security-actions {
