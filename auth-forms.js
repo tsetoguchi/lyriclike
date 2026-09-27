@@ -1,13 +1,14 @@
-// The sign-in modal. Google comes first, because every account made before
-// passwords has it; then email and password, with a text link between Sign in
-// and Create account, and the views that emailed links open: confirming a
-// signup (#signup_token=, read by auth-link.js) and setting a new password
-// (#reset_token=). With passwords switched off on the server, the modal shows
-// only Google.
+// The sign-in modal. It opens on one step for everyone: Google, or an email
+// address. The server then says what that address needs next: its password,
+// a new password to create the account, or Google. Then come the views that
+// emailed links open: confirming a signup (#signup_token=, read by
+// auth-link.js) and setting a new password (#reset_token=). With passwords
+// switched off on the server, the modal shows only Google.
 (function initAuthForms() {
   'use strict';
 
   const METHODS_URL = '/api/auth/methods';
+  const LOOKUP_URL = '/api/auth/lookup';
   const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
   const TURNSTILE_WAIT_MS = 60000;
   const FOCUS_DELAY_MS = 50;
@@ -31,10 +32,10 @@
     CHECK_FAILED: "The security check didn't finish. Try again.",
     NEED_EMAIL: 'Enter a valid email address.',
     NEED_PASSWORD: 'Enter your password.',
+    WRONG_PASSWORD: "That password isn't right. Try again or reset it.",
     TOO_SHORT: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
     HAS_EMAIL: "Don't use your email address in your password.",
-    LOGIN_HINT: 'Signed up with Google? Use the Google button above.',
     SENT: 'Sent',
     SIGNUP_LINK_LIFETIME: 'The link works for 24 hours.',
     RESET_LINK_LIFETIME: 'The link works for 30 minutes.',
@@ -44,7 +45,9 @@
   });
 
   const VIEW = Object.freeze({
+    START: 'start',
     SIGN_IN: 'sign-in',
+    GOOGLE_ONLY: 'google-only',
     SIGN_UP: 'sign-up',
     CHECK_EMAIL: 'check-email',
     FORGOT: 'forgot',
@@ -53,25 +56,37 @@
     RESET: 'reset',
   });
 
-  // What each view shows. `password` is the field's autocomplete value, or
-  // null for no password field; `turnstile` is the action the widget runs for.
+  // What each view shows. `email` is 'field' for the input, 'shown' for the
+  // address as text with Edit beside it, or false; `password` is the field's
+  // autocomplete value, or null for no password field; `turnstile` is the
+  // action the widget runs for.
   const VIEWS = Object.freeze({
+    [VIEW.START]: {
+      title: 'Log in or sign up', google: true, email: 'field', password: null,
+      message: 'Save every page you write and open it on any device.',
+      submit: 'Continue', links: [], turnstile: null,
+    },
     [VIEW.SIGN_IN]: {
-      title: 'Log in', google: true, email: true, password: 'current-password',
-      passwordLabel: 'Password', hint: false, submit: 'Log in', links: ['to-sign-up', 'forgot'],
+      title: 'Enter your password', google: false, email: 'shown', password: 'current-password',
+      passwordLabel: 'Password', hint: false, submit: 'Log in', links: ['forgot'],
       turnstile: null,
     },
     [VIEW.SIGN_UP]: {
-      title: 'Create account', google: true, email: true, password: 'new-password',
-      passwordLabel: 'Password', hint: true, submit: 'Create account', links: ['to-sign-in'],
+      title: 'Create a password', google: false, email: 'shown', password: 'new-password',
+      passwordLabel: 'Password', hint: true, submit: 'Create account', links: [],
       turnstile: 'signup',
+    },
+    [VIEW.GOOGLE_ONLY]: {
+      title: 'Log in with Google', google: true, email: 'shown', password: null,
+      message: 'This account uses Google to log in.',
+      submit: null, links: [], turnstile: null,
     },
     [VIEW.CHECK_EMAIL]: {
       title: 'Check your email', google: false, email: false, password: null,
       submit: null, links: ['resend', 'different-email'], turnstile: 'signup',
     },
     [VIEW.FORGOT]: {
-      title: 'Reset password', google: false, email: true, password: null,
+      title: 'Reset password', google: false, email: 'field', password: null,
       message: "Enter your email and we'll send you a link to set a new password.",
       submit: 'Send reset link', links: ['back'], turnstile: 'forgot',
     },
@@ -95,6 +110,7 @@
   const overlay = document.getElementById('auth-overlay');
   const form = document.getElementById('auth-form');
   const emailInput = document.getElementById('auth-email');
+  const emailShown = document.getElementById('auth-email-shown');
   const passwordInput = document.getElementById('auth-password');
   const passwordToggle = document.getElementById('auth-password-toggle');
   const passwordHint = document.getElementById('auth-password-hint');
@@ -106,10 +122,11 @@
 
   let methodsPromise = null;
   let methods = { password: false, turnstileSiteKey: null };
-  let currentView = VIEW.SIGN_IN;
+  let currentView = VIEW.START;
   let linkToken = null;
   let pendingSignup = null;
   let loginNeedsCheck = false;
+  let lookupNeedsCheck = false;
   let returnFocusTo = null;
   let busy = false;
 
@@ -245,8 +262,9 @@
     element.hidden = !shown;
   }
 
+  // Only the row of links under the form; Edit comes and goes with the address.
   function showLinks(names) {
-    linkButtons.forEach(button => {
+    linkButtons.filter(button => button.classList.contains('auth-link')).forEach(button => {
       button.hidden = !names.includes(button.dataset.authLink);
       button.disabled = false;
     });
@@ -265,15 +283,11 @@
     passwordToggle.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
   }
 
-  // With passwords off, every view collapses to Google alone. Create account
-  // keeps its title, since Google is how an account is made then too.
+  // With passwords off, every view collapses to Google alone, which is also
+  // how an account is made then.
   function describeView(name) {
-    const view = VIEWS[name];
-    if (methods.password) return view;
-    const title = name === VIEW.SIGN_UP ? view.title : VIEWS[VIEW.SIGN_IN].title;
-    return {
-      ...VIEWS[VIEW.SIGN_IN], title, email: false, password: null, submit: null, links: [], turnstile: null,
-    };
+    if (methods.password) return VIEWS[name];
+    return { ...VIEWS[VIEW.START], email: false, submit: null };
   }
 
   function showView(name, message) {
@@ -285,11 +299,14 @@
     setShown(document.getElementById('auth-google'), view.google);
     setShown(document.getElementById('auth-divider'), view.google && Boolean(view.submit));
     setShown(form, Boolean(view.submit));
-    setShown(document.getElementById('auth-email-field'), view.email);
+    setShown(document.getElementById('auth-email-field'), view.email === 'field');
+    document.getElementById('auth-email-text').textContent = emailInput.value.trim();
+    setShown(emailShown, view.email === 'shown');
     setShown(document.getElementById('auth-password-field'), Boolean(view.password));
     if (view.password) {
       passwordInput.setAttribute('autocomplete', view.password);
       document.querySelector('label[for="auth-password"]').textContent = view.passwordLabel;
+      passwordInput.placeholder = view.passwordLabel;
     }
     passwordInput.value = '';
     setPasswordVisible(false);
@@ -392,6 +409,37 @@
       : postJson('/api/auth/login', payload);
   }
 
+  const NEXT_VIEW = Object.freeze({
+    'password': VIEW.SIGN_IN,
+    'google': VIEW.GOOGLE_ONLY,
+    'sign-up': VIEW.SIGN_UP,
+  });
+
+  function attemptLookup(payload) {
+    return lookupNeedsCheck ? postWithCheck(LOOKUP_URL, payload) : postJson(LOOKUP_URL, payload);
+  }
+
+  // The first step: asks the server what this address needs next.
+  async function submitStart() {
+    const email = emailInput.value.trim();
+    if (!isEmailShaped(email)) return showError(TEXT.NEED_EMAIL, emailInput);
+
+    let result = await attemptLookup({ email });
+    if (result.status === HTTP_CAPTCHA_REQUIRED && !lookupNeedsCheck) {
+      // Many lookups from this IP: pass the check, then retry once.
+      lookupNeedsCheck = true;
+      showError(failureMessage(result));
+      await prepareTurnstile('lookup');
+      result = await attemptLookup({ email });
+    }
+
+    const next = result.status === HTTP_OK && result.data && NEXT_VIEW[result.data.next];
+    if (!next) return showError(failureMessage(result), fieldForCode(errorCode(result)));
+    showView(next);
+    setTimeout(focusFirstField, FOCUS_DELAY_MS);
+    return null;
+  }
+
   async function submitSignIn() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -409,9 +457,7 @@
     }
 
     if (result.status === HTTP_OK) return finishSignIn(result.data);
-    if (result.status === HTTP_UNAUTHORIZED) {
-      return showError(failureMessage(result), passwordInput, TEXT.LOGIN_HINT);
-    }
+    if (result.status === HTTP_UNAUTHORIZED) return showError(TEXT.WRONG_PASSWORD, passwordInput);
     return showError(failureMessage(result), fieldForCode(errorCode(result)));
   }
 
@@ -503,6 +549,7 @@
   }
 
   const SUBMITTERS = Object.freeze({
+    [VIEW.START]: submitStart,
     [VIEW.SIGN_IN]: submitSignIn,
     [VIEW.SIGN_UP]: submitSignUp,
     [VIEW.FORGOT]: submitForgot,
@@ -554,7 +601,7 @@
     const settings = options || {};
     returnFocusTo = document.activeElement;
     await loadMethods();
-    showView(VIEWS[settings.view] ? settings.view : VIEW.SIGN_IN, settings.message);
+    showView(VIEWS[settings.view] ? settings.view : VIEW.START, settings.message);
     overlay.hidden = false;
     overlay.classList.add('open');
     // Focus once the panel is on its way in, so iOS raises the keyboard for it.
@@ -596,18 +643,17 @@
   // ── Wiring ──
 
   const LINK_ACTIONS = Object.freeze({
-    'to-sign-up': () => showView(VIEW.SIGN_UP),
-    'to-sign-in': () => showView(VIEW.SIGN_IN),
-    'back': () => showView(VIEW.SIGN_IN),
+    'edit-email': () => showView(VIEW.START),
+    'back': () => showView(VIEW.START),
     'forgot': () => showView(VIEW.FORGOT),
-    'sign-up-again': () => showView(VIEW.SIGN_UP),
+    'sign-up-again': () => showView(VIEW.START),
     'new-reset-link': () => showView(VIEW.FORGOT),
-    'different-email': () => { pendingSignup = null; showView(VIEW.SIGN_UP); },
+    'different-email': () => { pendingSignup = null; showView(VIEW.START); },
     'resend': button => resendSignup(button),
   });
 
-  // Moving between views keeps the address that was typed, so switching from
-  // Sign in to Forgot password does not ask for it twice.
+  // Moving between views keeps the address that was typed, so Forgot password
+  // and Edit do not ask for it twice.
   linkButtons.forEach(button => {
     button.addEventListener('click', () => {
       const action = LINK_ACTIONS[button.dataset.authLink];
