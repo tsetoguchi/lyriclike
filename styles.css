@@ -1405,9 +1405,21 @@ header .nav-icon circle {
   }
 
   #sign-in-btn {
+    position: relative;
     background: var(--accent);
     border-color: var(--accent);
     color: var(--on-accent);
+  }
+
+  /* Drawn at 25px, it gets a full tap target without growing the header. */
+  #sign-in-btn::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: var(--tap-target);
+    transform: translateY(-50%);
   }
 
   #sign-in-btn:hover {
