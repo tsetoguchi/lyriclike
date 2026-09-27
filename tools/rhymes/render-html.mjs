@@ -107,27 +107,27 @@ ${renderFooter()}
 // ── Rhyme page ──
 
 // Common words are drawn a step heavier, as in the editor's panel.
-function renderWordItem({ word, tier }, pageWords) {
+function renderWordItem({ word, tier }, typeKey, pageWords) {
   const label = escapeHtml(word);
-  const classes = `rhyme-word${tier === 'common' ? ' common' : ''}`;
+  const classes = `rhyme-word color-${typeKey}${tier === 'common' ? ' common' : ''}`;
   if (!pageWords.has(word)) return `<li class="${classes}">${label}</li>`;
   return `<li><a class="${classes}" href="${rhymePagePath(word)}">${label}</a></li>`;
 }
 
-function renderSyllableGroup(group, pageWords) {
+function renderSyllableGroup(group, typeKey, pageWords) {
   const label = group.syllables === 1 ? '1 syllable' : `${group.syllables} syllables`;
-  const items = group.words.map((entry) => renderWordItem(entry, pageWords)).join('');
+  const items = group.words.map((entry) => renderWordItem(entry, typeKey, pageWords)).join('');
   return `<h3>${label}</h3>
 <ul class="rhyme-list">${items}</ul>`;
 }
 
 function renderSection(section, pageWords) {
-  const groups = section.groups.map((group) => renderSyllableGroup(group, pageWords));
+  const groups = section.groups.map((group) => renderSyllableGroup(group, section.key, pageWords));
   const note = section.total > section.shownCount
     ? `<p class="more">Showing ${section.shownCount} of ${section.total.toLocaleString('en-US')}. The editor lists them all.</p>`
     : '';
   return `<section class="rhyme-section">
-<h2>${section.name} rhymes<span class="count">${section.total.toLocaleString('en-US')}</span></h2>
+<h2><span class="dot dot-${section.key}"></span>${section.name} rhymes<span class="count">${section.total.toLocaleString('en-US')}</span></h2>
 <p class="type-desc">${escapeHtml(section.desc)}</p>
 ${groups.join('\n')}
 ${note}

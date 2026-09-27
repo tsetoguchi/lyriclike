@@ -37,6 +37,13 @@
   --ink-wash-strong: rgba(226, 231, 239, 0.14);
   --ink-border: rgba(226, 231, 239, 0.22);
 
+  --rhyme-perfect: #5ad19a;
+  --rhyme-family: #7cb8ff;
+  --rhyme-additive: #cfc06b;
+  --rhyme-subtractive: #ff9a6b;
+  --rhyme-assonance: #f58fc0;
+  --rhyme-consonance: #a99bf7;
+
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
 
   --space-1: 4px;
@@ -58,6 +65,7 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-pill: 999px;
+  --dot-size: 8px;
   --hairline: 1px;
   --page-width: 760px;
   --gutter: var(--space-4);
@@ -223,6 +231,20 @@ h3 {
   margin-bottom: var(--space-2);
 }
 
+.dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-perfect { background: var(--rhyme-perfect); }
+.dot-family { background: var(--rhyme-family); }
+.dot-additive { background: var(--rhyme-additive); }
+.dot-subtractive { background: var(--rhyme-subtractive); }
+.dot-assonance { background: var(--rhyme-assonance); }
+.dot-consonance { background: var(--rhyme-consonance); }
+
 .count {
   margin-left: auto;
   font-size: var(--text-caption-1);
@@ -250,8 +272,7 @@ h3 {
   gap: var(--space-2);
 }
 
-/* The panel's chips: a faint wash, small corners, in ink as the editor has
-   them. Rarer words sit back in pencil. */
+/* The panel's chips: a faint wash, small corners, the type's colour. */
 .rhyme-word {
   display: inline-block;
   font-size: var(--text-subhead);
@@ -259,7 +280,6 @@ h3 {
   padding: var(--space-1) var(--space-3);
   background: var(--ink-wash);
   border-radius: var(--radius-sm);
-  color: var(--ink-faded);
   text-decoration: none;
 }
 
@@ -267,7 +287,6 @@ h3 {
 .rhyme-word.common {
   font-size: var(--text-callout);
   font-weight: 700;
-  color: var(--ink);
 }
 
 /* A word with a page of its own keeps a faint underline, so the chips that
@@ -279,6 +298,13 @@ a.rhyme-word {
 }
 
 a.rhyme-word:hover { background: var(--ink-wash-strong); }
+
+.color-perfect { color: var(--rhyme-perfect); }
+.color-family { color: var(--rhyme-family); }
+.color-additive { color: var(--rhyme-additive); }
+.color-subtractive { color: var(--rhyme-subtractive); }
+.color-assonance { color: var(--rhyme-assonance); }
+.color-consonance { color: var(--rhyme-consonance); }
 
 .related h2,
 .letter-section h2 { margin-bottom: var(--space-3); }
