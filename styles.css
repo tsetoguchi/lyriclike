@@ -142,6 +142,10 @@
   /* The smallest a control should be under a fingertip. */
   --tap-target: 44px;
 
+  /* The tick beside a switched-on item in the phone's Highlights menu. */
+  --check-size: 14px;
+  --check-mask: url("assets/check.svg");
+
   /* Type scale — iOS Dynamic Type at the default size. Every label in the
      app is one of these; nothing sits between two steps. */
   --text-caption-1: 12px;
@@ -561,11 +565,19 @@ header .nav-icon circle {
   white-space: nowrap;
 }
 
-/* A phone has room for the button or the note, not both, and the button is
-   the one that says what to do. */
+.sample-note-short {
+  display: none;
+}
+
+/* A phone has room beside the button for the short note only. Without it, a
+   new visitor would not know why the verse is there. */
 @media (max-width: 480px) {
-  .sample-note {
+  .sample-note-long {
     display: none;
+  }
+
+  .sample-note-short {
+    display: inline;
   }
 
   /* The button stays its drawn size; the finger gets a full tap target.
@@ -739,12 +751,12 @@ header .nav-icon circle {
   text-underline-offset: var(--space-1);
 }
 
-/* An unnamed page shows its placeholder in pencil. It is drawn by CSS, so it
-   is never part of the title's text and can never be saved as the name.
-   Hidden while typing, or the caret would sit after it. */
+/* An unnamed page shows its placeholder in full ink, since pencil made the
+   title look switched off. It is drawn by CSS, so it is never part of the
+   title's text and can never be saved as the name. Hidden while typing, or
+   the caret would sit after it. */
 #lyrics-panel-title:empty:not(:focus)::before {
   content: attr(data-placeholder);
-  color: var(--ink-faded);
 }
 
 #lyrics-panel-title:focus {
@@ -2190,8 +2202,8 @@ body.sidebar-open #sidebar-scrim {
   background: var(--ink-wash);
 }
 
-/* Signed out there is no notebook to add a page to, so Create page is switched
-   off until an account is known: faded, and no hover to suggest otherwise. */
+/* Until the sign-in check answers, Create page cannot tell whether to make a
+   page or ask for an account: faded, and no hover to suggest otherwise. */
 #new-lyric-btn:disabled,
 #rail-new-btn:disabled {
   color: var(--ink-faded);
@@ -2315,38 +2327,6 @@ body.sidebar-open #sidebar-scrim {
   color: var(--ink-faded);
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
-}
-
-/* What an account would add, where ChatGPT keeps its log-in card. Outlined,
-   so the header's Sign up stays the one solid button on screen. Signed in,
-   there is nothing to ask for. */
-.sidebar-bottom {
-  padding: var(--space-4);
-  border-top: var(--hairline) solid var(--rule);
-  flex-shrink: 0;
-}
-
-body.signed-in .sidebar-bottom {
-  display: none;
-}
-
-.sidebar-card-title {
-  font-size: var(--text-footnote);
-  font-weight: var(--weight-bold);
-  color: var(--ink);
-}
-
-.sidebar-card-text {
-  margin-top: var(--space-1);
-  font-size: var(--text-caption-1);
-  line-height: 1.5;
-  color: var(--ink-faded);
-}
-
-#sidebar-sign-up-btn {
-  width: 100%;
-  margin-top: var(--space-3);
-  min-height: var(--tap-target);
 }
 
 /* A glyph is smaller than a fingertip. The mark keeps its size; the button
@@ -2794,9 +2774,15 @@ body.signed-in .sidebar-bottom {
     color: var(--accent);
   }
 
+  /* Drawn, not typed: iA Writer Quattro's ✓ reads as a square-root sign. */
   .rhymes-menu-popover .toggle-btn.active::after {
-    content: "\2713";
+    content: "";
+    width: var(--check-size);
+    height: var(--check-size);
     margin-left: auto;
+    background: currentColor;
+    -webkit-mask: var(--check-mask) center / contain no-repeat;
+    mask: var(--check-mask) center / contain no-repeat;
   }
 }
 

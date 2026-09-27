@@ -59,7 +59,6 @@ function openSignIn() {
 
 document.getElementById('sign-in-btn').addEventListener('click', openSignIn);
 document.getElementById('sign-up-btn').addEventListener('click', openSignIn);
-document.getElementById('sidebar-sign-up-btn').addEventListener('click', openSignIn);
 
 // An explicit sign-out or a deleted account leaves nothing of the account on
 // screen. An expired session does not come through here, so writing that
