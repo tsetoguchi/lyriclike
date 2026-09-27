@@ -190,11 +190,11 @@ function setNotebookButtonActive(isActive) {
 }
 
 // Signed out, a new page would have no notebook to live in, so Create page asks
-// for an account instead, in the sign-in modal's Create account view.
+// for an account instead, in the sign-in modal's first step.
 // currentUser is null only once the sign-in check has answered.
 async function promptForAccount() {
   if (window.openAuthModal) {
-    await window.openAuthModal({ view: 'sign-up', message: CREATE_ACCOUNT_MESSAGE });
+    await window.openAuthModal({ message: CREATE_ACCOUNT_MESSAGE });
   } else if (window.startSignIn) {
     window.startSignIn();
   }

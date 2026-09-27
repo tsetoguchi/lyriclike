@@ -49,21 +49,17 @@ function startSignIn() {
 }
 
 // The modal (auth-forms.js) offers Google and, when it is switched on, email
-// and password. Without it, both buttons still go straight to Google, which
-// is also how an account is made.
+// and password. It asks for the email first and works out from it whether this
+// is a log in or a sign up, so every button opens the same step. Without the
+// modal, they go straight to Google, which is also how an account is made.
 function openSignIn() {
   if (window.openAuthModal) window.openAuthModal();
   else startSignIn();
 }
 
-function openSignUp() {
-  if (window.openAuthModal) window.openAuthModal({ view: 'sign-up' });
-  else startSignIn();
-}
-
 document.getElementById('sign-in-btn').addEventListener('click', openSignIn);
-document.getElementById('sign-up-btn').addEventListener('click', openSignUp);
-document.getElementById('sidebar-sign-up-btn').addEventListener('click', openSignUp);
+document.getElementById('sign-up-btn').addEventListener('click', openSignIn);
+document.getElementById('sidebar-sign-up-btn').addEventListener('click', openSignIn);
 
 // An explicit sign-out or a deleted account leaves nothing of the account on
 // screen. An expired session does not come through here, so writing that

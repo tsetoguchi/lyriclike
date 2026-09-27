@@ -1,5 +1,5 @@
-// Cloudflare Turnstile, the CAPTCHA on signup, forgot-password and challenged
-// logins. The widget belongs to one form, so the response must name that form.
+// Cloudflare Turnstile, the CAPTCHA on signup, forgot-password, challenged
+// logins and busy email lookups. The widget belongs to one form, so the response must name that form.
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const SITEVERIFY_TIMEOUT_MS = 3000;
@@ -9,6 +9,7 @@ export const TURNSTILE_ACTION = Object.freeze({
   SIGNUP: 'signup',
   FORGOT: 'forgot',
   LOGIN: 'login',
+  LOOKUP: 'lookup',
 });
 
 function expectedHostname(env) {

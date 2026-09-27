@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import * as login from '../functions/api/auth/login.js';
+import * as lookup from '../functions/api/auth/lookup.js';
 import * as methods from '../functions/api/auth/methods.js';
 import * as forgot from '../functions/api/auth/password/forgot.js';
 import * as reset from '../functions/api/auth/password/reset.js';
@@ -38,6 +39,7 @@ describe('the PASSWORD_AUTH_ENABLED flag', () => {
     ['signup', signup, '/api/auth/signup'],
     ['signup/confirm', confirm, '/api/auth/signup/confirm'],
     ['login', login, '/api/auth/login'],
+    ['lookup', lookup, '/api/auth/lookup'],
     ['password/forgot', forgot, '/api/auth/password/forgot'],
     ['password/reset', reset, '/api/auth/password/reset'],
   ];
