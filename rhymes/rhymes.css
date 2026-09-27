@@ -283,12 +283,6 @@ h3 {
   text-decoration: none;
 }
 
-/* The words a lyric is most likely to use: a step bigger and heavier. */
-.rhyme-word.common {
-  font-size: var(--text-callout);
-  font-weight: 700;
-}
-
 /* Every chip looks the same at rest; an underline on only some of them read
    as random. A word with a page of its own shows it on hover or focus. */
 a.rhyme-word:hover,
