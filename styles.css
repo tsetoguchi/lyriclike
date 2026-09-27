@@ -1166,13 +1166,6 @@ header .nav-icon circle {
   background: var(--ink-wash-strong);
 }
 
-/* The words a lyric is most likely to use: one step bigger and heavier. The
-   rest stay as they are, since two weights is all the eye sorts at a glance. */
-.rhyme-word.common {
-  font-size: var(--text-subhead);
-  font-weight: var(--weight-bold);
-}
-
 /* ── Definition popup (desktop) ── */
 
 .def-overlay {
@@ -2612,10 +2605,6 @@ body.sidebar-open #sidebar-scrim {
     min-height: var(--tap-target);
     display: inline-flex;
     align-items: center;
-  }
-
-  .rhyme-word.common {
-    font-size: var(--text-callout);
   }
 
   .description {

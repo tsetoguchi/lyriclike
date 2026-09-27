@@ -15,8 +15,6 @@ const LOOSE_RHYME_TYPES = ['assonance', 'consonance'];
 // editor's panel uses, so a page and the app never disagree about which rhyme
 // is the best one. The editor lists names, rare words and crude words last; a
 // page leaves them out, since it is often the first thing a visitor sees.
-// Returns { word, tier }, so a page can draw common words heavier as the
-// panel does.
 function rankRhymes(words, context) {
   const ranked = rankRhymeWords(context.index, context.word, words, context.ranks);
   return tierRhymeWords(ranked, context.ranks, context.names, context.crude)

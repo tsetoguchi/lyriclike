@@ -165,7 +165,7 @@ function findRhymes(targetWord) {
   const results = RhymeCore.findRhymes(rhymeIndex, RhymeCore.normalizeWord(targetWord), filters);
   if (!results) return null;
   // Each group becomes { word, tier } entries, common words first and names
-  // and rare words last, so the panel can weight the chips it draws.
+  // and rare words last.
   for (const { key } of RHYME_TYPES) {
     results[key] = RhymeCore.tierRhymeWords(results[key], wordRanks, nameWords, crudeWords);
   }
@@ -174,11 +174,10 @@ function findRhymes(targetWord) {
 
 // ── Results rendering ──
 
-// Common words are drawn a step heavier; every other tier looks the same.
+// Every chip looks the same, so no word is pushed as the one to reach for.
 function buildChipsHtml(key, entries) {
   return entries.map(function toChip(entry) {
-    const common = entry.tier === 'common' ? ' common' : '';
-    return `<span class="rhyme-word color-${key}${common}">${entry.word}</span>`;
+    return `<span class="rhyme-word color-${key}">${entry.word}</span>`;
   }).join('');
 }
 

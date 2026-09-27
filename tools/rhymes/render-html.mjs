@@ -106,10 +106,9 @@ ${renderFooter()}
 
 // ── Rhyme page ──
 
-// Common words are drawn a step heavier, as in the editor's panel.
-function renderWordItem({ word, tier }, typeKey, pageWords) {
+function renderWordItem({ word }, typeKey, pageWords) {
   const label = escapeHtml(word);
-  const classes = `rhyme-word color-${typeKey}${tier === 'common' ? ' common' : ''}`;
+  const classes = `rhyme-word color-${typeKey}`;
   if (!pageWords.has(word)) return `<li class="${classes}">${label}</li>`;
   return `<li><a class="${classes}" href="${rhymePagePath(word)}">${label}</a></li>`;
 }
