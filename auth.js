@@ -20,7 +20,7 @@ function showUser(user) {
   document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
   // The sidebar shows the notebook's pages once it knows whose they are.
-  if (window.refreshNotebook) window.refreshNotebook();
+  if (window.openNotebook) window.openNotebook();
 }
 
 function showSignIn() {

@@ -37,6 +37,7 @@
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
     HAS_EMAIL: "Don't use your email address in your password.",
     SENT: 'Sent',
+    LINK_USED_SIGNED_IN: "That link was already used. You're signed in.",
     SIGNUP_LINK_LIFETIME: 'The link works for 24 hours.',
     RESET_LINK_LIFETIME: 'The link works for 30 minutes.',
     // The sending domain is new, and some inboxes (Outlook first) file its
@@ -519,6 +520,11 @@
     if (result.status === HTTP_CREATED) return finishSignIn(result.data);
 
     const code = errorCode(result);
+    // Someone already signed in has an account, so signing up again is no
+    // way forward; the close button is.
+    if (code === 'invalid_token' && window.currentUser) {
+      return endLinkView([], TEXT.LINK_USED_SIGNED_IN);
+    }
     if (code === 'invalid_token') return endLinkView(['sign-up-again'], failureMessage(result));
     if (result.status === HTTP_CONFLICT) return endLinkView(['back', 'forgot'], failureMessage(result));
     return showError(failureMessage(result), fieldForCode(code));

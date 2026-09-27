@@ -273,6 +273,7 @@ async function loadLyricsList() {
     for (const lyric of lyrics) {
       container.appendChild(buildListItem(lyric));
     }
+    return lyrics;
   } catch {
     showListMessage(container, LOAD_FAILED_MESSAGE);
   }
@@ -287,7 +288,7 @@ function buildListItem(lyric) {
   const item = document.createElement('div');
   item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
   item.dataset.id = lyric.id;
-  const title = escapeHtml(lyric.title);
+  const title = escapeHtml(titleForName(lyric.title));
 
   item.innerHTML = `
     <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}">${title}</button>
@@ -307,7 +308,7 @@ function buildListItem(lyric) {
 // The page a signed-out writer has, shown the way a saved one would be so
 // the notebook they would get is already in view.
 function showLocalPage(container) {
-  const title = escapeHtml(titleForDisplay(currentTitle) || PLACEHOLDER_TITLE);
+  const title = escapeHtml(titleForName(currentTitle));
   container.innerHTML = `
     <div class="lyrics-list-item active">
       <button class="lyrics-list-open" title="Saved in this browser">${title}</button>
@@ -401,7 +402,7 @@ async function saveNewLyric() {
 async function deleteLyric(id, title) {
   const confirmed = await openDialog({
     heading: DELETE_LYRIC_HEADING,
-    message: `“${title}” will be deleted, along with everything written in it. This cannot be undone.`,
+    message: `“${titleForName(title)}” will be deleted, along with everything written in it. This cannot be undone.`,
     confirmLabel: 'Delete',
     danger: true,
   });
@@ -512,6 +513,12 @@ function titleForDisplay(title) {
   return title === DEFAULT_TITLE ? '' : title;
 }
 
+// Where a page is named rather than edited, the unnamed page reads as the
+// editor's placeholder does.
+function titleForName(title) {
+  return titleForDisplay(title) || PLACEHOLDER_TITLE;
+}
+
 function updatePanelHeader() {
   const el = document.getElementById('lyrics-panel-title');
   if (document.activeElement !== el) el.textContent = titleForDisplay(currentTitle);
@@ -569,6 +576,21 @@ placeSidebarForViewport();
 // lets later changes animate.
 requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('sidebar-animate')));
 window.refreshNotebook = loadLyricsList;
+window.openNotebook = openNotebook;
+
+// A pad holding nothing but the sample, or nothing at all, on a page the
+// notebook does not have yet, is not the writer's work.
+function isPadUnused() {
+  const body = document.getElementById('lyrics').value;
+  return (body === '' || isSampleShowing()) && !listedTitles.has(currentLyricId);
+}
+
+// Signing in lands on the page last worked on, the way a reload does, rather
+// than on a blank one. Words typed before signing in stay where they are.
+async function openNotebook() {
+  const lyrics = await loadLyricsList();
+  if (lyrics && lyrics.length > 0 && isPadUnused()) await loadLyric(lyrics[0].id);
+}
 loadLyricsList();
 
 // Expose state for autosave (step 6).
