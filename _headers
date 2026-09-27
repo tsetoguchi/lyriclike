@@ -19,7 +19,8 @@
   Cache-Control: public, max-age=31536000, immutable
 
 # The pronouncing dictionary and word list are large and effectively static.
-# Regenerating either one requires a filename change to reach cached clients.
+# A changed file only reaches cached clients under a new URL: bump its version
+# in DATA_URLS in app.js with every edit.
 /cmudict.json
   Cache-Control: public, max-age=2592000
 

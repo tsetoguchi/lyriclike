@@ -12,6 +12,15 @@ const SCROLL_THROTTLE_MS = 16;
 const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
 const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
+// Browsers keep these files for 30 days (see _headers), so a changed file only
+// reaches a returning visitor under a new URL. Bump its version on every edit.
+const DATA_URLS = {
+  dictionary: 'cmudict.json?v=1',
+  englishWords: 'english-words.json?v=2',
+  nameWords: 'name-words.json?v=1',
+  crudeWords: 'crude-words.json?v=1',
+  blocklist: 'blocklist.json?v=1'
+};
 
 const RHYME_TYPES = RhymeCore.RHYME_TYPES;
 
@@ -144,7 +153,7 @@ function onRhymeDataError(err) {
 }
 
 async function loadDictionary() {
-  const resp = await fetch('cmudict.json');
+  const resp = await fetch(DATA_URLS.dictionary);
   if (!resp.ok) throw new Error('loadDictionary: failed to fetch cmudict.json');
   rhymeIndex = RhymeCore.buildRhymeIndex(await resp.json());
 }
@@ -1613,21 +1622,21 @@ function buildWordRanks(words) {
 // Ranking is wanted whether or not the English filter is on, so the ranks are
 // built here rather than beside the filter that shares the file.
 async function loadEnglishWords() {
-  const words = await fetchWordArray('english-words.json', 'loadEnglishWords');
+  const words = await fetchWordArray(DATA_URLS.englishWords,'loadEnglishWords');
   englishWords = new Set(words);
   wordRanks = buildWordRanks(words);
 }
 
 async function loadNameWords() {
-  nameWords = await loadWordSet('name-words.json', 'loadNameWords');
+  nameWords = await loadWordSet(DATA_URLS.nameWords,'loadNameWords');
 }
 
 async function loadCrudeWords() {
-  crudeWords = await loadWordSet('crude-words.json', 'loadCrudeWords');
+  crudeWords = await loadWordSet(DATA_URLS.crudeWords,'loadCrudeWords');
 }
 
 async function loadBlocklist() {
-  blocklist = await loadWordSet('blocklist.json', 'loadBlocklist');
+  blocklist = await loadWordSet(DATA_URLS.blocklist,'loadBlocklist');
 }
 
 // An open margin is already asking for the data, so it is fetched now rather
