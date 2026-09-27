@@ -688,6 +688,7 @@
   });
 
   window.openAuthModal = openAuthModal;
+  window.closeAuthModal = closeAuthModal;
   window.loadAuthMethods = loadMethods;
 
   // An emailed link opens its view straight away. Nothing is sent until the
