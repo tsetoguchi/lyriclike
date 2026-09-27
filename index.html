@@ -130,23 +130,21 @@
   </nav>
   </div>
   <div id="account-settings-overlay">
-    <div id="account-settings-panel">
+    <div id="account-settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-user-email">
       <div class="account-settings-header">
-        <span>Account</span>
-        <button id="close-account-settings-btn" class="icon-btn">&#x2715;</button>
+        <span id="settings-user-email" class="settings-value"></span>
+        <button id="close-account-settings-btn" class="icon-btn" aria-label="Close">&#x2715;</button>
       </div>
       <div class="account-settings-body">
-        <div class="settings-section">
-          <div class="settings-row">
-            <span class="settings-label">Email</span>
-            <span id="settings-user-email" class="settings-value"></span>
-          </div>
-        </div>
         <div id="security-section" class="settings-section" hidden>
-          <div class="settings-section-title">Security</div>
-          <button id="change-password-btn" class="settings-btn" type="button" hidden
-                  aria-expanded="false" aria-controls="change-password-form">Change password</button>
-          <button id="add-password-btn" class="settings-btn" type="button" hidden>Add a password</button>
+          <div class="settings-row">
+            <span class="settings-label">Password</span>
+            <button id="change-password-btn" class="settings-link" type="button" hidden
+                    aria-label="Change password"
+                    aria-expanded="false" aria-controls="change-password-form">Change</button>
+            <button id="add-password-btn" class="settings-link" type="button" hidden
+                    aria-label="Add a password">Add</button>
+          </div>
           <p id="add-password-hint" class="settings-hint" hidden>We'll email you a link to set one.</p>
           <form id="change-password-form" class="auth-form security-form" novalidate hidden>
             <input id="security-username" type="email" autocomplete="username" hidden>
@@ -170,12 +168,10 @@
           <p id="security-status" class="settings-hint" aria-live="polite" hidden></p>
         </div>
         <div class="settings-section">
-          <button id="settings-sign-out-btn" class="settings-btn">Sign out</button>
+          <button id="settings-sign-out-btn" class="settings-btn" type="button">Sign out</button>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-title">Danger Zone</div>
-          <button id="settings-delete-account-btn" class="settings-btn danger-btn">Delete Account</button>
-          <p class="settings-hint">Permanently deletes your account and all saved pages.</p>
+        <div class="settings-section settings-delete">
+          <button id="settings-delete-account-btn" class="settings-link danger-link" type="button">Delete account</button>
         </div>
       </div>
     </div>
