@@ -178,7 +178,7 @@ function findRhymes(targetWord) {
 function buildChipsHtml(key, entries) {
   return entries.map(function toChip(entry) {
     const common = entry.tier === 'common' ? ' common' : '';
-    return `<span class="rhyme-word color-${key}${common}" title="Click for meaning">${entry.word}</span>`;
+    return `<span class="rhyme-word color-${key}${common}">${entry.word}</span>`;
   }).join('');
 }
 
@@ -1068,12 +1068,124 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     return;
   }
 
-  // Word definition
+  // A chip swaps itself into the lyric. With no word to swap (the picked
+  // word was edited away), the click falls back to the word's meaning.
   const wordEl = clicked.closest('.rhyme-word');
-  if (wordEl) {
-    showDefinition(wordEl.textContent.trim(), wordEl);
+  if (!wordEl) return;
+  if (isLongPressClick) {
+    isLongPressClick = false;
+    return;
   }
+  const word = wordEl.textContent.trim();
+  if (!replacePickedWord(word)) showDefinition(word, wordEl, false);
 });
+
+// ── Swapping a rhyme into the lyric ──
+
+// "Night" becomes "Light" and "NIGHT" becomes "LIGHT", so a swap never
+// leaves the line looking wrong.
+function matchWordCase(original, replacement) {
+  const isAllCaps = original.length > 1 && original === original.toUpperCase() &&
+    original !== original.toLowerCase();
+  if (isAllCaps) return replacement.toUpperCase();
+  const first = original.charAt(0);
+  const isCapitalized = first !== first.toLowerCase();
+  if (isCapitalized) return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  return replacement;
+}
+
+// Returns false when there is no picked word to replace. The swapped-in word
+// stays picked, so a second chip swaps it again: the writer can try several
+// rhymes in place while the list stays on the word they started from.
+function replacePickedWord(word) {
+  console.assert(typeof word === 'string', 'replacePickedWord: word must be a string');
+  if (!pickedBounds || typeof word !== 'string' || word === '') return false;
+  const start = pickedBounds.start;
+  const end = pickedBounds.end;
+  const replacement = matchWordCase(textareaEl.value.slice(start, end), word);
+  insertIntoEditor(replacement, start, end);
+  pickedBounds = { start: start, end: start + replacement.length };
+  currentHighlightWord = RhymeCore.normalizeWord(replacement);
+  markPickedWord();
+  return true;
+}
+
+// On desktop the swap goes through the browser's own editing, so Ctrl+Z
+// takes it back. On mobile the editor sits behind the Rhymes tab, and
+// focusing it would pop the keyboard up, so the text is set directly.
+function insertIntoEditor(text, start, end) {
+  if (!isMobileView()) {
+    textareaEl.focus();
+    textareaEl.setSelectionRange(start, end);
+    if (document.execCommand('insertText', false, text)) return;
+  }
+  textareaEl.setRangeText(text, start, end, 'end');
+  textareaEl.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// ── Peeking at a rhyme's meaning ──
+
+// Hovering a chip shows its meaning after a short pause, so sweeping the
+// pointer across the list does not fire a lookup for every word it crosses.
+const DEFINITION_HOVER_DELAY_MS = 350;
+// Touch has no hover, so holding a chip down shows the meaning instead.
+const DEFINITION_LONG_PRESS_MS = 500;
+
+let definitionHoverTimer = null;
+let hoveredChipEl = null;
+let longPressTimer = null;
+let isLongPressClick = false;
+
+function canHover() {
+  return window.matchMedia('(hover: hover)').matches;
+}
+
+function handleChipPointerOver(event) {
+  if (!canHover()) return;
+  const chip = event.target.closest('.rhyme-word');
+  if (!chip || chip === hoveredChipEl) return;
+  hoveredChipEl = chip;
+  clearTimeout(definitionHoverTimer);
+  closeDefinition();
+  definitionHoverTimer = setTimeout(function peekAtDefinition() {
+    showDefinition(chip.textContent.trim(), chip, true);
+  }, DEFINITION_HOVER_DELAY_MS);
+}
+
+function handleChipPointerOut(event) {
+  if (!hoveredChipEl) return;
+  if (hoveredChipEl.contains(event.relatedTarget)) return;
+  hoveredChipEl = null;
+  clearTimeout(definitionHoverTimer);
+  closeDefinition();
+}
+
+function handleChipTouchStart(event) {
+  if (event.pointerType !== 'touch') return;
+  const chip = event.target.closest('.rhyme-word');
+  if (!chip) return;
+  isLongPressClick = false;
+  clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(function showHeldDefinition() {
+    isLongPressClick = true;
+    showDefinition(chip.textContent.trim(), chip, false);
+  }, DEFINITION_LONG_PRESS_MS);
+}
+
+function cancelLongPress() {
+  clearTimeout(longPressTimer);
+}
+
+resultsEl.addEventListener('pointerover', handleChipPointerOver);
+resultsEl.addEventListener('pointerout', handleChipPointerOut);
+resultsEl.addEventListener('pointerdown', handleChipTouchStart);
+resultsEl.addEventListener('pointerup', cancelLongPress);
+resultsEl.addEventListener('pointercancel', cancelLongPress);
+// A peek is pinned to where its chip was; once the list scrolls it points
+// at nothing, so it goes.
+resultsEl.addEventListener('scroll', function closePeekOnScroll() {
+  if (document.querySelector('.def-popup.def-peek')) closeDefinition();
+}, { passive: true, capture: true });
 
 // ── Definition popup ──
 
@@ -1090,16 +1202,20 @@ function closeDefinition() {
   if (popup) popup.remove();
 }
 
-function showDefinition(word, anchorEl) {
+// A peek follows the pointer and stays out of its way: no overlay to click
+// through, and it closes when the pointer leaves the chip.
+function showDefinition(word, anchorEl, isPeek) {
   closeDefinition();
 
-  var overlay = document.createElement('div');
-  overlay.className = 'def-overlay';
-  overlay.addEventListener('click', closeDefinition);
-  document.body.appendChild(overlay);
+  if (!isPeek) {
+    var overlay = document.createElement('div');
+    overlay.className = 'def-overlay';
+    overlay.addEventListener('click', closeDefinition);
+    document.body.appendChild(overlay);
+  }
 
   var popup = document.createElement('div');
-  popup.className = 'def-popup';
+  popup.className = isPeek ? 'def-popup def-peek' : 'def-popup';
   popup.innerHTML = '<div class="def-loading">Loading...</div>';
   document.body.appendChild(popup);
 
@@ -1130,17 +1246,28 @@ function showDefinition(word, anchorEl) {
     });
 }
 
+// Hovering back over a word should not fetch it again. Failed lookups are
+// dropped from the cache so the next hover retries.
+const definitionCache = new Map();
+
 // Resolves to a definition entry, or null when the word genuinely has no
 // entry. Rejects only when the lookup itself failed, so an outage is never
 // reported to the user as a missing word.
 function fetchDefinition(word) {
+  const key = word.toLowerCase();
+  if (definitionCache.has(key)) return definitionCache.get(key);
   const url = DEFINITION_ENDPOINT + encodeURIComponent(word);
-  return fetch(url, { signal: AbortSignal.timeout(DEFINITION_TIMEOUT_MS) })
+  const lookup = fetch(url, { signal: AbortSignal.timeout(DEFINITION_TIMEOUT_MS) })
     .then(function readDefinitionResponse(resp) {
       if (resp.ok) return resp.json();
       if (resp.status === HTTP_NOT_FOUND) return null;
       throw new Error('definition lookup failed with status ' + resp.status);
     });
+  definitionCache.set(key, lookup);
+  lookup.catch(function forgetFailedLookup() {
+    definitionCache.delete(key);
+  });
+  return lookup;
 }
 
 function renderDefinition(entry) {

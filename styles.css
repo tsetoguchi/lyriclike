@@ -1148,7 +1148,7 @@ header .nav-icon circle {
   transition: background var(--duration-fast);
 }
 
-/* A chip opens the word's meaning, so it answers the pointer like a button. */
+/* A chip swaps itself into the lyric, so it answers the pointer like a button. */
 .rhyme-word:hover {
   background: var(--ink-wash-strong);
 }
@@ -1179,6 +1179,12 @@ header .nav-icon circle {
   border-radius: var(--radius-md);
   padding: var(--space-4);
   box-shadow: var(--shadow-popup);
+}
+
+/* A hover peek must not catch the pointer, or moving on to the next chip
+   could land on the popup instead. */
+.def-popup.def-peek {
+  pointer-events: none;
 }
 
 .def-popup::-webkit-scrollbar {
