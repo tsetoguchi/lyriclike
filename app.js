@@ -192,10 +192,14 @@ function buildGroupBodyHtml(key, entries) {
   return html;
 }
 
-// Past the first screenful an exact count reads like a database total, not
-// something a writer needs, so the heading only says there is more.
+// A big exact count reads like a database total, not something a writer
+// needs, so past a cap the heading only says there are plenty. The cap sits
+// above the first screenful, so a heading never promises fewer words than
+// "Show all" then lists.
+const GROUP_COUNT_CAP = 50;
+
 function formatGroupCount(total) {
-  return total > INITIAL_RESULTS_PER_GROUP ? INITIAL_RESULTS_PER_GROUP + '+' : String(total);
+  return total > GROUP_COUNT_CAP ? GROUP_COUNT_CAP + '+' : String(total);
 }
 
 // Groups render as headers only. Filling every body up front put thousands of
