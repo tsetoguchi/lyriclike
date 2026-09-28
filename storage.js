@@ -20,6 +20,8 @@ const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
 const NEW_LYRIC_HEADING = 'Create page';
 const DELETE_LYRIC_HEADING = 'Delete page';
+const LEAVE_LYRIC_HEADING = 'Leave page';
+const SHARED_GROUP_LABEL = 'Shared with me';
 const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
@@ -63,6 +65,24 @@ let unansweredBody = null;
 // What the server holds when a save was refused, until the writer picks
 // whose version to keep. Saving waits while it is set.
 let pendingConflict = null;
+// Whose the open page is and how many people have it. Sharing (sharing.js)
+// reads it for the Share button, the "Shared by" line and the poll.
+let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
+
+function setPageInfo(lyric) {
+  currentPageInfo = {
+    role: lyric.role === 'editor' ? 'editor' : 'owner',
+    shareCount: Number(lyric.share_count) || 0,
+    ownerName: typeof lyric.owner_name === 'string' ? lyric.owner_name : '',
+  };
+  refreshSharingUi();
+}
+
+// sharing.js loads after this file, so the first calls, from a restored
+// draft, come before it is there.
+function refreshSharingUi() {
+  if (typeof refreshPageSharing === 'function') refreshPageSharing();
+}
 
 // ── Dialog ──
 
@@ -263,6 +283,7 @@ async function loadLyricsList() {
   // check answers there is nothing to say yet.
   if (window.currentUser === null) {
     showLocalPage(container);
+    if (typeof promptForPendingShare === 'function') promptForPendingShare();
     return;
   }
   if (window.currentUser === undefined) {
@@ -290,14 +311,20 @@ async function loadLyricsList() {
 
     const lyrics = await res.json();
     listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
-    if (lyrics.length === 0) {
+    const own = lyrics.filter(lyric => !lyric.shared);
+    const shared = lyrics.filter(lyric => lyric.shared);
+    if (own.length === 0) {
       showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
-      return;
+    } else {
+      container.innerHTML = '';
+      for (const lyric of own) container.appendChild(buildListItem(lyric));
     }
-
-    container.innerHTML = '';
-    for (const lyric of lyrics) {
-      container.appendChild(buildListItem(lyric));
+    if (shared.length > 0) {
+      const label = document.createElement('h2');
+      label.className = 'sidebar-label lyrics-list-group';
+      label.textContent = SHARED_GROUP_LABEL;
+      container.appendChild(label);
+      for (const lyric of shared) container.appendChild(buildListItem(lyric));
     }
     return lyrics;
   } catch {
@@ -306,21 +333,32 @@ async function loadLyricsList() {
 }
 
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 8v6M14 11h6"/></svg>';
+const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
 
-// A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
-// wait at the end of the row until it is hovered or focused.
+// A page is its title, like a chat in Gemini or ChatGPT. Its actions wait at
+// the end of the row until it is hovered or focused. Share is there as well as
+// beside the title, because phones have no title row. A page shared with this
+// person shows whose it is, and can be left rather than deleted.
 function buildListItem(lyric) {
   const item = document.createElement('div');
   item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
   item.dataset.id = lyric.id;
   const title = escapeHtml(titleForName(lyric.title));
+  const owner = lyric.shared ? escapeHtml(lyric.owner_name || '') : '';
+  const lastAction = lyric.shared
+    ? `<button class="lyrics-action-btn lyrics-delete-btn" data-action="leave" aria-label="Leave ${title}" title="Leave">${LEAVE_ICON}</button>`
+    : `<button class="lyrics-action-btn lyrics-delete-btn" data-action="delete" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>`;
+  const shareAction = lyric.shared ? ''
+    : `<button class="lyrics-action-btn" data-action="share" aria-label="Share ${title}" title="Share">${SHARE_ICON}</button>`;
 
   item.innerHTML = `
-    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}">${title}</button>
+    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}">${title}${owner ? `<span class="lyrics-list-owner">${owner}</span>` : ''}</button>
     <div class="lyrics-list-actions">
-      <button class="lyrics-action-btn" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
-      <button class="lyrics-action-btn lyrics-delete-btn" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>
+      ${shareAction}
+      <button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
+      ${lastAction}
     </div>
   `;
 
@@ -328,9 +366,15 @@ function buildListItem(lyric) {
     trackEvent('page_opened');
     loadLyric(lyric.id);
   });
-  const [renameBtn, deleteBtn] = item.querySelectorAll('.lyrics-action-btn');
-  renameBtn.addEventListener('click', () => renameLyric(lyric.id, lyric.title));
-  deleteBtn.addEventListener('click', () => deleteLyric(lyric.id, lyric.title));
+  const actions = {
+    share: () => { if (typeof openShareDialog === 'function') openShareDialog(lyric.id, lyric.title); },
+    rename: () => renameLyric(lyric.id, lyric.title),
+    delete: () => deleteLyric(lyric),
+    leave: () => deleteLyric(lyric),
+  };
+  for (const button of item.querySelectorAll('.lyrics-action-btn')) {
+    button.addEventListener('click', actions[button.dataset.action]);
+  }
   return item;
 }
 
@@ -394,6 +438,7 @@ function showLyric(lyric) {
   lastSavedBody = lyric.body;
   unansweredBody = null;
   clearConflict();
+  if (lyric.role) setPageInfo(lyric);
 
   const textarea = document.getElementById('lyrics');
   textarea.value = lyric.body;
@@ -412,6 +457,7 @@ function startBlankPage(title) {
   lastSavedBody = '';
   unansweredBody = null;
   clearConflict();
+  setPageInfo({});
 
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
@@ -440,13 +486,22 @@ function saveNewLyric() {
   return performSave({ force: true });
 }
 
-async function deleteLyric(id, title) {
-  const confirmed = await openDialog({
-    heading: DELETE_LYRIC_HEADING,
-    message: `“${titleForName(title)}” will be deleted, along with everything written in it. This cannot be undone.`,
-    confirmLabel: 'Delete',
-    danger: true,
-  });
+// The server treats both the same way: the owner's call deletes the page,
+// an editor's only takes them off it. Only the words differ.
+async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
+  const confirmed = await openDialog(shared
+    ? {
+      heading: LEAVE_LYRIC_HEADING,
+      message: `You'll lose access to “${titleForName(title)}”. ${ownerName || 'Its owner'} keeps it.`,
+      confirmLabel: 'Leave',
+      danger: true,
+    }
+    : {
+      heading: DELETE_LYRIC_HEADING,
+      message: `“${titleForName(title)}” will be deleted, along with everything written in it. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
   if (!confirmed) return;
 
   if (id === currentLyricId) {
@@ -630,6 +685,7 @@ function savedAs(body, revision) {
   unansweredBody = null;
   saveDraft();
   showSaved();
+  refreshSharingUi();
 }
 
 function showSaved() {
@@ -725,6 +781,7 @@ function saveAsNewPage({ message }) {
   currentRevision = null;
   lastSavedBody = '';
   unansweredBody = null;
+  setPageInfo({});
   updatePanelHeader();
   saveDraft();
   saveQueued = true;
@@ -748,6 +805,7 @@ function saveDraft() {
     body: document.getElementById('lyrics').value,
     revision: currentRevision,
     dirty: hasUnsavedEdits(),
+    info: currentPageInfo,
   }));
 }
 
@@ -859,8 +917,10 @@ function isPadUnused() {
 // Signing in lands on the page last worked on, the way a reload does, rather
 // than on a blank one. Words typed before signing in stay where they are.
 async function openNotebook() {
+  refreshSharingUi();
   const lyrics = await loadLyricsList();
   await reconcileRestoredDraft();
+  if (typeof openPendingShare === 'function' && await openPendingShare()) return;
   if (lyrics && lyrics.length > 0 && isPadUnused()) await loadLyric(lyrics[0].id);
 }
 
@@ -957,6 +1017,8 @@ function clearLyricState() {
   restoredDraft = null;
   pendingConflict = null;
   hideNotice();
+  setPageInfo({});
+  if (typeof forgetPendingShare === 'function') forgetPendingShare();
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
   textarea.dispatchEvent(new Event('input'));
@@ -1051,6 +1113,11 @@ function restoreDraft() {
     currentTitle = title || DEFAULT_TITLE;
     // Set before the input event below, which writes the draft again.
     currentRevision = Number.isSafeInteger(draft.revision) ? draft.revision : null;
+    if (draft.info && typeof draft.info === 'object') {
+      setPageInfo({
+        role: draft.info.role, share_count: draft.info.shareCount, owner_name: draft.info.ownerName,
+      });
+    }
     lastSavedBody = currentRevision !== null && !draft.dirty ? (body || '') : '';
     restoredDraft = {
       id: currentLyricId,
