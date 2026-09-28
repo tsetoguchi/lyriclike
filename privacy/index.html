@@ -38,6 +38,8 @@
 <tr><th scope="row">Email, name and hashed password</th><td>Our database</td><td>Until you delete your account</td></tr>
 <tr><th scope="row">Sign-in cookie</th><td>This browser</td><td>30 days from your last visit, 90 days at most</td></tr>
 <tr><th scope="row">Account log, with a shortened IP address</th><td>Our database</td><td>90 days</td></tr>
+<tr><th scope="row">Emails you share a page with</th><td>Our database</td><td>Until the page is deleted or that person is taken off it</td></tr>
+<tr><th scope="row">Addresses that asked for no invite emails, scrambled</th><td>Our database</td><td>Kept, so they are never emailed again</td></tr>
 <tr><th scope="row">An email sign-up not yet confirmed</th><td>Our database</td><td>24 hours</td></tr>
 <tr><th scope="row">Visits and feature use</th><td>Google Analytics and Cloudflare</td><td>Up to 14 months</td></tr>
 </tbody>
@@ -46,12 +48,17 @@
 
 <section>
 <h2>Your lyrics</h2>
-<p>Signed out, your writing stays in this browser and never leaves the device. Signed in, your pages are saved to our database so they open on any device. Nobody looks at them, and they are never used for analytics, advertising or training.</p>
+<p>Signed out, your writing stays in this browser and never leaves the device. Signed in, your pages are saved to our database so they open on any device. Nobody looks at them except the people you share a page with, and they are never used for analytics, advertising or training.</p>
 </section>
 
 <section>
 <h2>Your account</h2>
 <p>We store your password only in hashed form, so we can't read it. The account log records events such as sign-ins and password changes. Its IP addresses are cut short, so they point to a network, not a person.</p>
+</section>
+
+<section>
+<h2>Sharing a page</h2>
+<p>When you share a page, we email the address you type to tell them. The email has your name and the page's title, but none of your words. We keep that address with the page so the person can open it once they log in with it, until the page is deleted or they are taken off it. Everyone on a page can see each other's emails. Every invite has a link to stop these emails; we then keep a scrambled form of the address (a hash, which can't be turned back into it) so we never email it again.</p>
 </section>
 
 <section>
@@ -64,13 +71,13 @@
 <ul>
 <li><strong>Cloudflare</strong> hosts the site and the database, and runs Turnstile, which checks that a sign-up comes from a person.</li>
 <li><strong>Google</strong> runs "Continue with Google" and Google Analytics.</li>
-<li><strong>Resend</strong> sends confirmation and password-reset emails.</li>
+<li><strong>Resend</strong> sends confirmation, password-reset and invite emails.</li>
 </ul>
 </section>
 
 <section>
 <h2>Seeing and deleting your data</h2>
-<p>Every page you've saved is in <strong>My Notebook</strong>, where you can read, edit, rename or delete it. To delete everything, go to <strong>Account</strong> and choose <strong>Delete account</strong>. Your account, every saved page and your account log are removed at once. To remove writing kept only in this browser, clear this site's data in your browser settings.</p>
+<p>Every page you've saved is in <strong>My Notebook</strong>, where you can read, edit, rename or delete it. To delete everything, go to <strong>Account</strong> and choose <strong>Delete account</strong>. Your account, every saved page, who you shared them with, and your access to pages others shared with you are removed at once, along with your account log. To remove writing kept only in this browser, clear this site's data in your browser settings.</p>
 </section>
 
 <section>

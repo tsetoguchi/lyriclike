@@ -656,6 +656,134 @@ header .nav-icon circle {
   gap: var(--space-2);
 }
 
+/* ── Sharing ── */
+
+/* Pushed to the far end of the title row, out of the title's way. */
+.share-btn {
+  margin-left: auto;
+  padding: var(--space-1) var(--space-3);
+}
+
+.share-btn[hidden] {
+  display: none;
+}
+
+/* "Shared by Ann" or "Shared with 3 people", in pencil under the title.
+   It opens the same dialog as the button, since phones have no title row. */
+.page-sharing {
+  width: 100%;
+  max-width: var(--sheet-width);
+  margin: calc(-1 * var(--space-2)) auto 0;
+  padding: 0 var(--space-5) var(--space-2)
+    calc(var(--sheet-syllables) + var(--editor-pad));
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.page-sharing:hover {
+  color: var(--ink);
+}
+
+.page-sharing[hidden] {
+  display: none;
+}
+
+.share-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.share-row .modal-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-hint {
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  line-height: 1.5;
+  color: var(--ink-faded);
+}
+
+.share-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.share-result[hidden],
+.share-leave[hidden] {
+  display: none;
+}
+
+.share-people-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.share-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.share-person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--space-8);
+  border-bottom: var(--hairline) solid var(--rule);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+}
+
+.share-person-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.share-person-status {
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.share-leave {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--danger);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A shared page in the notebook says whose it is, in pencil. */
+.lyrics-list-owner {
+  margin-left: var(--space-2);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.sidebar-label.lyrics-list-group {
+  padding: var(--space-5) var(--space-3) var(--space-2);
+}
+
 /* The annotation margin is only ruled off when there is something to write in
    it. Closed it takes no width at all, so the lyrics start at the paper's
    edge; opening widens it and the margin line arrives with it. */
@@ -2598,9 +2726,18 @@ body.sidebar-open #sidebar-scrim {
     display: none;
   }
 
-  /* With no title row above it, the notice needs its own space from the tabs. */
-  .page-notice {
+  /* With no title row above them, these need their own space from the tabs. */
+  .page-notice,
+  .page-sharing {
     padding-top: var(--space-3);
+  }
+
+  .page-sharing {
+    margin-top: 0;
+  }
+
+  .page-sharing:not([hidden]) + .page-notice {
+    padding-top: 0;
   }
 
   .resize-handle {
