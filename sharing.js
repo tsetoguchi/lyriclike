@@ -40,6 +40,13 @@
 
   const byId = id => document.getElementById(id);
 
+  // Tolerates a missing element: a tab that loaded the page just before a
+  // deploy can run this script against the older markup.
+  function setHidden(id, hidden) {
+    const element = byId(id);
+    if (element) element.hidden = hidden;
+  }
+
   // One person with a plus for the owner, who can add people; two people for
   // an editor, who can only see who is there.
   const SHARE_BUTTON_ICON = '<svg class="share-btn-icon" viewBox="0 0 24 24" aria-hidden="true">'
@@ -108,7 +115,8 @@
     submitButton.disabled = true;
     showResult('');
     form.hidden = true;
-    byId('share-leave').hidden = true;
+    setHidden('share-leave', true);
+    setHidden('share-people-block', true);
     byId('share-people').innerHTML = '';
     overlay.hidden = false;
     overlay.classList.add('open');
@@ -161,7 +169,6 @@
   async function loadPeople() {
     const page = dialogPage;
     if (!page) return;
-    const list = byId('share-people');
     let data;
     try {
       const res = await fetch(`/api/lyrics/${page.id}/shares`);
@@ -177,7 +184,18 @@
       return;
     }
     if (page !== dialogPage) return;
+    try {
+      showPeople(page, data);
+    } catch (err) {
+      console.error('share dialog', err);
+      showResult(TEXT.LOAD_FAILED, '', { error: true });
+    }
+  }
 
+  // A page only its owner has shows no list: "you, the owner" and a note
+  // about seeing each other's emails mean nothing until someone else is on it.
+  function showPeople(page, data) {
+    const list = byId('share-people');
     const isOwner = data.role === 'owner';
     page.role = data.role;
     page.ownerName = data.owner.name || data.owner.email;
@@ -186,8 +204,9 @@
       : `People on “${titleForName(page.title)}”`;
     form.hidden = !isOwner;
     // An editor's dialog is headed "People on …" already.
-    byId('share-people-label').hidden = !isOwner;
-    byId('share-leave').hidden = isOwner;
+    setHidden('share-people-label', !isOwner);
+    setHidden('share-leave', isOwner);
+    setHidden('share-people-block', data.people.length === 0);
 
     const myEmail = window.currentUser ? String(window.currentUser.email || '').toLowerCase() : '';
     list.innerHTML = '';
