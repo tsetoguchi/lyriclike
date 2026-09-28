@@ -240,7 +240,7 @@ describe('own lyrics', () => {
     const listed = await (await listLyrics(alice.sid)).json();
     assert.deepEqual(listed.map((lyric) => lyric.id), [ALICE_LYRIC_ID, 'older']);
     assert.deepEqual(
-      Object.keys(listed[0]).sort(), ['created_at', 'id', 'title', 'updated_at']);
+      Object.keys(listed[0]).sort(), ['created_at', 'id', 'share_count', 'title', 'updated_at']);
   });
 
   it('keep their created date in the list after a rename', async () => {

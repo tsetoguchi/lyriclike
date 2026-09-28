@@ -1,15 +1,16 @@
 import { requireUser, writeLog } from '../../_shared.js';
+import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
 const MAX_TITLE_LENGTH = 300;
 const MAX_BODY_LENGTH = 500_000;
 
-// Who can open a page. Every lyrics route asks the same question, so it is
-// written once and bound as canOpenParams(user) after the page id.
-const CAN_OPEN = 'user_id = ?';
-
-function canOpenParams(user) {
-  return [user.id];
-}
+// What the app needs to know about a page besides its words: whose it is,
+// and how many people it is shared with, which turns on the poll and the
+// "Shared with 3 people" line.
+const PAGE_COLUMNS = `id, title, body, revision, updated_at, created_at, user_id AS owner_id,
+  (SELECT count(*) FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id) AS share_count,
+  (SELECT COALESCE(NULLIF(users.name, ''), users.email) FROM users
+    WHERE users.id = lyrics.user_id) AS owner_name`;
 
 function notFound() {
   return new Response(null, { status: 404 });
@@ -38,13 +39,26 @@ export async function onRequestGet({ request, env, params }) {
   // The poll on a shared page asks only whether anything changed, so it does
   // not send the whole page every few seconds.
   const metaOnly = new URL(request.url).searchParams.get('meta') === '1';
-  const columns = metaOnly
-    ? 'revision, title, updated_at'
-    : 'id, title, body, revision, updated_at, created_at';
+  if (metaOnly) {
+    const meta = await findOpenable(env, params.id, user, 'revision, title, updated_at');
+    return meta ? Response.json(meta) : notFound();
+  }
 
-  const lyric = await findOpenable(env, params.id, user, columns);
-  if (!lyric) return notFound();
-  return Response.json(lyric);
+  const found = await findOpenable(env, params.id, user, PAGE_COLUMNS);
+  if (!found) return notFound();
+  const { owner_id: ownerId, ...lyric } = found;
+  const role = ownerId === user.id ? 'owner' : 'editor';
+  if (role === 'editor') await recordFirstOpen(request, env, params.id, user);
+  return Response.json({ ...lyric, role });
+}
+
+// Once per person, ever, for the growth numbers: did the invite get opened.
+async function recordFirstOpen(request, env, id, user) {
+  const opened = await env.lyricalmiracle_db.prepare(`
+    UPDATE lyric_shares SET first_opened_at = ?, user_id = COALESCE(user_id, ?)
+    WHERE lyric_id = ? AND email_normalized = ? AND first_opened_at IS NULL
+  `).bind(Date.now(), user.id, id, user.email_normalized).run();
+  if (opened.meta.changes > 0) await writeLog(env, request, { userId: user.id, event: 'share_opened' });
 }
 
 // A body that is not a JSON object is the caller's mistake, so it gets a 400
@@ -169,9 +183,19 @@ export async function onRequestDelete({ request, env, params }) {
   const { user, response } = await requireUser(request, env);
   if (response) return response;
 
-  await env.lyricalmiracle_db.prepare(
-    'DELETE FROM lyrics WHERE id = ? AND user_id = ?'
-  ).bind(params.id, user.id).run();
+  // The owner deletes the page and its share list; the owner check sits in
+  // the share delete too, so nobody else can wipe a page's list this way. An
+  // editor calling this only leaves: their own row goes, the page stays.
+  const db = env.lyricalmiracle_db;
+  await db.batch([
+    db.prepare(
+      'DELETE FROM lyric_shares WHERE lyric_id IN (SELECT id FROM lyrics WHERE id = ? AND user_id = ?)'
+    ).bind(params.id, user.id),
+    db.prepare('DELETE FROM lyrics WHERE id = ? AND user_id = ?').bind(params.id, user.id),
+    db.prepare(
+      'DELETE FROM lyric_shares WHERE lyric_id = ? AND email_normalized = ?'
+    ).bind(params.id, user.email_normalized),
+  ]);
 
   return new Response(null, { status: 204 });
 }

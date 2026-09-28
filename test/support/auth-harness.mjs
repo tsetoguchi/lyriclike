@@ -20,6 +20,7 @@ export function makeEnv(extra = {}) {
     EMAIL_FROM: 'LyricLike <noreply@lyriclike.com>',
     APP_BASE_URL: BASE_URL,
     TURNSTILE_SECRET_KEY: 'turnstile-secret',
+    INVITE_SIGNING_SECRET: 'invite-secret-not-a-secret',
     ...extra,
   };
 }

@@ -62,6 +62,15 @@ export async function onRequestDelete({ request, env }) {
 
   await env.lyricalmiracle_db.batch([
     env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
+    // Shares on this user's pages, then this user's access to other pages.
+    // Both hold foreign keys, so they go before the lyrics and the user.
+    env.lyricalmiracle_db.prepare(
+      'DELETE FROM lyric_shares WHERE lyric_id IN (SELECT id FROM lyrics WHERE user_id = ?)'
+    ).bind(user.id),
+    env.lyricalmiracle_db.prepare(
+      'DELETE FROM lyric_shares WHERE user_id = ? OR email_normalized = ' +
+      '(SELECT email_normalized FROM users WHERE id = ?)'
+    ).bind(user.id, user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM lyrics WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM identities WHERE user_id = ?').bind(user.id),
