@@ -79,7 +79,9 @@
       + `<span>${isEditor ? 'People' : 'Share'}</span>`;
 
     const line = byId('page-sharing');
-    line.textContent = signedIn ? sharingLine() : '';
+    const canInvite = signedIn && currentRevision !== null && !isEditor && !isShared();
+    line.textContent = signedIn ? sharingLine() || (canInvite ? 'Share this page' : '') : '';
+    line.classList.toggle('page-sharing-invite', canInvite);
     line.hidden = !line.textContent;
     schedulePoll();
   }
@@ -350,15 +352,13 @@
     if (status === HTTP_NOT_FOUND) {
       showNotice(TEXT.NOT_AVAILABLE, [
         { label: 'Log out', onClick: () => { hideNotice(); signOut(); } },
-        { label: 'OK', onClick: hideNotice },
       ]);
       return;
     }
     if (status !== HTTP_OK) return;
     loadLyricsList();
     if (currentPageInfo.role === 'editor') {
-      showNotice(`${currentPageInfo.ownerName || 'Someone'} shared this with you.`,
-        [{ label: 'OK', onClick: hideNotice }]);
+      showNotice(`${currentPageInfo.ownerName || 'Someone'} shared this with you.`);
     }
   }
 
@@ -399,10 +399,10 @@
       });
       if (!res.ok) throw new Error(String(res.status));
     } catch {
-      await openDialog({ heading: 'Stop these emails', message: TEXT.FAILED, confirmLabel: 'OK' });
+      await openDialog({ heading: 'Stop these emails', message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
       return;
     }
-    await openDialog({ heading: 'Done', message: TEXT.STOPPED, confirmLabel: 'OK' });
+    await openDialog({ heading: 'Emails stopped', message: TEXT.STOPPED, confirmLabel: 'OK', noCancel: true });
   }
 
   function openShareLink(link) {

@@ -95,7 +95,7 @@ function refreshSharingUi() {
 let resolveDialog = null;
 let requiredAnswer = null;
 
-function openDialog({ heading, message, confirmLabel, danger, field }) {
+function openDialog({ heading, message, confirmLabel, danger, field, noCancel = false }) {
   const overlay = document.getElementById('dialog-overlay');
   const input = document.getElementById('dialog-input');
   const confirm = document.getElementById('dialog-confirm');
@@ -103,6 +103,8 @@ function openDialog({ heading, message, confirmLabel, danger, field }) {
   const fieldEl = document.getElementById('dialog-field');
 
   document.getElementById('dialog-title').textContent = heading;
+  // A dialog that only tells something has nothing to cancel.
+  document.getElementById('dialog-cancel').hidden = noCancel;
   confirm.textContent = confirmLabel;
   confirm.classList.toggle('danger-btn', Boolean(danger));
 
@@ -333,14 +335,13 @@ async function loadLyricsList() {
 }
 
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
-const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 8v6M14 11h6"/></svg>';
 const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
 
-// A page is its title, like a chat in Gemini or ChatGPT. Its actions wait at
-// the end of the row until it is hovered or focused. Share is there as well as
-// beside the title, because phones have no title row. A page shared with this
-// person shows whose it is, and can be left rather than deleted.
+// A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
+// wait at the end of the row until it is hovered or focused. A page shared
+// with this person shows whose it is, and can be left rather than deleted.
+// The owner's name stays whole; only the title is cut short.
 function buildListItem(lyric) {
   const item = document.createElement('div');
   item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
@@ -350,13 +351,10 @@ function buildListItem(lyric) {
   const lastAction = lyric.shared
     ? `<button class="lyrics-action-btn lyrics-delete-btn" data-action="leave" aria-label="Leave ${title}" title="Leave">${LEAVE_ICON}</button>`
     : `<button class="lyrics-action-btn lyrics-delete-btn" data-action="delete" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>`;
-  const shareAction = lyric.shared ? ''
-    : `<button class="lyrics-action-btn" data-action="share" aria-label="Share ${title}" title="Share">${SHARE_ICON}</button>`;
 
   item.innerHTML = `
-    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}">${title}${owner ? `<span class="lyrics-list-owner">${owner}</span>` : ''}</button>
+    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}"><span class="lyrics-list-title">${title}</span>${owner ? `<span class="lyrics-list-owner">${owner}</span>` : ''}</button>
     <div class="lyrics-list-actions">
-      ${shareAction}
       <button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
       ${lastAction}
     </div>
@@ -367,7 +365,6 @@ function buildListItem(lyric) {
     loadLyric(lyric.id);
   });
   const actions = {
-    share: () => { if (typeof openShareDialog === 'function') openShareDialog(lyric.id, lyric.title); },
     rename: () => renameLyric(lyric.id, lyric.title),
     delete: () => deleteLyric(lyric),
     leave: () => deleteLyric(lyric),
@@ -712,7 +709,7 @@ function handleConflict(theirs, sentBody) {
   showNotice(CONFLICT_MESSAGE, [
     { label: 'Load their version', onClick: loadTheirVersion },
     { label: 'Keep mine', onClick: keepMine },
-  ]);
+  ], { closable: false });
 }
 
 function clearConflict() {
@@ -786,7 +783,7 @@ function saveAsNewPage({ message }) {
   saveDraft();
   saveQueued = true;
   queuedForce = true;
-  if (message) showNotice(message, [{ label: 'OK', onClick: hideNotice }]);
+  if (message) showNotice(message);
 }
 
 // Whether the words on screen differ from what the server last had.
@@ -812,8 +809,10 @@ function saveDraft() {
 // ── Page notice ──
 
 // A strip under the title for what happened to the page: a save that someone
-// else beat, or a page this account can no longer open.
-function showNotice(text, actions) {
+// else beat, or a page this account can no longer open. Amber buttons are for
+// choices; a notice that only tells closes with a quiet ✕. The conflict bar
+// has no ✕: one of its two choices has to be made.
+function showNotice(text, actions = [], { closable = true } = {}) {
   const notice = document.getElementById('page-notice');
   document.getElementById('page-notice-text').textContent = text;
   const buttons = document.getElementById('page-notice-actions');
@@ -825,6 +824,16 @@ function showNotice(text, actions) {
     button.textContent = label;
     button.addEventListener('click', onClick);
     buttons.appendChild(button);
+  }
+  if (closable) {
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'lyrics-action-btn page-notice-close';
+    close.setAttribute('aria-label', 'Dismiss');
+    close.title = 'Dismiss';
+    close.textContent = '✕';
+    close.addEventListener('click', hideNotice);
+    buttons.appendChild(close);
   }
   notice.hidden = false;
 }
@@ -994,7 +1003,7 @@ async function checkOldAppDraft(id) {
 function dropUnavailablePage() {
   startBlankPage(DEFAULT_TITLE);
   saveDraft();
-  showNotice(UNAVAILABLE_MESSAGE, [{ label: 'OK', onClick: hideNotice }]);
+  showNotice(UNAVAILABLE_MESSAGE);
 }
 loadLyricsList();
 
