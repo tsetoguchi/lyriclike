@@ -40,6 +40,14 @@
 
   const byId = id => document.getElementById(id);
 
+  // One person with a plus for the owner, who can add people; two people for
+  // an editor, who can only see who is there.
+  const SHARE_BUTTON_ICON = '<svg class="share-btn-icon" viewBox="0 0 24 24" aria-hidden="true">'
+    + '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M18 8v6M15 11h6"/></svg>';
+  const PEOPLE_BUTTON_ICON = '<svg class="share-btn-icon" viewBox="0 0 24 24" aria-hidden="true">'
+    + '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>'
+    + '<path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c1.8.9 3 2.9 3 5.7"/></svg>';
+
   // ── The Share button and the line under the title ──
 
   function isShared() {
@@ -59,7 +67,9 @@
     const signedIn = Boolean(window.currentUser);
     const button = byId('share-btn');
     button.hidden = !signedIn || currentRevision === null;
-    button.textContent = currentPageInfo.role === 'editor' ? 'People' : 'Share';
+    const isEditor = currentPageInfo.role === 'editor';
+    button.innerHTML = (isEditor ? PEOPLE_BUTTON_ICON : SHARE_BUTTON_ICON)
+      + `<span>${isEditor ? 'People' : 'Share'}</span>`;
 
     const line = byId('page-sharing');
     line.textContent = signedIn ? sharingLine() : '';
@@ -79,9 +89,12 @@
   let copyLink = '';
   let returnFocusTo = null;
 
-  function showResult(text, link) {
+  // What happened after Share or Remove. Errors read in red; a success is a
+  // quiet line, since the new row in the list already shows it.
+  function showResult(text, link, { error = false } = {}) {
     byId('share-result').hidden = !text;
     byId('share-result-text').textContent = text || '';
+    byId('share-result-text').classList.toggle('is-error', error);
     copyLink = link || '';
     copyButton.hidden = !link;
     copyButton.textContent = 'Copy link';
@@ -92,6 +105,7 @@
     returnFocusTo = document.activeElement;
     byId('share-title').textContent = `Share “${titleForName(title)}”`;
     emailInput.value = '';
+    submitButton.disabled = true;
     showResult('');
     form.hidden = true;
     byId('share-leave').hidden = true;
@@ -109,16 +123,28 @@
     returnFocusTo = null;
   }
 
-  function personRow(label, detail, onRemove) {
+  // Each person is marked by their first letter, set the way the rhyme scheme
+  // letters are in the margin. The owner's is amber.
+  function personRow(label, detail, { isOwner = false, isYou = false, onRemove = null } = {}) {
     const row = document.createElement('li');
-    row.className = 'share-person';
+    row.className = 'share-person' + (isOwner ? ' is-owner' : '');
+    const initial = document.createElement('span');
+    initial.className = 'share-person-initial';
+    initial.setAttribute('aria-hidden', 'true');
+    initial.textContent = (label.trim()[0] || '?').toUpperCase();
     const name = document.createElement('span');
     name.className = 'share-person-name';
     name.textContent = label;
+    if (isYou) {
+      const you = document.createElement('span');
+      you.className = 'share-person-you';
+      you.textContent = ' (you)';
+      name.append(you);
+    }
     const status = document.createElement('span');
     status.className = 'share-person-status';
     status.textContent = detail;
-    row.append(name, status);
+    row.append(initial, name, status);
     if (onRemove) {
       const remove = document.createElement('button');
       remove.type = 'button';
@@ -147,7 +173,7 @@
       if (!res.ok) throw new Error(String(res.status));
       data = await res.json();
     } catch {
-      if (page === dialogPage) showResult(TEXT.LOAD_FAILED);
+      if (page === dialogPage) showResult(TEXT.LOAD_FAILED, '', { error: true });
       return;
     }
     if (page !== dialogPage) return;
@@ -159,13 +185,18 @@
       ? `Share “${titleForName(page.title)}”`
       : `People on “${titleForName(page.title)}”`;
     form.hidden = !isOwner;
+    // An editor's dialog is headed "People on …" already.
+    byId('share-people-label').hidden = !isOwner;
     byId('share-leave').hidden = isOwner;
 
+    const myEmail = window.currentUser ? String(window.currentUser.email || '').toLowerCase() : '';
     list.innerHTML = '';
-    list.append(personRow(page.ownerName, 'Owner'));
+    list.append(personRow(page.ownerName, 'Owner', { isOwner: true, isYou: isOwner }));
     for (const person of data.people) {
-      const remove = isOwner ? () => removePerson(person.email) : null;
-      list.append(personRow(person.email, person.joined ? 'Joined' : 'Invited', remove));
+      list.append(personRow(person.email, person.joined ? 'Joined' : 'Invited', {
+        isYou: person.email.toLowerCase() === myEmail,
+        onRemove: isOwner ? () => removePerson(person.email) : null,
+      }));
     }
     if (isOwner && page.id === currentLyricId && currentPageInfo.shareCount !== data.people.length) {
       currentPageInfo.shareCount = data.people.length;
@@ -200,7 +231,7 @@
       const data = await res.json().catch(() => null);
       if (page !== dialogPage) return;
       if (!res.ok) {
-        showResult(errorMessage(data));
+        showResult(errorMessage(data), '', { error: true });
         return;
       }
       if (data.status === 'already_shared') {
@@ -212,9 +243,9 @@
       emailInput.value = '';
       await loadPeople();
     } catch {
-      if (page === dialogPage) showResult(TEXT.FAILED);
+      if (page === dialogPage) showResult(TEXT.FAILED, '', { error: true });
     } finally {
-      submitButton.disabled = false;
+      submitButton.disabled = !emailInput.value.trim();
     }
   }
 
@@ -227,12 +258,11 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok && page === dialogPage) showResult(TEXT.FAILED);
+      showResult(res.ok ? '' : TEXT.FAILED, '', { error: !res.ok });
     } catch {
-      if (page === dialogPage) showResult(TEXT.FAILED);
+      showResult(TEXT.FAILED, '', { error: true });
     }
-    showResult('');
-    await loadPeople();
+    if (page === dialogPage) await loadPeople();
   }
 
   // Leaving goes through the notebook's own Leave, which asks first.
@@ -255,6 +285,7 @@
   }
 
   form.addEventListener('submit', sharePage);
+  emailInput.addEventListener('input', () => { submitButton.disabled = !emailInput.value.trim(); });
   copyButton.addEventListener('click', copyShareLink);
   byId('share-leave').addEventListener('click', leavePage);
   byId('share-done').addEventListener('click', closeShareDialog);
