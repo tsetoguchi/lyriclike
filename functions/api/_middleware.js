@@ -28,8 +28,18 @@ function isJson(request) {
   return type === JSON_MEDIA_TYPE;
 }
 
+// The one exception: a mail app's one-click unsubscribe is a cross-site POST
+// with a form body. The route needs no cookie; its signed token is the only
+// thing that lets it act, so a forged request can do nothing with it.
+const ONE_CLICK_STOP_PATH = '/api/invites/stop';
+
+function isOneClickStop(request) {
+  return request.method === 'POST' && new URL(request.url).pathname === ONE_CLICK_STOP_PATH;
+}
+
 function rejectForgedRequest(request) {
   if (SAFE_METHODS.has(request.method)) return null;
+  if (isOneClickStop(request)) return null;
   if (!isSameOrigin(request)) return new Response(null, { status: HTTP_FORBIDDEN });
   if (hasBody(request) && !isJson(request)) {
     return new Response(null, { status: HTTP_UNSUPPORTED_MEDIA_TYPE });

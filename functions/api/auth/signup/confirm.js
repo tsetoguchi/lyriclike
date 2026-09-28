@@ -13,6 +13,7 @@ import {
 } from '../../../_ratelimit.js';
 import { gatePasswordAuth, readJsonBody } from '../../../_request.js';
 import { jsonError, sha256Hex, writeLog } from '../../../_shared.js';
+import { claimShares } from '../../../_shares.js';
 
 const IP_LIMIT_PER_HOUR = 10;
 const MAX_WRONG_PASSWORDS = 5;
@@ -106,6 +107,7 @@ async function confirmNewUser(context, pending, tokenHash) {
     return confirmIntoExistingUser(context, pending, tokenHash);
   }
   await writeLog(env, request, { userId, event: 'signup_password' });
+  await claimShares(env, request, userId, pending.email_normalized);
   return signedInResponse(env, request, userId, HTTP_CREATED);
 }
 
