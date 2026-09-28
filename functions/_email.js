@@ -11,12 +11,13 @@ const RESEND_TIMEOUT_MS = 5000;
 export const SIGNUP_LINK_HOURS = 24;
 export const RESET_LINK_MINUTES = 30;
 
-// Mail per address per day, and a daily budget kept under Resend's free cap.
-// Signup mail has its own pool, so abuse that gets past Turnstile cannot use
-// up the quota that reset mail depends on.
+// Mail per address per day, and a daily budget kept under Resend's free cap
+// of 100. Signup and invite mail each have their own pool, so abuse that gets
+// past Turnstile, or a burst of shares, cannot use up the quota that reset
+// mail depends on.
 const ADDRESS_DAILY_LIMIT = 5;
-export const EMAIL_POOL = Object.freeze({ SIGNUP: 'signup', ACCOUNT: 'account' });
-const POOL_DAILY_LIMIT = Object.freeze({ signup: 60, account: 30 });
+export const EMAIL_POOL = Object.freeze({ SIGNUP: 'signup', ACCOUNT: 'account', INVITE: 'invite' });
+export const POOL_DAILY_LIMIT = Object.freeze({ signup: 40, account: 30, invite: 30 });
 
 const AMBER = '#e9b45f';
 const INK = '#141922';
@@ -161,14 +162,17 @@ function googleAddedMessage(env, token) {
   };
 }
 
-// A thin adapter: one fetch. Returns { ok } and never throws.
-export async function sendEmail(env, { to, subject, text, html }) {
+// A thin adapter: one fetch. Returns { ok } and never throws. `headers` are
+// extra mail headers, such as List-Unsubscribe.
+export async function sendEmail(env, { to, subject, text, html, headers }) {
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return { ok: false };
+  const message = { from: env.EMAIL_FROM, to: [to], subject, text, html };
+  if (headers) message.headers = headers;
   try {
     const response = await fetch(RESEND_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text, html }),
+      body: JSON.stringify(message),
       signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
     });
     return { ok: response.ok };
@@ -185,14 +189,22 @@ async function logEmailEvent({ env, request }, event) {
   }
 }
 
-// Whether this address and this pool still have room today. The address is
-// checked first, so a refused address does not spend the pool's budget.
-async function withinEmailLimits(env, pool, to) {
+// The event logged when a mail is skipped. The reason goes in the name,
+// because the logs table has no room for more: a full pool is the one to act
+// on, a busy address is normal.
+export function emailSkippedEvent(reason, pool) {
+  return reason === 'pool' ? `email_skipped_pool_${pool}` : 'email_skipped_address';
+}
+
+// Why this address or this pool has no room today: 'address', 'pool', or
+// null when the mail can go. The address is checked first, so a refused
+// address does not spend the pool's budget.
+async function emailLimitReason(env, pool, to) {
   const perAddress = await checkRateLimit(
     env, `email:addr:${await sha256Hex(to.trim().toLowerCase())}`, ADDRESS_DAILY_LIMIT, DAY_MS);
-  if (!perAddress.allowed) return false;
+  if (!perAddress.allowed) return 'address';
   const perPool = await checkRateLimit(env, `email:pool:${pool}`, POOL_DAILY_LIMIT[pool], DAY_MS);
-  return perPool.allowed;
+  return perPool.allowed ? null : 'pool';
 }
 
 // Applies the limits, builds and sends. Returns a promise that never rejects;
@@ -201,8 +213,9 @@ async function withinEmailLimits(env, pool, to) {
 // or DNS problem shows up.
 async function deliverEmail(context, pool, to, build) {
   try {
-    if (!await withinEmailLimits(context.env, pool, to)) {
-      await logEmailEvent(context, 'email_skipped');
+    const skipped = await emailLimitReason(context.env, pool, to);
+    if (skipped) {
+      await logEmailEvent(context, emailSkippedEvent(skipped, pool));
       return;
     }
     const message = build(context.env);

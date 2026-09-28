@@ -1,0 +1,86 @@
+name: Email cap
+
+# Once a day, asks the production database how much mail was skipped or
+# failed in the last day. Resend's free plan allows 100 mails a day, split
+# into three pools (signup 40, account 30, invite 30). A pool that filled up
+# means real mail was dropped, so it fails this job and GitHub emails the repo
+# owner. More than a few failed sends means a Resend or DNS problem.
+# A passing run still prints how full each pool got.
+#
+# Needs the repo secret CLOUDFLARE_D1_TOKEN: a Cloudflare API token with only
+# "D1: Read" (or "D1: Edit", if Read is refused on the query route). It only
+# ever runs the two SELECTs below.
+
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Look for skipped and failed mail in the last 24 hours
+        env:
+          CLOUDFLARE_D1_TOKEN: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 2548933b4f272b70de5a6c50171000c3
+          D1_DATABASE_ID: 581d1db7-8372-4f83-a375-693388712173
+        run: |
+          cat > check.mjs <<'EOF'
+          const DAY_MS = 24 * 60 * 60 * 1000;
+          const FAILED_LIMIT = 5;
+          const POOLS = ['signup', 'account', 'invite'];
+
+          const token = process.env.CLOUDFLARE_D1_TOKEN;
+          if (!token) throw new Error('The CLOUDFLARE_D1_TOKEN secret is not set.');
+          const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`
+            + `/d1/database/${process.env.D1_DATABASE_ID}/query`;
+
+          async function query(sql, params) {
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sql, params }),
+            });
+            const body = await res.json();
+            if (!res.ok || !body.success) {
+              throw new Error(`D1 query failed (${res.status}): ${JSON.stringify(body.errors)}`);
+            }
+            return body.result[0].results;
+          }
+
+          const since = Date.now() - DAY_MS;
+          const events = await query(
+            `SELECT event, count(*) AS n FROM logs
+             WHERE (event LIKE 'email_skipped_pool_%' OR event = 'email_failed') AND created_at > ?
+             GROUP BY event`, [since]);
+          const pools = await query(
+            `SELECT key, count, window_start FROM rate_limits WHERE key IN (${POOLS.map(() => '?').join(', ')})`,
+            POOLS.map(pool => `email:pool:${pool}`));
+
+          for (const pool of POOLS) {
+            const row = pools.find(r => r.key === `email:pool:${pool}`);
+            const used = row && row.window_start > since ? row.count : 0;
+            console.log(`${pool} pool: ${used} used in the current day`);
+          }
+          for (const { event, n } of events) console.log(`${event}: ${n}`);
+          if (events.length === 0) console.log('No skipped or failed mail in the last 24 hours.');
+
+          const problems = [];
+          for (const { event, n } of events) {
+            if (event.startsWith('email_skipped_pool_')) {
+              problems.push(`the ${event.slice('email_skipped_pool_'.length)} pool was full, ${n} mails dropped`);
+            }
+            if (event === 'email_failed' && n > FAILED_LIMIT) {
+              problems.push(`${n} sends failed at Resend (check Resend and DNS)`);
+            }
+          }
+          if (problems.length > 0) {
+            console.log('::error::Mail problems in the last 24 hours: ' + problems.join('; ') + '.');
+            process.exit(1);
+          }
+          EOF
+          node check.mjs
