@@ -204,17 +204,18 @@
           <label class="modal-label" for="share-email">Their email</label>
           <div class="share-row">
             <input id="share-email" class="modal-input" type="email" maxlength="254"
+                   placeholder="name@example.com"
                    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-            <button type="submit" id="share-submit" class="toggle-btn modal-confirm">Share</button>
+            <button type="submit" id="share-submit" class="toggle-btn modal-confirm" disabled>Share</button>
           </div>
           <p class="share-hint">Use the email they log in with. They can read and edit this page.</p>
         </form>
         <div id="share-result" class="share-result" role="status" hidden>
-          <p id="share-result-text" class="modal-message"></p>
+          <p id="share-result-text" class="share-result-text"></p>
           <button type="button" id="share-copy" class="toggle-btn" hidden>Copy link</button>
         </div>
         <div class="share-people-block">
-          <p class="modal-label">People on this page</p>
+          <p class="modal-label" id="share-people-label">People on this page</p>
           <ul id="share-people" class="share-people"></ul>
           <p class="share-hint">Everyone here can see each other's emails.</p>
         </div>

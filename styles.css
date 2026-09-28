@@ -661,7 +661,21 @@ header .nav-icon circle {
 /* Pushed to the far end of the title row, out of the title's way. */
 .share-btn {
   margin-left: auto;
-  padding: var(--space-1) var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+}
+
+.share-btn-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
 }
 
 .share-btn[hidden] {
@@ -716,6 +730,27 @@ header .nav-icon circle {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.share-result-text {
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.share-result-text.is-error {
+  color: var(--danger);
+}
+
+/* Nothing to share yet: a plain outline, turning amber once there is. */
+.toggle-btn.modal-confirm:disabled {
+  background: transparent;
+  border-color: var(--ink-border);
+  color: var(--ink-faded);
+  cursor: default;
 }
 
 .share-result[hidden],
@@ -740,11 +775,40 @@ header .nav-icon circle {
 .share-person {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: var(--space-8);
-  border-bottom: var(--hairline) solid var(--rule);
+  gap: var(--space-3);
+  min-height: 44px;
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
+}
+
+.share-person + .share-person {
+  border-top: var(--hairline) solid var(--rule);
+}
+
+/* The letter the rhyme scheme would give: bold, in a ring of hairline. */
+.share-person-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: 50%;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+.share-person.is-owner .share-person-initial {
+  border-color: var(--accent-border);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.share-person-you {
+  color: var(--ink-faded);
 }
 
 .share-person-name {
