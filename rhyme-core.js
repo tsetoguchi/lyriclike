@@ -397,6 +397,91 @@
     return RHYME_TIERS.flatMap((tier) => tiers[tier]);
   }
 
+  // ── Result sorting ──
+
+  // The panel's sort orders. 'closest' is the order findRhymes() and
+  // tierRhymeWords() already hand over, so it needs no comparator.
+  const RHYME_SORT_ORDERS = ['closest', 'popular', 'alphabetical', 'random'];
+  const BURIED_TIER = 'buried';
+  // Built once: localeCompare with options builds a collator on every call.
+  const ALPHABETICAL_COLLATOR = new Intl.Collator('en', { sensitivity: 'base' });
+  const FNV_OFFSET_BASIS = 0x811c9dc5;
+  const FNV_PRIME = 0x01000193;
+  const FMIX_MULTIPLIER_1 = 0x85ebca6b;
+  const FMIX_MULTIPLIER_2 = 0xc2b2ae35;
+  const FMIX_SHIFT_1 = 16;
+  const FMIX_SHIFT_2 = 13;
+
+  function isRhymeSortOrder(value) {
+    return RHYME_SORT_ORDERS.includes(value);
+  }
+
+  // FNV-1a over the seed and word, then murmur3's fmix32 so that seeds one
+  // character apart ("heart:0", "heart:1") give unrelated keys.
+  function shuffleKey(seed, word) {
+    const text = seed + ':' + word;
+    let hash = FNV_OFFSET_BASIS;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, FNV_PRIME);
+    }
+    hash ^= hash >>> FMIX_SHIFT_1;
+    hash = Math.imul(hash, FMIX_MULTIPLIER_1);
+    hash ^= hash >>> FMIX_SHIFT_2;
+    hash = Math.imul(hash, FMIX_MULTIPLIER_2);
+    hash ^= hash >>> FMIX_SHIFT_1;
+    return hash >>> 0;
+  }
+
+  // The panel is handed "Heart", "ain’t" or "heart" for the same word
+  // depending on the caller; the seed must not change between them.
+  function rhymeShuffleSeed(word, shuffleCount) {
+    return normalizeWord(word) + ':' + shuffleCount;
+  }
+
+  function compareAlphabetical(a, b) {
+    return ALPHABETICAL_COLLATOR.compare(a.word, b.word);
+  }
+
+  function comparePopularity(ranks) {
+    return (a, b) => {
+      const rankA = ranks.get(a.word) ?? UNRANKED;
+      const rankB = ranks.get(b.word) ?? UNRANKED;
+      if (rankA !== rankB) return rankA < rankB ? -1 : 1;
+      return compareAlphabetical(a, b);
+    };
+  }
+
+  // Keys are computed once per entry, not twice per comparison.
+  function sortByShuffleKey(entries, seed) {
+    const keyed = entries.map((entry) => ({ entry, key: shuffleKey(seed, entry.word) }));
+    keyed.sort((a, b) => (a.key - b.key) || compareAlphabetical(a.entry, b.entry));
+    return keyed.map(({ entry }) => entry);
+  }
+
+  // Buried words stay last in every order, sorted by the same rule.
+  function sortHeadAndTail(entries, sortPart) {
+    const head = entries.filter(({ tier }) => tier !== BURIED_TIER);
+    const tail = entries.filter(({ tier }) => tier === BURIED_TIER);
+    return sortPart(head).concat(sortPart(tail));
+  }
+
+  // context is { ranks, seed }. Returns a new array; an unknown order, or
+  // Popular before the ranks have loaded, keeps the closeness order.
+  function sortRhymeEntries(entries, order, context) {
+    const { ranks = null, seed = '' } = context || {};
+    if (order === 'popular' && ranks) {
+      return sortHeadAndTail(entries, (part) => part.sort(comparePopularity(ranks)));
+    }
+    if (order === 'alphabetical') {
+      return sortHeadAndTail(entries, (part) => part.sort(compareAlphabetical));
+    }
+    if (order === 'random') {
+      return sortHeadAndTail(entries, (part) => sortByShuffleKey(part, seed));
+    }
+    return entries.slice();
+  }
+
   // ── Pronunciation facts ──
 
   function hasPronunciation(index, word) {
@@ -1117,6 +1202,11 @@
     findRhymes,
     rankRhymeWords,
     tierRhymeWords,
+    RHYME_SORT_ORDERS,
+    isRhymeSortOrder,
+    sortRhymeEntries,
+    shuffleKey,
+    rhymeShuffleSeed,
     countSyllables,
     getStressedSyllable,
     countSyllablesForLine,

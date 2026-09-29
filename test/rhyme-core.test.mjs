@@ -12,6 +12,7 @@ const {
   RHYME_TYPES, buildRhymeIndex, classifyRhyme, computeRhymeScheme, countSyllables,
   countSyllablesForLine, extractEndRhymePart, extractRhymePart, findRhymes,
   getStressedSyllable, normalizeWord, groupRhymeMarks, tierRhymeWords, FUNCTION_WORDS,
+  RHYME_SORT_ORDERS, isRhymeSortOrder, rhymeShuffleSeed, shuffleKey, sortRhymeEntries,
   OVERFLOW_FAMILY
 } = rhymeCore;
 
@@ -622,5 +623,214 @@ describe('groupRhymeMarks', () => {
     const lines = ['the sky went on', 'a night went on', 'and light went on'];
     const { marks } = groupRhymeMarks(MARK_INDEX, lines);
     assert.ok(marks.flat().every((m) => m.isSlant === true));
+  });
+});
+
+// Closeness order, as findRhymes() + tierRhymeWords() would hand it over.
+const SORT_ENTRIES = [
+  { word: 'start', tier: 'common' },   // rank 400
+  { word: 'part', tier: 'common' },    // rank 150
+  { word: 'sort', tier: 'common' },    // rank 900
+  { word: 'apart', tier: 'common' },   // rank 2500
+  { word: 'chart', tier: 'plain' },    // rank 6000
+  { word: 'dart', tier: 'plain' },     // rank 9000
+  { word: 'bart', tier: 'buried' },    // rank 3000, a name
+  { word: 'smart', tier: 'buried' },   // rank 400, crude in this fixture
+  { word: 'mozart', tier: 'buried' },  // unranked
+  { word: 'rampart', tier: 'buried' }  // rank 41000
+];
+const SORT_RANKS = new Map([['part', 150], ['start', 400], ['smart', 400],
+  ['sort', 900], ['apart', 2500], ['bart', 3000], ['chart', 6000],
+  ['dart', 9000], ['rampart', 41000]]);
+const SORT_CONTEXT = { ranks: SORT_RANKS, seed: 'heart:0' };
+const LETTER_ENTRIES = Array.from('abcdefghijklmnopqrstuvwxyz', (word) => ({ word, tier: 'plain' }));
+const BURIED_WORDS = ['bart', 'smart', 'mozart', 'rampart'];
+const words = (entries) => entries.map(({ word }) => word);
+const byWord = (a, b) => a.word.localeCompare(b.word);
+
+describe('sortRhymeEntries, all orders', () => {
+  for (const order of RHYME_SORT_ORDERS) {
+    it(`${order}: never changes the input`, () => {
+      const before = structuredClone(SORT_ENTRIES);
+      const sorted = sortRhymeEntries(SORT_ENTRIES, order, SORT_CONTEXT);
+      assert.deepEqual(SORT_ENTRIES, before);
+      assert.notStrictEqual(sorted, SORT_ENTRIES);
+    });
+
+    it(`${order}: keeps every entry`, () => {
+      const sorted = sortRhymeEntries(SORT_ENTRIES, order, SORT_CONTEXT);
+      assert.deepEqual(sorted.slice().sort(byWord), SORT_ENTRIES.slice().sort(byWord));
+    });
+
+    it(`${order}: keeps buried words last`, () => {
+      const sorted = sortRhymeEntries(SORT_ENTRIES, order, SORT_CONTEXT);
+      assert.deepEqual(words(sorted.slice(-4)).sort(), BURIED_WORDS.slice().sort());
+    });
+
+    it(`${order}: handles an empty list`, () => {
+      assert.deepEqual(sortRhymeEntries([], order, SORT_CONTEXT), []);
+    });
+  }
+
+  it('changes nothing for an unknown order', () => {
+    for (const order of ['bogus', undefined, '']) {
+      assert.deepEqual(sortRhymeEntries(SORT_ENTRIES, order, SORT_CONTEXT), SORT_ENTRIES);
+    }
+  });
+});
+
+describe('sortRhymeEntries, closest', () => {
+  it('returns the entries in the order given', () => {
+    assert.deepEqual(sortRhymeEntries(SORT_ENTRIES, 'closest', SORT_CONTEXT), SORT_ENTRIES);
+  });
+});
+
+describe('sortRhymeEntries, popular', () => {
+  it('puts the commonest words first, across common and plain', () => {
+    assert.deepEqual(words(sortRhymeEntries(SORT_ENTRIES, 'popular', SORT_CONTEXT)), [
+      'part', 'start', 'sort', 'apart', 'chart', 'dart',
+      'smart', 'bart', 'rampart', 'mozart'
+    ]);
+  });
+
+  it('puts unranked words last in their part, A–Z', () => {
+    const entries = SORT_ENTRIES.concat({ word: 'hart', tier: 'buried' });
+    const sorted = words(sortRhymeEntries(entries, 'popular', SORT_CONTEXT));
+    assert.deepEqual(sorted.slice(-3), ['rampart', 'hart', 'mozart']);
+  });
+
+  it('breaks equal ranks A–Z', () => {
+    const ranks = new Map(SORT_RANKS).set('part', 400);
+    const sorted = words(sortRhymeEntries(SORT_ENTRIES, 'popular', { ranks }));
+    assert.deepEqual(sorted.slice(0, 2), ['part', 'start']);
+  });
+
+  it('keeps the closeness order before the ranks load', () => {
+    assert.deepEqual(
+      sortRhymeEntries(SORT_ENTRIES, 'popular', { ranks: null, seed: 'heart:0' }),
+      sortRhymeEntries(SORT_ENTRIES, 'closest', SORT_CONTEXT)
+    );
+  });
+});
+
+describe('sortRhymeEntries, alphabetical', () => {
+  it('sorts the head and the buried tail separately', () => {
+    assert.deepEqual(words(sortRhymeEntries(SORT_ENTRIES, 'alphabetical', SORT_CONTEXT)), [
+      'apart', 'chart', 'dart', 'part', 'sort', 'start',
+      'bart', 'mozart', 'rampart', 'smart'
+    ]);
+  });
+
+  it('ignores case', () => {
+    const entries = ['Zed', 'apple', 'Bee'].map((word) => ({ word, tier: 'plain' }));
+    assert.deepEqual(words(sortRhymeEntries(entries, 'alphabetical', {})), ['apple', 'Bee', 'Zed']);
+  });
+
+  it('sorts a word with an apostrophe beside its letters', () => {
+    const entries = ['zoo', "ain't", 'aint', 'bait'].map((word) => ({ word, tier: 'plain' }));
+    const sorted = words(sortRhymeEntries(entries, 'alphabetical', {}));
+    assert.equal(Math.abs(sorted.indexOf("ain't") - sorted.indexOf('aint')), 1);
+    assert.equal(sorted.at(-1), 'zoo');
+  });
+});
+
+describe('sortRhymeEntries, random', () => {
+  const SEED_SPREAD_COUNT = 200;
+  const MIN_DISTINCT_ENDS = 20;
+  const TAIL_SEED_COUNT = 50;
+  const shuffle = (entries, seed) => words(sortRhymeEntries(entries, 'random', { seed }));
+
+  it('gives the same order for the same seed', () => {
+    assert.deepEqual(shuffle(SORT_ENTRIES, 'heart:0'), shuffle(SORT_ENTRIES, 'heart:0'));
+  });
+
+  it('gives a different order for a different seed', () => {
+    assert.notDeepEqual(shuffle(LETTER_ENTRIES, 'heart:0'), shuffle(LETTER_ENTRIES, 'heart:1'));
+  });
+
+  it('spreads the order across nearby seeds', () => {
+    const firsts = new Set();
+    const lasts = new Set();
+    for (let i = 0; i < SEED_SPREAD_COUNT; i++) {
+      const sorted = shuffle(LETTER_ENTRIES, `s:${i}`);
+      firsts.add(sorted[0]);
+      lasts.add(sorted.at(-1));
+    }
+    assert.ok(firsts.size >= MIN_DISTINCT_ENDS, `first position took ${firsts.size} words`);
+    assert.ok(lasts.size >= MIN_DISTINCT_ENDS, `last position took ${lasts.size} words`);
+  });
+
+  it('keeps the order of words that stay when others come and go', () => {
+    const before = shuffle(LETTER_ENTRIES, 'heart:0');
+    const survivors = LETTER_ENTRIES.filter((_, i) => i % 3 !== 0);
+    const changed = survivors.concat({ word: 'aa', tier: 'plain' }, { word: 'zz', tier: 'plain' });
+    const surviving = new Set(words(survivors));
+    const after = shuffle(changed, 'heart:0');
+    assert.deepEqual(after.filter((word) => surviving.has(word)),
+      before.filter((word) => surviving.has(word)));
+  });
+
+  it('shuffles the buried tail on its own', () => {
+    const tails = new Set();
+    for (let i = 0; i < TAIL_SEED_COUNT; i++) {
+      const tail = shuffle(SORT_ENTRIES, `heart:${i}`).slice(-4);
+      assert.deepEqual(tail.slice().sort(), BURIED_WORDS.slice().sort());
+      tails.add(tail.join(' '));
+    }
+    assert.ok(tails.size > 1);
+  });
+
+  it('returns a one-word list as it is', () => {
+    assert.deepEqual(shuffle([{ word: 'heart', tier: 'plain' }], 'heart:0'), ['heart']);
+  });
+});
+
+describe('shuffleKey', () => {
+  const MAX_KEY = 2 ** 32;
+  const KEY_SAMPLE_SIZE = 1000;
+
+  it('is deterministic, and the seed and word both matter', () => {
+    assert.equal(shuffleKey('heart:0', 'part'), shuffleKey('heart:0', 'part'));
+    assert.notEqual(shuffleKey('heart:0', 'part'), shuffleKey('heart:1', 'part'));
+    assert.notEqual(shuffleKey('heart:0', 'part'), shuffleKey('heart:0', 'start'));
+  });
+
+  it('returns an unsigned 32-bit integer', () => {
+    for (let i = 0; i < KEY_SAMPLE_SIZE; i++) {
+      for (const seed of ['heart:0', '']) {
+        const key = shuffleKey(seed, `word${i}`);
+        assert.ok(Number.isInteger(key) && key >= 0 && key < MAX_KEY, `${key}`);
+      }
+    }
+  });
+});
+
+describe('rhymeShuffleSeed', () => {
+  it('ignores how the word was typed', () => {
+    assert.equal(rhymeShuffleSeed('Heart,', 0), rhymeShuffleSeed('heart', 0));
+  });
+
+  it('includes the reshuffle counter', () => {
+    assert.notEqual(rhymeShuffleSeed('heart', 0), rhymeShuffleSeed('heart', 1));
+  });
+});
+
+describe('isRhymeSortOrder', () => {
+  it('accepts the four orders', () => {
+    for (const order of ['closest', 'popular', 'alphabetical', 'random']) {
+      assert.equal(isRhymeSortOrder(order), true);
+    }
+  });
+
+  it('rejects anything else', () => {
+    for (const value of ['Closest', 'relevance', '', null, undefined, 'random ']) {
+      assert.equal(isRhymeSortOrder(value), false);
+    }
+  });
+});
+
+describe('RHYME_SORT_ORDERS', () => {
+  it('matches the data-order values in index.html', () => {
+    assert.deepEqual(RHYME_SORT_ORDERS, ['closest', 'popular', 'alphabetical', 'random']);
   });
 });

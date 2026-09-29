@@ -1038,6 +1038,131 @@ header .nav-icon circle {
   display: none;
 }
 
+/* A word that isn't found, has no rhymes or is still loading has nothing to
+   sort, though the bar still shows it. */
+.rhymes-panel:has(#rhyme-results > .empty-state) .rhyme-sort {
+  display: none;
+}
+
+/* Top right of the bar, beside the picked word, and the menu's anchor: the
+   menu drops from the button itself, opening leftward so it never clips. */
+.rhyme-sort {
+  position: relative;
+  margin-left: auto;
+}
+
+/* Like the header's tools: the icon with its name, grey until touched. The
+   name is the current order, so the state shows without opening the menu,
+   and nothing here is amber beside the picked word. */
+.rhyme-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--space-8);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) calc(var(--space-1) * -1) 0;
+  padding: 0 var(--space-2);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faded);
+  cursor: pointer;
+  transition: color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.rhyme-sort-btn[aria-expanded="true"] {
+  color: var(--ink);
+  background-color: var(--ink-wash);
+}
+
+/* Hover only where it can end: a tap on a phone leaves :hover stuck. */
+@media (hover: hover) {
+  .rhyme-sort-btn:hover {
+    color: var(--ink);
+    background-color: var(--ink-wash);
+  }
+}
+
+.sort-icon {
+  flex-shrink: 0;
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* The same short list as the Highlights menu: name, and a tick for the
+   chosen order. */
+.rhyme-sort-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: calc(var(--space-2) * -1);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  padding: var(--space-1) 0;
+  background: var(--paper);
+  border: var(--hairline) solid var(--margin-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+}
+
+.rhyme-sort-menu[hidden] {
+  display: none;
+}
+
+.rhyme-sort-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .rhyme-sort-option:hover {
+    background-color: var(--ink-wash);
+  }
+}
+
+/* Amber like the Highlights menu's chosen overlay: in a popup, away from the
+   picked word, it marks what is on. */
+.rhyme-sort-option[aria-checked="true"] {
+  color: var(--accent);
+}
+
+/* Drawn, not typed: iA Writer Quattro's check reads as a square-root sign. */
+.rhyme-sort-option[aria-checked="true"]::after {
+  content: "";
+  width: var(--check-size);
+  height: var(--check-size);
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check-mask) center / contain no-repeat;
+  mask: var(--check-mask) center / contain no-repeat;
+}
+
+/* Chosen, Random's row reads "Shuffle again": an action, which a tick would
+   misstate. Amber and the button's label already show Random is on. */
+.rhyme-sort-option[data-order="random"][aria-checked="true"]::after {
+  content: none;
+}
+
 @keyframes word-flash {
   0% { background: var(--flash); }
   100% { background: transparent; }
@@ -1149,6 +1274,17 @@ header .nav-icon circle {
 
 .rhyme-group.open .rhyme-group-body {
   display: flex;
+}
+
+/* A sort change fades the chips in from part-way, never from blank: when a
+   reshuffle happens to look alike, the fade is what shows it did anything. */
+@keyframes rhyme-resort {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+#rhyme-results.is-resorted .rhyme-group.open .rhyme-group-body {
+  animation: rhyme-resort var(--duration-fast) ease-out;
 }
 
 .rhyme-word {
@@ -2639,6 +2775,18 @@ body.sidebar-open #sidebar-scrim {
     font-size: var(--text-title-3);
   }
 
+  /* A thumb-sized target whose extra size overlaps the bar's padding, so the
+     bar is no taller than the word. */
+  .rhyme-sort-btn {
+    min-width: var(--tap-target);
+    height: var(--tap-target);
+    margin-block: calc(var(--space-2) * -1);
+  }
+
+  .rhyme-sort-option {
+    min-height: var(--tap-target);
+  }
+
   .rhyme-group-header {
     padding: var(--space-3) var(--space-4);
     min-height: var(--tap-target);
@@ -2853,7 +3001,8 @@ body.sidebar-open #sidebar-scrim {
 @media (prefers-reduced-motion: reduce) {
   .lyrics-panel,
   .rhymes-panel,
-  .selected-word-bar.flash {
+  .selected-word-bar.flash,
+  #rhyme-results.is-resorted .rhyme-group.open .rhyme-group-body {
     animation: none;
   }
 
