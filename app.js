@@ -15,6 +15,11 @@ const SCROLL_THROTTLE_MS = 16;
 const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
 const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
+const RHYME_SORT_STORAGE_KEY = 'rhymeSort';
+const DEFAULT_RHYME_SORT = 'closest';
+const RANDOM_RHYME_SORT = 'random';
+const RESHUFFLE_HINT = ' (shuffle again)';
+const RESORTED_CLASS = 'is-resorted';
 // Browsers keep these files for 30 days (see _headers), so a changed file only
 // reaches a returning visitor under a new URL. Bump its version on every edit.
 const DATA_URLS = {
@@ -46,6 +51,10 @@ let crudeWords = null;
 // so this is state rather than a constant only because setEnglishOnly()
 // keeps it reachable for a settings page.
 let englishOnly = true;
+// How each rhyme group is ordered. Set from storage once the DOM refs exist.
+let rhymeSort = DEFAULT_RHYME_SORT;
+// Part of Random's seed; pressing Random again bumps it for a fresh order.
+let rhymeShuffleCount = 0;
 // Syllable counts and rhyme letters are what the app is for, so they start on.
 // Only a writer who has switched one off this session keeps it off.
 let syllablesVisible = sessionStorage.getItem('syllablesVisible') !== '0';
@@ -86,6 +95,8 @@ const headerRightEl = document.querySelector('.header-right');
 const headerActionsEl = document.querySelector('.header-actions');
 const headerToolsEl = document.querySelector('.header-tools');
 const userAreaEl = document.getElementById('user-area');
+const rhymeSortEl = document.getElementById('rhyme-sort');
+const reshuffleHintEl = rhymeSortEl.querySelector('[data-reshuffle-hint]');
 
 // ── Restore session state ──
 
@@ -284,7 +295,11 @@ function renderResults(word, results) {
   // The tab names the word it is holding, so the rhymes are visibly one tap
   // away without anything switching underneath the writer.
   tabRhymeWordEl.textContent = word;
-  currentResults = results;
+  // Only a sort change fades the chips in; setRhymeSort() adds this back.
+  resultsEl.classList.remove(RESORTED_CLASS);
+  baseWord = word;
+  baseResults = results;
+  currentResults = sortRhymeResults(word, results);
 
   if (!results) {
     resultsEl.innerHTML = '<div class="empty-state">Word not found in dictionary</div>';
@@ -318,12 +333,92 @@ function trackRhymeLookup(word, results) {
   trackEvent('rhyme_lookup', params);
 }
 
+// ── Rhyme sort ──
+
+function loadRhymeSort() {
+  try {
+    const stored = localStorage.getItem(RHYME_SORT_STORAGE_KEY);
+    return RhymeCore.isRhymeSortOrder(stored) ? stored : DEFAULT_RHYME_SORT;
+  } catch (err) {
+    // Blocked storage (private mode, site data off) only costs the memory.
+    return DEFAULT_RHYME_SORT;
+  }
+}
+
+function saveRhymeSort(order) {
+  try {
+    localStorage.setItem(RHYME_SORT_STORAGE_KEY, order);
+  } catch (err) {
+    console.warn('saveRhymeSort: storage unavailable, order not remembered', err);
+  }
+}
+
+// Random is seeded from the word, so re-rendering the same word (typing,
+// re-tapping, a word list landing) keeps the order the writer is reading.
+function sortRhymeResults(word, results) {
+  if (!results) return null;
+  const context = {
+    ranks: wordRanks,
+    seed: RhymeCore.rhymeShuffleSeed(word, rhymeShuffleCount)
+  };
+  const sorted = { ...results };
+  for (const { key } of RHYME_TYPES) {
+    sorted[key] = RhymeCore.sortRhymeEntries(results[key], rhymeSort, context);
+  }
+  return sorted;
+}
+
+function updateSortButtons() {
+  for (const button of rhymeSortEl.querySelectorAll('.rhyme-sort-btn')) {
+    const isChosen = button.dataset.order === rhymeSort;
+    button.setAttribute('aria-pressed', isChosen ? 'true' : 'false');
+  }
+  reshuffleHintEl.textContent = rhymeSort === RANDOM_RHYME_SORT ? RESHUFFLE_HINT : '';
+}
+
+// Redraws the word already shown, never searching again. baseWord, not
+// currentHighlightWord: after a chip swap the list stays on the word the
+// writer started from.
+function resortShownRhymes() {
+  closeDefinition();
+  rememberOpenGroups();
+  renderResults(baseWord, baseResults);
+  resultsEl.scrollTop = 0;
+  resultsEl.classList.add(RESORTED_CLASS);
+}
+
+// Pressing the chosen order does nothing, except Random, which reshuffles.
+function setRhymeSort(order) {
+  const isReshuffle = order === RANDOM_RHYME_SORT && rhymeSort === RANDOM_RHYME_SORT;
+  if (order === rhymeSort && !isReshuffle) return;
+  if (isReshuffle) rhymeShuffleCount++;
+  rhymeSort = order;
+  saveRhymeSort(order);
+  updateSortButtons();
+  trackEvent('rhyme_sort_changed', { order, is_reshuffle: isReshuffle });
+  if (describeLookupResult(baseResults) !== LOOKUP_FOUND) return;
+  resortShownRhymes();
+}
+
+rhymeSortEl.addEventListener('click', function handleSortClick(event) {
+  const button = event.target.closest('.rhyme-sort-btn');
+  if (!button || !RhymeCore.isRhymeSortOrder(button.dataset.order)) return;
+  setRhymeSort(button.dataset.order);
+});
+
+rhymeSort = loadRhymeSort();
+updateSortButtons();
+
 // ── Word highlight overlay ──
 
 let currentHighlightWord = '';
 let pickedBounds = null;
 let highlightedText = '';
 let currentResults = null;
+// What renderResults() was last handed, before sorting, so a sort change can
+// redraw the same word without searching again.
+let baseWord = '';
+let baseResults = null;
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 
@@ -1557,6 +1652,8 @@ function resetRhymesPanel() {
   currentHighlightWord = '';
   pickedBounds = null;
   currentResults = null;
+  baseWord = '';
+  baseResults = null;
   selectedWordEl.textContent = '';
   selectedContextEl.textContent = '';
   tabRhymeWordEl.textContent = '';

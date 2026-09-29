@@ -109,6 +109,19 @@
       <div class="selected-word-bar">
         <span class="word" id="selected-word"></span>
         <span class="context-line" id="selected-context"></span>
+        <div class="rhyme-sort" id="rhyme-sort" role="group" aria-label="Sort rhymes">
+          <button type="button" class="rhyme-sort-btn" data-order="closest"
+                  aria-pressed="true">Closest</button>
+          <button type="button" class="rhyme-sort-btn" data-order="popular"
+                  aria-pressed="false">Popular</button>
+          <button type="button" class="rhyme-sort-btn" data-order="alphabetical"
+                  aria-pressed="false">A–Z</button>
+          <button type="button" class="rhyme-sort-btn" data-order="random"
+                  aria-pressed="false">Random<span class="visually-hidden"
+                  data-reshuffle-hint></span><svg class="reshuffle-icon" viewBox="0 0 24 24"
+                  aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path
+                  d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+        </div>
       </div>
       <div id="rhyme-results">
         <div class="empty-state">
