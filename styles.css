@@ -1054,20 +1054,20 @@ header .nav-icon circle {
   margin-left: auto;
 }
 
-/* Drawn like the header's tool icons, and grey like them: amber is kept for
-   the picked word. */
+/* Like the header's tools: the icon with its name, grey until touched. The
+   name is the current order, so the state shows without opening the menu,
+   and nothing here is amber beside the picked word. */
 .rhyme-sort-btn {
-  /* The dot sits on the icon's top-right corner whatever the button's size. */
-  --sort-dot-size: 6px;
-  --sort-dot-offset: 13px;
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--space-8);
+  gap: var(--space-1);
   height: var(--space-8);
   margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) calc(var(--space-1) * -1) 0;
-  padding: 0;
+  padding: 0 var(--space-2);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -1090,25 +1090,13 @@ header .nav-icon circle {
 }
 
 .sort-icon {
-  width: var(--space-5);
-  height: var(--space-5);
+  flex-shrink: 0;
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.5;
+  stroke-width: 2;
   stroke-linecap: round;
-}
-
-/* Any order but Closest leaves a dot on the icon, so a list that isn't in
-   its usual order says so without opening the menu. */
-.rhyme-sort-btn.is-sorted::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - var(--sort-dot-offset));
-  right: calc(50% - var(--sort-dot-offset));
-  width: var(--sort-dot-size);
-  height: var(--sort-dot-size);
-  border-radius: 50%;
-  background: var(--ink);
 }
 
 /* The same short list as the Highlights menu: name, and a tick for the
@@ -1153,6 +1141,12 @@ header .nav-icon circle {
   .rhyme-sort-option:hover {
     background-color: var(--ink-wash);
   }
+}
+
+/* Amber like the Highlights menu's chosen overlay: in a popup, away from the
+   picked word, it marks what is on. */
+.rhyme-sort-option[aria-checked="true"] {
+  color: var(--accent);
 }
 
 /* Drawn, not typed: iA Writer Quattro's check reads as a square-root sign. */
@@ -2781,9 +2775,14 @@ body.sidebar-open #sidebar-scrim {
   /* A thumb-sized target whose extra size overlaps the bar's padding, so the
      bar is no taller than the word. */
   .rhyme-sort-btn {
-    width: var(--tap-target);
+    min-width: var(--tap-target);
     height: var(--tap-target);
     margin-block: calc(var(--space-2) * -1);
+  }
+
+  /* The bar's padding is narrower here, so the button's edge moves in too. */
+  .rhyme-sort-menu {
+    right: var(--space-2);
   }
 
   .rhyme-sort-option {

@@ -100,6 +100,7 @@ const userAreaEl = document.getElementById('user-area');
 const rhymeSortEl = document.getElementById('rhyme-sort');
 const rhymeSortBtn = document.getElementById('rhyme-sort-btn');
 const rhymeSortMenuEl = document.getElementById('rhyme-sort-menu');
+const rhymeSortLabelEl = document.getElementById('rhyme-sort-label');
 const reshuffleHintEl = rhymeSortMenuEl.querySelector('[data-reshuffle-hint]');
 
 // ── Restore session state ──
@@ -376,7 +377,8 @@ function listSortOptions() {
   return Array.from(rhymeSortMenuEl.querySelectorAll('.rhyme-sort-option'));
 }
 
-// The icon has no text of its own, so its name carries the current order.
+// The button is labelled with the current order, as the header's tools carry
+// their names; its accessible name says what the button is for as well.
 function updateSortButtons() {
   let chosenLabel = '';
   for (const option of listSortOptions()) {
@@ -385,8 +387,8 @@ function updateSortButtons() {
     if (isChosen) chosenLabel = option.firstChild.textContent;
   }
   reshuffleHintEl.textContent = rhymeSort === RANDOM_RHYME_SORT ? RESHUFFLE_HINT : '';
+  rhymeSortLabelEl.textContent = chosenLabel;
   rhymeSortBtn.setAttribute('aria-label', SORT_BUTTON_LABEL + ': ' + chosenLabel);
-  rhymeSortBtn.classList.toggle('is-sorted', rhymeSort !== DEFAULT_RHYME_SORT);
 }
 
 // Redraws the word already shown, never searching again. baseWord, not
