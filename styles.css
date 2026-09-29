@@ -1044,69 +1044,126 @@ header .nav-icon circle {
   display: none;
 }
 
-/* Its own row under the context line, so it never moves from word to word.
-   It wraps only when the panel is dragged near its minimum width; the
-   negative margin lines "Closest" up with the word rather than its border. */
-.rhyme-sort {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  row-gap: 0;
-  margin-left: calc(var(--space-2) * -1);
+/* Top right of the bar, beside the picked word. The bar is the menu's anchor
+   so the menu can open under the button without clipping at narrow widths. */
+.selected-word-bar {
+  position: relative;
 }
 
-/* Styled after the tool buttons, not the chips: chips put words into the
-   lyric, and this sits right above them. The chosen one is outlined in
-   --ink-faded, which clears 3:1 where --ink-border does not; nothing is amber,
-   which is kept for the picked word. */
+.rhyme-sort {
+  margin-left: auto;
+}
+
+/* Drawn like the header's tool icons, and grey like them: amber is kept for
+   the picked word. */
 .rhyme-sort-btn {
+  /* The dot sits on the icon's top-right corner whatever the button's size. */
+  --sort-dot-size: 6px;
+  --sort-dot-offset: 13px;
+  position: relative;
   display: inline-flex;
   align-items: center;
-  flex-shrink: 0;
-  font-family: var(--font-editor);
-  font-size: var(--text-footnote);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-tight);
-  padding: var(--space-1) var(--space-2);
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) calc(var(--space-1) * -1) 0;
+  padding: 0;
   background: transparent;
-  border: var(--hairline) solid transparent;
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--ink-faded);
   cursor: pointer;
-  white-space: nowrap;
-  transition: color var(--duration-fast), background-color var(--duration-fast),
-    border-color var(--duration-fast);
+  transition: color var(--duration-fast), background-color var(--duration-fast);
 }
 
-.rhyme-sort-btn[aria-pressed="true"] {
+.rhyme-sort-btn[aria-expanded="true"] {
   color: var(--ink);
-  border-color: var(--ink-faded);
+  background-color: var(--ink-wash);
 }
 
-/* Hover only where it can end: a tap on a phone leaves :hover stuck, and a
-   filled option would read as a chip. */
+/* Hover only where it can end: a tap on a phone leaves :hover stuck. */
 @media (hover: hover) {
   .rhyme-sort-btn:hover {
+    color: var(--ink);
     background-color: var(--ink-wash);
   }
 }
 
-/* Drawn like .nav-icon. Hidden rather than removed, so the row keeps its
-   width when Random is chosen. */
-.reshuffle-icon {
-  width: var(--space-3);
-  height: var(--space-3);
-  margin-left: var(--space-1);
+.sort-icon {
+  width: var(--space-5);
+  height: var(--space-5);
   fill: none;
   stroke: currentColor;
   stroke-width: 2.5;
   stroke-linecap: round;
-  stroke-linejoin: round;
-  visibility: hidden;
 }
 
-.rhyme-sort-btn[aria-pressed="true"] .reshuffle-icon {
-  visibility: visible;
+/* Any order but Closest leaves a dot on the icon, so a list that isn't in
+   its usual order says so without opening the menu. */
+.rhyme-sort-btn.is-sorted::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - var(--sort-dot-offset));
+  right: calc(50% - var(--sort-dot-offset));
+  width: var(--sort-dot-size);
+  height: var(--sort-dot-size);
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+/* The same short list as the Highlights menu: name, and a tick for the
+   chosen order. */
+.rhyme-sort-menu {
+  position: absolute;
+  top: calc(100% - var(--space-2));
+  right: var(--space-3);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  padding: var(--space-1) 0;
+  background: var(--paper);
+  border: var(--hairline) solid var(--margin-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+}
+
+.rhyme-sort-menu[hidden] {
+  display: none;
+}
+
+.rhyme-sort-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .rhyme-sort-option:hover {
+    background-color: var(--ink-wash);
+  }
+}
+
+/* Drawn, not typed: iA Writer Quattro's check reads as a square-root sign. */
+.rhyme-sort-option[aria-checked="true"]::after {
+  content: "";
+  width: var(--check-size);
+  height: var(--check-size);
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check-mask) center / contain no-repeat;
+  mask: var(--check-mask) center / contain no-repeat;
 }
 
 @keyframes word-flash {
@@ -2721,17 +2778,16 @@ body.sidebar-open #sidebar-scrim {
     font-size: var(--text-title-3);
   }
 
-  /* Thumb-sized targets that overlap the bar's gap and padding instead of
-     adding to them, so the first group doesn't move down by a whole row. */
-  .rhyme-sort {
-    margin-top: calc(var(--space-2) * -1);
-    margin-bottom: calc(var(--space-3) * -1);
+  /* A thumb-sized target whose extra size overlaps the bar's padding, so the
+     bar is no taller than the word. */
+  .rhyme-sort-btn {
+    width: var(--tap-target);
+    height: var(--tap-target);
+    margin-block: calc(var(--space-2) * -1);
   }
 
-  .rhyme-sort-btn {
+  .rhyme-sort-option {
     min-height: var(--tap-target);
-    min-width: var(--tap-target);
-    justify-content: center;
   }
 
   .rhyme-group-header {

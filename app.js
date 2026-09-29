@@ -20,6 +20,8 @@ const DEFAULT_RHYME_SORT = 'closest';
 const RANDOM_RHYME_SORT = 'random';
 const RESHUFFLE_HINT = ' (shuffle again)';
 const RESORTED_CLASS = 'is-resorted';
+const SORT_BUTTON_LABEL = 'Sort rhymes';
+const SORT_MENU_MOVE_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 // Browsers keep these files for 30 days (see _headers), so a changed file only
 // reaches a returning visitor under a new URL. Bump its version on every edit.
 const DATA_URLS = {
@@ -96,7 +98,9 @@ const headerActionsEl = document.querySelector('.header-actions');
 const headerToolsEl = document.querySelector('.header-tools');
 const userAreaEl = document.getElementById('user-area');
 const rhymeSortEl = document.getElementById('rhyme-sort');
-const reshuffleHintEl = rhymeSortEl.querySelector('[data-reshuffle-hint]');
+const rhymeSortBtn = document.getElementById('rhyme-sort-btn');
+const rhymeSortMenuEl = document.getElementById('rhyme-sort-menu');
+const reshuffleHintEl = rhymeSortMenuEl.querySelector('[data-reshuffle-hint]');
 
 // ── Restore session state ──
 
@@ -368,12 +372,21 @@ function sortRhymeResults(word, results) {
   return sorted;
 }
 
+function listSortOptions() {
+  return Array.from(rhymeSortMenuEl.querySelectorAll('.rhyme-sort-option'));
+}
+
+// The icon has no text of its own, so its name carries the current order.
 function updateSortButtons() {
-  for (const button of rhymeSortEl.querySelectorAll('.rhyme-sort-btn')) {
-    const isChosen = button.dataset.order === rhymeSort;
-    button.setAttribute('aria-pressed', isChosen ? 'true' : 'false');
+  let chosenLabel = '';
+  for (const option of listSortOptions()) {
+    const isChosen = option.dataset.order === rhymeSort;
+    option.setAttribute('aria-checked', isChosen ? 'true' : 'false');
+    if (isChosen) chosenLabel = option.firstChild.textContent;
   }
   reshuffleHintEl.textContent = rhymeSort === RANDOM_RHYME_SORT ? RESHUFFLE_HINT : '';
+  rhymeSortBtn.setAttribute('aria-label', SORT_BUTTON_LABEL + ': ' + chosenLabel);
+  rhymeSortBtn.classList.toggle('is-sorted', rhymeSort !== DEFAULT_RHYME_SORT);
 }
 
 // Redraws the word already shown, never searching again. baseWord, not
@@ -400,11 +413,68 @@ function setRhymeSort(order) {
   resortShownRhymes();
 }
 
-rhymeSortEl.addEventListener('click', function handleSortClick(event) {
-  const button = event.target.closest('.rhyme-sort-btn');
-  if (!button || !RhymeCore.isRhymeSortOrder(button.dataset.order)) return;
-  setRhymeSort(button.dataset.order);
+function isSortMenuOpen() {
+  return !rhymeSortMenuEl.hidden;
+}
+
+// Opening lands on the chosen order, as a native select does.
+function setSortMenuOpen(isOpen) {
+  rhymeSortMenuEl.hidden = !isOpen;
+  rhymeSortBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if (!isOpen) return;
+  const chosen = listSortOptions().find((option) => option.dataset.order === rhymeSort);
+  if (chosen) chosen.focus();
+}
+
+function closeSortMenu() {
+  setSortMenuOpen(false);
+  rhymeSortBtn.focus();
+}
+
+// Arrow keys move through the options and wrap, as a menu's do.
+function moveSortMenuFocus(key) {
+  const options = listSortOptions();
+  const current = options.indexOf(document.activeElement);
+  const last = options.length - 1;
+  const targets = {
+    ArrowDown: current >= last ? 0 : current + 1,
+    ArrowUp: current <= 0 ? last : current - 1,
+    Home: 0,
+    End: last
+  };
+  options[targets[key]].focus();
+}
+
+function handleSortMenuKey(event) {
+  if (!isSortMenuOpen()) return;
+  if (event.key === 'Escape') {
+    closeSortMenu();
+  } else if (event.key === 'Tab') {
+    setSortMenuOpen(false);
+  } else if (SORT_MENU_MOVE_KEYS.has(event.key)) {
+    event.preventDefault();
+    moveSortMenuFocus(event.key);
+  }
+}
+
+function handleOutsideSortMenu(event) {
+  if (!isSortMenuOpen() || rhymeSortEl.contains(event.target)) return;
+  setSortMenuOpen(false);
+}
+
+rhymeSortBtn.addEventListener('click', function toggleSortMenu() {
+  setSortMenuOpen(!isSortMenuOpen());
 });
+
+// Choosing closes the menu so the reordered chips are in view.
+rhymeSortMenuEl.addEventListener('click', function handleSortChoice(event) {
+  const option = event.target.closest('.rhyme-sort-option');
+  if (!option || !RhymeCore.isRhymeSortOrder(option.dataset.order)) return;
+  closeSortMenu();
+  setRhymeSort(option.dataset.order);
+});
+rhymeSortEl.addEventListener('keydown', handleSortMenuKey);
+document.addEventListener('pointerdown', handleOutsideSortMenu);
 
 rhymeSort = loadRhymeSort();
 updateSortButtons();

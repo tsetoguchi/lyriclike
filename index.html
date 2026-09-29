@@ -108,20 +108,26 @@
     <div class="rhymes-panel" id="rhymes-panel">
       <div class="selected-word-bar">
         <span class="word" id="selected-word"></span>
-        <span class="context-line" id="selected-context"></span>
-        <div class="rhyme-sort" id="rhyme-sort" role="group" aria-label="Sort rhymes">
-          <button type="button" class="rhyme-sort-btn" data-order="closest"
-                  aria-pressed="true">Closest</button>
-          <button type="button" class="rhyme-sort-btn" data-order="popular"
-                  aria-pressed="false">Popular</button>
-          <button type="button" class="rhyme-sort-btn" data-order="alphabetical"
-                  aria-pressed="false">A–Z</button>
-          <button type="button" class="rhyme-sort-btn" data-order="random"
-                  aria-pressed="false">Random<span class="visually-hidden"
-                  data-reshuffle-hint></span><svg class="reshuffle-icon" viewBox="0 0 24 24"
-                  aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path
-                  d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+        <div class="rhyme-sort" id="rhyme-sort">
+          <button type="button" class="rhyme-sort-btn" id="rhyme-sort-btn"
+                  aria-haspopup="menu" aria-expanded="false" aria-controls="rhyme-sort-menu"
+                  aria-label="Sort rhymes"><svg class="sort-icon" viewBox="0 0 24 24"
+                  aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7"
+                  y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg></button>
+          <div class="rhyme-sort-menu" id="rhyme-sort-menu" role="menu"
+               aria-label="Sort rhymes" hidden>
+            <button type="button" role="menuitemradio" class="rhyme-sort-option"
+                    data-order="closest" aria-checked="true" tabindex="-1">Closest</button>
+            <button type="button" role="menuitemradio" class="rhyme-sort-option"
+                    data-order="popular" aria-checked="false" tabindex="-1">Popular</button>
+            <button type="button" role="menuitemradio" class="rhyme-sort-option"
+                    data-order="alphabetical" aria-checked="false" tabindex="-1">A–Z</button>
+            <button type="button" role="menuitemradio" class="rhyme-sort-option"
+                    data-order="random" aria-checked="false" tabindex="-1">Random<span
+                    class="visually-hidden" data-reshuffle-hint></span></button>
+          </div>
         </div>
+        <span class="context-line" id="selected-context"></span>
       </div>
       <div id="rhyme-results">
         <div class="empty-state">
