@@ -18,7 +18,9 @@ const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
 const RHYME_SORT_STORAGE_KEY = 'rhymeSort';
 const DEFAULT_RHYME_SORT = 'closest';
 const RANDOM_RHYME_SORT = 'random';
-const RESHUFFLE_HINT = ' (shuffle again)';
+const RANDOM_SORT_LABEL = 'Random';
+const RESHUFFLE_LABEL = 'Shuffle again';
+const RESHUFFLE_ACCESSIBLE_LABEL = 'Random, shuffle again';
 const RESORTED_CLASS = 'is-resorted';
 const SORT_BUTTON_LABEL = 'Sort rhymes';
 const SORT_MENU_MOVE_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
@@ -101,7 +103,7 @@ const rhymeSortEl = document.getElementById('rhyme-sort');
 const rhymeSortBtn = document.getElementById('rhyme-sort-btn');
 const rhymeSortMenuEl = document.getElementById('rhyme-sort-menu');
 const rhymeSortLabelEl = document.getElementById('rhyme-sort-label');
-const reshuffleHintEl = rhymeSortMenuEl.querySelector('[data-reshuffle-hint]');
+const randomSortOptionEl = rhymeSortMenuEl.querySelector('[data-order="random"]');
 
 // ── Restore session state ──
 
@@ -377,6 +379,18 @@ function listSortOptions() {
   return Array.from(rhymeSortMenuEl.querySelectorAll('.rhyme-sort-option'));
 }
 
+// Once Random is on, its row offers what pressing it again does, since
+// nothing else would tell a writer that it reshuffles.
+function labelRandomOption() {
+  const isRandom = rhymeSort === RANDOM_RHYME_SORT;
+  randomSortOptionEl.textContent = isRandom ? RESHUFFLE_LABEL : RANDOM_SORT_LABEL;
+  if (isRandom) {
+    randomSortOptionEl.setAttribute('aria-label', RESHUFFLE_ACCESSIBLE_LABEL);
+  } else {
+    randomSortOptionEl.removeAttribute('aria-label');
+  }
+}
+
 // The button is labelled with the current order, as the header's tools carry
 // their names; its accessible name says what the button is for as well.
 function updateSortButtons() {
@@ -384,9 +398,10 @@ function updateSortButtons() {
   for (const option of listSortOptions()) {
     const isChosen = option.dataset.order === rhymeSort;
     option.setAttribute('aria-checked', isChosen ? 'true' : 'false');
-    if (isChosen) chosenLabel = option.firstChild.textContent;
+    if (isChosen) chosenLabel = option.textContent;
   }
-  reshuffleHintEl.textContent = rhymeSort === RANDOM_RHYME_SORT ? RESHUFFLE_HINT : '';
+  if (rhymeSort === RANDOM_RHYME_SORT) chosenLabel = RANDOM_SORT_LABEL;
+  labelRandomOption();
   rhymeSortLabelEl.textContent = chosenLabel;
   rhymeSortBtn.setAttribute('aria-label', SORT_BUTTON_LABEL + ': ' + chosenLabel);
 }

@@ -1044,13 +1044,10 @@ header .nav-icon circle {
   display: none;
 }
 
-/* Top right of the bar, beside the picked word. The bar is the menu's anchor
-   so the menu can open under the button without clipping at narrow widths. */
-.selected-word-bar {
-  position: relative;
-}
-
+/* Top right of the bar, beside the picked word, and the menu's anchor: the
+   menu drops from the button itself, opening leftward so it never clips. */
 .rhyme-sort {
+  position: relative;
   margin-left: auto;
 }
 
@@ -1103,8 +1100,8 @@ header .nav-icon circle {
    chosen order. */
 .rhyme-sort-menu {
   position: absolute;
-  top: calc(100% - var(--space-2));
-  right: var(--space-3);
+  top: calc(100% + var(--space-2));
+  right: calc(var(--space-2) * -1);
   z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;
@@ -1158,6 +1155,12 @@ header .nav-icon circle {
   background: currentColor;
   -webkit-mask: var(--check-mask) center / contain no-repeat;
   mask: var(--check-mask) center / contain no-repeat;
+}
+
+/* Chosen, Random's row reads "Shuffle again": an action, which a tick would
+   misstate. Amber and the button's label already show Random is on. */
+.rhyme-sort-option[data-order="random"][aria-checked="true"]::after {
+  content: none;
 }
 
 @keyframes word-flash {
@@ -2778,11 +2781,6 @@ body.sidebar-open #sidebar-scrim {
     min-width: var(--tap-target);
     height: var(--tap-target);
     margin-block: calc(var(--space-2) * -1);
-  }
-
-  /* The bar's padding is narrower here, so the button's edge moves in too. */
-  .rhyme-sort-menu {
-    right: var(--space-2);
   }
 
   .rhyme-sort-option {
