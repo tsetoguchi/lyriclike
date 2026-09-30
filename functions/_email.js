@@ -2,8 +2,8 @@
 // APP_BASE_URL, never from the Host header, which blocks reset-link poisoning.
 // Tokens ride in the URL fragment, so they never reach request logs.
 
-import { DAY_MS, checkRateLimit } from './_ratelimit.js';
-import { sha256Hex, writeLog } from './_shared.js';
+import { DAY_MS, checkRateLimit, hitRateLimit, peekRateLimit } from './_ratelimit.js';
+import { jsonError, sha256Hex, writeLog } from './_shared.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const RESEND_TIMEOUT_MS = 5000;
@@ -17,6 +17,18 @@ export const RESET_LINK_MINUTES = 30;
 const ADDRESS_DAILY_LIMIT = 5;
 export const EMAIL_POOL = Object.freeze({ SIGNUP: 'signup', ACCOUNT: 'account' });
 const POOL_DAILY_LIMIT = Object.freeze({ signup: 60, account: 30 });
+
+// A pool that reaches this share of its cap emails ALERT_EMAIL, so a busy day
+// shows up before mail starts being refused.
+const ALERT_FRACTION = 0.7;
+const RESEND_DASHBOARD_URL = 'https://resend.com/emails';
+
+const HTTP_SERVICE_UNAVAILABLE = 503;
+const POOL_FULL_MESSAGE = Object.freeze({
+  signup: "We can't send any more sign-up emails today. Try again tomorrow, " +
+    'or continue with Google.',
+  account: "We can't send any more account emails today. Try again tomorrow.",
+});
 
 const AMBER = '#e9b45f';
 const INK = '#141922';
@@ -161,6 +173,24 @@ function googleAddedMessage(env, token) {
   };
 }
 
+function quotaWarningMessage(env, pool, count) {
+  const limit = POOL_DAILY_LIMIT[pool];
+  return {
+    subject: `LyricLike ${pool} email is at ${count} of ${limit} today`,
+    ...renderEmail(env, {
+      heading: `Today's ${pool} email is filling up`,
+      paragraphs: [
+        `${count} of today's ${limit} ${pool} emails have been used. At ${limit}, ` +
+          'people are told to try again tomorrow.',
+        'If this keeps happening, upgrade the Resend plan and raise POOL_DAILY_LIMIT ' +
+          'in functions/_email.js.',
+      ],
+      button: { label: 'Open Resend', url: RESEND_DASHBOARD_URL },
+      footer: 'Sent at most once a day per pool, because ALERT_EMAIL is set.',
+    }),
+  };
+}
+
 // A thin adapter: one fetch. Returns { ok } and never throws.
 export async function sendEmail(env, { to, subject, text, html }) {
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return { ok: false };
@@ -185,14 +215,29 @@ async function logEmailEvent({ env, request }, event) {
   }
 }
 
-// Whether this address and this pool still have room today. The address is
-// checked first, so a refused address does not spend the pool's budget.
-async function withinEmailLimits(env, pool, to) {
+// Counts this send against the address and the pool. Returns the pool's count
+// so far today, or null when either is out of room. The address is checked
+// first, so a refused address does not spend the pool's budget.
+async function claimEmailSlot(env, pool, to) {
   const perAddress = await checkRateLimit(
     env, `email:addr:${await sha256Hex(to.trim().toLowerCase())}`, ADDRESS_DAILY_LIMIT, DAY_MS);
-  if (!perAddress.allowed) return false;
-  const perPool = await checkRateLimit(env, `email:pool:${pool}`, POOL_DAILY_LIMIT[pool], DAY_MS);
-  return perPool.allowed;
+  if (!perAddress.allowed) return null;
+  const { count } = await hitRateLimit(env, `email:pool:${pool}`, DAY_MS);
+  return count <= POOL_DAILY_LIMIT[pool] ? count : null;
+}
+
+function alertThreshold(pool) {
+  return Math.ceil(POOL_DAILY_LIMIT[pool] * ALERT_FRACTION);
+}
+
+// The pool counter is atomic, so exactly one send a day lands on the
+// threshold: the warning goes out once with no record of having sent it.
+async function warnIfPoolFilling(context, pool, count) {
+  const alertTo = context.env.ALERT_EMAIL;
+  if (count !== alertThreshold(pool) || !alertTo) return;
+  const message = quotaWarningMessage(context.env, pool, count);
+  const { ok } = await sendEmail(context.env, { to: alertTo, ...message });
+  await logEmailEvent(context, ok ? 'email_quota_warning' : 'email_failed');
 }
 
 // Applies the limits, builds and sends. Returns a promise that never rejects;
@@ -201,17 +246,31 @@ async function withinEmailLimits(env, pool, to) {
 // or DNS problem shows up.
 async function deliverEmail(context, pool, to, build) {
   try {
-    if (!await withinEmailLimits(context.env, pool, to)) {
+    const count = await claimEmailSlot(context.env, pool, to);
+    if (count === null) {
       await logEmailEvent(context, 'email_skipped');
       return;
     }
     const message = build(context.env);
     const { ok } = await sendEmail(context.env, { to, ...message });
     if (!ok) await logEmailEvent(context, 'email_failed');
+    await warnIfPoolFilling(context, pool, count);
   } catch (err) {
     console.error('email error', err);
     await logEmailEvent(context, 'email_failed');
   }
+}
+
+// Checked before a request is accepted, so a person is told the mail cannot
+// go out instead of waiting for it. The pool is shared by everyone, so the
+// answer says nothing about any one address. Returns a Response, or null
+// when the pool has room.
+export async function gateEmailPool(env, pool) {
+  const { allowed, retryAfterSeconds } = await peekRateLimit(
+    env, `email:pool:${pool}`, POOL_DAILY_LIMIT[pool], DAY_MS);
+  if (allowed) return null;
+  return jsonError(HTTP_SERVICE_UNAVAILABLE, 'email_unavailable', POOL_FULL_MESSAGE[pool],
+    { 'Retry-After': String(retryAfterSeconds) });
 }
 
 export function sendConfirmSignupEmail(context, { to, token }) {
