@@ -5,7 +5,7 @@
 // on purpose: setting a password still needs the mailbox, not just a session.
 
 import { issueResetToken } from '../../_accounts.js';
-import { sendResetEmail } from '../../_email.js';
+import { EMAIL_POOL, gateEmailPool, sendResetEmail } from '../../_email.js';
 import { HOUR_MS, checkRateLimit, rateLimitedResponse } from '../../_ratelimit.js';
 import { gatePasswordAuth, runInBackground } from '../../_request.js';
 import { requireUser } from '../../_shared.js';
@@ -20,6 +20,9 @@ export async function onRequestPost(context) {
 
   const { user, response } = await requireUser(request, env);
   if (response) return response;
+
+  const poolFull = await gateEmailPool(env, EMAIL_POOL.ACCOUNT);
+  if (poolFull) return poolFull;
 
   const limit = await checkRateLimit(env, `password-link:${user.id}`, LINKS_PER_HOUR, HOUR_MS);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);

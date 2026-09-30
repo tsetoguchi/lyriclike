@@ -298,6 +298,57 @@ describe('email', () => {
     assert.equal(services.mail.length, 61);
   });
 
+  it('emails ALERT_EMAIL once when a pool reaches 70% of its daily cap', async () => {
+    env = makeEnv({ ALERT_EMAIL: 'owner@example.com' });
+    for (let i = 0; i < 60; i++) {
+      await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
+    }
+    const alerts = services.mail.filter(m => m.to[0] === 'owner@example.com');
+
+    assert.equal(alerts.length, 1);
+    assert.match(alerts[0].subject, /signup email is at 42 of 60/);
+    assert.deepEqual((await events(env)).filter(e => e === 'email_quota_warning'),
+      ['email_quota_warning']);
+  });
+
+  it('sends no warning when ALERT_EMAIL is not set', async () => {
+    for (let i = 0; i < 45; i++) {
+      await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
+    }
+    assert.equal(services.mail.length, 45);
+  });
+
+  it('turns signups away with 503 once the signup pool is spent, for any address', async () => {
+    await addPasswordUser(env, { email: 'taken@example.com' });
+    for (let i = 0; i < 60; i++) {
+      await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
+    }
+    const attempt = email => post(signup, env, '/api/auth/signup',
+      { email, password: GOOD_PASSWORD, turnstile: turnstileToken('signup') });
+    const fresh = await attempt('new@example.com');
+    const taken = await attempt('taken@example.com');
+
+    for (const response of [fresh, taken]) {
+      assert.equal(response.status, 503);
+      assert.ok(Number(response.headers.get('Retry-After')) > 0);
+      const { error } = await response.json();
+      assert.equal(error.code, 'email_unavailable');
+      assert.match(error.message, /Try again tomorrow, or continue with Google/);
+    }
+    assert.equal(services.mail.length, 60);
+  });
+
+  it('turns reset requests away with 503 once the account pool is spent', async () => {
+    for (let i = 0; i < 30; i++) {
+      await sendResetEmail(context(), { to: `r${i}@example.com`, token: 'a'.repeat(64) });
+    }
+    const response = await post(forgot, env, '/api/auth/password/forgot',
+      { email: 'ann@example.com', turnstile: turnstileToken('forgot') });
+
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.code, 'email_unavailable');
+  });
+
   it('logs email_failed, and never throws, for a provider error or missing configuration', async () => {
     services.mailDown = true;
     await sendResetEmail(context(), { to: 'a@example.com', token: 'a'.repeat(64) });
