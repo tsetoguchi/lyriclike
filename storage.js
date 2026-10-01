@@ -8,16 +8,9 @@ const SAMPLE_SEEN_KEY = 'sample_seen';
 const SAMPLE_HINT_SEEN_KEY = 'sample_hint_seen';
 // Set once this device has reported its first typed word to analytics.
 const FIRST_WRITE_KEY = 'first_write_tracked';
-// Shown to a first-time visitor so the counts and rhyme letters are on screen
-// before they have written anything. ABAB, so the letters show the pattern.
-const SAMPLE_VERSE = [
-  'I left the porch light on for you',
-  'The way I did the year before',
-  'The tea is cold, the sky is blue',
-  'And still I listen for the door',
-].join('\n');
-// The word the rhymes panel opens on: the first line's last word.
-const SAMPLE_PICKED_WORD = 'you';
+// SAMPLE_VERSE and SAMPLE_PICKED_WORD, shown to a first-time visitor so the
+// counts and rhyme letters are on screen before they have written anything,
+// come from sample-verse.js.
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';

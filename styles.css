@@ -2556,20 +2556,20 @@ body.sidebar-open #sidebar-scrim {
 }
 
 .app-footer a,
-.sidebar-privacy {
+.sidebar-links a {
   color: var(--ink-faded);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .app-footer a:hover,
-.sidebar-privacy:hover {
+.sidebar-links a:hover {
   color: var(--ink);
 }
 
 /* On a phone the bottom bar owns the foot of the screen, so the link moves
    to the foot of the notebook drawer instead. */
-.sidebar-privacy {
+.sidebar-links {
   display: none;
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-caption-1);
@@ -2580,7 +2580,7 @@ body.sidebar-open #sidebar-scrim {
     display: none;
   }
 
-  .sidebar-privacy {
+  .sidebar-links {
     display: block;
   }
 }
