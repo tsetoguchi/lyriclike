@@ -1189,6 +1189,11 @@ header .nav-icon circle {
   animation: word-flash var(--duration-flash) ease-out;
 }
 
+/* Answers a tap on a word when the rhymes are behind this tab. */
+.mobile-tab.flash {
+  animation: word-flash var(--duration-flash) ease-out;
+}
+
 /* The same amber as the picked word in the lyrics, so the two read as one. */
 .selected-word-bar .word {
   font-family: var(--font-editor);
@@ -3021,6 +3026,12 @@ body.sidebar-open #sidebar-scrim {
   .selected-word-bar.flash,
   #rhyme-results.is-resorted .rhyme-group.open .rhyme-group-body {
     animation: none;
+  }
+
+  /* The tab is the only answer to a tap on a phone, so it still changes
+     colour: held, then snapped back, with nothing moving. */
+  .mobile-tab.flash {
+    animation: word-flash var(--duration-flash) steps(1, end);
   }
 
   *, *::before, *::after {
