@@ -643,9 +643,24 @@ function isFirstVisit() {
   }
 }
 
+let isSampleShownUnreported = false;
+
+// isFirstVisit ignores sign-in, so the event says which kind of visitor saw
+// the sample. The sign-in check answers after this script runs, so the event
+// waits for it.
+function reportSampleShown() {
+  if (!isSampleShownUnreported || window.currentUser === undefined) return;
+  isSampleShownUnreported = false;
+  trackEvent('sample_shown', { signed_in: Boolean(window.currentUser) });
+}
+
+document.addEventListener('auth-checked', reportSampleShown);
+
 function showSample() {
   const textarea = document.getElementById('lyrics');
   sampleShowing = true;
+  isSampleShownUnreported = true;
+  reportSampleShown();
   document.getElementById('sample-bar').hidden = false;
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
