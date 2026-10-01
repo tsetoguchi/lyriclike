@@ -662,13 +662,15 @@ describe('sortRhymeEntries, all orders', () => {
       assert.deepEqual(sorted.slice().sort(byWord), SORT_ENTRIES.slice().sort(byWord));
     });
 
+    it(`${order}: handles an empty list`, () => {
+      assert.deepEqual(sortRhymeEntries([], order, SORT_CONTEXT), []);
+    });
+  }
+
+  for (const order of ['closest', 'popular', 'random']) {
     it(`${order}: keeps buried words last`, () => {
       const sorted = sortRhymeEntries(SORT_ENTRIES, order, SORT_CONTEXT);
       assert.deepEqual(words(sorted.slice(-4)).sort(), BURIED_WORDS.slice().sort());
-    });
-
-    it(`${order}: handles an empty list`, () => {
-      assert.deepEqual(sortRhymeEntries([], order, SORT_CONTEXT), []);
     });
   }
 
@@ -714,10 +716,10 @@ describe('sortRhymeEntries, popular', () => {
 });
 
 describe('sortRhymeEntries, alphabetical', () => {
-  it('sorts the head and the buried tail separately', () => {
+  it('sorts buried words in with the rest, so A–Z never starts over', () => {
     assert.deepEqual(words(sortRhymeEntries(SORT_ENTRIES, 'alphabetical', SORT_CONTEXT)), [
-      'apart', 'chart', 'dart', 'part', 'sort', 'start',
-      'bart', 'mozart', 'rampart', 'smart'
+      'apart', 'bart', 'chart', 'dart', 'mozart', 'part',
+      'rampart', 'smart', 'sort', 'start'
     ]);
   });
 
