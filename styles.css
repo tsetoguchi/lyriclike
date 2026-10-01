@@ -543,46 +543,62 @@ header .nav-icon circle {
 }
 
 /* Spans the scroller, so the sheet's centring margin is worked into its
-   padding to start the note where the lyrics start, as the title does. */
+   padding to start the note where the lyrics start, as the title does. The
+   copy is chosen by the bar's own width, not the viewport's: the lyrics
+   column narrows beside the rhymes panel and when its handle is dragged. */
 .sample-bar {
+  container-type: inline-size;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: var(--space-8);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   padding: 0 var(--editor-pad) 0
     calc(max(0px, (100% - var(--sheet-width)) / 2) + var(--sheet-syllables)
       + var(--editor-pad));
 }
 
+.sample-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 100%;
+}
+
 .sample-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
   white-space: nowrap;
 }
 
-.sample-note-short {
+/* The compact tier is the default, so a browser without container queries
+   gets the version that always fits. */
+.sample-note-long,
+.sample-clear-long {
   display: none;
 }
 
-/* A phone has room beside the button for the short note only. Without it, a
-   new visitor would not know why the verse is there. */
-@media (max-width: 480px) {
-  .sample-note-long {
-    display: none;
-  }
-
-  .sample-note-short {
+/* The longest long-tier note, the gap and the full button, with room to spare. */
+@container (min-width: 500px) {
+  .sample-note-long,
+  .sample-clear-long {
     display: inline;
   }
 
-  /* The button stays its drawn size; the finger gets a full tap target.
-     It reaches down into the gap above the first line, since the scroller
-     clips anything above its top edge. */
+  .sample-note-short,
+  .sample-clear-short {
+    display: none;
+  }
+}
+
+/* The button stays its drawn size; the finger gets a full tap target.
+   It reaches down into the gap above the first line, since the scroller
+   clips anything above its top edge. */
+@media (max-width: 480px) {
   .sample-bar {
     z-index: 1;
   }
@@ -616,6 +632,7 @@ header .nav-icon circle {
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 
