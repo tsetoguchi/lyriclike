@@ -80,8 +80,11 @@ async function writeRhymePages(pages, index, data) {
   }
 }
 
+// Hand-written, so it is listed here and not generated like the pages around it.
+const GUIDE_PATH = '/guide/';
+
 async function writeSitemap(pages) {
-  const paths = ['/', RHYMES_PATH, ...pages.map((page) => rhymePagePath(page.word))];
+  const paths = ['/', GUIDE_PATH, RHYMES_PATH, ...pages.map((page) => rhymePagePath(page.word))];
   await writeFile(new URL('sitemap.xml', REPO_ROOT), renderSitemap(paths));
 }
 
