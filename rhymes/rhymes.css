@@ -79,6 +79,7 @@
   --gutter: var(--space-4);
   --wordmark-height: 28px;
   --pledge-gutter: 40px;
+  --icon-size: 20px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -611,4 +612,34 @@ a.rhyme-word:focus-visible {
     grid-template-columns: 1fr;
     justify-items: start;
   }
+}
+
+/* The app's own icons, drawn the way its buttons draw them, so a visitor
+   knows the control when they meet it. */
+.guide-icon {
+  flex-shrink: 0;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.guide h2 .guide-icon { color: var(--accent); }
+
+.guide .controls {
+  list-style: none;
+  padding-left: 0;
+}
+
+.guide .controls li {
+  display: grid;
+  grid-template-columns: var(--icon-size) 1fr;
+  column-gap: var(--space-3);
+}
+
+.guide .controls .guide-icon {
+  margin-top: 3px;
+  color: var(--ink-faded);
 }
