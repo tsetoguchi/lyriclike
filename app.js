@@ -788,6 +788,24 @@ function flashWordBar() {
   wordBarEl.classList.add('flash');
 }
 
+// On a phone the rhymes are on the other tab, so a tap would otherwise show
+// nothing: the tab answers it. Keyed to the tab layout, not the pointer, so a
+// mouse in a narrow window gets it too.
+function flashRhymesTab() {
+  if (!isMobileView()) return;
+  const tab = mobileTabsEl.querySelector('[data-tab="rhymes"]');
+  tab.classList.remove('flash');
+  void tab.offsetWidth;
+  tab.classList.add('flash');
+}
+
+// storage.js listens, so the sample's hint can retire without the two files
+// reaching into each other's elements.
+function announcePointerPick() {
+  flashRhymesTab();
+  document.dispatchEvent(new CustomEvent('rhyme-pick'));
+}
+
 // The panel holds the word while the dictionary is still in flight, so a tap
 // is never silently dropped; onRhymeDataReady() fills the rhymes in after.
 function showPendingRhymes(word) {
@@ -815,6 +833,7 @@ function handleSelection(event) {
     pickHighlightWord(word, pickedBoundsForSelection(text, start, end), isPointerPick);
     selectedContextEl.textContent = getWordContext(text, start);
     flashWordBar();
+    if (isPointerPick) announcePointerPick();
 
     // Reaching for a word is the clearest signal that the rhymes are wanted.
     if (!rhymeIndex) {
