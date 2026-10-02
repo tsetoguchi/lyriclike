@@ -1,0 +1,18 @@
+{
+  "name": "lyriclike-videos",
+  "private": true,
+  "description": "Vertical lyric videos for TikTok and Instagram, built with Remotion",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.532",
+    "@remotion/media-utils": "^4.0.532",
+    "@types/react": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.532",
+    "typescript": "^7.0.2"
+  }
+}

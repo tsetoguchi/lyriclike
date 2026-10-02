@@ -14,3 +14,4 @@ jobs:
         with:
           node-version: 22
       - run: node --test "test/*.test.mjs"
+      - run: node --test "video/test/*.test.mjs"
