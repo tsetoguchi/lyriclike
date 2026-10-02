@@ -2357,6 +2357,7 @@ body.sidebar-open #sidebar-scrim {
   font-family: var(--font-editor);
   font-size: var(--text-subhead);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: background var(--duration-fast);
 }
