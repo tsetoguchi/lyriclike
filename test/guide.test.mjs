@@ -140,3 +140,13 @@ describe('what the guide says about repeats', () => {
     assert.ok(marks.flat().length > 0 && marks.flat().every((mark) => mark.isSlant));
   });
 });
+
+describe('the shared stylesheet', () => {
+  it('has its published copy identical to the source the build copies', async () => {
+    const [source, published] = await Promise.all([
+      readRepoFile('tools/rhymes/page.css'),
+      readRepoFile('rhymes/rhymes.css')
+    ]);
+    assert.equal(published, source);
+  });
+});

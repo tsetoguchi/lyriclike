@@ -586,7 +586,7 @@ a.rhyme-word:focus-visible {
 
 .guide .kinds li {
   display: grid;
-  grid-template-columns: 9.5em 1fr 6em;
+  grid-template-columns: 9.5em 1fr auto;
   align-items: baseline;
   gap: var(--space-1) var(--space-3);
 }
@@ -626,8 +626,6 @@ a.rhyme-word:focus-visible {
   stroke-linecap: round;
 }
 
-.guide h2 .guide-icon { color: var(--accent); }
-
 .guide .controls {
   list-style: none;
   padding-left: 0;
@@ -642,4 +640,11 @@ a.rhyme-word:focus-visible {
 .guide .controls .guide-icon {
   margin-top: 3px;
   color: var(--ink-faded);
+}
+
+/* A phone's 358px card cannot fit a verse line at the pledge size. */
+@media (max-width: 480px) {
+  .specimen-verse {
+    --text-pledge: 14px;
+  }
 }
