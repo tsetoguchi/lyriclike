@@ -631,13 +631,15 @@ a.rhyme-word:focus-visible {
   padding-left: 0;
 }
 
-.guide .controls li {
+.guide .controls li,
+.guide .control {
   display: grid;
   grid-template-columns: var(--icon-size) 1fr;
   column-gap: var(--space-3);
 }
 
-.guide .controls .guide-icon {
+.guide .controls .guide-icon,
+.guide .control .guide-icon {
   margin-top: 3px;
   color: var(--ink-faded);
 }
