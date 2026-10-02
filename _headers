@@ -69,6 +69,9 @@
 /storage.js
   Cache-Control: no-cache
 
+/sample-verse.js
+  Cache-Control: no-cache
+
 /back-button.js
   Cache-Control: no-cache
 
@@ -79,4 +82,15 @@
   Cache-Control: no-cache
 
 /manifest.json
+  Cache-Control: no-cache
+
+# The reading pages share one stylesheet and are edited by hand, so a change
+# has to reach returning visitors together.
+/rhymes/rhymes.css
+  Cache-Control: no-cache
+
+/guide/*
+  Cache-Control: no-cache
+
+/privacy/*
   Cache-Control: no-cache

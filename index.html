@@ -43,7 +43,7 @@
     </div>
     <h2 class="sidebar-label">My Notebook</h2>
     <div id="lyrics-list-items"></div>
-    <a class="sidebar-privacy" href="/privacy/">Privacy</a>
+    <p class="sidebar-links"><a href="/privacy/">Privacy</a> · <a href="/guide/">How it works</a></p>
   </aside>
   <div id="app-content">
   <header>
@@ -85,9 +85,11 @@
       </div>
       <div class="lyrics-area">
         <div class="sample-bar" id="sample-bar" hidden>
-          <span class="sample-note sample-note-long">This is a sample verse.</span>
-          <span class="sample-note sample-note-short">Sample verse.</span>
-          <button type="button" class="sample-clear" id="sample-clear">Clear and start writing</button>
+          <div class="sample-bar-row">
+            <span class="sample-note sample-note-long">This is a sample verse.</span>
+            <span class="sample-note sample-note-short">Sample verse.</span>
+            <button type="button" class="sample-clear" id="sample-clear"><span class="sample-clear-long">Clear and start writing</span><span class="sample-clear-short">Clear</span></button>
+          </div>
         </div>
         <div class="syllable-gutter" id="syllable-gutter"></div>
         <div class="lyrics-wrapper">
@@ -136,7 +138,7 @@
       </div>
     </div>
   </div>
-  <p class="app-footer">LyricLike never reads or shares your lyrics. <a href="/privacy/">Privacy</a></p>
+  <p class="app-footer">LyricLike never reads or shares your lyrics. <a href="/privacy/">Privacy</a> · <a href="/guide/">How it works</a></p>
   <nav class="bottom-nav" id="bottom-nav">
     <div class="rhymes-menu" id="rhymes-menu">
       <div class="rhymes-menu-popover" id="rhymes-menu-popover" hidden></div>
@@ -266,6 +268,7 @@
   <script src="auth.js"></script>
   <script src="auth-forms.js"></script>
   <script src="account-security.js"></script>
+  <script src="sample-verse.js"></script>
   <script src="storage.js"></script>
   <script src="back-button.js"></script>
 </body>

@@ -3,18 +3,14 @@ const DEFAULT_TITLE = 'Untitled';
 const DRAFT_STORAGE_KEY = 'swag_draft';
 // Set once a visitor has cleared the sample verse or written over it.
 const SAMPLE_SEEN_KEY = 'sample_seen';
+// Set once a visitor has picked a word in the sample, so the hint that asked
+// them to stays gone after a reload brings the sample back.
+const SAMPLE_HINT_SEEN_KEY = 'sample_hint_seen';
 // Set once this device has reported its first typed word to analytics.
 const FIRST_WRITE_KEY = 'first_write_tracked';
-// Shown to a first-time visitor so the counts and rhyme letters are on screen
-// before they have written anything. ABAB, so the letters show the pattern.
-const SAMPLE_VERSE = [
-  'I left the porch light on for you',
-  'The way I did the year before',
-  'The tea is cold, the sky is blue',
-  'And still I listen for the door',
-].join('\n');
-// The word the rhymes panel opens on: the first line's last word.
-const SAMPLE_PICKED_WORD = 'you';
+// SAMPLE_VERSE and SAMPLE_PICKED_WORD, shown to a first-time visitor so the
+// counts and rhyme letters are on screen before they have written anything,
+// come from sample-verse.js.
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -643,9 +639,63 @@ function isFirstVisit() {
   }
 }
 
+const SAMPLE_NOTE_PLAIN_LONG = 'This is a sample verse.';
+const SAMPLE_NOTE_PLAIN_SHORT = 'Sample verse.';
+const SAMPLE_HINT_TOUCH_LONG = 'Tap any word to see what rhymes with it.';
+const SAMPLE_HINT_TOUCH_SHORT = 'Tap a word for rhymes.';
+const SAMPLE_HINT_POINTER_SHORT = 'Click a word for rhymes.';
+
+function hasSeenSampleHint() {
+  try {
+    return localStorage.getItem(SAMPLE_HINT_SEEN_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+// The long pointer hint is the blank page's own line, so the two never
+// drift apart. Pointer type picks the verb; the bar's width picks the length
+// (see the container query in styles.css).
+function setSampleNote({ isHint }) {
+  const isTouch = isTouchPrimary();
+  const hintLong = isTouch ? SAMPLE_HINT_TOUCH_LONG : RHYME_HINT_POINTER;
+  const hintShort = isTouch ? SAMPLE_HINT_TOUCH_SHORT : SAMPLE_HINT_POINTER_SHORT;
+  document.querySelector('.sample-note-long').textContent =
+    isHint ? hintLong : SAMPLE_NOTE_PLAIN_LONG;
+  document.querySelector('.sample-note-short').textContent =
+    isHint ? hintShort : SAMPLE_NOTE_PLAIN_SHORT;
+}
+
+// A pick made by the pointer on a real word, announced by app.js. Arrow keys,
+// the sample's own pre-picked word and clicks that pick nothing never reach
+// here.
+function retireSampleHint() {
+  if (!sampleShowing || hasSeenSampleHint()) return;
+  setSampleNote({ isHint: false });
+  try { localStorage.setItem(SAMPLE_HINT_SEEN_KEY, '1'); } catch {}
+}
+
+document.addEventListener('rhyme-pick', retireSampleHint);
+
+let isSampleShownUnreported = false;
+
+// isFirstVisit ignores sign-in, so the event says which kind of visitor saw
+// the sample. The sign-in check answers after this script runs, so the event
+// waits for it.
+function reportSampleShown() {
+  if (!isSampleShownUnreported || window.currentUser === undefined) return;
+  isSampleShownUnreported = false;
+  trackEvent('sample_shown', { signed_in: Boolean(window.currentUser) });
+}
+
+document.addEventListener('auth-checked', reportSampleShown);
+
 function showSample() {
   const textarea = document.getElementById('lyrics');
   sampleShowing = true;
+  isSampleShownUnreported = true;
+  reportSampleShown();
+  setSampleNote({ isHint: !hasSeenSampleHint() });
   document.getElementById('sample-bar').hidden = false;
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
