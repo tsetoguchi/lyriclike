@@ -6,6 +6,8 @@ const CURLY_APOSTROPHES = /[‘’]/g;
 const WORD_RUNS = /[A-Za-z‘’']+/g;
 const NEAR_MATCH_SIMILARITY = 0.5;
 const UNHEARD_WORD_SECONDS = 0.3;
+// Whisper invents zero-length words ("Thanks for watching") after the audio ends.
+const MIN_HEARD_SECONDS = 0.02;
 const WEAK_ALIGNMENT_MATCH = 0.7;
 const SONGS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'songs');
 
@@ -147,10 +149,9 @@ function fractionHeard(words) {
 
 export function alignLyrics(lines, heardWords) {
   const lyricWords = lines.flat();
-  const heard = heardWords.map((entry) => ({
-    ...entry,
-    text: normalizeWord(entry.word)
-  }));
+  const heard = heardWords
+    .filter((entry) => entry.end - entry.start >= MIN_HEARD_SECONDS)
+    .map((entry) => ({ ...entry, text: normalizeWord(entry.word) }));
   const table = buildScoreTable(lyricWords, heard);
   const heardIndexes = traceMatches(table, lyricWords, heard);
   const timed = toTimedWords(lyricWords, heard, heardIndexes);

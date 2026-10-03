@@ -1,48 +1,33 @@
 import React from 'react';
-import { AbsoluteFill, Audio, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, staticFile, useVideoConfig } from 'remotion';
 
 import { AmbientBackdrop } from '../components/AmbientBackdrop';
-import { BeatPulse } from '../components/BeatPulse';
 import { CtaBar } from '../components/CtaBar';
-import { LyricCard } from '../components/LyricCard';
-import { Wordmark } from '../components/Wordmark';
+import { ScrollingLyrics } from '../components/ScrollingLyrics';
 import { useAppFonts } from '../fonts';
-import { CONTENT_BOTTOM, CONTENT_TOP } from '../theme';
+import { OUTRO_SECONDS } from '../outro';
+import { rhymeEvents } from '../rhyme-events';
 import timelineJson from '../../songs/sound-2/timeline.json';
 import type { SongTimeline } from '../types';
 
 export const SOUND_2_AUDIO = 'audio/sound-2.wav';
 
 const SONG = timelineJson as unknown as SongTimeline;
-const SLOW_ZOOM = 1.05;
-const CTA_LEAD_SECONDS = 2.2;
+const EVENTS = rhymeEvents(SONG.timeline);
 const CTA_LABEL = 'Trace your rhymes · lyriclike.com';
+const CTA_LEAD_SECONDS = 2.2;
 
 export const Sound2: React.FC = () => {
-  useAppFonts();
-  const frame = useCurrentFrame();
+  const areFontsReady = useAppFonts();
   const { durationInFrames, fps } = useVideoConfig();
-  const zoom = interpolate(frame, [0, durationInFrames], [1, SLOW_ZOOM]);
+  const ctaAppearsAt = durationInFrames / fps - Math.max(CTA_LEAD_SECONDS, OUTRO_SECONDS);
 
   return (
     <AbsoluteFill>
       <Audio src={staticFile(SOUND_2_AUDIO)} />
-      <AmbientBackdrop />
-      <Wordmark />
-      <AbsoluteFill
-        style={{
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: CONTENT_TOP,
-          paddingBottom: CONTENT_BOTTOM,
-          transform: `scale(${zoom})`
-        }}
-      >
-        <BeatPulse audioFile={SOUND_2_AUDIO}>
-          <LyricCard lines={SONG.timeline} />
-        </BeatPulse>
-      </AbsoluteFill>
-      <CtaBar appearAtSecond={durationInFrames / fps - CTA_LEAD_SECONDS} label={CTA_LABEL} />
+      <AmbientBackdrop events={EVENTS} />
+      <ScrollingLyrics lines={SONG.timeline} events={EVENTS} areFontsReady={areFontsReady} />
+      <CtaBar appearAtSecond={ctaAppearsAt} label={CTA_LABEL} />
     </AbsoluteFill>
   );
 };

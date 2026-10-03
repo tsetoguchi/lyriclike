@@ -11,9 +11,13 @@ export const SAFE_TOP = 192;
 export const SAFE_BOTTOM = 420;
 export const SAFE_SIDE = 90;
 
-// The lyrics sit between the wordmark (top) and the call-to-action pill (bottom).
-export const CONTENT_TOP = SAFE_TOP + 170;
-export const CONTENT_BOTTOM = SAFE_BOTTOM + 150;
+export const CTA_HEIGHT = 120;
+
+// The lyric box runs from the top safe line to just above the call-to-action pill.
+const BOX_GAP_ABOVE_CTA = 40;
+export const BOX_TOP = SAFE_TOP;
+export const BOX_WIDTH = WIDTH - 2 * SAFE_SIDE;
+export const BOX_HEIGHT = HEIGHT - SAFE_BOTTOM - CTA_HEIGHT - BOX_GAP_ABOVE_CTA - BOX_TOP;
 
 // rhyme-core.js marks the families that outrun the palette with this value.
 export const OVERFLOW_FAMILY = -1;

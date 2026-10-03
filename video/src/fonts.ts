@@ -18,9 +18,15 @@ async function loadFont(source: FontSource): Promise<void> {
 }
 
 // Holds the render until the app's fonts are in, so no frame uses a fallback.
-export function useAppFonts(): void {
+// Returns true once they are, so layout can be measured with the real glyphs.
+export function useAppFonts(): boolean {
   const [handle] = useState(() => delayRender('loading fonts'));
+  const [isReady, setIsReady] = useState(false);
   useEffect(() => {
-    Promise.all(FONT_SOURCES.map(loadFont)).then(() => continueRender(handle));
+    Promise.all(FONT_SOURCES.map(loadFont)).then(() => {
+      setIsReady(true);
+      continueRender(handle);
+    });
   }, [handle]);
+  return isReady;
 }

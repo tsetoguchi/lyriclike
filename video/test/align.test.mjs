@@ -60,6 +60,17 @@ test('extra transcribed words that are not in the lyrics are dropped', () => {
   assert.deepEqual(timeline.flat().map((word) => word.start), [0.3, 0.7]);
 });
 
+test('zero-length words invented after the audio ends never steal a match', () => {
+  const lines = parseLyricLines('one time');
+  const { timeline } = alignLyrics(lines, [
+    heard('one', 1, 1.4),
+    heard('time', 1.5, 1.9),
+    heard('Thanks', 9, 9),
+    heard('time.', 9, 9)
+  ]);
+  assert.deepEqual(timeline.flat().map((word) => word.start), [1, 1.5]);
+});
+
 test('interpolated times stay in order across a run of missing words', () => {
   const lines = parseLyricLines('a b c d e');
   const { timeline } = alignLyrics(lines, [heard('a', 0, 1), heard('e', 9, 10)]);
