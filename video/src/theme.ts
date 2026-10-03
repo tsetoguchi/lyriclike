@@ -11,13 +11,17 @@ export const SAFE_TOP = 192;
 export const SAFE_BOTTOM = 420;
 export const SAFE_SIDE = 90;
 
-export const CTA_HEIGHT = 120;
+// One step darker than the app's --paper (#141922), so the amber and the rhyme
+// colours carry the frame.
+export const STAGE_BACKGROUND = '#0b0e14';
+export const SITE_URL = 'lyriclike.com';
 
-// The lyric box runs from the top safe line to just above the call-to-action pill.
-const BOX_GAP_ABOVE_CTA = 40;
-export const BOX_TOP = SAFE_TOP;
-export const BOX_WIDTH = WIDTH - 2 * SAFE_SIDE;
-export const BOX_HEIGHT = HEIGHT - SAFE_BOTTOM - CTA_HEIGHT - BOX_GAP_ABOVE_CTA - BOX_TOP;
+// Lyrics are centred in the space between the top safe line and the URL mark.
+const URL_ZONE_HEIGHT = 150;
+export const STAGE_TOP = SAFE_TOP;
+export const STAGE_WIDTH = WIDTH - 2 * SAFE_SIDE;
+export const STAGE_HEIGHT = HEIGHT - SAFE_BOTTOM - URL_ZONE_HEIGHT - STAGE_TOP;
+export const URL_TOP = HEIGHT - SAFE_BOTTOM - 90;
 
 // rhyme-core.js marks the families that outrun the palette with this value.
 export const OVERFLOW_FAMILY = -1;

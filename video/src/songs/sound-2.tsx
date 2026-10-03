@@ -1,12 +1,15 @@
 import React from 'react';
-import { AbsoluteFill, Audio, staticFile, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 
-import { AmbientBackdrop } from '../components/AmbientBackdrop';
-import { CtaBar } from '../components/CtaBar';
-import { ScrollingLyrics } from '../components/ScrollingLyrics';
+import { KineticLine } from '../components/KineticLine';
+import { Recap } from '../components/Recap';
+import { Stage } from '../components/Stage';
+import { UrlMark } from '../components/UrlMark';
 import { useAppFonts } from '../fonts';
+import { shakeAt } from '../impact';
+import { lineWindows } from '../lines';
 import { OUTRO_SECONDS } from '../outro';
-import { rhymeEvents } from '../rhyme-events';
+import { buildWordMaps, rhymeEvents } from '../rhyme-events';
 import timelineJson from '../../songs/sound-2/timeline.json';
 import type { SongTimeline } from '../types';
 
@@ -14,20 +17,36 @@ export const SOUND_2_AUDIO = 'audio/sound-2.wav';
 
 const SONG = timelineJson as unknown as SongTimeline;
 const EVENTS = rhymeEvents(SONG.timeline);
-const CTA_LABEL = 'Trace your rhymes · lyriclike.com';
-const CTA_LEAD_SECONDS = 2.2;
+const MAPS = buildWordMaps(EVENTS);
+const SPANS = SONG.timeline.map((line) => ({
+  start: line[0].start,
+  end: line[line.length - 1].end
+}));
 
 export const Sound2: React.FC = () => {
-  const areFontsReady = useAppFonts();
-  const { durationInFrames, fps } = useVideoConfig();
-  const ctaAppearsAt = durationInFrames / fps - Math.max(CTA_LEAD_SECONDS, OUTRO_SECONDS);
+  useAppFonts();
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const windows = lineWindows(SPANS, durationInFrames / fps - OUTRO_SECONDS);
+  const shake = shakeAt(frame / fps, EVENTS);
 
   return (
     <AbsoluteFill>
       <Audio src={staticFile(SOUND_2_AUDIO)} />
-      <AmbientBackdrop events={EVENTS} />
-      <ScrollingLyrics lines={SONG.timeline} events={EVENTS} areFontsReady={areFontsReady} />
-      <CtaBar appearAtSecond={ctaAppearsAt} label={CTA_LABEL} />
+      <Stage events={EVENTS} />
+      <AbsoluteFill style={{ transform: `translate(${shake.x}px, ${shake.y}px)` }}>
+        {SONG.timeline.map((words, lineIndex) => (
+          <KineticLine
+            key={lineIndex}
+            words={words}
+            lineIndex={lineIndex}
+            maps={MAPS}
+            window={windows[lineIndex]}
+          />
+        ))}
+        <Recap lines={SONG.timeline} maps={MAPS} />
+      </AbsoluteFill>
+      <UrlMark />
     </AbsoluteFill>
   );
 };

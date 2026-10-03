@@ -1,4 +1,9 @@
+import { OUTRO_STAGGER_SECONDS } from './outro.ts';
 import type { TimedWord } from './types';
+
+export function wordKey(lineIndex: number, wordIndex: number): string {
+  return `${lineIndex}-${wordIndex}`;
+}
 
 export type WordRef = { lineIndex: number; wordIndex: number };
 
@@ -20,6 +25,24 @@ function collectMarkedWords(timeline: TimedWord[][]): MarkedWord[] {
     });
   });
   return marked.sort((a, b) => a.time - b.time);
+}
+
+export type WordMaps = {
+  landings: Set<string>;
+  outroDelays: Record<string, number>;
+};
+
+// Which words complete a rhyme, and when each rhyme word takes its turn in the
+// closing wave.
+export function buildWordMaps(events: RhymeEvent[]): WordMaps {
+  const landings = new Set<string>();
+  const outroDelays: Record<string, number> = {};
+  events.forEach((event, order) => {
+    const key = wordKey(event.lineIndex, event.wordIndex);
+    if (event.countInFamily >= 2) landings.add(key);
+    outroDelays[key] = order * OUTRO_STAGGER_SECONDS;
+  });
+  return { landings, outroDelays };
 }
 
 // Every marked word in the order it is sung, with how many words of its family
