@@ -23,6 +23,12 @@ media/
 *.png
 !assets/**/*.png
 
+# Lyric video tooling: songs hold copyrighted lyrics and audio
+video/songs/
+video/public/
+video/node_modules/
+video/out/
+
 # Design reference images (third-party, not for redistribution)
 design_ideas/
 
