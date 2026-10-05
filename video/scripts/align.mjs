@@ -3,7 +3,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const CURLY_APOSTROPHES = /[‘’]/g;
-const WORD_RUNS = /[A-Za-z‘’']+/g;
+// Dotted initials such as L.A. stay one word; otherwise a word is a run of letters.
+const WORD_RUNS = /(?:[A-Za-z]\.){2,}|[A-Za-z‘’']+/g;
 const NEAR_MATCH_SIMILARITY = 0.5;
 const UNHEARD_WORD_SECONDS = 0.3;
 // Whisper invents zero-length words ("Thanks for watching") after the audio ends.
@@ -147,9 +148,24 @@ function fractionHeard(words) {
   return heardCount / words.length;
 }
 
+// Whisper hears initials as pieces ("L", ".A", "."); glue each piece that starts with
+// a dot onto the word before it, so "L.A." starts where the "L" was heard.
+function glueDottedPieces(heardWords) {
+  const glued = [];
+  for (const entry of heardWords) {
+    const previous = glued[glued.length - 1];
+    if (previous && entry.word.startsWith('.')) {
+      glued[glued.length - 1] = { ...previous, word: previous.word + entry.word, end: entry.end };
+    } else {
+      glued.push(entry);
+    }
+  }
+  return glued;
+}
+
 export function alignLyrics(lines, heardWords) {
   const lyricWords = lines.flat();
-  const heard = heardWords
+  const heard = glueDottedPieces(heardWords)
     .filter((entry) => entry.end - entry.start >= MIN_HEARD_SECONDS)
     .map((entry) => ({ ...entry, text: normalizeWord(entry.word) }));
   const table = buildScoreTable(lyricWords, heard);

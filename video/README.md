@@ -40,8 +40,10 @@ late, change `LINE_OFFSET_SECONDS` in the song's file (negative is earlier).
 a speech model, so no word is skipped or guessed. `check_sync.py` compares each word
 with the nearest acoustic onset; aim for a mean error under about 50 ms.
 
-Check the timing with `npm run studio` (in `video/`), then register the song in
-`src/Root.tsx`, write `src/songs/<slug>.tsx` and render:
+Write `src/songs/<slug>.tsx` (copy an existing one: it is a few lines of data passed
+to `makeLyricVideo`, including any words to censor on screen, e.g.
+`censored: { bitches: 'b*tches' }`), add it to `SONGS` in `src/Root.tsx`, check the
+timing with `npm run studio` (in `video/`) and render:
 
 ```
 node video/scripts/render.mjs <slug>

@@ -13,6 +13,38 @@ test('parseLyricLines keeps line and word order and normalises words', () => {
   );
 });
 
+test('dotted initials stay one word, shown with their dots and matched without them', () => {
+  const [line] = parseLyricLines('ain’t in L.A.​');
+  assert.deepEqual(line.map((word) => word.raw), ['ain’t', 'in', 'L.A.']);
+  assert.deepEqual(line.map((word) => word.text), ["ain't", 'in', 'la']);
+  const { timeline } = alignLyrics([line], [
+    heard('ain’t', 1, 1.2),
+    heard('in', 1.3, 1.4),
+    heard('L.A.', 1.5, 2)
+  ]);
+  assert.equal(timeline[0][2].start, 1.5);
+  assert.equal(timeline[0][2].isInterpolated, false);
+});
+
+test('initials Whisper splits into pieces are glued back so the word starts at its first letter', () => {
+  const [line] = parseLyricLines('ain’t in L.A.');
+  const { timeline } = alignLyrics([line], [
+    heard('ain’t', 10.72, 11.06),
+    heard('in', 11.06, 11.22),
+    heard('L', 11.22, 11.42),
+    heard('.A', 11.42, 13.22),
+    heard('.', 13.22, 13.48)
+  ]);
+  const initials = timeline[0][2];
+  assert.equal(initials.start, 11.22);
+  assert.equal(initials.end, 13.48);
+});
+
+test('a full stop at the end of an ordinary word is not kept', () => {
+  const [line] = parseLyricLines('run away.');
+  assert.deepEqual(line.map((word) => word.raw), ['run', 'away']);
+});
+
 test('matched words take the transcribed times', () => {
   const lines = parseLyricLines('hello world');
   const { timeline } = alignLyrics(lines, [

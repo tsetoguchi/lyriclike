@@ -28,6 +28,9 @@ class LyricWordsTest(unittest.TestCase):
         self.assertEqual(force_align.lyric_words("it’s okay\nI’ll go"),
                          ["it’s", "okay", "I’ll", "go"])
 
+    def test_dotted_initials_stay_one_word(self):
+        self.assertEqual(force_align.lyric_words("ain't in L.A.​"), ["ain't", "in", "L.A."])
+
     def test_skips_things_with_no_letters(self):
         self.assertEqual(force_align.lyric_words("go ' - ' now"), ["go", "now"])
 
@@ -37,6 +40,14 @@ class TokensTest(unittest.TestCase):
         tokens, spans = force_align.to_tokens(["it's", "a"], VOCAB)
         self.assertEqual(tokens, [9, 10, 5, 11, 4, 6])
         self.assertEqual(spans, [(0, 3), (5, 5)])
+
+
+class InitialsTokensTest(unittest.TestCase):
+    def test_initials_become_their_letters(self):
+        vocab = {"<pad>": 0, "|": 4, "L": 12, "A": 6}
+        tokens, spans = force_align.to_tokens(["L.A."], vocab)
+        self.assertEqual(tokens, [12, 6])
+        self.assertEqual(spans, [(0, 1)])
 
 
 class AlignmentTest(unittest.TestCase):

@@ -19,7 +19,8 @@ MODEL_NAME = "facebook/wav2vec2-base-960h"
 SAMPLE_RATE = 16000
 BLANK_ID = 0
 WORD_DELIMITER = "|"
-LYRIC_WORD = re.compile("[A-Za-z‘’']+")
+# Dotted initials such as L.A. stay one word, as in align.mjs.
+LYRIC_WORD = re.compile("(?:[A-Za-z]\\.){2,}|[A-Za-z‘’']+")
 SONGS_DIR = Path(__file__).resolve().parent.parent / "songs"
 
 
@@ -29,7 +30,7 @@ def lyric_words(lyrics):
 
 
 def normalise(word):
-    return word.upper().replace("‘", "'").replace("’", "'")
+    return word.upper().replace("‘", "'").replace("’", "'").replace(".", "")
 
 
 def to_tokens(words, vocab):
