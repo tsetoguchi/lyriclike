@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useCurrentFrame, useVideoConfig } from 'remotion';
 
-import { appearProgress, LINE_GAP_EM, LINE_HEIGHT_EM, pastDimAt, stackOffsetAt } from '../stack';
+import { isLineVisible, LINE_GAP_EM, LINE_HEIGHT_EM, pastDimAt, stackOffsetAt } from '../stack';
 import { SAFE_SIDE, STAGE_HEIGHT, STAGE_TOP, STAGE_WIDTH, theme } from '../theme';
 import type { TimedWord } from '../types';
 import { useLineBottoms } from '../useLineBottoms';
@@ -10,8 +10,6 @@ import { KineticWord } from './KineticWord';
 
 const WORD_GAP_EM = 0.3;
 const ROW_GAP_EM = 0.1;
-const ENTER_RISE_PX = 28;
-const ENTER_BLUR_PX = 10;
 const TOP_FADE_PX = 70;
 const TOP_FADE_AFTER_PX = 40;
 
@@ -23,18 +21,14 @@ type LyricStackProps = {
 };
 
 function lineStyle(seconds: number, appearAt: number, nextAppearAt: number | undefined): React.CSSProperties {
-  const progress = appearProgress(seconds, appearAt);
-  const eased = 1 - Math.pow(1 - progress, 3);
   return {
     display: 'flex',
     flexWrap: 'wrap',
     columnGap: `${WORD_GAP_EM}em`,
     rowGap: `${ROW_GAP_EM}em`,
     lineHeight: LINE_HEIGHT_EM,
-    visibility: progress > 0 ? 'visible' : 'hidden',
-    opacity: eased * pastDimAt(seconds, nextAppearAt),
-    transform: `translateY(${ENTER_RISE_PX * (1 - eased)}px)`,
-    filter: eased < 1 ? `blur(${ENTER_BLUR_PX * (1 - eased)}px)` : undefined
+    visibility: isLineVisible(seconds, appearAt) ? 'visible' : 'hidden',
+    opacity: pastDimAt(seconds, nextAppearAt)
   };
 }
 

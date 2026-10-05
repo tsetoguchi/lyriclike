@@ -3,7 +3,6 @@
 import { clamp01, easeInOutCubic } from './ease.ts';
 
 export const APPEAR_LEAD_SECONDS = 0.12;
-export const APPEAR_SECONDS = 0.2;
 export const PAST_OPACITY = 0.75;
 export const PAST_FADE_SECONDS = 0.3;
 export const SCROLL_SECONDS = 0.35;
@@ -40,8 +39,9 @@ export function lineAppearAt(firstWordStart: number, lineIndex: number): number 
   return lineIndex === 0 ? 0 : firstWordStart - APPEAR_LEAD_SECONDS;
 }
 
-export function appearProgress(seconds: number, appearAt: number): number {
-  return clamp01((seconds - appearAt) / APPEAR_SECONDS);
+// A line is there in full the moment it is due; only its words fill in over time.
+export function isLineVisible(seconds: number, appearAt: number): boolean {
+  return seconds >= appearAt;
 }
 
 // 1 for the line being sung, easing to PAST_OPACITY once the next line arrives.

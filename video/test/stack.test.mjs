@@ -3,11 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   APPEAR_LEAD_SECONDS,
-  APPEAR_SECONDS,
   PAST_FADE_SECONDS,
   PAST_OPACITY,
-  appearProgress,
   estimateStackHeight,
+  isLineVisible,
   lineAppearAt,
   pastDimAt,
   songFontSize,
@@ -41,10 +40,10 @@ test('the first line is there from the start and later lines arrive just before 
   assert.equal(lineAppearAt(5.5, 2), 5.5 - APPEAR_LEAD_SECONDS);
 });
 
-test('appear progress runs from 0 to 1 over its duration', () => {
-  assert.equal(appearProgress(4.9, 5), 0);
-  assert.ok(Math.abs(appearProgress(5 + APPEAR_SECONDS / 2, 5) - 0.5) < 1e-9);
-  assert.equal(appearProgress(9, 5), 1);
+test('a line is hidden before its time and fully there from that moment', () => {
+  assert.equal(isLineVisible(4.99, 5), false);
+  assert.equal(isLineVisible(5, 5), true);
+  assert.equal(isLineVisible(9, 5), true);
 });
 
 test('a line stays at full brightness until the next arrives, then eases to the past level', () => {
