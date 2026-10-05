@@ -16,6 +16,9 @@ export const SOUND_2_AUDIO = 'audio/sound-2.wav';
 // Nudge every word if the highlighting still feels early (negative) or late (positive).
 const SYNC_OFFSET_SECONDS = 0;
 
+// Nudge when new lines cut in: negative is earlier, positive is later.
+const LINE_OFFSET_SECONDS = 0;
+
 const SONG = timelineJson as unknown as SongTimeline;
 const LINES = SONG.timeline.map((line) =>
   line.map((word) => ({
@@ -25,7 +28,9 @@ const LINES = SONG.timeline.map((line) =>
   }))
 );
 const BEATS = (beatsJson as { beats: number[] }).beats;
-const APPEAR_TIMES = LINES.map((line, index) => lineAppearAt(line[0].start, index, BEATS));
+const APPEAR_TIMES = LINES.map(
+  (line, index) => lineAppearAt(line[0].start, index, BEATS) + LINE_OFFSET_SECONDS
+);
 const FONT_SIZE = songFontSize(
   LINES.map((line) => line.map((word) => word.raw).join(' ')),
   STAGE_WIDTH,

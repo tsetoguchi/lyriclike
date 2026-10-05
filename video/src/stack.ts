@@ -2,9 +2,9 @@
 // node --test can load it.
 import { clamp01, easeInOutCubic } from './ease.ts';
 
-export const APPEAR_LEAD_SECONDS = 0.12;
-// Within half a beat at a typical tempo, so a line can always find a beat.
-const BEAT_SNAP_SECONDS = 0.25;
+// A singer often starts a line a little before the beat, so a line only locks to a
+// beat when its first word is already almost on it. Further out, the voice wins.
+const BEAT_SNAP_SECONDS = 0.06;
 export const PAST_OPACITY = 0.75;
 export const PAST_FADE_SECONDS = 0.3;
 export const SCROLL_SECONDS = 0.35;
@@ -46,14 +46,11 @@ export function snapToBeat(time: number, beats: number[], toleranceSeconds: numb
   return nearest;
 }
 
-// The first line is there from the first frame. Every other line lands on the beat
-// nearest its first word, so the cut hits the music; a singer often starts just before
-// the beat, so that beat can fall a little after the first word. With no beat close by,
-// the line arrives just before its first word.
+// The first line is there from the first frame. Every other line cuts in when its
+// first word is sung, locked to the beat only if that word is already almost on it.
 export function lineAppearAt(firstWordStart: number, lineIndex: number, beats: number[]): number {
   if (lineIndex === 0) return 0;
-  const beat = snapToBeat(firstWordStart, beats, BEAT_SNAP_SECONDS);
-  return beat ?? firstWordStart - APPEAR_LEAD_SECONDS;
+  return snapToBeat(firstWordStart, beats, BEAT_SNAP_SECONDS) ?? firstWordStart;
 }
 
 // A line is there in full the moment it is due; only its words fill in over time.

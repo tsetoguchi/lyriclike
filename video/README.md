@@ -31,8 +31,10 @@ python video/scripts/check_sync.py <slug> video/songs/<slug>/vocals.wav
 ```
 
 `detect_beats.py` finds the song's steady beat (from the full mix, not the vocals) and
-saves it to `beats.json`. Each new line cuts in on the beat nearest its first word,
-so the cuts hit the music. The first line is on screen from the first frame.
+saves it to `beats.json`. Each new line cuts in when its first word is sung, and locks
+to a beat only if that word is within 60 ms of it (singers often start a little before
+the beat). The first line is on screen from the first frame. If the cuts feel early or
+late, change `LINE_OFFSET_SECONDS` in the song's file (negative is earlier).
 
 `force_align.py` times every word of the exact lyrics against the isolated vocals with
 a speech model, so no word is skipped or guessed. `check_sync.py` compares each word

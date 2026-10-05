@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  APPEAR_LEAD_SECONDS,
   PAST_FADE_SECONDS,
   PAST_OPACITY,
   estimateStackHeight,
@@ -49,14 +48,19 @@ test('the first line is there from the start', () => {
   assert.equal(lineAppearAt(0.73, 0, BEATS), 0);
 });
 
-test('later lines land on the nearest beat, even if that is just after their first word', () => {
-  assert.equal(lineAppearAt(5.68, 1, BEATS), 5.875);
-  assert.equal(lineAppearAt(10.49, 2, BEATS), 10.675);
-  assert.equal(lineAppearAt(14.97, 3, BEATS), 14.875);
+test('a line cuts in when its first word is sung, not on a beat that is a pickup away', () => {
+  assert.equal(lineAppearAt(5.68, 1, BEATS), 5.68);
+  assert.equal(lineAppearAt(10.49, 2, BEATS), 10.49);
+  assert.equal(lineAppearAt(14.97, 3, BEATS), 14.97);
 });
 
-test('a line with no beat nearby arrives just before its first word', () => {
-  assert.equal(lineAppearAt(8.2, 1, BEATS), 8.2 - APPEAR_LEAD_SECONDS);
+test('a first word that really is on a beat locks to it exactly', () => {
+  assert.equal(lineAppearAt(5.9, 1, BEATS), 5.875);
+  assert.equal(lineAppearAt(10.64, 2, BEATS), 10.675);
+});
+
+test('with no beats at all a line still cuts in at its first word', () => {
+  assert.equal(lineAppearAt(8.2, 1, []), 8.2);
 });
 
 test('a line is hidden before its time and fully there from that moment', () => {
