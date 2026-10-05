@@ -43,3 +43,6 @@ instructions.txt
 
 # Internal planning docs (new ones stay local; already-tracked files here are unaffected)
 plans/
+# Python bytecode
+__pycache__/
+*.pyc
