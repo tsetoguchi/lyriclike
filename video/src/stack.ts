@@ -3,6 +3,8 @@
 import { clamp01, easeInOutCubic } from './ease.ts';
 
 export const APPEAR_LEAD_SECONDS = 0.12;
+// Within half a beat at a typical tempo, so a line can always find a beat.
+const BEAT_SNAP_SECONDS = 0.25;
 export const PAST_OPACITY = 0.75;
 export const PAST_FADE_SECONDS = 0.3;
 export const SCROLL_SECONDS = 0.35;
@@ -33,10 +35,25 @@ export function songFontSize(texts: string[], width: number, height: number): nu
   return fitting ?? FONT_SIZES[FONT_SIZES.length - 1];
 }
 
-// The first line is there from the first frame; the rest arrive just before their
-// first word.
-export function lineAppearAt(firstWordStart: number, lineIndex: number): number {
-  return lineIndex === 0 ? 0 : firstWordStart - APPEAR_LEAD_SECONDS;
+// The beat nearest to a moment, or null when none is close enough to matter.
+export function snapToBeat(time: number, beats: number[], toleranceSeconds: number): number | null {
+  let nearest: number | null = null;
+  for (const beat of beats) {
+    const isCloser = nearest === null || Math.abs(beat - time) < Math.abs(nearest - time);
+    if (isCloser) nearest = beat;
+  }
+  if (nearest === null || Math.abs(nearest - time) > toleranceSeconds) return null;
+  return nearest;
+}
+
+// The first line is there from the first frame. Every other line lands on the beat
+// nearest its first word, so the cut hits the music; a singer often starts just before
+// the beat, so that beat can fall a little after the first word. With no beat close by,
+// the line arrives just before its first word.
+export function lineAppearAt(firstWordStart: number, lineIndex: number, beats: number[]): number {
+  if (lineIndex === 0) return 0;
+  const beat = snapToBeat(firstWordStart, beats, BEAT_SNAP_SECONDS);
+  return beat ?? firstWordStart - APPEAR_LEAD_SECONDS;
 }
 
 // A line is there in full the moment it is due; only its words fill in over time.

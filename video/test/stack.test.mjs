@@ -9,6 +9,7 @@ import {
   isLineVisible,
   lineAppearAt,
   pastDimAt,
+  snapToBeat,
   songFontSize,
   stackOffsetAt
 } from '../src/stack.ts';
@@ -35,9 +36,27 @@ test('a song too long for any size still gets the smallest size', () => {
   assert.equal(songFontSize(huge, WIDTH, HEIGHT), 56);
 });
 
-test('the first line is there from the start and later lines arrive just before their words', () => {
-  assert.equal(lineAppearAt(0.73, 0), 0);
-  assert.equal(lineAppearAt(5.5, 2), 5.5 - APPEAR_LEAD_SECONDS);
+const BEATS = [0.475, 1.075, 1.675, 2.275, 5.875, 6.475, 10.675, 14.875];
+
+test('snapToBeat picks the nearest beat, but only when one is close enough', () => {
+  assert.equal(snapToBeat(5.68, BEATS, 0.25), 5.875);
+  assert.equal(snapToBeat(14.97, BEATS, 0.25), 14.875);
+  assert.equal(snapToBeat(8.2, BEATS, 0.25), null);
+  assert.equal(snapToBeat(3, [], 0.25), null);
+});
+
+test('the first line is there from the start', () => {
+  assert.equal(lineAppearAt(0.73, 0, BEATS), 0);
+});
+
+test('later lines land on the nearest beat, even if that is just after their first word', () => {
+  assert.equal(lineAppearAt(5.68, 1, BEATS), 5.875);
+  assert.equal(lineAppearAt(10.49, 2, BEATS), 10.675);
+  assert.equal(lineAppearAt(14.97, 3, BEATS), 14.875);
+});
+
+test('a line with no beat nearby arrives just before its first word', () => {
+  assert.equal(lineAppearAt(8.2, 1, BEATS), 8.2 - APPEAR_LEAD_SECONDS);
 });
 
 test('a line is hidden before its time and fully there from that moment', () => {

@@ -7,6 +7,7 @@ import { UrlMark } from '../components/UrlMark';
 import { useAppFonts } from '../fonts';
 import { lineAppearAt, songFontSize } from '../stack';
 import { STAGE_HEIGHT, STAGE_WIDTH } from '../theme';
+import beatsJson from '../../songs/sound-2/beats.json';
 import timelineJson from '../../songs/sound-2/timeline.json';
 import type { SongTimeline } from '../types';
 
@@ -23,7 +24,8 @@ const LINES = SONG.timeline.map((line) =>
     end: word.end + SYNC_OFFSET_SECONDS
   }))
 );
-const APPEAR_TIMES = LINES.map((line, index) => lineAppearAt(line[0].start, index));
+const BEATS = (beatsJson as { beats: number[] }).beats;
+const APPEAR_TIMES = LINES.map((line, index) => lineAppearAt(line[0].start, index, BEATS));
 const FONT_SIZE = songFontSize(
   LINES.map((line) => line.map((word) => word.raw).join(' ')),
   STAGE_WIDTH,

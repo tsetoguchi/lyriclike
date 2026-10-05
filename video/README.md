@@ -25,9 +25,14 @@ python video/scripts/separate_vocals.py <slug> media/audio/<file>
 python video/scripts/force_align.py <slug> video/songs/<slug>/vocals.wav
 node video/scripts/align.mjs <slug>
 node video/scripts/rhyme-marks.mjs <slug>
+python video/scripts/detect_beats.py <slug> media/audio/<file>
 node video/scripts/sync-assets.mjs <slug> media/audio/<file>
 python video/scripts/check_sync.py <slug> video/songs/<slug>/vocals.wav
 ```
+
+`detect_beats.py` finds the song's steady beat (from the full mix, not the vocals) and
+saves it to `beats.json`. Each new line cuts in on the beat nearest its first word,
+so the cuts hit the music. The first line is on screen from the first frame.
 
 `force_align.py` times every word of the exact lyrics against the isolated vocals with
 a speech model, so no word is skipped or guessed. `check_sync.py` compares each word
@@ -56,4 +61,5 @@ Whisper stretches the first word after a pause back across the silence, which
 `trim_to_voice.py` repairs using the vocal stem.
 
 Tests: `node --test "video/test/*.test.mjs"` (also in CI) and
-`python -m unittest video/test/test_force_align.py` (local only).
+`python -m unittest video/test/test_force_align.py video/test/test_detect_beats.py`
+(local only).
