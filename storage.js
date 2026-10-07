@@ -11,6 +11,10 @@ const FIRST_WRITE_KEY = 'first_write_tracked';
 // SAMPLE_VERSE and SAMPLE_PICKED_WORD, shown to a first-time visitor so the
 // counts and rhyme letters are on screen before they have written anything,
 // come from sample-verse.js.
+// The sample's name, shown while it is up and never saved. It lives here, not
+// in sample-verse.js, because the notebook names pages with it on every visit
+// and a cached older copy of that file would leave it undefined.
+const SAMPLE_TITLE = 'Nobody Home';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -35,6 +39,9 @@ let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
 let lastSavedBody = '';
 let saveTimer = null;
+// Up here, not with the rest of the sample code, because naming the page
+// reads it and the notebook can be drawn before that code runs.
+let sampleShowing = false;
 
 // ── Dialog ──
 
@@ -515,10 +522,20 @@ function titleForDisplay(title) {
   return title === DEFAULT_TITLE ? '' : title;
 }
 
+// An unnamed page takes the sample's title while the sample is up. Only the
+// placeholder changes, so the sample's name is never saved as the page's.
+function placeholderTitle() {
+  return sampleShowing ? SAMPLE_TITLE : PLACEHOLDER_TITLE;
+}
+
+function showPlaceholderTitle() {
+  document.getElementById('lyrics-panel-title').dataset.placeholder = placeholderTitle();
+}
+
 // Where a page is named rather than edited, the unnamed page reads as the
 // editor's placeholder does.
 function titleForName(title) {
-  return titleForDisplay(title) || PLACEHOLDER_TITLE;
+  return titleForDisplay(title) || placeholderTitle();
 }
 
 function updatePanelHeader() {
@@ -621,8 +638,6 @@ function clearLyricState() {
 
 // ── Sample verse ──
 
-let sampleShowing = false;
-
 function isSampleShowing() {
   return sampleShowing && document.getElementById('lyrics').value === SAMPLE_VERSE;
 }
@@ -681,6 +696,7 @@ function showSample() {
   // do at a time: pick a word, then make the pad their own.
   document.getElementById('sample-clear').hidden = !hasSeenSampleHint();
   document.getElementById('sample-bar').hidden = false;
+  showPlaceholderTitle();
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
   if (window.showRhymesForWord) {
@@ -697,6 +713,8 @@ function endSample() {
   document.getElementById('sample-bar').hidden = true;
   document.getElementById('sample-clear').hidden = true;
   if (window.hideSamplePointer) window.hideSamplePointer();
+  showPlaceholderTitle();
+  if (window.currentUser === null) loadLyricsList();
   try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
 }
 
