@@ -577,43 +577,17 @@ header .nav-icon circle {
 
 /* The compact tier is the default, so a browser without container queries
    gets the version that always fits. */
-.sample-note-long,
-.sample-clear-long {
+.sample-note-long {
   display: none;
 }
 
-/* The longest long-tier note, the gap and the full button, with room to spare. */
 @container (min-width: 500px) {
-  .sample-note-long,
-  .sample-clear-long {
+  .sample-note-long {
     display: inline;
   }
 
-  .sample-note-short,
-  .sample-clear-short {
+  .sample-note-short {
     display: none;
-  }
-}
-
-/* The button stays its drawn size; the finger gets a full tap target.
-   It reaches down into the gap above the first line, since the scroller
-   clips anything above its top edge. */
-@media (max-width: 480px) {
-  .sample-bar {
-    z-index: 1;
-  }
-
-  .sample-clear {
-    position: relative;
-  }
-
-  .sample-clear::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: var(--tap-target);
   }
 }
 
@@ -621,24 +595,112 @@ header .nav-icon circle {
   display: none;
 }
 
+/* Once a word has been picked, the sample's one next step: centred in the
+   pad under the verse, finger-sized. sample-start.js sets its top. It keeps
+   the outlined amber of a switch that is on; solid amber is sign-up's. */
 .sample-clear {
-  padding: var(--space-1) var(--space-3);
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-6);
   background: var(--accent-wash);
   border: var(--hairline) solid var(--accent-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-family: var(--font-editor);
-  font-size: var(--text-footnote);
+  font-size: var(--text-callout);
   font-weight: var(--weight-bold);
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.sample-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .sample-clear:hover {
   background: var(--accent-wash-strong);
   border-color: var(--accent);
+}
+
+/* It arrives in answer to the first pick, so it fades in rather than pops. */
+.sample-clear:not([hidden]) {
+  animation: sample-clear-arrive var(--duration-slow) ease-out;
+}
+
+.sample-clear[hidden] {
+  display: none;
+}
+
+@keyframes sample-clear-arrive {
+  from { opacity: 0; }
+}
+
+/* The first-visit arrow from the sample's picked word to its rhymes, drawn in
+   viewport coordinates by sample-pointer.js. It waits a beat before fading
+   in, so the verse and the rhymes land first and the arrow joins them. */
+#sample-pointer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bar);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast), visibility 0s var(--duration-fast);
+}
+
+#sample-pointer.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-flash) ease-out 0.4s, visibility 0s 0.4s;
+}
+
+.sample-pointer-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sample-pointer-path,
+#sample-pointer-head path {
+  fill: none;
+  stroke: var(--accent-border);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sample-pointer-path {
+  stroke-dasharray: 3 5;
+}
+
+/* Plain text, not an outlined pill: it is a note on the arrow, and a pill
+   would read as a button. The card colour behind it breaks the line. */
+.sample-pointer-tip {
+  position: absolute;
+  padding: var(--space-1) var(--space-2);
+  background: var(--paper-card);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sample-pointer,
+  #sample-pointer.is-shown {
+    transition: none;
+  }
+
+  .sample-clear:not([hidden]) {
+    animation: none;
+  }
 }
 
 /* The annotation margin is only ruled off when there is something to write in

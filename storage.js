@@ -11,6 +11,10 @@ const FIRST_WRITE_KEY = 'first_write_tracked';
 // SAMPLE_VERSE and SAMPLE_PICKED_WORD, shown to a first-time visitor so the
 // counts and rhyme letters are on screen before they have written anything,
 // come from sample-verse.js.
+// The sample's name, shown while it is up and never saved. It lives here, not
+// in sample-verse.js, because the notebook names pages with it on every visit
+// and a cached older copy of that file would leave it undefined.
+const SAMPLE_TITLE = 'Nobody Home';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -35,6 +39,9 @@ let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
 let lastSavedBody = '';
 let saveTimer = null;
+// Up here, not with the rest of the sample code, because naming the page
+// reads it and the notebook can be drawn before that code runs.
+let sampleShowing = false;
 
 // ── Dialog ──
 
@@ -515,10 +522,20 @@ function titleForDisplay(title) {
   return title === DEFAULT_TITLE ? '' : title;
 }
 
+// An unnamed page takes the sample's title while the sample is up. Only the
+// placeholder changes, so the sample's name is never saved as the page's.
+function placeholderTitle() {
+  return sampleShowing ? SAMPLE_TITLE : PLACEHOLDER_TITLE;
+}
+
+function showPlaceholderTitle() {
+  document.getElementById('lyrics-panel-title').dataset.placeholder = placeholderTitle();
+}
+
 // Where a page is named rather than edited, the unnamed page reads as the
 // editor's placeholder does.
 function titleForName(title) {
-  return titleForDisplay(title) || PLACEHOLDER_TITLE;
+  return titleForDisplay(title) || placeholderTitle();
 }
 
 function updatePanelHeader() {
@@ -621,8 +638,6 @@ function clearLyricState() {
 
 // ── Sample verse ──
 
-let sampleShowing = false;
-
 function isSampleShowing() {
   return sampleShowing && document.getElementById('lyrics').value === SAMPLE_VERSE;
 }
@@ -639,12 +654,6 @@ function isFirstVisit() {
   }
 }
 
-const SAMPLE_NOTE_PLAIN_LONG = 'This is a sample verse.';
-const SAMPLE_NOTE_PLAIN_SHORT = 'Sample verse.';
-const SAMPLE_HINT_TOUCH_LONG = 'Tap any word to see what rhymes with it.';
-const SAMPLE_HINT_TOUCH_SHORT = 'Tap a word for rhymes.';
-const SAMPLE_HINT_POINTER_SHORT = 'Click a word for rhymes.';
-
 function hasSeenSampleHint() {
   try {
     return localStorage.getItem(SAMPLE_HINT_SEEN_KEY) !== null;
@@ -653,25 +662,13 @@ function hasSeenSampleHint() {
   }
 }
 
-// The long pointer hint is the blank page's own line, so the two never
-// drift apart. Pointer type picks the verb; the bar's width picks the length
-// (see the container query in styles.css).
-function setSampleNote({ isHint }) {
-  const isTouch = isTouchPrimary();
-  const hintLong = isTouch ? SAMPLE_HINT_TOUCH_LONG : RHYME_HINT_POINTER;
-  const hintShort = isTouch ? SAMPLE_HINT_TOUCH_SHORT : SAMPLE_HINT_POINTER_SHORT;
-  document.querySelector('.sample-note-long').textContent =
-    isHint ? hintLong : SAMPLE_NOTE_PLAIN_LONG;
-  document.querySelector('.sample-note-short').textContent =
-    isHint ? hintShort : SAMPLE_NOTE_PLAIN_SHORT;
-}
-
 // A pick made by the pointer on a real word, announced by app.js. Arrow keys,
 // the sample's own pre-picked word and clicks that pick nothing never reach
 // here.
 function retireSampleHint() {
   if (!sampleShowing || hasSeenSampleHint()) return;
-  setSampleNote({ isHint: false });
+  if (window.hideSamplePointer) window.hideSamplePointer();
+  document.getElementById('sample-clear').hidden = false;
   try { localStorage.setItem(SAMPLE_HINT_SEEN_KEY, '1'); } catch {}
 }
 
@@ -695,14 +692,18 @@ function showSample() {
   sampleShowing = true;
   isSampleShownUnreported = true;
   reportSampleShown();
-  setSampleNote({ isHint: !hasSeenSampleHint() });
+  // The button waits for the first pick, so a new visitor sees one thing to
+  // do at a time: pick a word, then make the pad their own.
+  document.getElementById('sample-clear').hidden = !hasSeenSampleHint();
   document.getElementById('sample-bar').hidden = false;
+  showPlaceholderTitle();
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
   if (window.showRhymesForWord) {
     const start = SAMPLE_VERSE.indexOf(SAMPLE_PICKED_WORD);
     window.showRhymesForWord(SAMPLE_PICKED_WORD, { start, end: start + SAMPLE_PICKED_WORD.length });
   }
+  if (!hasSeenSampleHint() && window.showSamplePointer) window.showSamplePointer();
 }
 
 // Clearing it and writing over it both make the pad the visitor's own, so
@@ -710,6 +711,10 @@ function showSample() {
 function endSample() {
   sampleShowing = false;
   document.getElementById('sample-bar').hidden = true;
+  document.getElementById('sample-clear').hidden = true;
+  if (window.hideSamplePointer) window.hideSamplePointer();
+  showPlaceholderTitle();
+  if (window.currentUser === null) loadLyricsList();
   try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
 }
 
