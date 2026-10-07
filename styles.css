@@ -641,6 +641,65 @@ header .nav-icon circle {
   border-color: var(--accent);
 }
 
+/* The first-visit arrow from the sample's picked word to its rhymes, drawn in
+   viewport coordinates by sample-pointer.js. It waits a beat before fading
+   in, so the verse and the rhymes land first and the arrow joins them. */
+#sample-pointer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bar);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast), visibility 0s var(--duration-fast);
+}
+
+#sample-pointer.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-flash) ease-out 0.4s, visibility 0s 0.4s;
+}
+
+.sample-pointer-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sample-pointer-path,
+#sample-pointer-head path {
+  fill: none;
+  stroke: var(--accent-border);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sample-pointer-path {
+  stroke-dasharray: 3 5;
+}
+
+.sample-pointer-tip {
+  position: absolute;
+  padding: var(--space-1) var(--space-2);
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--accent-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sample-pointer,
+  #sample-pointer.is-shown {
+    transition: none;
+  }
+}
+
 /* The annotation margin is only ruled off when there is something to write in
    it. Closed it takes no width at all, so the lyrics start at the paper's
    edge; opening widens it and the margin line arrives with it. */

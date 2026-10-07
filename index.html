@@ -89,7 +89,7 @@
           <div class="sample-bar-row">
             <span class="sample-note sample-note-long">This is a sample verse.</span>
             <span class="sample-note sample-note-short">Sample verse.</span>
-            <button type="button" class="sample-clear" id="sample-clear"><span class="sample-clear-long">Clear and start writing</span><span class="sample-clear-short">Clear</span></button>
+            <button type="button" class="sample-clear" id="sample-clear"><span class="sample-clear-long">Start your own</span><span class="sample-clear-short">Start your own</span></button>
           </div>
         </div>
         <div class="syllable-gutter" id="syllable-gutter"></div>
@@ -138,6 +138,17 @@
         </div>
       </div>
     </div>
+  </div>
+  <div id="sample-pointer" aria-hidden="true">
+    <svg class="sample-pointer-line">
+      <defs>
+        <marker id="sample-pointer-head" viewBox="0 0 10 10" refX="7" refY="5"
+                markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse"
+                orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9"/></marker>
+      </defs>
+      <path class="sample-pointer-path" marker-end="url(#sample-pointer-head)"/>
+    </svg>
+    <span class="sample-pointer-tip"></span>
   </div>
   <p class="app-footer">LyricLike never reads or shares your lyrics. <a href="/privacy/">Privacy</a> · <a href="/guide/">How it works</a></p>
   <nav class="bottom-nav" id="bottom-nav">
@@ -270,6 +281,7 @@
   <script src="auth-forms.js"></script>
   <script src="account-security.js"></script>
   <script src="sample-verse.js"></script>
+  <script src="sample-pointer.js"></script>
   <script src="storage.js"></script>
   <script src="back-button.js"></script>
 </body>

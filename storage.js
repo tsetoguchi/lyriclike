@@ -639,12 +639,6 @@ function isFirstVisit() {
   }
 }
 
-const SAMPLE_NOTE_PLAIN_LONG = 'This is a sample verse.';
-const SAMPLE_NOTE_PLAIN_SHORT = 'Sample verse.';
-const SAMPLE_HINT_TOUCH_LONG = 'Tap any word to see what rhymes with it.';
-const SAMPLE_HINT_TOUCH_SHORT = 'Tap a word for rhymes.';
-const SAMPLE_HINT_POINTER_SHORT = 'Click a word for rhymes.';
-
 function hasSeenSampleHint() {
   try {
     return localStorage.getItem(SAMPLE_HINT_SEEN_KEY) !== null;
@@ -653,25 +647,12 @@ function hasSeenSampleHint() {
   }
 }
 
-// The long pointer hint is the blank page's own line, so the two never
-// drift apart. Pointer type picks the verb; the bar's width picks the length
-// (see the container query in styles.css).
-function setSampleNote({ isHint }) {
-  const isTouch = isTouchPrimary();
-  const hintLong = isTouch ? SAMPLE_HINT_TOUCH_LONG : RHYME_HINT_POINTER;
-  const hintShort = isTouch ? SAMPLE_HINT_TOUCH_SHORT : SAMPLE_HINT_POINTER_SHORT;
-  document.querySelector('.sample-note-long').textContent =
-    isHint ? hintLong : SAMPLE_NOTE_PLAIN_LONG;
-  document.querySelector('.sample-note-short').textContent =
-    isHint ? hintShort : SAMPLE_NOTE_PLAIN_SHORT;
-}
-
 // A pick made by the pointer on a real word, announced by app.js. Arrow keys,
 // the sample's own pre-picked word and clicks that pick nothing never reach
 // here.
 function retireSampleHint() {
   if (!sampleShowing || hasSeenSampleHint()) return;
-  setSampleNote({ isHint: false });
+  if (window.hideSamplePointer) window.hideSamplePointer();
   try { localStorage.setItem(SAMPLE_HINT_SEEN_KEY, '1'); } catch {}
 }
 
@@ -695,7 +676,6 @@ function showSample() {
   sampleShowing = true;
   isSampleShownUnreported = true;
   reportSampleShown();
-  setSampleNote({ isHint: !hasSeenSampleHint() });
   document.getElementById('sample-bar').hidden = false;
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
@@ -703,6 +683,7 @@ function showSample() {
     const start = SAMPLE_VERSE.indexOf(SAMPLE_PICKED_WORD);
     window.showRhymesForWord(SAMPLE_PICKED_WORD, { start, end: start + SAMPLE_PICKED_WORD.length });
   }
+  if (!hasSeenSampleHint() && window.showSamplePointer) window.showSamplePointer();
 }
 
 // Clearing it and writing over it both make the pad the visitor's own, so
@@ -710,6 +691,7 @@ function showSample() {
 function endSample() {
   sampleShowing = false;
   document.getElementById('sample-bar').hidden = true;
+  if (window.hideSamplePointer) window.hideSamplePointer();
   try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
 }
 
