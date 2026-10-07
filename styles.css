@@ -577,43 +577,17 @@ header .nav-icon circle {
 
 /* The compact tier is the default, so a browser without container queries
    gets the version that always fits. */
-.sample-note-long,
-.sample-clear-long {
+.sample-note-long {
   display: none;
 }
 
-/* The longest long-tier note, the gap and the full button, with room to spare. */
 @container (min-width: 500px) {
-  .sample-note-long,
-  .sample-clear-long {
+  .sample-note-long {
     display: inline;
   }
 
-  .sample-note-short,
-  .sample-clear-short {
+  .sample-note-short {
     display: none;
-  }
-}
-
-/* The button stays its drawn size; the finger gets a full tap target.
-   It reaches down into the gap above the first line, since the scroller
-   clips anything above its top edge. */
-@media (max-width: 480px) {
-  .sample-bar {
-    z-index: 1;
-  }
-
-  .sample-clear {
-    position: relative;
-  }
-
-  .sample-clear::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: var(--tap-target);
   }
 }
 
@@ -621,19 +595,31 @@ header .nav-icon circle {
   display: none;
 }
 
+/* Once a word has been picked, the sample's one next step: centred in the
+   pad under the verse, finger-sized. sample-start.js sets its top. It keeps
+   the outlined amber of a switch that is on; solid amber is sign-up's. */
 .sample-clear {
-  padding: var(--space-1) var(--space-3);
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-6);
   background: var(--accent-wash);
   border: var(--hairline) solid var(--accent-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-family: var(--font-editor);
-  font-size: var(--text-footnote);
+  font-size: var(--text-callout);
   font-weight: var(--weight-bold);
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.sample-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .sample-clear:hover {

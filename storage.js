@@ -695,6 +695,7 @@ function showSample() {
 function endSample() {
   sampleShowing = false;
   document.getElementById('sample-bar').hidden = true;
+  document.getElementById('sample-clear').hidden = true;
   if (window.hideSamplePointer) window.hideSamplePointer();
   try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
 }

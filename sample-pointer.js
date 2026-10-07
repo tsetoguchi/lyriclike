@@ -25,7 +25,6 @@
   const panelWordEl = document.getElementById('selected-word');
   const panelEl = document.getElementById('rhymes-panel');
   const rhymesTabEl = document.querySelector('.mobile-tab[data-tab="rhymes"]');
-  const sampleClearEl = document.getElementById('sample-clear');
   let isActive = false;
   let placeFrame = null;
 
@@ -59,16 +58,11 @@
     return { from, to, wordRect, bow: CURVE_BOW_PX, isTab: false };
   }
 
-  // The sample's button sits between the verse and the tabs, so the arrow
-  // lands right of it and bows right, away from it.
+  // Bows right, away from the sample note at the start of the strip above.
   function arrowToTab(wordRect) {
     const tab = rhymesTabEl.getBoundingClientRect();
-    const buttonRight = sampleClearEl.getBoundingClientRect().right;
     const from = { x: wordRect.left + wordRect.width / 2, y: wordRect.top - END_GAP_PX };
-    const to = {
-      x: Math.max(tab.left + tab.width / 2, buttonRight + END_GAP_PX),
-      y: tab.bottom + END_GAP_PX,
-    };
+    const to = { x: tab.left + tab.width / 2, y: tab.bottom + END_GAP_PX };
     if (from.y - to.y < MIN_ARROW_PX) return null;
     return { from, to, wordRect, bow: -CURVE_BOW_PX, isTab: true };
   }
