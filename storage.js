@@ -653,6 +653,7 @@ function hasSeenSampleHint() {
 function retireSampleHint() {
   if (!sampleShowing || hasSeenSampleHint()) return;
   if (window.hideSamplePointer) window.hideSamplePointer();
+  document.getElementById('sample-clear').hidden = false;
   try { localStorage.setItem(SAMPLE_HINT_SEEN_KEY, '1'); } catch {}
 }
 
@@ -676,6 +677,9 @@ function showSample() {
   sampleShowing = true;
   isSampleShownUnreported = true;
   reportSampleShown();
+  // The button waits for the first pick, so a new visitor sees one thing to
+  // do at a time: pick a word, then make the pad their own.
+  document.getElementById('sample-clear').hidden = !hasSeenSampleHint();
   document.getElementById('sample-bar').hidden = false;
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));

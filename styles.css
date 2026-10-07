@@ -641,6 +641,19 @@ header .nav-icon circle {
   border-color: var(--accent);
 }
 
+/* It arrives in answer to the first pick, so it fades in rather than pops. */
+.sample-clear:not([hidden]) {
+  animation: sample-clear-arrive var(--duration-slow) ease-out;
+}
+
+.sample-clear[hidden] {
+  display: none;
+}
+
+@keyframes sample-clear-arrive {
+  from { opacity: 0; }
+}
+
 /* The first-visit arrow from the sample's picked word to its rhymes, drawn in
    viewport coordinates by sample-pointer.js. It waits a beat before fading
    in, so the verse and the rhymes land first and the arrow joins them. */
@@ -681,12 +694,12 @@ header .nav-icon circle {
   stroke-dasharray: 3 5;
 }
 
+/* Plain text, not an outlined pill: it is a note on the arrow, and a pill
+   would read as a button. The card colour behind it breaks the line. */
 .sample-pointer-tip {
   position: absolute;
   padding: var(--space-1) var(--space-2);
   background: var(--paper-card);
-  border: var(--hairline) solid var(--accent-border);
-  border-radius: var(--radius-sm);
   font-family: var(--font-editor);
   font-size: var(--text-caption-1);
   color: var(--accent);
@@ -697,6 +710,10 @@ header .nav-icon circle {
   #sample-pointer,
   #sample-pointer.is-shown {
     transition: none;
+  }
+
+  .sample-clear:not([hidden]) {
+    animation: none;
   }
 }
 
