@@ -18,8 +18,10 @@ cmudict.dict
 definitions.txt
 style.txt
 
-# Demo videos, screenshots / QA artifacts
-media/
+# Local-only working files
+content/
+
+# Screenshots / QA artifacts
 *.png
 !assets/**/*.png
 
@@ -38,5 +40,3 @@ instructions.txt
 # Internal planning docs (new ones stay local; already-tracked files here are unaffected)
 plans/
 
-# Local-only tooling
-video/
