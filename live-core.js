@@ -13,6 +13,14 @@
   const DIFF_DELETE = -1;
   const DIFF_INSERT = 1;
   const DIFF_EQUAL = 0;
+  // Words that could not be placed go at the end of the page, after a blank
+  // line, so they are easy to spot and never lost.
+  const UNPLACED_SEPARATOR = '\n\n';
+  // diff-match-patch's default of 0.5 lets a patch land on loosely similar
+  // text, and a delete landing there removes a co-writer's words. A skipped
+  // delete loses nothing, so a rebase only applies close matches.
+  const REBASE_MATCH_THRESHOLD = 0.25;
+  const REBASE_DELETE_THRESHOLD = 0.25;
 
   function isHighSurrogate(code) {
     return code >= HIGH_SURROGATE_FIRST && code <= HIGH_SURROGATE_LAST;
@@ -171,13 +179,49 @@
     }, origin);
   }
 
+  function insertedText(patch) {
+    return patch.diffs.filter(([op]) => op === DIFF_INSERT).map(([, text]) => text).join('');
+  }
+
+  // The caller's matcher is left as it was given.
+  function strictPatchApply(dmp, patches, onto) {
+    const { Match_Threshold: matchThreshold, Patch_DeleteThreshold: deleteThreshold } = dmp;
+    dmp.Match_Threshold = REBASE_MATCH_THRESHOLD;
+    dmp.Patch_DeleteThreshold = REBASE_DELETE_THRESHOLD;
+    try {
+      return dmp.patch_apply(patches, onto);
+    } finally {
+      dmp.Match_Threshold = matchThreshold;
+      dmp.Patch_DeleteThreshold = deleteThreshold;
+    }
+  }
+
+  function rebase(dmp, base, changed, onto) {
+    const patches = dmp.patch_make(base, changed);
+    const [patched, applied] = strictPatchApply(dmp, patches, onto);
+    // A failed delete loses nothing, so only failed inserts are kept.
+    const unplaced = patches.filter((patch, i) => !applied[i]).map(insertedText).filter(Boolean);
+    if (!unplaced.length) return { text: patched, unplaced };
+    const text = [patched, ...unplaced].join(UNPLACED_SEPARATOR);
+    return { text, unplaced };
+  }
+
+  // PATCH does not move the revision, so the room's last-written title is
+  // the only way to tell which rename is newer.
+  function mergeTitle(writtenTitle, roomTitle, outsideTitle) {
+    return roomTitle === writtenTitle ? outsideTitle : roomTitle;
+  }
+
   const LiveCore = {
     applyEdit,
     applyEdits,
     diffTextEdit,
     isMidPair,
     mapSelection,
+    mergeTitle,
     minimalEdits,
+    rebase,
+    UNPLACED_SEPARATOR,
   };
 
   if (typeof module === 'object' && module.exports) {

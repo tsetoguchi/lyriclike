@@ -9,7 +9,10 @@ import { describe, it } from 'node:test';
 import liveCore from '../live-core.js';
 import { Y, newDmp } from './support/live-deps.mjs';
 
-const { applyEdit, applyEdits, diffTextEdit, isMidPair, mapSelection, minimalEdits } = liveCore;
+const {
+  applyEdit, applyEdits, diffTextEdit, isMidPair, mapSelection, mergeTitle, minimalEdits, rebase,
+  UNPLACED_SEPARATOR,
+} = liveCore;
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
@@ -180,5 +183,64 @@ describe('minimalEdits', () => {
       assert.equal(ytext.toString(), to, `${from} → ${to}`);
       assert.equal(roundTrip(ytext), to, `${from} → ${to}`);
     }
+  });
+});
+
+describe('rebase', () => {
+  it('keeps both sides when they changed different lines', () => {
+    const base = 'one\ntwo\nthree\n';
+    const theirs = 'ONE\ntwo\nthree\n';
+    const ours = 'one\ntwo\nTHREE\n';
+    assert.deepEqual(rebase(newDmp(), base, theirs, ours), { text: 'ONE\ntwo\nTHREE\n', unplaced: [] });
+  });
+
+  it('is a plain copy when nothing else changed', () => {
+    assert.deepEqual(rebase(newDmp(), 'a', 'ab', 'a'), { text: 'ab', unplaced: [] });
+  });
+
+  it('adds every word of a change to an empty page', () => {
+    assert.deepEqual(rebase(newDmp(), '', 'new words', ''), { text: 'new words', unplaced: [] });
+  });
+
+  it('puts words that no longer fit at the end instead of losing them', () => {
+    const base = 'the old verse about the rain\n';
+    const changed = 'the old verse about the rain and the river\n';
+    // Shares no letters with the patch's context, so no fuzzy match is found.
+    const onto = 'qqqq qqqq\n';
+    const { text, unplaced } = rebase(newDmp(), base, changed, onto);
+    assert.deepEqual(unplaced, [' and the river']);
+    assert.equal(text, `${onto}${UNPLACED_SEPARATOR} and the river`);
+  });
+
+  it('ignores a delete that no longer fits, since no words are lost', () => {
+    const { text, unplaced } = rebase(newDmp(), 'remove this line\n', '', 'something else\n');
+    assert.deepEqual(unplaced, []);
+    assert.equal(text, 'something else\n');
+  });
+});
+
+describe('rebase strictness', () => {
+  it('still applies a delete when a co-writer changed the line beside it', () => {
+    const base = 'verse one\nbad line\nverse two\n';
+    const changed = 'verse one\nverse two\n';
+    const onto = 'verse ONE\nbad line\nverse two\n';
+    assert.deepEqual(rebase(newDmp(), base, changed, onto), { text: 'verse ONE\nverse two\n', unplaced: [] });
+  });
+
+  it("leaves the caller's matcher settings as they were", () => {
+    const dmp = newDmp();
+    rebase(dmp, 'remove this line\n', '', 'something else\n');
+    assert.equal(dmp.Match_Threshold, 0.5);
+    assert.equal(dmp.Patch_DeleteThreshold, 0.5);
+  });
+});
+
+describe('mergeTitle', () => {
+  it('takes the outside rename when the room did not rename', () => {
+    assert.equal(mergeTitle('Draft', 'Draft', 'Rain Song'), 'Rain Song');
+  });
+
+  it('keeps the room rename when the room renamed since its last write', () => {
+    assert.equal(mergeTitle('Draft', 'River Song', 'Rain Song'), 'River Song');
   });
 });
