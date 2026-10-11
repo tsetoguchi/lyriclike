@@ -11,8 +11,8 @@ import { awarenessProtocol, Y } from '../collab/src/deps.js';
 import { decodePresence } from '../collab/src/presence.js';
 import { CLOSE, encodeUpdate, PROTOCOL_VERSION } from '../collab/src/protocol.js';
 import {
-  MAX_BACKOFF_MS, MAX_MESSAGE_BYTES, MAX_SOCKETS, MAX_SOCKETS_PER_USER, RATE_LIMIT, RoomCore,
-  SNAPSHOT_MS, WRITE_BACK_MS,
+  EMPTY_AFTER_MS, MAX_BACKOFF_MS, MAX_MESSAGE_BYTES, MAX_SOCKETS, MAX_SOCKETS_PER_USER, RATE_LIMIT,
+  RECHECK_MS, RoomCore, SNAPSHOT_MS, WRITE_BACK_MS,
 } from '../collab/src/room-core.js';
 import liveCore from '../live-core.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
@@ -286,5 +286,127 @@ describe('saving', () => {
     restore();
     await runDueAlarms(host.clock + MAX_BACKOFF_MS);
     assert.equal((await readStored()).body, 'hello!');
+  });
+});
+
+describe('leaving and emptying', () => {
+  it('writes back at once when the last person leaves', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    await room.leave(ann.socket);
+    assert.equal((await readStored()).body, 'hello!');
+    assert.equal(host.storage.loadState().meta.emptySince, host.clock);
+  });
+
+  it('tells the others when someone leaves, once, even if leaving runs twice', async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    const awareness = new awarenessProtocol.Awareness(new Y.Doc());
+    awareness.setLocalState({ cursor: 1 });
+    ann.sendPresence(awarenessProtocol.encodeAwarenessUpdate(awareness, [awareness.clientID]));
+    awareness.destroy();
+    await ann.sync();
+    await room.leave(ann.socket);
+    await room.leave(ann.socket);
+    await bo.sync();
+    const leaves = bo.presence.filter(update => decodePresence(update)[0].state === null);
+    assert.equal(leaves.length, 1);
+  });
+
+  it("empties 10 minutes later, keeping only the epoch's final snapshot", async () => {
+    const ann = await connect(ANN);
+    await room.leave(ann.socket);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    assert.equal(host.storage.loadState().snapshot, null);
+    assert.ok(host.storage.loadEpochSnapshot(ann.hello.epoch));
+  });
+
+  it('does not empty if someone came back within the 10 minutes', async () => {
+    const ann = await connect(ANN);
+    await room.leave(ann.socket);
+    const emptyAt = host.alarmAt;
+    await connect(BO);
+    await runAlarm(emptyAt);
+    assert.ok(host.storage.loadState().snapshot);
+  });
+
+  it('does not empty while D1 lacks the text', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    const restore = failD1Writes();
+    await room.leave(ann.socket);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    assert.ok(host.storage.loadState().snapshot);
+    restore();
+  });
+
+  it("starts a new epoch after emptying, and hands back the old one's snapshot", async () => {
+    const ann = await connect(ANN);
+    const oldEpoch = ann.hello.epoch;
+    await room.leave(ann.socket);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    const back = await connect(ANN, { epoch: oldEpoch });
+    assert.notEqual(back.hello.epoch, oldEpoch);
+    assert.deepEqual(back.hello.oldEpochSnapshot, host.storage.loadEpochSnapshot(oldEpoch));
+  });
+});
+
+describe('access', () => {
+  it('closes a signed-out socket with 4006 before applying its next message', async () => {
+    const bo = await connect(BO);
+    await exec('DELETE FROM sessions WHERE id = ?', SESSIONS.bo);
+    host.clock += RECHECK_MS;
+    bo.type(0, 'sneaky ');
+    await bo.sync();
+    assert.equal(bo.socket.closed.code, CLOSE.SIGNED_OUT);
+    assert.equal(room.text(), 'hello');
+  });
+
+  it('closes a socket whose share was removed with 4004 on the re-check', async () => {
+    const bo = await connect(BO);
+    await exec('DELETE FROM lyric_shares WHERE lyric_id = ?', PAGE);
+    host.clock += RECHECK_MS;
+    bo.type(0, 'x');
+    await bo.sync();
+    assert.equal(bo.socket.closed.code, CLOSE.UNSHARED);
+  });
+
+  it("evicts one person's sockets with 4004 and leaves the rest", async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    await room.evict(BO.email);
+    assert.equal(bo.socket.closed.code, CLOSE.UNSHARED);
+    assert.equal(ann.socket.closed, null);
+  });
+
+  it('closes the room with 4005 and deletes its storage', async () => {
+    const ann = await connect(ANN);
+    await room.leave(ann.socket);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    const bo = await connect(BO);
+    await room.closeRoom();
+    assert.equal(bo.socket.closed.code, CLOSE.PAGE_DELETED);
+    assert.equal(host.storage.loadEpochSnapshot(ann.hello.epoch), null);
+    assert.equal(host.alarmAt, null);
+  });
+
+  it('evicts on an idle room without reading D1', async () => {
+    db.prepare = () => { throw new Error('D1 should not be read'); };
+    await room.evict(BO.email);
+  });
+});
+
+describe('waking', () => {
+  it('asks open sockets for what it lost since the last snapshot', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, ' world');
+    await ann.sync();
+    room = new RoomCore(host);
+    ann.room = room;
+    await runAlarm(host.clock + 1);
+    await ann.sync();
+    assert.equal(room.text(), 'hello world');
   });
 });

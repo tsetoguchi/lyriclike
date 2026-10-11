@@ -4,9 +4,9 @@
 // Everything it touches comes in through `host`, so it runs under node --test
 // with fakes; page-room.js plugs it into a Durable Object.
 import liveCore from '../../live-core.js';
-import { readPage, writePage } from './d1-page.js';
+import { readAccess, readPage, writePage } from './d1-page.js';
 import { Y } from './deps.js';
-import { stampPresence } from './presence.js';
+import { leavePresence, stampPresence } from './presence.js';
 import {
   CLOSE, encodeHello, encodePersisted, encodePresence, encodeSyncStep1, encodeSyncStep2,
   encodeUpdate, isProtocolAccepted, readIncoming,
@@ -26,6 +26,7 @@ export const SNAPSHOT_MS = 5_000;
 export const WRITE_BACK_MS = 10_000;
 export const MAX_BACKOFF_MS = 5 * 60_000;
 export const EMPTY_AFTER_MS = 10 * 60_000;
+export const RECHECK_MS = 5 * 60_000;
 // One retry after merging a save made outside the room.
 const WRITE_ATTEMPTS = 2;
 const OUTSIDE = 'outside';
@@ -73,6 +74,8 @@ export class RoomCore {
     this.lastSnapshotAt = 0;
     this.writeFailures = 0;
     this.nextWriteBackAt = 0;
+    // A fresh instance, new or just woken, checks access on its first message.
+    this.lastRecheckAt = 0;
   }
 
   // ── Sockets ──
@@ -98,6 +101,7 @@ export class RoomCore {
   async closeSocket(socket, code, reason) {
     closeQuietly(socket, code, reason);
     this.host.log('close', { code });
+    await this.leave(socket);
   }
 
   capacityRefusal(userId) {
@@ -174,6 +178,7 @@ export class RoomCore {
     // seed again with a new history and duplicate the page on every screen.
     if (!snapshot) this.saveSnapshot();
     else if (this.isChangedOutside(page)) this.applyOutside(page);
+    this.resyncSockets();
   }
 
   restore(snapshot, meta) {
@@ -243,6 +248,8 @@ export class RoomCore {
     if (this.snapshotDirty && now - this.lastSnapshotAt >= SNAPSHOT_MS) this.saveSnapshot();
     if (this.isD1Dirty() && now >= this.nextWriteBackAt) await this.writeBack();
     if (this.isGone) return;
+    if (this.openSockets().length && now - this.lastRecheckAt >= RECHECK_MS) await this.recheck();
+    if (this.isReadyToEmpty(now)) return this.emptyWorkingCopy();
     await this.scheduleAlarm();
   }
 
@@ -325,6 +332,86 @@ export class RoomCore {
     this.host.log(event, {});
   }
 
+  // ── Leaving and emptying ──
+
+  // Runs once per socket, whether the server closed it or the client went.
+  async leave(socket) {
+    const attachment = attachmentOf(socket);
+    if (!attachment.socketId || attachment.hasLeft) return;
+    updateAttachment(socket, { hasLeft: true });
+    this.rates.delete(attachment.socketId);
+    if (attachment.clients?.length) this.broadcast(encodePresence(leavePresence(attachment.clients)));
+    if (this.isGone || this.openSockets().length) return;
+    await this.ensureLoaded();
+    if (!this.isGone) await this.settleEmptyRoom();
+  }
+
+  // The last person left: save now, and empty in 10 minutes unless someone
+  // comes back. The 10 minutes cover quick reloads and deploy restarts.
+  async settleEmptyRoom() {
+    if (this.snapshotDirty) this.saveSnapshot();
+    if (this.isD1Dirty()) await this.writeBack();
+    if (this.isGone) return;
+    this.emptySince = this.host.now();
+    this.saveMeta();
+    await this.scheduleAlarm();
+  }
+
+  // Never while D1 lacks the text: the snapshot is then the only copy.
+  isReadyToEmpty(now) {
+    return this.emptySince !== null && !this.openSockets().length
+      && now - this.emptySince >= EMPTY_AFTER_MS && !this.snapshotDirty && !this.isD1Dirty();
+  }
+
+  emptyWorkingCopy() {
+    this.host.storage.clearWorkingCopy(this.epoch, this.savedSnapshot, this.host.now());
+    this.doc.destroy();
+    this.doc = null;
+    this.loading = null;
+    this.host.log('emptied', {});
+  }
+
+  // A doc rebuilt after hibernation may lack the last few seconds before
+  // the snapshot; asking every open socket for what the room is missing
+  // brings those edits back.
+  resyncSockets() {
+    if (!this.doc) return;
+    for (const socket of this.greetedSockets()) socket.send(encodeSyncStep1(this.doc));
+  }
+
+  // ── Access ──
+
+  async recheck() {
+    this.lastRecheckAt = this.host.now();
+    const sockets = this.openSockets();
+    if (!sockets.length) return;
+    const sessionIds = sockets.map(socket => attachmentOf(socket).sessionId);
+    const access = await readAccess(this.host.db, await this.host.lyricId(), sessionIds, this.host.now());
+    for (const socket of sockets) {
+      const { sessionId, email } = attachmentOf(socket);
+      if (!access.validSessions.has(sessionId)) await this.closeSocket(socket, CLOSE.SIGNED_OUT, 'Signed out');
+      else if (!access.allowedEmails.has(email)) await this.closeSocket(socket, CLOSE.UNSHARED, 'No longer shared with you');
+    }
+  }
+
+  // A room with no alarm runs no timers, so a signed-out tab is caught by its
+  // next message once 5 minutes have passed since the last check.
+  async isRefusedOnRecheck(socket) {
+    if (this.host.now() - this.lastRecheckAt < RECHECK_MS) return false;
+    await this.recheck();
+    return Boolean(attachmentOf(socket).hasLeft);
+  }
+
+  async evict(email) {
+    for (const socket of this.openSockets()) {
+      if (attachmentOf(socket).email === email) await this.closeSocket(socket, CLOSE.UNSHARED, 'No longer shared with you');
+    }
+  }
+
+  async closeRoom() {
+    await this.shutDown('closed');
+  }
+
   // ── Messages ──
 
   async message(socket, bytes) {
@@ -332,6 +419,7 @@ export class RoomCore {
     if (this.isTooFast(socket)) return this.closeSocket(socket, CLOSE.TOO_FAST, 'Too many messages');
     await this.ensureLoaded();
     if (this.isGone || attachmentOf(socket).hasLeft) return;
+    if (await this.isRefusedOnRecheck(socket)) return;
     await this.handle(socket, readIncoming(bytes));
     await this.scheduleAlarm();
   }
