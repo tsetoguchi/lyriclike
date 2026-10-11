@@ -64,6 +64,8 @@ async function runRoute(context) {
 // which reads as the sign-in having failed.
 export async function onRequest(context) {
   const response = rejectForgedRequest(context.request) || await runRoute(context);
+  // Rebuilding a 101 can drop its webSocket, so the handoff goes out untouched.
+  if (response.status === 101) return response;
 
   const answer = new Response(response.body, response);
   // _headers does not apply to Function responses.

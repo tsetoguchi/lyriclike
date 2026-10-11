@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- SPIKE ONLY (branch live-spike). Not for merging. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Live socket test</title>
+  <style>
+    body { font: 16px/1.4 system-ui, sans-serif; margin: 0; padding: 16px; background: #fbf7ee; color: #141922; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    #status { font-weight: 600; margin: 8px 0; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    button { font: inherit; padding: 10px 14px; border-radius: 8px; border: 1px solid #141922; background: #fff; }
+    #log { font: 13px/1.4 ui-monospace, monospace; white-space: pre-wrap; word-break: break-word;
+      background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px; max-height: 60vh; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Live socket test</h1>
+  <div id="status">Starting…</div>
+  <div class="buttons">
+    <button id="btn-echo">Send one</button>
+    <button id="btn-stats">Room stats</button>
+    <button id="btn-load">10-min load</button>
+    <button id="btn-size">Size test</button>
+    <button id="btn-copy">Copy log</button>
+  </div>
+  <div id="log"></div>
+  <script src="spike.js"></script>
+</body>
+</html>

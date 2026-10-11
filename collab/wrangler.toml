@@ -1,0 +1,25 @@
+# SPIKE ONLY (branch live-spike): an echo room to test the Pages -> Durable
+# Object socket handoff. Not for merging.
+name = "lyricalmiracle-collab"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+# No public door: the room trusts headers that only the Pages binding can set.
+workers_dev = false
+preview_urls = false
+
+[[durable_objects.bindings]]
+name = "PAGE_ROOM"
+class_name = "PageRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PageRoom"]
+
+[env.preview]
+name = "lyricalmiracle-collab-preview"
+workers_dev = false
+preview_urls = false
+
+[[env.preview.durable_objects.bindings]]
+name = "PAGE_ROOM"
+class_name = "PageRoom"
