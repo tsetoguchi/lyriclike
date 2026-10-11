@@ -4,7 +4,7 @@
 // Everything that differs (the token, the mail) happens after the response.
 
 import { findUserByEmail, issueResetToken } from '../../../_accounts.js';
-import { sendResetEmail } from '../../../_email.js';
+import { EMAIL_POOL, gateEmailPool, sendResetEmail } from '../../../_email.js';
 import {
   HOUR_MS, addressKey, checkRateLimit, clientIpKey, rateLimitedResponse,
 } from '../../../_ratelimit.js';
@@ -33,6 +33,9 @@ export async function onRequestPost(context) {
   if (!body || typeof body.email !== 'string') {
     return jsonError(HTTP_BAD_REQUEST, 'invalid_request', 'The request was not understood.');
   }
+
+  const poolFull = await gateEmailPool(env, EMAIL_POOL.ACCOUNT);
+  if (poolFull) return poolFull;
 
   const ipLimit = await checkRateLimit(env, `forgot:ip:${clientIpKey(request)}`,
     IP_LIMIT_PER_HOUR, HOUR_MS);

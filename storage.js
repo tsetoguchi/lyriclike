@@ -3,18 +3,18 @@ const DEFAULT_TITLE = 'Untitled';
 const DRAFT_STORAGE_KEY = 'swag_draft';
 // Set once a visitor has cleared the sample verse or written over it.
 const SAMPLE_SEEN_KEY = 'sample_seen';
+// Set once a visitor has picked a word in the sample, so the hint that asked
+// them to stays gone after a reload brings the sample back.
+const SAMPLE_HINT_SEEN_KEY = 'sample_hint_seen';
 // Set once this device has reported its first typed word to analytics.
 const FIRST_WRITE_KEY = 'first_write_tracked';
-// Shown to a first-time visitor so the counts and rhyme letters are on screen
-// before they have written anything. ABAB, so the letters show the pattern.
-const SAMPLE_VERSE = [
-  'I left the porch light on for you',
-  'The way I did the year before',
-  'The tea is cold, the sky is blue',
-  'And still I listen for the door',
-].join('\n');
-// The word the rhymes panel opens on: the first line's last word.
-const SAMPLE_PICKED_WORD = 'you';
+// SAMPLE_VERSE and SAMPLE_PICKED_WORD, shown to a first-time visitor so the
+// counts and rhyme letters are on screen before they have written anything,
+// come from sample-verse.js.
+// The sample's name, shown while it is up and never saved. It lives here, not
+// in sample-verse.js, because the notebook names pages with it on every visit
+// and a cached older copy of that file would leave it undefined.
+const SAMPLE_TITLE = 'Nobody Home';
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -83,6 +83,10 @@ function setPageInfo(lyric) {
 function refreshSharingUi() {
   if (typeof refreshPageSharing === 'function') refreshPageSharing();
 }
+
+// Up here, not with the rest of the sample code, because naming the page
+// reads it and the notebook can be drawn before that code runs.
+let sampleShowing = false;
 
 // ── Dialog ──
 
@@ -852,10 +856,20 @@ function titleForDisplay(title) {
   return title === DEFAULT_TITLE ? '' : title;
 }
 
+// An unnamed page takes the sample's title while the sample is up. Only the
+// placeholder changes, so the sample's name is never saved as the page's.
+function placeholderTitle() {
+  return sampleShowing ? SAMPLE_TITLE : PLACEHOLDER_TITLE;
+}
+
+function showPlaceholderTitle() {
+  document.getElementById('lyrics-panel-title').dataset.placeholder = placeholderTitle();
+}
+
 // Where a page is named rather than edited, the unnamed page reads as the
 // editor's placeholder does.
 function titleForName(title) {
-  return titleForDisplay(title) || PLACEHOLDER_TITLE;
+  return titleForDisplay(title) || placeholderTitle();
 }
 
 function updatePanelHeader() {
@@ -1042,8 +1056,6 @@ function clearLyricState() {
 
 // ── Sample verse ──
 
-let sampleShowing = false;
-
 function isSampleShowing() {
   return sampleShowing && document.getElementById('lyrics').value === SAMPLE_VERSE;
 }
@@ -1060,16 +1072,56 @@ function isFirstVisit() {
   }
 }
 
+function hasSeenSampleHint() {
+  try {
+    return localStorage.getItem(SAMPLE_HINT_SEEN_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+// A pick made by the pointer on a real word, announced by app.js. Arrow keys,
+// the sample's own pre-picked word and clicks that pick nothing never reach
+// here.
+function retireSampleHint() {
+  if (!sampleShowing || hasSeenSampleHint()) return;
+  if (window.hideSamplePointer) window.hideSamplePointer();
+  document.getElementById('sample-clear').hidden = false;
+  try { localStorage.setItem(SAMPLE_HINT_SEEN_KEY, '1'); } catch {}
+}
+
+document.addEventListener('rhyme-pick', retireSampleHint);
+
+let isSampleShownUnreported = false;
+
+// isFirstVisit ignores sign-in, so the event says which kind of visitor saw
+// the sample. The sign-in check answers after this script runs, so the event
+// waits for it.
+function reportSampleShown() {
+  if (!isSampleShownUnreported || window.currentUser === undefined) return;
+  isSampleShownUnreported = false;
+  trackEvent('sample_shown', { signed_in: Boolean(window.currentUser) });
+}
+
+document.addEventListener('auth-checked', reportSampleShown);
+
 function showSample() {
   const textarea = document.getElementById('lyrics');
   sampleShowing = true;
+  isSampleShownUnreported = true;
+  reportSampleShown();
+  // The button waits for the first pick, so a new visitor sees one thing to
+  // do at a time: pick a word, then make the pad their own.
+  document.getElementById('sample-clear').hidden = !hasSeenSampleHint();
   document.getElementById('sample-bar').hidden = false;
+  showPlaceholderTitle();
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
   if (window.showRhymesForWord) {
     const start = SAMPLE_VERSE.indexOf(SAMPLE_PICKED_WORD);
     window.showRhymesForWord(SAMPLE_PICKED_WORD, { start, end: start + SAMPLE_PICKED_WORD.length });
   }
+  if (!hasSeenSampleHint() && window.showSamplePointer) window.showSamplePointer();
 }
 
 // Clearing it and writing over it both make the pad the visitor's own, so
@@ -1077,6 +1129,10 @@ function showSample() {
 function endSample() {
   sampleShowing = false;
   document.getElementById('sample-bar').hidden = true;
+  document.getElementById('sample-clear').hidden = true;
+  if (window.hideSamplePointer) window.hideSamplePointer();
+  showPlaceholderTitle();
+  if (window.currentUser === null) loadLyricsList();
   try { localStorage.setItem(SAMPLE_SEEN_KEY, '1'); } catch {}
 }
 

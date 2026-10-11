@@ -16,6 +16,7 @@ async function initAuth() {
 
 function showUser(user) {
   window.currentUser = user;
+  document.dispatchEvent(new Event('auth-checked'));
   document.body.classList.add('signed-in');
   document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
@@ -25,6 +26,7 @@ function showUser(user) {
 
 function showSignIn() {
   window.currentUser = null;
+  document.dispatchEvent(new Event('auth-checked'));
   document.body.classList.remove('signed-in');
   document.getElementById('signed-out-actions').style.display = '';
   document.getElementById('user-info').style.display = 'none';

@@ -7,7 +7,9 @@
 // account" mail) happens after the response.
 
 import { findUserByEmail } from '../../_accounts.js';
-import { sendConfirmSignupEmail, sendExistingAccountEmail } from '../../_email.js';
+import {
+  EMAIL_POOL, gateEmailPool, sendConfirmSignupEmail, sendExistingAccountEmail,
+} from '../../_email.js';
 import {
   PASSWORD_PROBLEM, PASSWORD_PROBLEM_MESSAGE, checkPasswordPolicy, hashPassword,
   isBreachedPassword,
@@ -90,6 +92,9 @@ export async function onRequestPost(context) {
 
   const signup = readSignup(await readJsonBody(request));
   if (!signup) return badRequest('invalid_request', 'The request was not understood.');
+
+  const poolFull = await gateEmailPool(env, EMAIL_POOL.SIGNUP);
+  if (poolFull) return poolFull;
 
   const ipLimit = await checkRateLimit(env, `signup:ip:${clientIpKey(request)}`,
     IP_LIMIT_PER_HOUR, HOUR_MS);

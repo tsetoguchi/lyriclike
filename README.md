@@ -63,6 +63,11 @@ EMAIL_FROM=LyricLike <noreply@your-domain>
 sign-in shows. Every emailed link is built from `APP_BASE_URL`. The public
 Turnstile site key lives in `wrangler.toml`.
 
+Optionally, set `ALERT_EMAIL` to an address that should hear when a day's
+signup or account email reaches 70% of its cap in `functions/_email.js`. Once
+a cap is reached, the signup, forgot-password and set-password requests answer
+503 until the next day.
+
 Preview deploys use their own database, `lyricalmiracle-db-preview`, so a
 branch never touches real accounts.
 

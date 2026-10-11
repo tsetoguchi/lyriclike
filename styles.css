@@ -543,61 +543,51 @@ header .nav-icon circle {
 }
 
 /* Spans the scroller, so the sheet's centring margin is worked into its
-   padding to start the note where the lyrics start, as the title does. */
+   padding to start the note where the lyrics start, as the title does. The
+   copy is chosen by the bar's own width, not the viewport's: the lyrics
+   column narrows beside the rhymes panel and when its handle is dragged. */
 .sample-bar {
+  container-type: inline-size;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: var(--space-8);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   padding: 0 var(--editor-pad) 0
     calc(max(0px, (100% - var(--sheet-width)) / 2) + var(--sheet-syllables)
       + var(--editor-pad));
 }
 
+.sample-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 100%;
+}
+
 .sample-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--font-editor);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
   white-space: nowrap;
 }
 
-.sample-note-short {
+/* The compact tier is the default, so a browser without container queries
+   gets the version that always fits. */
+.sample-note-long {
   display: none;
 }
 
-/* A phone has room beside the button for the short note only. Without it, a
-   new visitor would not know why the verse is there. */
-@media (max-width: 480px) {
+@container (min-width: 500px) {
   .sample-note-long {
-    display: none;
-  }
-
-  .sample-note-short {
     display: inline;
   }
 
-  /* The button stays its drawn size; the finger gets a full tap target.
-     It reaches down into the gap above the first line, since the scroller
-     clips anything above its top edge. */
-  .sample-bar {
-    z-index: 1;
-  }
-
-  .sample-clear {
-    position: relative;
-  }
-
-  .sample-clear::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: var(--tap-target);
+  .sample-note-short {
+    display: none;
   }
 }
 
@@ -605,18 +595,31 @@ header .nav-icon circle {
   display: none;
 }
 
+/* Once a word has been picked, the sample's one next step: centred in the
+   pad under the verse, finger-sized. sample-start.js sets its top. It keeps
+   the outlined amber of a switch that is on; solid amber is sign-up's. */
 .sample-clear {
-  padding: var(--space-1) var(--space-3);
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-6);
   background: var(--accent-wash);
   border: var(--hairline) solid var(--accent-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-family: var(--font-editor);
-  font-size: var(--text-footnote);
+  font-size: var(--text-callout);
   font-weight: var(--weight-bold);
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.sample-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .sample-clear:hover {
@@ -860,6 +863,82 @@ header .nav-icon circle {
 
 .sidebar-label.lyrics-list-group {
   padding: var(--space-5) var(--space-3) var(--space-2);
+}
+
+/* It arrives in answer to the first pick, so it fades in rather than pops. */
+.sample-clear:not([hidden]) {
+  animation: sample-clear-arrive var(--duration-slow) ease-out;
+}
+
+.sample-clear[hidden] {
+  display: none;
+}
+
+@keyframes sample-clear-arrive {
+  from { opacity: 0; }
+}
+
+/* The first-visit arrow from the sample's picked word to its rhymes, drawn in
+   viewport coordinates by sample-pointer.js. It waits a beat before fading
+   in, so the verse and the rhymes land first and the arrow joins them. */
+#sample-pointer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bar);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast), visibility 0s var(--duration-fast);
+}
+
+#sample-pointer.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-flash) ease-out 0.4s, visibility 0s 0.4s;
+}
+
+.sample-pointer-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sample-pointer-path,
+#sample-pointer-head path {
+  fill: none;
+  stroke: var(--accent-border);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sample-pointer-path {
+  stroke-dasharray: 3 5;
+}
+
+/* Plain text, not an outlined pill: it is a note on the arrow, and a pill
+   would read as a button. The card colour behind it breaks the line. */
+.sample-pointer-tip {
+  position: absolute;
+  padding: var(--space-1) var(--space-2);
+  background: var(--paper-card);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sample-pointer,
+  #sample-pointer.is-shown {
+    transition: none;
+  }
+
+  .sample-clear:not([hidden]) {
+    animation: none;
+  }
 }
 
 /* The annotation margin is only ruled off when there is something to write in
@@ -1276,12 +1355,142 @@ header .nav-icon circle {
   display: none;
 }
 
+/* A word that isn't found, has no rhymes or is still loading has nothing to
+   sort, though the bar still shows it. */
+.rhymes-panel:has(#rhyme-results > .empty-state) .rhyme-sort {
+  display: none;
+}
+
+/* Top right of the bar, beside the picked word, and the menu's anchor: the
+   menu drops from the button itself, opening leftward so it never clips. */
+.rhyme-sort {
+  position: relative;
+  margin-left: auto;
+}
+
+/* Like the header's tools: the icon with its name, grey until touched. The
+   name is the current order, so the state shows without opening the menu,
+   and nothing here is amber beside the picked word. */
+.rhyme-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--space-8);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) calc(var(--space-1) * -1) 0;
+  padding: 0 var(--space-2);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faded);
+  cursor: pointer;
+  transition: color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.rhyme-sort-btn[aria-expanded="true"] {
+  color: var(--ink);
+  background-color: var(--ink-wash);
+}
+
+/* Hover only where it can end: a tap on a phone leaves :hover stuck. */
+@media (hover: hover) {
+  .rhyme-sort-btn:hover {
+    color: var(--ink);
+    background-color: var(--ink-wash);
+  }
+}
+
+.sort-icon {
+  flex-shrink: 0;
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* The same short list as the Highlights menu: name, and a tick for the
+   chosen order. */
+.rhyme-sort-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: calc(var(--space-2) * -1);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  padding: var(--space-1) 0;
+  background: var(--paper);
+  border: var(--hairline) solid var(--margin-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+}
+
+.rhyme-sort-menu[hidden] {
+  display: none;
+}
+
+.rhyme-sort-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .rhyme-sort-option:hover {
+    background-color: var(--ink-wash);
+  }
+}
+
+/* Amber like the Highlights menu's chosen overlay: in a popup, away from the
+   picked word, it marks what is on. */
+.rhyme-sort-option[aria-checked="true"] {
+  color: var(--accent);
+}
+
+/* Drawn, not typed: iA Writer Quattro's check reads as a square-root sign. */
+.rhyme-sort-option[aria-checked="true"]::after {
+  content: "";
+  width: var(--check-size);
+  height: var(--check-size);
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check-mask) center / contain no-repeat;
+  mask: var(--check-mask) center / contain no-repeat;
+}
+
+/* Chosen, Random's row reads "Shuffle again": an action, which a tick would
+   misstate. Amber and the button's label already show Random is on. */
+.rhyme-sort-option[data-order="random"][aria-checked="true"]::after {
+  content: none;
+}
+
 @keyframes word-flash {
   0% { background: var(--flash); }
   100% { background: transparent; }
 }
 
 .selected-word-bar.flash {
+  animation: word-flash var(--duration-flash) ease-out;
+}
+
+/* Answers a tap on a word when the rhymes are behind this tab. */
+.mobile-tab.flash {
   animation: word-flash var(--duration-flash) ease-out;
 }
 
@@ -1387,6 +1596,17 @@ header .nav-icon circle {
 
 .rhyme-group.open .rhyme-group-body {
   display: flex;
+}
+
+/* A sort change fades the chips in from part-way, never from blank: when a
+   reshuffle happens to look alike, the fade is what shows it did anything. */
+@keyframes rhyme-resort {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+#rhyme-results.is-resorted .rhyme-group.open .rhyme-group-body {
+  animation: rhyme-resort var(--duration-fast) ease-out;
 }
 
 .rhyme-word {
@@ -2437,6 +2657,7 @@ body.sidebar-open #sidebar-scrim {
   font-family: var(--font-editor);
   font-size: var(--text-subhead);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: background var(--duration-fast);
 }
@@ -2642,20 +2863,20 @@ body.sidebar-open #sidebar-scrim {
 }
 
 .app-footer a,
-.sidebar-privacy {
+.sidebar-links a {
   color: var(--ink-faded);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .app-footer a:hover,
-.sidebar-privacy:hover {
+.sidebar-links a:hover {
   color: var(--ink);
 }
 
 /* On a phone the bottom bar owns the foot of the screen, so the link moves
    to the foot of the notebook drawer instead. */
-.sidebar-privacy {
+.sidebar-links {
   display: none;
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-caption-1);
@@ -2666,7 +2887,7 @@ body.sidebar-open #sidebar-scrim {
     display: none;
   }
 
-  .sidebar-privacy {
+  .sidebar-links {
     display: block;
   }
 }
@@ -2901,6 +3122,18 @@ body.sidebar-open #sidebar-scrim {
     font-size: var(--text-title-3);
   }
 
+  /* A thumb-sized target whose extra size overlaps the bar's padding, so the
+     bar is no taller than the word. */
+  .rhyme-sort-btn {
+    min-width: var(--tap-target);
+    height: var(--tap-target);
+    margin-block: calc(var(--space-2) * -1);
+  }
+
+  .rhyme-sort-option {
+    min-height: var(--tap-target);
+  }
+
   .rhyme-group-header {
     padding: var(--space-3) var(--space-4);
     min-height: var(--tap-target);
@@ -3115,8 +3348,15 @@ body.sidebar-open #sidebar-scrim {
 @media (prefers-reduced-motion: reduce) {
   .lyrics-panel,
   .rhymes-panel,
-  .selected-word-bar.flash {
+  .selected-word-bar.flash,
+  #rhyme-results.is-resorted .rhyme-group.open .rhyme-group-body {
     animation: none;
+  }
+
+  /* The tab is the only answer to a tap on a phone, so it still changes
+     colour: held, then snapped back, with nothing moving. */
+  .mobile-tab.flash {
+    animation: word-flash var(--duration-flash) steps(1, end);
   }
 
   *, *::before, *::after {
