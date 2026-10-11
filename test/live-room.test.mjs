@@ -9,7 +9,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { awarenessProtocol, Y } from '../collab/src/deps.js';
 import { decodePresence } from '../collab/src/presence.js';
-import { CLOSE, encodeUpdate, PROTOCOL_VERSION } from '../collab/src/protocol.js';
+import { CLOSE, encodeSyncStep1, encodeUpdate, PROTOCOL_VERSION } from '../collab/src/protocol.js';
 import {
   EMPTY_AFTER_MS, MAX_BACKOFF_MS, MAX_MESSAGE_BYTES, MAX_SOCKETS, MAX_SOCKETS_PER_USER, RATE_LIMIT,
   RECHECK_MS, RoomCore, SNAPSHOT_MS, WRITE_BACK_MS,
@@ -86,6 +86,14 @@ describe('joining', () => {
     host.open.push(socket);
     await room.join(socket, { identity: ANN, sessionId: SESSIONS.ann, protocol: 0, epoch: null });
     assert.equal(socket.closed.code, CLOSE.OLD_PROTOCOL);
+  });
+
+  it('ignores what a refused socket sends afterwards', async () => {
+    const socket = new FakeSocket();
+    host.open.push(socket);
+    await room.join(socket, { identity: ANN, sessionId: SESSIONS.ann, protocol: 0, epoch: null });
+    await room.message(socket, encodeSyncStep1(new Y.Doc()));
+    assert.deepEqual(socket.sent, []);
   });
 
   it(`refuses a socket past ${MAX_SOCKETS_PER_USER} for one person with 4008`, async () => {

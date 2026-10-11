@@ -415,6 +415,9 @@ export class RoomCore {
   // ── Messages ──
 
   async message(socket, bytes) {
+    // A refused socket still delivers what its client sent before the close.
+    const { socketId, hasLeft } = attachmentOf(socket);
+    if (!socketId || hasLeft) return;
     if (bytes.byteLength > MAX_MESSAGE_BYTES) return this.closeSocket(socket, CLOSE.TOO_LARGE, 'Message too large');
     if (this.isTooFast(socket)) return this.closeSocket(socket, CLOSE.TOO_FAST, 'Too many messages');
     await this.ensureLoaded();
