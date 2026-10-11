@@ -143,15 +143,25 @@ function bindButtons() {
     navigator.clipboard.writeText(document.getElementById('log').textContent);
 }
 
+async function logDiagnostics() {
+  log(`browser: ${navigator.userAgent}`);
+  const res = await fetch(`/api/lyrics/${lyricId}/live?probe=1`);
+  log(`server sees (plain request): ${res.status} ${await res.text()}`);
+}
+
 async function start() {
   bindButtons();
   watchVisibility();
+  document.addEventListener('securitypolicyviolation', event => {
+    log(`BLOCKED by page security rules: ${event.violatedDirective} ${event.blockedURI}`);
+  });
   lyricId = await pickLyric();
   if (!lyricId) {
     setStatus('Sign in on the main site and write one page first, then reload.');
     return;
   }
   log(`page id ${lyricId}`);
+  await logDiagnostics();
   connect();
 }
 

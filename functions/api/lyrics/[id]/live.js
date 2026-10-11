@@ -35,13 +35,37 @@ async function roomRequest(request, user) {
   return new Request(request.url, { headers });
 }
 
+// What the Function sees on a plain GET, so a phone can show it.
+async function probe(request, env, id) {
+  const session = await getSession(request, env);
+  return Response.json({
+    cookieSent: Boolean(parseCookies(request)[SESSION_COOKIE]),
+    signedIn: Boolean(session),
+    canOpen: session ? await canOpen(env, id, session.user) : false,
+  });
+}
+
 export async function onRequestGet({ request, env, params }) {
+  console.log('live request', JSON.stringify({
+    upgrade: request.headers.get('Upgrade'),
+    origin: request.headers.get('Origin'),
+    host: new URL(request.url).host,
+    cookieSent: Boolean(parseCookies(request)[SESSION_COOKIE]),
+    ua: request.headers.get('User-Agent'),
+  }));
   if (request.headers.get('Upgrade') !== 'websocket') {
+    if (new URL(request.url).searchParams.has('probe')) return probe(request, env, params.id);
     return new Response(null, { status: HTTP_UPGRADE_REQUIRED });
   }
-  if (!isSameOrigin(request)) return new Response(null, { status: HTTP_FORBIDDEN });
+  if (!isSameOrigin(request)) {
+    console.log('live refused: origin');
+    return new Response(null, { status: HTTP_FORBIDDEN });
+  }
   const session = await getSession(request, env);
-  if (!session) return new Response(null, { status: 401 });
+  if (!session) {
+    console.log('live refused: no session');
+    return new Response(null, { status: 401 });
+  }
   if (!await canOpen(env, params.id, session.user)) {
     return new Response(null, { status: HTTP_NOT_FOUND });
   }
