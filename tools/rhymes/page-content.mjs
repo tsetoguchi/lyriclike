@@ -14,9 +14,11 @@ const LOOSE_RHYME_TYPES = ['assonance', 'consonance'];
 // Common words first, then closest sound: the same tiers and order the
 // editor's panel uses, so a page and the app never disagree about which rhyme
 // is the best one. The editor lists names, rare words and crude words last; a
-// page leaves them out, since it is often the first thing a visitor sees.
+// page leaves them out, since it is often the first thing a visitor sees. It
+// also leaves out the words ad networks treat as sensitive.
 function rankRhymes(words, context) {
-  const ranked = rankRhymeWords(context.index, context.word, words, context.ranks);
+  const listed = words.filter((word) => !context.pageExcluded.has(word));
+  const ranked = rankRhymeWords(context.index, context.word, listed, context.ranks);
   return tierRhymeWords(ranked, context.ranks, context.names, context.crude)
     .filter(({ tier }) => tier !== 'buried');
 }
@@ -73,9 +75,9 @@ export function countListedRhymes(results) {
   return RHYME_TYPES.reduce((sum, { key }) => sum + results[key].length, 0);
 }
 
-export function buildPageModel({ word, results, index, ranks, names, crude, related }) {
+export function buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related }) {
   const targetSyllables = countSyllables(index, word);
-  const context = { index, ranks, names, crude, word };
+  const context = { index, ranks, names, crude, pageExcluded, word };
   return {
     word,
     syllables: targetSyllables,
