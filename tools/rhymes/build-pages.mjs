@@ -19,6 +19,9 @@ const MIN_LISTED_RHYMES = 10;
 const RELATED_COUNT = 24;
 const OUTPUT_DIR = new URL('rhymes/', REPO_ROOT);
 const STYLESHEET_SOURCE = new URL('./page.css', import.meta.url);
+// Windows can't create a folder with these names, so a page for "con" left the
+// repo impossible to check out there.
+const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
 
 // Autocomplete surfaces slang and fragments ("ty"), so a page also needs the
 // word to be on the same English list the editor filters results with.
@@ -28,6 +31,7 @@ function isPageCandidate(word, index, data) {
   const { filters } = data;
   if (!filters.englishWords.has(word) || filters.blocklist.has(word)) return false;
   if (data.crude.has(word) || data.pageExcluded.has(word)) return false;
+  if (WINDOWS_RESERVED_NAME.test(word)) return false;
   return hasRhymeEntry(index, word);
 }
 
