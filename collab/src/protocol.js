@@ -22,6 +22,8 @@ export const CLOSE = Object.freeze({
   ROOM_FULL: 4007,
   TOO_MANY_TABS: 4008,
   BAD_MESSAGE: 4009,
+  // The standard "server error, try again" code.
+  TRY_AGAIN: 1011,
 });
 
 // The room and the site deploy separately, so the room accepts the version

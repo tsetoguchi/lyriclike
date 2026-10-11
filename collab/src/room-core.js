@@ -39,6 +39,16 @@ function updateAttachment(socket, changes) {
   socket.serializeAttachment({ ...attachmentOf(socket), ...changes });
 }
 
+// A socket the client just closed can still be listed for a moment; failing
+// to reach it must not stop anyone else getting the message.
+function sendQuietly(socket, message) {
+  try {
+    socket.send(message);
+  } catch {
+    return;
+  }
+}
+
 function closeQuietly(socket, code, reason) {
   try {
     socket.close(code, reason);
@@ -74,6 +84,8 @@ export class RoomCore {
     this.lastSnapshotAt = 0;
     this.writeFailures = 0;
     this.nextWriteBackAt = 0;
+    this.writing = null;
+    this.rechecking = null;
     // A fresh instance, new or just woken, checks access on its first message.
     this.lastRecheckAt = 0;
   }
@@ -95,7 +107,7 @@ export class RoomCore {
   }
 
   broadcast(message, exceptId) {
-    for (const socket of this.greetedSockets(exceptId)) socket.send(message);
+    for (const socket of this.greetedSockets(exceptId)) sendQuietly(socket, message);
   }
 
   async closeSocket(socket, code, reason) {
@@ -125,23 +137,35 @@ export class RoomCore {
     updateAttachment(socket, {
       ...identity, sessionId, socketId: crypto.randomUUID(), clients: [], presence: null,
     });
-    await this.ensureLoaded();
-    if (this.isGone) return;
+    try {
+      await this.ensureLoaded();
+    } catch (err) {
+      return this.refuseAfterFailedLoad(socket, err);
+    }
+    if (this.isGone) return closeQuietly(socket, CLOSE.PAGE_DELETED, 'This page was deleted');
     this.greet(socket, epoch);
     this.markOccupied();
     this.host.log('join', { userId: identity.userId });
   }
 
+  // A failed load leaves nobody half-joined: the socket would otherwise count
+  // toward the limits and keep the room from ever emptying.
+  refuseAfterFailedLoad(socket, err) {
+    updateAttachment(socket, { hasLeft: true });
+    closeQuietly(socket, CLOSE.TRY_AGAIN, 'Could not open the page, try again');
+    this.host.log('join_failed', { message: String(err) });
+  }
+
   greet(socket, clientEpoch) {
     const isOtherEpoch = clientEpoch && clientEpoch !== this.epoch;
     const oldSnapshot = isOtherEpoch ? this.host.storage.loadEpochSnapshot(clientEpoch) : null;
-    socket.send(encodeHello(this.epoch, oldSnapshot));
-    socket.send(encodeSyncStep1(this.doc));
-    socket.send(encodePersisted(this.savedSnapshot));
+    sendQuietly(socket, encodeHello(this.epoch, oldSnapshot));
+    sendQuietly(socket, encodeSyncStep1(this.doc));
+    sendQuietly(socket, encodePersisted(this.savedSnapshot));
     const { socketId } = attachmentOf(socket);
     for (const other of this.greetedSockets(socketId)) {
       const { presence } = attachmentOf(other);
-      if (presence) socket.send(encodePresence(presence));
+      if (presence) sendQuietly(socket, encodePresence(presence));
     }
     updateAttachment(socket, { isGreeted: true });
   }
@@ -270,13 +294,26 @@ export class RoomCore {
     if (current === null || next < current) await this.host.setAlarm(next);
   }
 
-  async writeBack() {
+  // One at a time: two overlapping writes would each see the other's as a
+  // save from outside and merge the same words in twice.
+  writeBack() {
+    if (!this.writing) {
+      this.writing = this.writeBackOnce().finally(() => {
+        this.writing = null;
+      });
+    }
+    return this.writing;
+  }
+
+  async writeBackOnce() {
     try {
       const lyricId = await this.host.lyricId();
       for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt += 1) {
-        if (await this.tryWrite(lyricId)) return;
+        const sent = await this.tryWrite(lyricId);
+        if (sent.revision !== null) return;
         const page = await readPage(this.host.db, lyricId);
         if (!page) return this.shutDown('page_gone');
+        if (this.isOwnWrite(page, sent)) return this.adoptWrite(page.revision, sent);
         this.applyOutside(page);
       }
       this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
@@ -285,20 +322,32 @@ export class RoomCore {
     }
   }
 
+  // The snapshot is saved first, so D1 never holds text the snapshot lacks: a
+  // restart would otherwise take D1 as written and put the older text back.
   // The text is captured before the await, so edits made meanwhile simply
   // leave the room dirty for the next write.
   async tryWrite(lyricId) {
+    if (this.snapshotDirty) this.saveSnapshot();
     const body = this.text();
     const title = this.title();
     const revision = await writePage(this.host.db, lyricId, {
       body, title, now: this.host.now(), baseRevision: this.written.revision, baseTitle: this.written.title,
     });
-    if (revision === null) return false;
+    if (revision !== null) this.adoptWrite(revision, { body, title });
+    return { revision, body, title };
+  }
+
+  // D1 holding exactly what the room sent means the write landed and only its
+  // answer was lost; merging it as an outside save would double the words.
+  isOwnWrite(page, sent) {
+    return page.body === sent.body && page.title === sent.title;
+  }
+
+  adoptWrite(revision, { body, title }) {
     this.written = { revision, text: body, title };
     this.writeFailures = 0;
     this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
     this.saveMeta();
-    return true;
   }
 
   writeFailed(err) {
@@ -376,12 +425,23 @@ export class RoomCore {
   // brings those edits back.
   resyncSockets() {
     if (!this.doc) return;
-    for (const socket of this.greetedSockets()) socket.send(encodeSyncStep1(this.doc));
+    for (const socket of this.greetedSockets()) sendQuietly(socket, encodeSyncStep1(this.doc));
   }
 
   // ── Access ──
 
-  async recheck() {
+  // One at a time, and every message waits for one in flight: otherwise a
+  // signed-out person's other tab gets edits in while D1 answers.
+  recheck() {
+    if (!this.rechecking) {
+      this.rechecking = this.recheckOnce().finally(() => {
+        this.rechecking = null;
+      });
+    }
+    return this.rechecking;
+  }
+
+  async recheckOnce() {
     this.lastRecheckAt = this.host.now();
     const sockets = this.openSockets();
     if (!sockets.length) return;
@@ -397,7 +457,8 @@ export class RoomCore {
   // A room with no alarm runs no timers, so a signed-out tab is caught by its
   // next message once 5 minutes have passed since the last check.
   async isRefusedOnRecheck(socket) {
-    if (this.host.now() - this.lastRecheckAt < RECHECK_MS) return false;
+    const isDue = this.host.now() - this.lastRecheckAt >= RECHECK_MS;
+    if (!isDue && !this.rechecking) return false;
     await this.recheck();
     return Boolean(attachmentOf(socket).hasLeft);
   }

@@ -418,3 +418,99 @@ describe('waking', () => {
     assert.equal(room.text(), 'hello world');
   });
 });
+
+describe('review fixes', () => {
+  it('does not merge its own write back in when D1 took it but the answer was lost', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, ' world');
+    await ann.sync();
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => {
+      const statement = prepare(sql);
+      if (!sql.includes('UPDATE lyrics')) return statement;
+      return { bind: (...args) => ({ first: async () => { await statement.bind(...args).first(); throw new Error('answer lost'); } }) };
+    };
+    await runAlarm(host.clock);
+    db.prepare = prepare;
+    await runDueAlarms(host.clock + MAX_BACKOFF_MS);
+    await ann.sync();
+    assert.equal(ann.text, 'hello world');
+    assert.equal((await readStored()).body, 'hello world');
+  });
+
+  it('runs one write-back at a time, even when two are asked for at once', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, ' world');
+    await ann.sync();
+    await Promise.all([room.writeBack(), room.writeBack()]);
+    await ann.sync();
+    assert.equal(ann.text, 'hello world');
+    assert.deepEqual(await readStored(), { body: 'hello world', title: 'Song', revision: 1 });
+  });
+
+  it('never lets D1 get ahead of the snapshot, so a restart cannot write older text back', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, ' my new line');
+    await ann.sync();
+    await runAlarm(host.clock);
+    assert.equal((await readStored()).body, 'hello my new line');
+    host.open = [];
+    room = new RoomCore(host);
+    await runAlarm(host.clock + 1);
+    await room.ensureLoaded();
+    await room.alarm();
+    assert.equal((await readStored()).body, 'hello my new line');
+  });
+
+  it('applies nothing from a signed-out person while the re-check is still waiting on D1', async () => {
+    const tab1 = await connect(BO);
+    const tab2 = await connect(BO);
+    await exec('DELETE FROM sessions WHERE id = ?', SESSIONS.bo);
+    host.clock += RECHECK_MS;
+    // D1 takes time; the other tab's message must not slip past while it does.
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => {
+      const statement = prepare(sql);
+      if (!sql.includes('FROM sessions')) return statement;
+      return { bind: (...args) => ({ all: async () => {
+        await new Promise(resolve => setTimeout(resolve, 20));
+        return statement.bind(...args).all();
+      } }) };
+    };
+    tab1.type(5, 'X');
+    tab2.type(0, 'Y');
+    await Promise.all([tab1.sync(), tab2.sync()]);
+    db.prepare = prepare;
+    assert.equal(room.text(), 'hello');
+  });
+
+  it('does not close the sender when sending to someone else fails', async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    const broken = await connect({ ...BO, userId: 'bo-2' });
+    broken.socket.send = () => { throw new Error('socket already gone'); };
+    ann.type(5, '!');
+    await ann.sync();
+    await bo.sync();
+    assert.equal(ann.socket.closed, null);
+    assert.equal(bo.text, 'hello!');
+  });
+
+  it('closes a joining socket when loading fails, so it blocks nothing', async () => {
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => (sql.includes('SELECT body') ? { bind: () => ({ first: async () => { throw new Error('D1 down'); } }) } : prepare(sql));
+    const socket = new FakeSocket();
+    host.open.push(socket);
+    await room.join(socket, { identity: ANN, sessionId: SESSIONS.ann, protocol: PROTOCOL_VERSION, epoch: null });
+    db.prepare = prepare;
+    assert.equal(socket.closed.code, CLOSE.TRY_AGAIN);
+    assert.equal(room.openSockets().length, 0);
+  });
+
+  it('closes a socket that joins after the room was closed', async () => {
+    await connect(ANN);
+    await room.closeRoom();
+    const late = await connect(BO);
+    assert.equal(late.socket.closed.code, CLOSE.PAGE_DELETED);
+  });
+});
