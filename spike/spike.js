@@ -32,6 +32,7 @@ async function pickLyric() {
   const fromUrl = new URLSearchParams(location.search).get('id');
   if (fromUrl) return fromUrl;
   const res = await fetch('/api/lyrics');
+  log(`page list: ${res.status}`);
   if (res.status === 401) return null;
   const list = await res.json();
   const lyrics = Array.isArray(list) ? list : list.lyrics || [];
@@ -47,6 +48,7 @@ function handleMessage(event) {
 }
 
 function connect() {
+  if (!lyricId) return;
   if (socket && socket.readyState <= WebSocket.OPEN) return;
   const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/lyrics/${lyricId}/live`;
   setStatus('Connecting…');
@@ -144,7 +146,6 @@ function bindButtons() {
 }
 
 async function logDiagnostics() {
-  log(`browser: ${navigator.userAgent}`);
   const res = await fetch(`/api/lyrics/${lyricId}/live?probe=1`);
   log(`server sees (plain request): ${res.status} ${await res.text()}`);
 }
@@ -155,6 +156,8 @@ async function start() {
   document.addEventListener('securitypolicyviolation', event => {
     log(`BLOCKED by page security rules: ${event.violatedDirective} ${event.blockedURI}`);
   });
+  log(`browser: ${navigator.userAgent}`);
+  log(`signed in check: ${(await fetch('/api/me')).status}`);
   lyricId = await pickLyric();
   if (!lyricId) {
     setStatus('Sign in on the main site and write one page first, then reload.');
