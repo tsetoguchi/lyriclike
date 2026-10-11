@@ -257,3 +257,43 @@ describe('connection trouble', () => {
     assert.equal(link.sockets.length, 1);
   });
 });
+
+describe('titles', () => {
+  it("shows the co-writer's rename, unless I am typing in the title", async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    ann.session.rename('Rain Song');
+    await settle(ann, bo);
+    assert.deepEqual(bo.page.titles, ['Rain Song']);
+    bo.page.isTitleFocusedFlag = true;
+    ann.session.rename('River Song');
+    await settle(ann, bo);
+    assert.deepEqual(bo.page.titles, ['Rain Song']);
+  });
+
+  it('keeps a rename made before the first sync', async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await bo.session.open(LYRIC);
+    await settle(bo);
+    const opening = ann.session.open(LYRIC);
+    ann.session.rename('Early');
+    await opening;
+    await settle(ann, bo);
+    assert.deepEqual(bo.page.titles, ['Early']);
+  });
+
+  it('writes a live rename to D1 with the text', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.session.rename('Rain Song');
+    await settle(ann);
+    await runRoomAlarms();
+    const stored = await db.prepare('SELECT title FROM lyrics WHERE id = ?').bind(PAGE).first();
+    assert.equal(stored.title, 'Rain Song');
+  });
+});
