@@ -29,4 +29,9 @@ describe('live dependencies', () => {
     assert.equal(doc.getText('body').toString(), 'hello');
     assert.equal(newDmp().diff_main('a', 'b').length, 2);
   });
+
+  it('loads the same Yjs the room does', async () => {
+    const roomYjs = await import('../collab/node_modules/yjs/dist/yjs.mjs');
+    assert.equal(Y.Doc, roomYjs.Doc);
+  });
 });

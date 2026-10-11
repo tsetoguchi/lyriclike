@@ -1,11 +1,8 @@
-// Yjs and diff-match-patch live in collab/node_modules, where the room
-// Worker gets them, so the tests load the very same copies.
-import { createRequire } from 'node:module';
+// Yjs and diff-match-patch come through collab/src/deps.js, the very copies
+// the room Worker uses, so test documents and room documents share one Yjs.
+import { DiffMatchPatch, Y } from '../../collab/src/deps.js';
 
-const requireFromCollab = createRequire(new URL('../../collab/package.json', import.meta.url));
-
-export const Y = requireFromCollab('yjs');
-export const DiffMatchPatch = requireFromCollab('diff-match-patch');
+export { DiffMatchPatch, Y };
 
 export function newDmp() {
   return new DiffMatchPatch();
