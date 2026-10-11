@@ -11,8 +11,10 @@ import { awarenessProtocol, Y } from '../collab/src/deps.js';
 import { decodePresence } from '../collab/src/presence.js';
 import { CLOSE, encodeUpdate, PROTOCOL_VERSION } from '../collab/src/protocol.js';
 import {
-  MAX_MESSAGE_BYTES, MAX_SOCKETS, MAX_SOCKETS_PER_USER, RATE_LIMIT, RoomCore,
+  MAX_BACKOFF_MS, MAX_MESSAGE_BYTES, MAX_SOCKETS, MAX_SOCKETS_PER_USER, RATE_LIMIT, RoomCore,
+  SNAPSHOT_MS, WRITE_BACK_MS,
 } from '../collab/src/room-core.js';
+import liveCore from '../live-core.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 import { FakeSocket, TestClient, createRoomHost } from './support/fake-room-host.mjs';
 
@@ -166,5 +168,123 @@ describe('presence', () => {
     await ann.sync();
     const bo = await connect(BO);
     assert.equal(decodePresence(bo.presence[0])[0].state.user.name, 'Ann');
+  });
+});
+
+async function runAlarm(at) {
+  host.clock = at;
+  host.alarmAt = null;
+  await room.alarm();
+}
+
+// Fires every alarm due by `until`, in order, as the platform would.
+async function runDueAlarms(until) {
+  for (let fired = 0; host.alarmAt !== null && host.alarmAt <= until; fired += 1) {
+    if (fired > 20) throw new Error('alarms never settle');
+    await runAlarm(host.alarmAt);
+  }
+}
+
+function failD1Writes() {
+  const prepare = db.prepare.bind(db);
+  db.prepare = sql => (sql.includes('UPDATE lyrics')
+    ? { bind: () => ({ first: async () => { throw new Error('D1 down'); } }) }
+    : prepare(sql));
+  return () => { db.prepare = prepare; };
+}
+
+describe('saving', () => {
+  it('saves a snapshot after an edit and tells everyone it covers the edit', async () => {
+    const ann = await connect(ANN);
+    let edit = null;
+    ann.doc.once('update', update => { edit = update; });
+    ann.type(5, '!');
+    await ann.sync();
+    assert.equal(liveCore.isUpdateSaved(Y, edit, ann.persisted), false);
+    assert.ok(host.alarmAt !== null && host.alarmAt <= host.clock + SNAPSHOT_MS);
+    await runDueAlarms(host.clock + SNAPSHOT_MS);
+    await ann.sync();
+    assert.equal(liveCore.isUpdateSaved(Y, edit, ann.persisted), true);
+  });
+
+  it('writes the text and a live rename back to D1', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, ' world');
+    ann.doc.getMap('meta').set('title', 'Rain Song');
+    await ann.sync();
+    await runDueAlarms(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(await readStored(), { body: 'hello world', title: 'Rain Song', revision: 1 });
+  });
+
+  it('moves the one alarm only ever earlier', async () => {
+    const ann = await connect(ANN);
+    for (const letter of 'abcde') {
+      ann.type(0, letter);
+      await ann.sync();
+    }
+    assert.equal(host.alarmSets, 1);
+  });
+
+  it('merges a save made outside the room, keeping both sides', async () => {
+    const ann = await connect(ANN);
+    ann.type(0, 'oh ');
+    await ann.sync();
+    await exec("UPDATE lyrics SET body = 'hello there', revision = revision + 1 WHERE id = ?", PAGE);
+    await runDueAlarms(host.clock + WRITE_BACK_MS);
+    await ann.sync();
+    assert.equal(ann.text, 'oh hello there');
+    assert.equal((await readStored()).body, 'oh hello there');
+  });
+
+  it('takes a rename made outside the room when the room did not rename', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    await exec("UPDATE lyrics SET title = 'Outside' WHERE id = ?", PAGE);
+    await runDueAlarms(host.clock + WRITE_BACK_MS);
+    await ann.sync();
+    assert.equal(ann.title, 'Outside');
+    assert.equal((await readStored()).title, 'Outside');
+  });
+
+  it("keeps the room's rename over an older one made outside", async () => {
+    const ann = await connect(ANN);
+    ann.doc.getMap('meta').set('title', 'Inside');
+    await ann.sync();
+    await exec("UPDATE lyrics SET title = 'Outside' WHERE id = ?", PAGE);
+    await runDueAlarms(host.clock + WRITE_BACK_MS);
+    assert.equal((await readStored()).title, 'Inside');
+  });
+
+  it('merges an outside save it finds when it loads', async () => {
+    await connect(ANN);
+    await exec("UPDATE lyrics SET body = 'hello again', revision = revision + 1 WHERE id = ?", PAGE);
+    room = new RoomCore(host);
+    const bo = await connect(BO);
+    assert.equal(bo.text, 'hello again');
+  });
+
+  it('closes everyone with 4005 and clears its storage when the page is gone', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    await exec('DELETE FROM lyric_shares WHERE lyric_id = ?', PAGE);
+    await exec('DELETE FROM lyrics WHERE id = ?', PAGE);
+    await runDueAlarms(host.clock + WRITE_BACK_MS);
+    assert.equal(ann.socket.closed.code, CLOSE.PAGE_DELETED);
+    assert.equal(host.storage.loadPageId(), null);
+  });
+
+  it('backs off and retries when D1 fails, keeping the edit', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    const restore = failD1Writes();
+    await runDueAlarms(host.clock + WRITE_BACK_MS);
+    assert.equal((await readStored()).body, 'hello');
+    assert.ok(host.alarmAt !== null, 'a retry is scheduled');
+    restore();
+    await runDueAlarms(host.clock + MAX_BACKOFF_MS);
+    assert.equal((await readStored()).body, 'hello!');
   });
 });

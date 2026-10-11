@@ -4,7 +4,7 @@
 // Everything it touches comes in through `host`, so it runs under node --test
 // with fakes; page-room.js plugs it into a Durable Object.
 import liveCore from '../../live-core.js';
-import { readPage } from './d1-page.js';
+import { readPage, writePage } from './d1-page.js';
 import { Y } from './deps.js';
 import { stampPresence } from './presence.js';
 import {
@@ -23,6 +23,12 @@ export const MAX_BODY_LENGTH = 500_000;
 export const RATE_WINDOW_MS = 10_000;
 export const RATE_LIMIT = 200;
 export const SNAPSHOT_MS = 5_000;
+export const WRITE_BACK_MS = 10_000;
+export const MAX_BACKOFF_MS = 5 * 60_000;
+export const EMPTY_AFTER_MS = 10 * 60_000;
+// One retry after merging a save made outside the room.
+const WRITE_ATTEMPTS = 2;
+const OUTSIDE = 'outside';
 
 function attachmentOf(socket) {
   return socket.deserializeAttachment() || {};
@@ -65,6 +71,8 @@ export class RoomCore {
     this.rates = new Map();
     this.snapshotDirty = false;
     this.lastSnapshotAt = 0;
+    this.writeFailures = 0;
+    this.nextWriteBackAt = 0;
   }
 
   // ── Sockets ──
@@ -156,7 +164,7 @@ export class RoomCore {
 
   async load() {
     const page = await readPage(this.host.db, await this.host.lyricId());
-    if (!page) return this.closeAll(CLOSE.PAGE_DELETED);
+    if (!page) return this.shutDown('page_gone');
     const { snapshot, meta } = this.host.storage.loadState();
     if (snapshot) this.restore(snapshot, meta);
     else this.seed(page);
@@ -165,6 +173,7 @@ export class RoomCore {
     // Saved before anyone is greeted: a room that hibernated unsaved would
     // seed again with a new history and duplicate the page on every screen.
     if (!snapshot) this.saveSnapshot();
+    else if (this.isChangedOutside(page)) this.applyOutside(page);
   }
 
   restore(snapshot, meta) {
@@ -217,6 +226,105 @@ export class RoomCore {
     this.broadcast(encodeUpdate(update), origin);
   }
 
+  // ── Saving ──
+
+  isD1Dirty() {
+    return this.text() !== this.written.text || this.title() !== this.written.title;
+  }
+
+  isChangedOutside(page) {
+    return page.revision !== this.written.revision || page.title !== this.written.title;
+  }
+
+  async alarm() {
+    await this.ensureLoaded();
+    if (this.isGone) return;
+    const now = this.host.now();
+    if (this.snapshotDirty && now - this.lastSnapshotAt >= SNAPSHOT_MS) this.saveSnapshot();
+    if (this.isD1Dirty() && now >= this.nextWriteBackAt) await this.writeBack();
+    if (this.isGone) return;
+    await this.scheduleAlarm();
+  }
+
+  nextAlarmAt() {
+    const times = [];
+    if (this.snapshotDirty) times.push(this.lastSnapshotAt + SNAPSHOT_MS);
+    if (this.isD1Dirty()) times.push(this.nextWriteBackAt);
+    if (this.emptySince !== null && !this.openSockets().length) times.push(this.emptySince + EMPTY_AFTER_MS);
+    return times.length ? Math.max(Math.min(...times), this.host.now()) : null;
+  }
+
+  // Every alarm set is a billed storage write, so it only moves earlier.
+  async scheduleAlarm() {
+    if (!this.doc) return;
+    const next = this.nextAlarmAt();
+    if (next === null) return;
+    const current = await this.host.getAlarm();
+    if (current === null || next < current) await this.host.setAlarm(next);
+  }
+
+  async writeBack() {
+    try {
+      const lyricId = await this.host.lyricId();
+      for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt += 1) {
+        if (await this.tryWrite(lyricId)) return;
+        const page = await readPage(this.host.db, lyricId);
+        if (!page) return this.shutDown('page_gone');
+        this.applyOutside(page);
+      }
+      this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
+    } catch (err) {
+      this.writeFailed(err);
+    }
+  }
+
+  // The text is captured before the await, so edits made meanwhile simply
+  // leave the room dirty for the next write.
+  async tryWrite(lyricId) {
+    const body = this.text();
+    const title = this.title();
+    const revision = await writePage(this.host.db, lyricId, {
+      body, title, now: this.host.now(), baseRevision: this.written.revision, baseTitle: this.written.title,
+    });
+    if (revision === null) return false;
+    this.written = { revision, text: body, title };
+    this.writeFailures = 0;
+    this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
+    this.saveMeta();
+    return true;
+  }
+
+  writeFailed(err) {
+    this.writeFailures += 1;
+    const backoff = Math.min(WRITE_BACK_MS * 2 ** this.writeFailures, MAX_BACKOFF_MS);
+    this.nextWriteBackAt = this.host.now() + backoff;
+    this.host.log('write_back_failed', { failures: this.writeFailures, message: String(err) });
+  }
+
+  // A save or rename made outside the room (an old tab, a REST client while
+  // the switch flips) is merged in, never written over.
+  applyOutside(page) {
+    const { dmp } = this.host;
+    const roomText = this.text();
+    const merged = liveCore.rebase(Y, dmp, this.written.text, page.body, roomText);
+    const edits = liveCore.minimalEdits(dmp, roomText, merged);
+    liveCore.applyEdits(this.doc.getText(TEXT_FIELD), edits, OUTSIDE);
+    const title = liveCore.mergeTitle(this.written.title, this.title(), page.title);
+    if (title !== this.title()) {
+      this.doc.transact(() => this.doc.getMap(META_FIELD).set(TITLE_KEY, title), OUTSIDE);
+    }
+    this.written = { revision: page.revision, text: page.body, title: page.title };
+    this.saveMeta();
+    this.host.log('outside_merge', {});
+  }
+
+  async shutDown(event) {
+    await this.closeAll(CLOSE.PAGE_DELETED);
+    await this.host.storage.deleteAll();
+    await this.host.deleteAlarm();
+    this.host.log(event, {});
+  }
+
   // ── Messages ──
 
   async message(socket, bytes) {
@@ -225,6 +333,7 @@ export class RoomCore {
     await this.ensureLoaded();
     if (this.isGone || attachmentOf(socket).hasLeft) return;
     await this.handle(socket, readIncoming(bytes));
+    await this.scheduleAlarm();
   }
 
   async handle(socket, incoming) {
