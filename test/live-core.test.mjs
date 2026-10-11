@@ -9,7 +9,7 @@ import { describe, it } from 'node:test';
 import liveCore from '../live-core.js';
 import { Y } from './support/live-deps.mjs';
 
-const { applyEdit, diffTextEdit, isMidPair } = liveCore;
+const { applyEdit, diffTextEdit, isMidPair, mapSelection } = liveCore;
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
@@ -91,5 +91,39 @@ describe('applyEdit', () => {
     applyEdit(ytext, { index: 1, deleteCount: 2, insert: 'he' }, 'local');
     assert.equal(ytext.toString(), 'the cat');
     assert.deepEqual(origins, ['local']);
+  });
+});
+
+describe('mapSelection', () => {
+  const caret = position => ({ start: position, end: position });
+
+  it('shifts past an insert before it', () => {
+    assert.deepEqual(mapSelection(caret(5), [{ insert: 'abc' }]), caret(8));
+  });
+
+  it('stays put for an insert exactly at it', () => {
+    assert.deepEqual(mapSelection(caret(5), [{ retain: 5 }, { insert: 'abc' }]), caret(5));
+  });
+
+  it('ignores an insert after it', () => {
+    assert.deepEqual(mapSelection(caret(5), [{ retain: 7 }, { insert: 'abc' }]), caret(5));
+  });
+
+  it('moves back for a delete before it', () => {
+    assert.deepEqual(mapSelection(caret(5), [{ retain: 1 }, { delete: 2 }]), caret(3));
+  });
+
+  it('collapses onto a delete that spans it', () => {
+    assert.deepEqual(mapSelection(caret(5), [{ retain: 3 }, { delete: 4 }]), caret(3));
+  });
+
+  it('collapses a selection inside deleted text', () => {
+    assert.deepEqual(mapSelection({ start: 4, end: 6 }, [{ retain: 2 }, { delete: 6 }]),
+      { start: 2, end: 2 });
+  });
+
+  it('maps each end of a selection on its own', () => {
+    const delta = [{ retain: 2 }, { insert: 'xx' }, { retain: 4 }, { delete: 1 }];
+    assert.deepEqual(mapSelection({ start: 3, end: 9 }, delta), { start: 5, end: 10 });
   });
 });

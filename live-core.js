@@ -72,10 +72,34 @@
     }, origin);
   }
 
+  // An insert exactly at the position leaves it in place, so a co-writer's
+  // words appear after the caret rather than pushing it along.
+  function mapPosition(position, delta) {
+    let oldIndex = 0;
+    let shift = 0;
+    for (const op of delta) {
+      if (oldIndex >= position) break;
+      if (op.retain) {
+        oldIndex += op.retain;
+      } else if (op.insert) {
+        shift += op.insert.length;
+      } else {
+        shift -= Math.min(op.delete, position - oldIndex);
+        oldIndex += op.delete;
+      }
+    }
+    return position + shift;
+  }
+
+  function mapSelection(selection, delta) {
+    return { start: mapPosition(selection.start, delta), end: mapPosition(selection.end, delta) };
+  }
+
   const LiveCore = {
     applyEdit,
     diffTextEdit,
     isMidPair,
+    mapSelection,
   };
 
   if (typeof module === 'object' && module.exports) {
