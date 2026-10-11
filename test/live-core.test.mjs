@@ -11,7 +11,7 @@ import { Y, newDmp } from './support/live-deps.mjs';
 
 const {
   applyEdit, applyEdits, diffTextEdit, isMidPair, isUpdateSaved, mapSelection, mergeTitle,
-  minimalEdits, rebase, UNPLACED_SEPARATOR,
+  minimalEdits, rebase,
 } = liveCore;
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
@@ -129,6 +129,17 @@ describe('mapSelection', () => {
     const delta = [{ retain: 2 }, { insert: 'xx' }, { retain: 4 }, { delete: 1 }];
     assert.deepEqual(mapSelection({ start: 3, end: 9 }, delta), { start: 5, end: 10 });
   });
+
+  it("does not grow a selection over words a co-writer typed at its start", () => {
+    // "the rain falls" with "rain" selected; "cold " arrives at index 4.
+    assert.deepEqual(mapSelection({ start: 4, end: 8 }, [{ retain: 4 }, { insert: 'cold ' }]),
+      { start: 9, end: 13 });
+  });
+
+  it("does not grow a selection over words a co-writer typed at its end", () => {
+    assert.deepEqual(mapSelection({ start: 4, end: 8 }, [{ retain: 8 }, { insert: ' down' }]),
+      { start: 4, end: 8 });
+  });
 });
 
 // A small seeded generator, so a failing case can be replayed.
@@ -191,47 +202,98 @@ describe('rebase', () => {
     const base = 'one\ntwo\nthree\n';
     const theirs = 'ONE\ntwo\nthree\n';
     const ours = 'one\ntwo\nTHREE\n';
-    assert.deepEqual(rebase(newDmp(), base, theirs, ours), { text: 'ONE\ntwo\nTHREE\n', unplaced: [] });
+    assert.equal(rebase(Y, newDmp(), base, theirs, ours), 'ONE\ntwo\nTHREE\n');
   });
 
   it('is a plain copy when nothing else changed', () => {
-    assert.deepEqual(rebase(newDmp(), 'a', 'ab', 'a'), { text: 'ab', unplaced: [] });
+    assert.equal(rebase(Y, newDmp(), 'a', 'ab', 'a'), 'ab');
   });
 
   it('adds every word of a change to an empty page', () => {
-    assert.deepEqual(rebase(newDmp(), '', 'new words', ''), { text: 'new words', unplaced: [] });
+    assert.equal(rebase(Y, newDmp(), '', 'new words', ''), 'new words');
   });
 
-  it('puts words that no longer fit at the end instead of losing them', () => {
-    const base = 'the old verse about the rain\n';
-    const changed = 'the old verse about the rain and the river\n';
-    // Shares no letters with the patch's context, so no fuzzy match is found.
-    const onto = 'qqqq qqqq\n';
-    const { text, unplaced } = rebase(newDmp(), base, changed, onto);
-    assert.deepEqual(unplaced, [' and the river']);
-    assert.equal(text, `${onto}${UNPLACED_SEPARATOR} and the river`);
+  it("puts the co-writer's words first when both wrote at the same spot", () => {
+    assert.equal(rebase(Y, newDmp(), '', 'hello', 'existing'), 'existinghello');
   });
 
-  it('ignores a delete that no longer fits, since no words are lost', () => {
-    const { text, unplaced } = rebase(newDmp(), 'remove this line\n', '', 'something else\n');
-    assert.deepEqual(unplaced, []);
-    assert.equal(text, 'something else\n');
-  });
-});
-
-describe('rebase strictness', () => {
-  it('still applies a delete when a co-writer changed the line beside it', () => {
-    const base = 'verse one\nbad line\nverse two\n';
+  it('keeps a word the co-writer added inside a line that was deleted', () => {
+    const base = 'verse one\nthe rain falls down\nverse two\n';
     const changed = 'verse one\nverse two\n';
-    const onto = 'verse ONE\nbad line\nverse two\n';
-    assert.deepEqual(rebase(newDmp(), base, changed, onto), { text: 'verse ONE\nverse two\n', unplaced: [] });
+    const onto = 'verse one\nthe cold rain falls down\nverse two\n';
+    assert.match(rebase(Y, newDmp(), base, changed, onto), /cold/);
   });
 
-  it("leaves the caller's matcher settings as they were", () => {
-    const dmp = newDmp();
-    rebase(dmp, 'remove this line\n', '', 'something else\n');
-    assert.equal(dmp.Match_Threshold, 0.5);
-    assert.equal(dmp.Patch_DeleteThreshold, 0.5);
+  it('keeps a line the co-writer added inside a long deleted stanza', () => {
+    const base = 'intro\nfirst line of the stanza here\nsecond line of the stanza\noutro\n';
+    const changed = 'intro\noutro\n';
+    const onto = 'intro\nfirst line of the stanza here\nB WROTE THIS\nsecond line of the stanza\noutro\n';
+    assert.match(rebase(Y, newDmp(), base, changed, onto), /B WROTE THIS/);
+  });
+
+  it('places a change correctly after the co-writer added a verse above', () => {
+    const base = 'verse one line\nchorus goes here\nlast line of song\n';
+    const changed = 'verse one line\nchorus goes here NEW WORDS\nlast line of song\n';
+    const added = 'a brand new verse the co-writer wrote at the top\n'.repeat(6);
+    const onto = added + base;
+    assert.equal(rebase(Y, newDmp(), base, changed, onto), added + changed);
+  });
+
+  it('applies a delete after the co-writer added a verse above', () => {
+    const base = 'keep\nbad line\nkeep too\n';
+    const added = 'a brand new verse the co-writer wrote at the top\n'.repeat(6);
+    assert.equal(rebase(Y, newDmp(), base, 'keep\nkeep too\n', added + base), `${added}keep\nkeep too\n`);
+  });
+
+  it('keeps every word the co-writer wrote over a line that was deleted', () => {
+    // Only whole words are compared, so no letter of theirs can be taken for
+    // an old one and deleted with it. A shared space or line break may go.
+    const result = rebase(Y, newDmp(), 'remove this line\n', '', 'something else\n');
+    assert.match(result, /^something else\n?$/);
+  });
+
+  it('keeps whole words when a co-writer reworded a line that was deleted', () => {
+    const result = rebase(Y, newDmp(), 'the rain falls\n', '', 'then sun rises\n');
+    for (const word of ['then', 'sun', 'rises']) assert.match(result, new RegExp(`\\b${word}\\b`));
+  });
+
+  it('never loses or cuts a word the co-writer added, whatever was deleted (fuzz)', () => {
+    const random = seededRandom(23);
+    const VOCAB = ['rain', 'falls', 'down', 'the', 'night', 'is', 'cold', 'and', 'we', 'sing'];
+    const words = n => Array.from({ length: n }, () => VOCAB[Math.floor(random() * VOCAB.length)]);
+    for (let round = 0; round < 300; round += 1) {
+      const base = words(12);
+      const mine = base.filter(() => random() > 0.4).map(w => (random() < 0.2 ? `${w}s` : w));
+      // Added words share letters with the old ones, as real rewrites do, so
+      // a merge that compared letters would mix them up.
+      const added = new Set();
+      const theirs = base.flatMap((w, i) => {
+        if (random() >= 0.3) return [w];
+        const word = `${VOCAB[Math.floor(random() * VOCAB.length)]}${round}x${i}`;
+        added.add(word);
+        return [word, w];
+      }).filter(w => added.has(w) || random() > 0.15);
+      const result = rebase(Y, newDmp(), base.join(' '), mine.join(' '), theirs.join(' '));
+      for (const word of added) {
+        // Unbroken, though it may touch a word the other side wrote at the
+        // very same spot, as two people rewriting one word do.
+        assert.ok(result.includes(word), `round ${round}: ${word} missing from ${result}`);
+      }
+    }
+  });
+
+  it("never loses a line the co-writer added (fuzz)", () => {
+    const random = seededRandom(11);
+    const lines = n => Array.from({ length: n }, (_, i) => `line ${i} of the song\n`);
+    for (let round = 0; round < 300; round += 1) {
+      const baseLines = lines(8);
+      const mine = baseLines.filter(() => random() > 0.25);
+      const theirs = [...baseLines];
+      const added = `co-writer line ${round}\n`;
+      theirs.splice(Math.floor(random() * (theirs.length + 1)), 0, added);
+      const result = rebase(Y, newDmp(), baseLines.join(''), mine.join(''), theirs.join(''));
+      assert.ok(result.includes(added), `round ${round}: ${JSON.stringify(result)}`);
+    }
   });
 });
 

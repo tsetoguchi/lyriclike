@@ -11,16 +11,23 @@
   const LOW_SURROGATE_LAST = 0xdfff;
   // diff-match-patch's operation codes.
   const DIFF_DELETE = -1;
-  const DIFF_INSERT = 1;
   const DIFF_EQUAL = 0;
-  // Words that could not be placed go at the end of the page, after a blank
-  // line, so they are easy to spot and never lost.
-  const UNPLACED_SEPARATOR = '\n\n';
-  // diff-match-patch's default of 0.5 lets a patch land on loosely similar
-  // text, and a delete landing there removes a co-writer's words. A skipped
-  // delete loses nothing, so a rebase only applies close matches.
-  const REBASE_MATCH_THRESHOLD = 0.25;
-  const REBASE_DELETE_THRESHOLD = 0.25;
+  // The merge's scratch documents. Fixed client ids keep the result the same
+  // on every machine.
+  const MERGE_FIELD = 'body';
+  const MERGE_ONTO_CLIENT = 1;
+  const MERGE_CHANGED_CLIENT = 2;
+  const MERGE_BASE_CLIENT = 3;
+  // Word-level diffs work on each word with the spaces after it, so a word
+  // that survives a merge brings its own space and never runs into the next.
+  // Spaces at the very start of a text are a unit of their own.
+  const WORD_OR_SPACE = /\S+\s*|\s+/g;
+  // Each distinct token becomes one code unit. The surrogate block is skipped
+  // so no code unit is half a pair.
+  const FIRST_TOKEN_CODE = 1;
+  const SURROGATE_BLOCK_START = 0xd800;
+  const SURROGATE_BLOCK_SIZE = 0x800;
+  const LAST_TOKEN_CODE = 0xffff;
 
   function isHighSurrogate(code) {
     return code >= HIGH_SURROGATE_FIRST && code <= HIGH_SURROGATE_LAST;
@@ -84,13 +91,13 @@
     }, origin);
   }
 
-  // An insert exactly at the position leaves it in place, so a co-writer's
-  // words appear after the caret rather than pushing it along.
-  function mapPosition(position, delta) {
+  // An insert exactly at the position leaves it in place, unless
+  // isPushedByInsert, when it moves past the insert.
+  function mapPosition(position, delta, isPushedByInsert) {
     let oldIndex = 0;
     let shift = 0;
     for (const op of delta) {
-      if (oldIndex >= position) break;
+      if (oldIndex > position || (oldIndex === position && !isPushedByInsert)) break;
       if (op.retain) {
         oldIndex += op.retain;
       } else if (op.insert) {
@@ -103,8 +110,15 @@
     return position + shift;
   }
 
+  // A caret stays put for a co-writer's words typed right at it. A selection
+  // never grows over them: its start moves past words typed at the start, or
+  // typing over the selection would delete the co-writer's words too.
   function mapSelection(selection, delta) {
-    return { start: mapPosition(selection.start, delta), end: mapPosition(selection.end, delta) };
+    const isRange = selection.start !== selection.end;
+    return {
+      start: mapPosition(selection.start, delta, isRange),
+      end: mapPosition(selection.end, delta, false),
+    };
   }
 
   // Groups diff-match-patch output into runs of kept text and replaced spans.
@@ -157,6 +171,50 @@
   function minimalEdits(dmp, fromText, toText) {
     const diffs = dmp.diff_main(fromText, toText);
     dmp.diff_cleanupSemantic(diffs);
+    return editsFromDiffs(diffs);
+  }
+
+  function tokenCode(index) {
+    const code = FIRST_TOKEN_CODE + index;
+    return code >= SURROGATE_BLOCK_START ? code + SURROGATE_BLOCK_SIZE : code;
+  }
+
+  function tokenIndex(code) {
+    const isAboveBlock = code >= SURROGATE_BLOCK_START + SURROGATE_BLOCK_SIZE;
+    return (isAboveBlock ? code - SURROGATE_BLOCK_SIZE : code) - FIRST_TOKEN_CODE;
+  }
+
+  // Each text as one code unit per word or run of spaces, plus the table to
+  // turn codes back into text. Null when there are too many distinct tokens
+  // to give each its own code unit.
+  function encodeTokens(fromText, toText) {
+    const codes = new Map();
+    const table = [];
+    const encode = text => (text.match(WORD_OR_SPACE) || []).map(token => {
+      if (!codes.has(token)) {
+        codes.set(token, String.fromCharCode(tokenCode(table.length)));
+        table.push(token);
+      }
+      return codes.get(token);
+    }).join('');
+    const encoded = [encode(fromText), encode(toText)];
+    if (tokenCode(table.length) > LAST_TOKEN_CODE) return null;
+    const decode = chars => Array.from(chars, c => table[tokenIndex(c.charCodeAt(0))]).join('');
+    return { encoded, decode };
+  }
+
+  // Like minimalEdits, but a word is kept or replaced whole. A merge needs
+  // this: a letter-level diff can take a letter of a co-writer's new word for
+  // an old one, and the other side's delete of the old text then cuts it out.
+  function wordEdits(dmp, fromText, toText) {
+    const tokens = encodeTokens(fromText, toText);
+    if (!tokens) return minimalEdits(dmp, fromText, toText);
+    const diffs = dmp.diff_main(tokens.encoded[0], tokens.encoded[1], false);
+    dmp.diff_cleanupSemantic(diffs);
+    return editsFromDiffs(diffs.map(([op, chars]) => [op, tokens.decode(chars)]));
+  }
+
+  function editsFromDiffs(diffs) {
     const edits = [];
     let index = 0;
     for (const run of keepPairsWhole(diffRuns(diffs))) {
@@ -179,31 +237,29 @@
     }, origin);
   }
 
-  function insertedText(patch) {
-    return patch.diffs.filter(([op]) => op === DIFF_INSERT).map(([, text]) => text).join('');
+  // Two copies of base, each given one side's change, merged by Yjs. Yjs can
+  // only delete the base letters a side deleted, never letters the other side
+  // added, so no co-writer's words can vanish in a merge, and nothing is left
+  // over to place. Where both sides wrote at one spot, the co-writer's words
+  // (onto) come first: Yjs puts the lower client id first.
+  function forkOf(Y, baseUpdate, clientId) {
+    const doc = new Y.Doc();
+    doc.clientID = clientId;
+    Y.applyUpdate(doc, baseUpdate);
+    return doc;
   }
 
-  // The caller's matcher is left as it was given.
-  function strictPatchApply(dmp, patches, onto) {
-    const { Match_Threshold: matchThreshold, Patch_DeleteThreshold: deleteThreshold } = dmp;
-    dmp.Match_Threshold = REBASE_MATCH_THRESHOLD;
-    dmp.Patch_DeleteThreshold = REBASE_DELETE_THRESHOLD;
-    try {
-      return dmp.patch_apply(patches, onto);
-    } finally {
-      dmp.Match_Threshold = matchThreshold;
-      dmp.Patch_DeleteThreshold = deleteThreshold;
-    }
-  }
-
-  function rebase(dmp, base, changed, onto) {
-    const patches = dmp.patch_make(base, changed);
-    const [patched, applied] = strictPatchApply(dmp, patches, onto);
-    // A failed delete loses nothing, so only failed inserts are kept.
-    const unplaced = patches.filter((patch, i) => !applied[i]).map(insertedText).filter(Boolean);
-    if (!unplaced.length) return { text: patched, unplaced };
-    const text = [patched, ...unplaced].join(UNPLACED_SEPARATOR);
-    return { text, unplaced };
+  function rebase(Y, dmp, base, changed, onto) {
+    const baseDoc = new Y.Doc();
+    baseDoc.clientID = MERGE_BASE_CLIENT;
+    baseDoc.getText(MERGE_FIELD).insert(0, base);
+    const baseUpdate = Y.encodeStateAsUpdate(baseDoc);
+    const theirs = forkOf(Y, baseUpdate, MERGE_ONTO_CLIENT);
+    const mine = forkOf(Y, baseUpdate, MERGE_CHANGED_CLIENT);
+    applyEdits(theirs.getText(MERGE_FIELD), wordEdits(dmp, base, onto), null);
+    applyEdits(mine.getText(MERGE_FIELD), wordEdits(dmp, base, changed), null);
+    Y.applyUpdate(theirs, Y.encodeStateAsUpdate(mine, Y.encodeStateVector(theirs)));
+    return theirs.getText(MERGE_FIELD).toString();
   }
 
   // PATCH does not move the revision, so the room's last-written title is
@@ -251,7 +307,6 @@
     mergeTitle,
     minimalEdits,
     rebase,
-    UNPLACED_SEPARATOR,
   };
 
   if (typeof module === 'object' && module.exports) {
