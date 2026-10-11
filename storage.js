@@ -45,6 +45,9 @@ const COPY_SUFFIX = ' (my copy)';
 const MAX_TITLE_LENGTH = 300;
 // HTTP_NOT_FOUND comes from app.js: the scripts share one global scope.
 const HTTP_CONFLICT = 409;
+// A 4001 from a live room reloads the page; a stale cache must not loop it.
+const RELOAD_GUARD_KEY = 'live_reloaded_at';
+const RELOAD_GUARD_MS = 60 * 1000;
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -82,6 +85,16 @@ function setPageInfo(lyric) {
 // draft, come before it is there.
 function refreshSharingUi() {
   if (typeof refreshPageSharing === 'function') refreshPageSharing();
+}
+
+// live.js loads after this file, so early calls find no session yet.
+function liveSession() {
+  return window.liveSession || null;
+}
+
+function isLive() {
+  const session = liveSession();
+  return Boolean(session && session.isLive());
 }
 
 // Up here, not with the rest of the sample code, because naming the page
@@ -447,10 +460,12 @@ function showLyric(lyric) {
 
   setSaveIndicator('');
   updatePanelHeader();
+  if (liveSession()) liveSession().follow(lyric);
 }
 
 // A new page is on screen but not on the server, so its first save creates it.
 function startBlankPage(title) {
+  if (liveSession()) liveSession().close();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = title;
@@ -553,6 +568,10 @@ async function renameLyric(id, oldTitle) {
 // is still on its way is renamed once that lands.
 async function renameCurrentPage() {
   const pageId = currentLyricId;
+  if (isLive()) {
+    liveSession().rename(currentTitle);
+    return;
+  }
   await waitForSaves();
   if (pageId !== currentLyricId) return;
   if (currentRevision === null) {
@@ -580,6 +599,8 @@ async function renameCurrentPage() {
 
 function scheduleSave() {
   if (!window.currentUser) return;
+  // The room saves a live page; the draft still records it.
+  if (isLive()) return;
   clearTimeout(saveTimer);
   setSaveIndicator('Unsaved');
   saveTimer = setTimeout(performSave, 1000);
@@ -617,6 +638,8 @@ async function waitForSaves() {
 // caught in an unresolved conflict are kept as a page of their own. Returns
 // false when that failed, and the page must stay open so nothing is lost.
 async function flushSave() {
+  // Leaving a live page waits for the room to save its words, or stays.
+  if (isLive()) return liveSession().flush();
   if (pendingConflict) return keepMineAsCopy();
   clearTimeout(saveTimer);
   saveTimer = null;
@@ -777,6 +800,7 @@ function keepMine() {
 // The page on screen can no longer be saved where it is, so its words move to
 // a new page of the writer's own. The save that follows creates it.
 function saveAsNewPage({ message }) {
+  if (liveSession()) liveSession().close();
   currentLyricId = crypto.randomUUID();
   currentTitle = copyTitle(currentTitle);
   currentRevision = null;
@@ -1025,10 +1049,41 @@ loadLyricsList();
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
 window.clearLyricState = clearLyricState;
 
+// What the live session shows on the page (live.js). titleEl is declared
+// further down, so it is read only when called.
+window.livePage = {
+  setIndicator: setSaveIndicator,
+  showSaved,
+  onTitle(title) {
+    currentTitle = title;
+    updatePanelHeader();
+    saveDraft();
+    refreshListIfBehind();
+  },
+  isTitleFocused: () => document.activeElement === titleEl,
+  // Unsaved words become a page of the writer's own, as with a REST save.
+  onUnavailable({ hasUnsaved }) {
+    if (!hasUnsaved) return dropUnavailablePage();
+    saveAsNewPage({ message: LOST_ACCESS_MESSAGE });
+    performSave({ force: true });
+  },
+  onSessionExpired: () => { if (window.handleSessionExpired) window.handleSessionExpired(); },
+  reload() {
+    saveDraft();
+    const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY)) || 0;
+    if (Date.now() - last < RELOAD_GUARD_MS) return;
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+    location.reload();
+  },
+  notice: text => showNotice(text),
+  setReadOnly: isReadOnly => { document.getElementById('lyrics').readOnly = isReadOnly; },
+};
+
 // Signing out must not leave the last account's lyric on screen, in the
 // notebook list, in the rhymes panel, or in the draft kept on this device.
 // The draft is removed after the input event, which saves an empty one.
 function clearLyricState() {
+  if (liveSession()) liveSession().close();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = DEFAULT_TITLE;

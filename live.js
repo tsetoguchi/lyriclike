@@ -416,6 +416,52 @@
     }
   }
 
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`could not load ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  // Loaded only when a live page opens, so solo writers download nothing more.
+  function loadDeps() {
+    if (root.LiveDeps) return Promise.resolve(root.LiveDeps);
+    return loadScript(LIVE_DEPS_SRC).then(() => root.LiveDeps);
+  }
+
+  function browserEnv() {
+    const textarea = document.getElementById('lyrics');
+    const scroller = document.querySelector('.lyrics-area');
+    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    return {
+      textarea, loadDeps, liveCore: root.LiveCore, createTextBinding: root.LiveBinding.createTextBinding,
+      openSocket: path => new WebSocket(`${scheme}://${location.host}${path}`),
+      now: () => Date.now(),
+      setTimeout: (fn, ms) => setTimeout(fn, ms),
+      clearTimeout: id => clearTimeout(id),
+      random: () => Math.random(),
+      schedule: frame => requestAnimationFrame(frame),
+      isFocused: () => document.activeElement === textarea,
+      adjustScroll: px => { if (scroller) scroller.scrollTop += px; },
+      get page() { return root.livePage; },
+    };
+  }
+
+  function startInBrowser() {
+    const session = new LiveSession(browserEnv());
+    root.liveSession = session;
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) session.checkAlive();
+    });
+    window.addEventListener('online', () => session.reconnectNow());
+  }
+
+  const isBrowser = typeof document !== 'undefined' && Boolean(document.getElementById('lyrics'));
+  if (isBrowser) startInBrowser();
+
   const Live = { LIVE_DEPS_SRC, TEXT, LiveSession, PageConnection };
 
   if (typeof module === 'object' && module.exports) {
