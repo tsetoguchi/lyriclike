@@ -18,9 +18,13 @@ function firstColumn(text) {
   return text.split('\n').map((line) => line.split(/\s/)[0]).filter(Boolean);
 }
 
-// Rank 0 is the most frequent word; the file is already sorted by count.
-async function loadFrequencyRanks() {
-  const words = firstColumn(await readText(TOOLS_DIR, 'word-frequency.txt'));
+// Most frequent first; the file is already sorted by count.
+async function loadFrequentWords() {
+  return firstColumn(await readText(TOOLS_DIR, 'word-frequency.txt'));
+}
+
+// Rank 0 is the most frequent word.
+function rankWords(words) {
   const ranks = new Map();
   words.forEach((word, rank) => {
     if (!ranks.has(word)) ranks.set(word, rank);
@@ -34,14 +38,15 @@ async function loadPopularWords() {
 }
 
 export async function loadBuildData() {
-  const [dictionary, englishWords, blocklist, names, crude, ranks, popularWords] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json').then((words) => new Set(words)),
     readRepoJson('blocklist.json').then((words) => new Set(words)),
     readRepoJson('name-words.json').then((words) => new Set(words)),
     readRepoJson('crude-words.json').then((words) => new Set(words)),
-    loadFrequencyRanks(),
+    loadFrequentWords(),
     loadPopularWords()
   ]);
-  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords };
+  const ranks = rankWords(frequentWords);
+  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords };
 }

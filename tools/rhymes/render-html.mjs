@@ -219,11 +219,11 @@ export function renderHubPage(pageWordList) {
   const jumpLinks = groups.map(([initial]) => `<a href="#letter-${initial}">${initial.toUpperCase()}</a>`);
   const head = {
     title: `Rhyming Dictionary for Songwriters | ${SITE_NAME}`,
-    description: `Rhymes for the ${pageWordList.length.toLocaleString('en-US')} words people look up most, from perfect rhymes to near rhymes, sorted by syllable count.`,
+    description: `Rhymes for ${pageWordList.length.toLocaleString('en-US')} common words and the ones people look up most, from perfect rhymes to near rhymes, sorted by syllable count.`,
     path: RHYMES_PATH
   };
   const main = `<h1>Rhyming dictionary</h1>
-<p class="answer">Rhymes for the words people look up most, matched by sound rather than spelling: perfect rhymes, near rhymes and slant rhymes, with syllable counts.</p>
+<p class="answer">Rhymes for common words and the ones people look up most, matched by sound rather than spelling: perfect rhymes, near rhymes and slant rhymes, with syllable counts.</p>
 ${renderCallToAction()}
 <nav class="letter-jump">${jumpLinks.join(' ')}</nav>
 ${groups.map(renderInitialSection).join('\n')}`;

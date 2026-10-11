@@ -13,7 +13,7 @@ import rhymeCore from '../../rhyme-core.js';
 
 const { buildRhymeIndex, findRhymes, hasRhymeEntry } = rhymeCore;
 
-const MAX_PAGES = 1000;
+const MAX_PAGES = 5000;
 // Below this a page is too thin to be worth indexing.
 const MIN_LISTED_RHYMES = 10;
 const RELATED_COUNT = 24;
@@ -29,10 +29,16 @@ function isPageCandidate(word, index, data) {
   return !data.crude.has(word) && hasRhymeEntry(index, word);
 }
 
+// Popular searches lead; once they run out, common words fill the rest in
+// frequency order, so the pages still go to the words most likely searched.
+function candidateWords(data) {
+  return [...data.popularWords, ...data.frequentWords];
+}
+
 function selectPages(index, data) {
   const pages = [];
   const seen = new Set();
-  for (const word of data.popularWords) {
+  for (const word of candidateWords(data)) {
     if (pages.length >= MAX_PAGES) break;
     if (seen.has(word) || !isPageCandidate(word, index, data)) continue;
     seen.add(word);
