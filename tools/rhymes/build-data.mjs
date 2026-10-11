@@ -32,21 +32,28 @@ function rankWords(words) {
   return ranks;
 }
 
+// Words that ad networks treat as sensitive. They get no page and are left
+// out of every page's lists; the editor still lists them.
+async function loadPageExcludedWords() {
+  return new Set(JSON.parse(await readText(TOOLS_DIR, 'page-excluded-words.json')));
+}
+
 // Most-searched first, as written by collect-popular-words.mjs.
 async function loadPopularWords() {
   return firstColumn(await readText(TOOLS_DIR, 'popular-words.tsv'));
 }
 
 export async function loadBuildData() {
-  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords, pageExcluded] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json').then((words) => new Set(words)),
     readRepoJson('blocklist.json').then((words) => new Set(words)),
     readRepoJson('name-words.json').then((words) => new Set(words)),
     readRepoJson('crude-words.json').then((words) => new Set(words)),
     loadFrequentWords(),
-    loadPopularWords()
+    loadPopularWords(),
+    loadPageExcludedWords()
   ]);
   const ranks = rankWords(frequentWords);
-  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords };
+  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords, pageExcluded };
 }

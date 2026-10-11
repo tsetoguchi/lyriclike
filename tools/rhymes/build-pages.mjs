@@ -22,11 +22,13 @@ const STYLESHEET_SOURCE = new URL('./page.css', import.meta.url);
 
 // Autocomplete surfaces slang and fragments ("ty"), so a page also needs the
 // word to be on the same English list the editor filters results with.
-// A crude word gets no page of its own, the same as it never leads a list.
+// A crude word gets no page of its own, the same as it never leads a list,
+// and neither does a word ad networks treat as sensitive.
 function isPageCandidate(word, index, data) {
   const { filters } = data;
   if (!filters.englishWords.has(word) || filters.blocklist.has(word)) return false;
-  return !data.crude.has(word) && hasRhymeEntry(index, word);
+  if (data.crude.has(word) || data.pageExcluded.has(word)) return false;
+  return hasRhymeEntry(index, word);
 }
 
 // Popular searches lead; once they run out, common words fill the rest in
@@ -76,12 +78,12 @@ async function writePage(path, html) {
 }
 
 async function writeRhymePages(pages, index, data) {
-  const { ranks, names, crude } = data;
+  const { ranks, names, crude, pageExcluded } = data;
   const pageWords = new Set(pages.map((page) => page.word));
   for (let position = 0; position < pages.length; position++) {
     const { word, results } = pages[position];
     const related = pickRelated(pages, position);
-    const model = buildPageModel({ word, results, index, ranks, names, crude, related });
+    const model = buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related });
     await writePage(rhymePagePath(word), renderRhymePage(model, pageWords));
   }
 }

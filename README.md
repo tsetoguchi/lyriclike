@@ -84,6 +84,9 @@ node tools/rhymes/build-pages.mjs             # rewrite /rhymes/ and sitemap.xml
 
 The editor and the pages share one copy of the rhyme logic, `rhyme-core.js`.
 Pages leave out names, rare words and crude words; the editor lists them last.
+They also leave out the words in `tools/rhymes/page-excluded-words.json`, which
+ad networks treat as sensitive; those get no page either, but the editor still
+lists them.
 
 ## Word lists
 
