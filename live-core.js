@@ -9,6 +9,10 @@
   const HIGH_SURROGATE_LAST = 0xdbff;
   const LOW_SURROGATE_FIRST = 0xdc00;
   const LOW_SURROGATE_LAST = 0xdfff;
+  // diff-match-patch's operation codes.
+  const DIFF_DELETE = -1;
+  const DIFF_INSERT = 1;
+  const DIFF_EQUAL = 0;
 
   function isHighSurrogate(code) {
     return code >= HIGH_SURROGATE_FIRST && code <= HIGH_SURROGATE_LAST;
@@ -95,11 +99,85 @@
     return { start: mapPosition(selection.start, delta), end: mapPosition(selection.end, delta) };
   }
 
+  // Groups diff-match-patch output into runs of kept text and replaced spans.
+  // A delete next to an insert is one span.
+  function diffRuns(diffs) {
+    const runs = [];
+    for (const [op, text] of diffs) {
+      if (op === DIFF_EQUAL) {
+        runs.push({ kept: text });
+        continue;
+      }
+      let span = runs[runs.length - 1];
+      if (!span || span.kept !== undefined) {
+        span = { deleted: '', inserted: '' };
+        runs.push(span);
+      }
+      if (op === DIFF_DELETE) span.deleted += text;
+      else span.inserted += text;
+    }
+    return runs;
+  }
+
+  // diff-match-patch works in code units and can cut an emoji in half. Yjs
+  // sends text as UTF-8, where a lone half becomes U+FFFD on every other
+  // screen, so the half in the kept text moves into the span beside it.
+  function keepPairsWhole(runs) {
+    runs.forEach((run, i) => {
+      if (!run.kept) return;
+      const next = runs[i + 1];
+      if (next && isHighSurrogate(run.kept.charCodeAt(run.kept.length - 1))) {
+        const half = run.kept.slice(-1);
+        run.kept = run.kept.slice(0, -1);
+        next.deleted = half + next.deleted;
+        next.inserted = half + next.inserted;
+      }
+      const previous = runs[i - 1];
+      if (previous && run.kept && isLowSurrogate(run.kept.charCodeAt(0))) {
+        const half = run.kept[0];
+        run.kept = run.kept.slice(1);
+        previous.deleted += half;
+        previous.inserted += half;
+      }
+    });
+    return runs;
+  }
+
+  // Each change as its own small edit, never one span from the first change
+  // to the last: that span would delete and re-insert a co-writer's words in
+  // between, undoing any of their deletes there.
+  function minimalEdits(dmp, fromText, toText) {
+    const diffs = dmp.diff_main(fromText, toText);
+    dmp.diff_cleanupSemantic(diffs);
+    const edits = [];
+    let index = 0;
+    for (const run of keepPairsWhole(diffRuns(diffs))) {
+      if (run.kept !== undefined) {
+        index += run.kept.length;
+        continue;
+      }
+      edits.push({ index, deleteCount: run.deleted.length, insert: run.inserted });
+      index += run.inserted.length;
+    }
+    return edits;
+  }
+
+  function applyEdits(ytext, edits, origin) {
+    ytext.doc.transact(() => {
+      for (const edit of edits) {
+        if (edit.deleteCount) ytext.delete(edit.index, edit.deleteCount);
+        if (edit.insert) ytext.insert(edit.index, edit.insert);
+      }
+    }, origin);
+  }
+
   const LiveCore = {
     applyEdit,
+    applyEdits,
     diffTextEdit,
     isMidPair,
     mapSelection,
+    minimalEdits,
   };
 
   if (typeof module === 'object' && module.exports) {

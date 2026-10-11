@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import liveCore from '../live-core.js';
-import { Y } from './support/live-deps.mjs';
+import { Y, newDmp } from './support/live-deps.mjs';
 
-const { applyEdit, diffTextEdit, isMidPair, mapSelection } = liveCore;
+const { applyEdit, applyEdits, diffTextEdit, isMidPair, mapSelection, minimalEdits } = liveCore;
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
@@ -125,5 +125,60 @@ describe('mapSelection', () => {
   it('maps each end of a selection on its own', () => {
     const delta = [{ retain: 2 }, { insert: 'xx' }, { retain: 4 }, { delete: 1 }];
     assert.deepEqual(mapSelection({ start: 3, end: 9 }, delta), { start: 5, end: 10 });
+  });
+});
+
+// A small seeded generator, so a failing case can be replayed.
+function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const PIECES = ['a', 'b', ' ', '\n', 'la', '😀', '😁', '鈴', 'é'];
+
+function randomText(random, length) {
+  let text = '';
+  while (text.length < length) text += PIECES[Math.floor(random() * PIECES.length)];
+  return text;
+}
+
+describe('minimalEdits', () => {
+  it('returns no edits for equal texts', () => {
+    assert.deepEqual(minimalEdits(newDmp(), 'same', 'same'), []);
+  });
+
+  it('turns one text into the other', () => {
+    const ytext = textOf('the quick brown fox');
+    applyEdits(ytext, minimalEdits(newDmp(), 'the quick brown fox', 'a quick red fox'), 'merge');
+    assert.equal(ytext.toString(), 'a quick red fox');
+  });
+
+  it('makes two small edits for two distant changes in a long page', () => {
+    const middle = 'line of lyrics\n'.repeat(13_000);
+    const from = `start\n${middle}end\n`;
+    const to = `START\n${middle}END\n`;
+    const edits = minimalEdits(newDmp(), from, to);
+    assert.equal(edits.length, 2);
+    for (const edit of edits) assert.ok(edit.deleteCount <= 5 && edit.insert.length <= 5);
+  });
+
+  it('never splits an emoji, so every copy agrees (fuzz)', () => {
+    const random = seededRandom(7);
+    for (let round = 0; round < 300; round += 1) {
+      const from = randomText(random, 20);
+      const to = randomText(random, 20);
+      const ytext = textOf(from);
+      const edits = minimalEdits(newDmp(), from, to);
+      for (const edit of edits) assert.equal(LONE_SURROGATE.test(edit.insert), false, `${from} → ${to}`);
+      applyEdits(ytext, edits, 'merge');
+      assert.equal(ytext.toString(), to, `${from} → ${to}`);
+      assert.equal(roundTrip(ytext), to, `${from} → ${to}`);
+    }
   });
 });
