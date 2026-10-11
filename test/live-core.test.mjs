@@ -10,8 +10,8 @@ import liveCore from '../live-core.js';
 import { Y, newDmp } from './support/live-deps.mjs';
 
 const {
-  applyEdit, applyEdits, diffTextEdit, isMidPair, mapSelection, mergeTitle, minimalEdits, rebase,
-  UNPLACED_SEPARATOR,
+  applyEdit, applyEdits, diffTextEdit, isMidPair, isUpdateSaved, mapSelection, mergeTitle,
+  minimalEdits, rebase, UNPLACED_SEPARATOR,
 } = liveCore;
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
@@ -242,5 +242,54 @@ describe('mergeTitle', () => {
 
   it('keeps the room rename when the room renamed since its last write', () => {
     assert.equal(mergeTitle('Draft', 'River Song', 'Rain Song'), 'River Song');
+  });
+});
+
+describe('isUpdateSaved', () => {
+  // A client and a room that start from the same text.
+  function clientAndRoom(text) {
+    const room = new Y.Doc();
+    room.getText('body').insert(0, text);
+    const client = new Y.Doc();
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(room));
+    return { client, room };
+  }
+
+  function captureUpdate(doc, change) {
+    let update = null;
+    doc.once('update', captured => { update = captured; });
+    change();
+    return update;
+  }
+
+  const snapshotOf = doc => Y.encodeSnapshot(Y.snapshot(doc));
+
+  it('is false before the room has an insert, true after', () => {
+    const { client, room } = clientAndRoom('hello');
+    const update = captureUpdate(client, () => client.getText('body').insert(5, '!'));
+    assert.equal(isUpdateSaved(Y, update, snapshotOf(room)), false);
+    Y.applyUpdate(room, update);
+    assert.equal(isUpdateSaved(Y, update, snapshotOf(room)), true);
+  });
+
+  it('is false before the room has a delete-only update, true after', () => {
+    const { client, room } = clientAndRoom('hello world');
+    const update = captureUpdate(client, () => client.getText('body').delete(5, 6));
+    assert.equal(isUpdateSaved(Y, update, snapshotOf(room)), false);
+    Y.applyUpdate(room, update);
+    assert.equal(isUpdateSaved(Y, update, snapshotOf(room)), true);
+  });
+
+  it('needs both halves of an update that inserts and deletes', () => {
+    const { client, room } = clientAndRoom('teh cat');
+    const update = captureUpdate(client, () => {
+      client.transact(() => {
+        client.getText('body').delete(1, 2);
+        client.getText('body').insert(1, 'he');
+      });
+    });
+    assert.equal(isUpdateSaved(Y, update, snapshotOf(room)), false);
+    Y.applyUpdate(room, update);
+    assert.equal(isUpdateSaved(Y, update, snapshotOf(room)), true);
   });
 });

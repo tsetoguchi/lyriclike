@@ -212,11 +212,41 @@
     return roomTitle === writtenTitle ? outsideTitle : roomTitle;
   }
 
+  function areInsertsSaved(Y, update, stateVector) {
+    for (const [client, clock] of Y.parseUpdateMeta(update).to) {
+      if ((stateVector.get(client) || 0) < clock) return false;
+    }
+    return true;
+  }
+
+  // Delete sets come back sorted and merged, so a saved range sits inside a
+  // single entry.
+  function isRangeDeleted(savedItems, range) {
+    return (savedItems || []).some(item =>
+      item.clock <= range.clock && range.clock + range.len <= item.clock + item.len);
+  }
+
+  function areDeletesSaved(Y, update, deleteSet) {
+    for (const [client, ranges] of Y.decodeUpdate(update).ds.clients) {
+      const savedItems = deleteSet.clients.get(client);
+      if (!ranges.every(range => isRangeDeleted(savedItems, range))) return false;
+    }
+    return true;
+  }
+
+  // A state vector counts inserts only, so a delete-only update would look
+  // saved at once without the delete set check.
+  function isUpdateSaved(Y, update, savedSnapshot) {
+    const { sv, ds } = Y.decodeSnapshot(savedSnapshot);
+    return areInsertsSaved(Y, update, sv) && areDeletesSaved(Y, update, ds);
+  }
+
   const LiveCore = {
     applyEdit,
     applyEdits,
     diffTextEdit,
     isMidPair,
+    isUpdateSaved,
     mapSelection,
     mergeTitle,
     minimalEdits,
