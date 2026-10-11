@@ -117,3 +117,18 @@ which the site does serve. The frequency list itself is not served.
 
 Source: https://github.com/hermitdave/FrequencyWords
 Upstream revision: 525f9b560de45753a5ea01069454e72e9aa541c6
+
+vendor/live-deps-*.js — bundled for live co-editing
+-----------------------------------------------------------------
+Yjs — Copyright (c) 2023 Kevin Jahns <kevin.jahns@protonmail.com> and the
+Chair of Computer Science 5 (Databases & Information Systems), RWTH Aachen
+University, Germany. y-protocols and lib0 — Copyright (c) 2019 Kevin Jahns
+<kevin.jahns@protonmail.com>. All three are released under the MIT License:
+permission is hereby granted, free of charge, to any person obtaining a copy
+of this software, to deal in it without restriction, provided the copyright
+notice and this permission notice are included in all copies or substantial
+portions of it. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+diff-match-patch — Copyright 2018 The diff-match-patch Authors. Licensed
+under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0).
