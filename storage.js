@@ -457,6 +457,13 @@ async function loadLyric(id) {
 // The revision and the saved text are set before the input event, which
 // would otherwise schedule a save of text that is already on the server.
 function showLyric(lyric) {
+  // The page already live on screen: its room has newer words than this
+  // copy, and writing it into the editor would send it to everyone as typing.
+  const session = currentLiveSession();
+  if (lyric.live && session && session.isLiveFor(lyric.id)) return refreshLivePageInfo(lyric);
+  // Off the old page's room before its editor changes, so nothing of the new
+  // page is ever sent there.
+  closeLiveSession();
   currentLyricId = lyric.id;
   currentTitle = lyric.title;
   currentRevision = lyric.revision;
@@ -471,8 +478,14 @@ function showLyric(lyric) {
 
   setSaveIndicator('');
   updatePanelHeader();
-  liveBase = null;
-  if (currentLiveSession()) currentLiveSession().follow(lyric);
+  // D1's text is a sound base for a reload until the room confirms more.
+  liveBase = lyric.live ? lyric.body : null;
+  if (session) session.follow(lyric);
+}
+
+function refreshLivePageInfo(lyric) {
+  if (lyric.role) setPageInfo(lyric);
+  markActiveListItem();
 }
 
 // A new page is on screen but not on the server, so its first save creates it.
@@ -664,6 +677,8 @@ async function flushSave() {
 // page. The answer is only used if its page is still the one open: a slow
 // save on one page must not hand its revision to the next.
 async function sendSave(force) {
+  // A live page is saved by its room; a REST save would only meet it as a 409.
+  if (isLive()) return;
   if (pendingConflict) return;
   const typed = document.getElementById('lyrics').value;
   if (!force) {
@@ -843,7 +858,7 @@ function saveDraft() {
     revision: currentRevision,
     dirty: hasUnsavedEdits(),
     info: currentPageInfo,
-    liveBase: isLive() ? liveBase : null,
+    liveBase,
   }));
 }
 
@@ -1014,6 +1029,7 @@ async function reconcileRestoredDraft() {
 // are not repeated and unsaved ones are kept. Off the switch, it is saved the
 // REST way like any other draft.
 async function reopenLiveDraft(draft) {
+  clearTimeout(saveTimer);
   let res;
   try {
     res = await fetch(`/api/lyrics/${draft.id}`);
@@ -1301,6 +1317,9 @@ function restoreDraft() {
       fromOldApp: !('revision' in draft),
       liveBase: typeof draft.liveBase === 'string' ? draft.liveBase : null,
     };
+    // Kept until the reconcile, so the draft written again below (and any
+    // written while offline) still marks the page as live.
+    liveBase = restoredDraft.liveBase;
     if (body) {
       const textarea = document.getElementById('lyrics');
       textarea.value = body;

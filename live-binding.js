@@ -66,7 +66,8 @@
     handleInput() {
       const value = this.textarea.value;
       if (value === this.lastValue) return;
-      if (value.length > MAX_BODY_LENGTH) return this.revert();
+      // Only growth is refused: a page others pushed past the cap can still shrink.
+      if (value.length > MAX_BODY_LENGTH && value.length > this.lastValue.length) return this.revert();
       const edit = this.liveCore.diffTextEdit(this.lastValue, value, this.textarea.selectionEnd);
       this.liveCore.applyEdit(this.ytext, edit, LOCAL_ORIGIN);
       this.lastValue = value;

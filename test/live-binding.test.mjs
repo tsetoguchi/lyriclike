@@ -164,3 +164,15 @@ describe('destroy', () => {
     assert.equal(doc.getText('body').toString(), 'hello world');
   });
 });
+
+describe('the length cap', () => {
+  it('still lets a page pushed past the cap by others be shortened', () => {
+    const long = 'x'.repeat(MAX_BODY_LENGTH + 5);
+    const longArea = new FakeTextarea(long);
+    const longDoc = new Y.Doc();
+    longDoc.getText('body').insert(0, long);
+    createTextBinding({ textarea: longArea, doc: longDoc, Y, liveCore, dmp: newDmp(), schedule: () => {}, isFocused: () => true });
+    longArea.replace(0, 1, '');
+    assert.equal(longDoc.getText('body').length, MAX_BODY_LENGTH + 4);
+  });
+});

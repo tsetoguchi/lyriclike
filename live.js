@@ -23,6 +23,8 @@
   const NORMAL_CLOSE = 1000;
   const PING = 'ping';
   const PONG = 'pong';
+  // How long to wait before trying the bundle again when it failed to load.
+  const DEPS_RETRY_MS = 5000;
 
   const TEXT = Object.freeze({
     saving: 'Saving...',
@@ -31,6 +33,17 @@
     roomFull: 'Too many people are on this page right now. It is read-only for you.',
     tooManyTabs: 'This page is open in too many of your tabs. It is read-only here.',
   });
+
+  // Where a caret at `position` in the old text sits after minimal edits.
+  // Edits come in text order, each against the text the earlier ones left.
+  function mapThroughEdits(position, edits) {
+    let mapped = position;
+    for (const { index, deleteCount, insert } of edits) {
+      if (index >= mapped) break;
+      mapped += insert.length - Math.min(deleteCount, mapped - index);
+    }
+    return mapped;
+  }
 
   class PageConnection {
     constructor(env, deps, { id, body, title }) {
@@ -147,7 +160,13 @@
         return;
       }
       Y.applyUpdate(this.confirmed, message.payload, REMOTE_ORIGIN);
-      if (this.isSynced) return this.binding.queueRemote(message.payload);
+      if (this.isSynced) {
+        this.binding.queueRemote(message.payload);
+        // A co-writer re-sends anything the room loses, so their words count
+        // as confirmed now; a reload must not merge them in a second time.
+        this.reportConfirmed();
+        return;
+      }
       Y.applyUpdate(this.working, message.payload, REMOTE_ORIGIN);
       if (message.syncType === protocol.SYNC.STEP2) this.finishSync();
     }
@@ -158,7 +177,10 @@
       const { textarea } = this.env;
       const roomText = this.working.getText(TEXT_FIELD).toString();
       const local = textarea.value;
-      const merged = local === this.base
+      const selection = { start: textarea.selectionStart, end: textarea.selectionEnd };
+      // Matching the room already means everything typed reached it; a
+      // rebase would only insert those words a second time.
+      const merged = local === this.base || local === roomText
         ? roomText
         : this.env.liveCore.rebase(this.deps.Y, this.dmp, this.base, local, roomText);
       textarea.value = roomText;
@@ -167,10 +189,21 @@
       this.attempts = 0;
       if (merged !== roomText) this.binding.applyLocalText(merged);
       else textarea.dispatchEvent(new Event('input'));
+      this.keepSelection(selection, local, merged);
       this.applyRoomTitle();
       if (this.pendingTitle !== undefined) this.rename(this.pendingTitle);
       this.reportConfirmed();
       this.updateIndicator();
+      if (!this.pending.length) this.resolveFlush(true);
+    }
+
+    // Setting the value moves a browser's caret to the end; put it back on
+    // the same words.
+    keepSelection(selection, local, merged) {
+      if (!this.env.isFocused()) return;
+      const edits = this.env.liveCore.minimalEdits(this.dmp, local, merged);
+      this.env.textarea.setSelectionRange(
+        mapThroughEdits(selection.start, edits), mapThroughEdits(selection.end, edits));
     }
 
     // The page keeps the room-confirmed text with its draft, so a reload can
@@ -238,8 +271,11 @@
       this.wasSaving = false;
     }
 
+    // Words typed before the first sync are not pending yet, but they are not
+    // saved either, so leaving waits for the sync too.
     flush() {
-      if (!this.pending.length) return Promise.resolve(true);
+      const hasUnsyncedTyping = !this.isSynced && this.env.textarea.value !== this.base;
+      if (!this.pending.length && !hasUnsyncedTyping) return Promise.resolve(true);
       this.sendOutbox();
       return new Promise(resolve => {
         this.flushWaiters.push(resolve);
@@ -308,6 +344,7 @@
     }
 
     goReadOnly(text) {
+      this.isReadOnly = true;
       this.env.page.setReadOnly(true);
       this.env.page.notice(text);
     }
@@ -360,6 +397,7 @@
       this.isClosed = true;
       for (const name of Object.keys(this.timers)) this.clearTimer(name);
       this.resolveFlush(this.pending.length === 0);
+      if (this.isReadOnly) this.env.page.setReadOnly(false);
       this.binding?.destroy();
       if (this.socket) this.socket.close(NORMAL_CLOSE);
       this.socket = null;
@@ -372,7 +410,9 @@
     constructor(env) {
       this.env = env;
       this.connection = null;
-      this.wantedId = null;
+      this.wanted = null;
+      this.token = 0;
+      this.opening = Promise.resolve();
     }
 
     follow(lyric) {
@@ -383,37 +423,72 @@
 
     // Live from this moment, so REST saves stand aside even while the
     // bundle loads; anything typed meanwhile is rebased at the first sync.
-    async open({ id, body, title }) {
-      if (this.wantedId === id) return;
+    // Each open gets a token, so a slow load for an earlier open can never
+    // attach a second connection to the editor.
+    open({ id, body, title }) {
+      if (this.isLiveFor(id)) return this.opening;
       this.close();
-      this.wantedId = id;
-      const deps = await this.env.loadDeps();
-      if (this.wantedId !== id) return;
-      this.connection = new PageConnection(this.env, deps, { id, body, title });
+      const token = this.token;
+      this.wanted = { id, body, title };
+      this.opening = this.start(token);
+      return this.opening;
+    }
+
+    async start(token) {
+      let deps;
+      try {
+        deps = await this.env.loadDeps();
+      } catch {
+        return this.retryStart(token);
+      }
+      if (token !== this.token) return;
+      this.connection = new PageConnection(this.env, deps, this.wanted);
       if (this.pendingTitle !== undefined) this.connection.rename(this.pendingTitle);
       this.pendingTitle = undefined;
       this.connection.connect();
     }
 
+    // The bundle did not load (offline, most likely). The page stays live,
+    // so REST saves stand aside, and what is typed is rebased once it loads.
+    retryStart(token) {
+      if (token !== this.token) return;
+      this.env.page.setIndicator(TEXT.offline);
+      this.retryTimer = this.env.setTimeout(() => {
+        this.retryTimer = null;
+        if (token === this.token) this.opening = this.start(token);
+      }, DEPS_RETRY_MS);
+    }
+
     close() {
-      this.wantedId = null;
+      this.token += 1;
+      this.wanted = null;
       this.pendingTitle = undefined;
+      if (this.retryTimer) this.env.clearTimeout(this.retryTimer);
+      this.retryTimer = null;
       this.connection?.close();
       this.connection = null;
     }
 
     isLive() {
-      return this.wantedId !== null;
+      return this.wanted !== null;
     }
 
+    isLiveFor(id) {
+      return this.wanted !== null && this.wanted.id === id;
+    }
+
+    // Before a connection exists, words typed since opening cannot be saved
+    // yet, so leaving is refused rather than dropping them.
     flush() {
-      return this.connection ? this.connection.flush() : Promise.resolve(true);
+      if (this.connection) return this.connection.flush();
+      if (!this.wanted) return Promise.resolve(true);
+      return Promise.resolve(this.env.textarea.value === this.wanted.body);
     }
 
     // A rename while the bundle still loads waits for the connection.
     rename(title) {
       if (this.connection) this.connection.rename(title);
-      else if (this.wantedId !== null) this.pendingTitle = title;
+      else if (this.wanted !== null) this.pendingTitle = title;
     }
 
     checkAlive() {

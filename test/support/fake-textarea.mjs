@@ -4,10 +4,19 @@ export class FakeTextarea extends EventTarget {
   constructor(value = '') {
     super();
     this.value = value;
-    this.selectionStart = value.length;
-    this.selectionEnd = value.length;
     this.scrollHeight = 100;
     this.readOnly = false;
+  }
+
+  // As in a browser, setting the value puts the caret at the end.
+  get value() {
+    return this.text;
+  }
+
+  set value(text) {
+    this.text = text;
+    this.selectionStart = text.length;
+    this.selectionEnd = text.length;
   }
 
   setSelectionRange(start, end) {

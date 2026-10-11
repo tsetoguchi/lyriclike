@@ -31,7 +31,7 @@ async function exec(sql, ...params) {
   await db.prepare(sql).bind(...params).run();
 }
 
-function makeSession(identity, { body = LYRIC.body } = {}) {
+function makeSession(identity, { body = LYRIC.body, loadDeps } = {}) {
   const textarea = new FakeTextarea(body);
   const frames = [];
   const page = {
@@ -51,7 +51,7 @@ function makeSession(identity, { body = LYRIC.body } = {}) {
   };
   const env = {
     textarea, page, liveCore, createTextBinding: binding.createTextBinding,
-    loadDeps: async () => ({ Y, DiffMatchPatch, protocol }),
+    loadDeps: loadDeps || (async () => ({ Y, DiffMatchPatch, protocol })),
     openSocket: path => link.connect(path, identity),
     now: clock.now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
     random: () => 0.5,
@@ -312,5 +312,132 @@ describe('the confirmed text', () => {
     await runRoomAlarms();
     await settle(ann);
     assert.equal(ann.page.confirmed.at(-1), 'hello!');
+  });
+});
+
+describe('review fixes', () => {
+  const DEPS = { Y, DiffMatchPatch, protocol };
+
+  function gatedDeps() {
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    return { loadDeps: () => gate.then(() => DEPS), release };
+  }
+
+  it('opens one connection when a page is reopened while the bundle still loads', async () => {
+    const deps = gatedDeps();
+    const ann = makeSession(ANN, { loadDeps: deps.loadDeps });
+    const first = ann.session.open(LYRIC);
+    ann.session.close();
+    const second = ann.session.open(LYRIC);
+    deps.release();
+    await Promise.all([first, second]);
+    await settle(ann);
+    assert.equal(link.sockets.length, 1);
+    ann.textarea.type(5, ' world');
+    await settle(ann);
+    assert.equal(link.room.text(), 'hello world');
+  });
+
+  it('refuses to leave while the bundle loads if words were typed', async () => {
+    const deps = gatedDeps();
+    const ann = makeSession(ANN, { loadDeps: deps.loadDeps });
+    ann.session.open(LYRIC);
+    assert.equal(await ann.session.flush(), true);
+    ann.textarea.type(5, '!');
+    assert.equal(await ann.session.flush(), false);
+  });
+
+  it('waits for the first sync before letting words typed while connecting go', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    ann.textarea.type(5, '!');
+    const flushing = ann.session.flush();
+    let isDone = false;
+    flushing.then(() => { isDone = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(isDone, false, 'must wait for the sync');
+    await settle(ann);
+    await runRoomAlarms();
+    await settle(ann);
+    assert.equal(await flushing, true);
+    assert.equal(link.room.text(), 'hello!');
+  });
+
+  it("counts a co-writer's words as confirmed as soon as they arrive", async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    bo.textarea.type(5, ' world');
+    await settle(ann, bo);
+    assert.equal(ann.page.confirmed.at(-1), 'hello world');
+  });
+
+  it('keeps the caret after words typed while connecting', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, ' there');
+    await settle(ann);
+    const bo = makeSession(BO);
+    const opening = bo.session.open(LYRIC);
+    bo.textarea.type(0, 'well ');
+    await opening;
+    await settle(ann, bo);
+    assert.equal(bo.textarea.value, 'well hello there');
+    assert.equal(bo.textarea.selectionStart, 5);
+  });
+
+  it('lifts read-only when the page is closed', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.sockets[0].closeFromServer(protocol.CLOSE.TOO_MANY_TABS);
+    await settle(ann);
+    assert.equal(ann.page.readOnly, true);
+    ann.session.close();
+    assert.equal(ann.page.readOnly, false);
+  });
+
+  it('retries a bundle that failed to load, staying live and saying offline', async () => {
+    let tries = 0;
+    const ann = makeSession(ANN, {
+      loadDeps: async () => {
+        tries += 1;
+        if (tries === 1) throw new Error('network');
+        return DEPS;
+      },
+    });
+    await ann.session.open(LYRIC);
+    assert.equal(ann.session.isLive(), true);
+    assert.equal(ann.page.indicator.at(-1), TEXT.offline);
+    ann.textarea.type(5, '!');
+    clock.advance(5000);
+    await settle(ann);
+    assert.equal(link.room.text(), 'hello!');
+  });
+
+  it('takes the room as it is when the screen already matches it, after a reload', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, ' +ann');
+    await settle(ann);
+    ann.session.close();
+    // A reload: the draft shows what was typed, but the room never confirmed it.
+    const again = makeSession(ANN, { body: 'hello +ann' });
+    await again.session.open({ ...LYRIC, body: 'hello' });
+    await settle(again);
+    assert.equal(again.textarea.value, 'hello +ann');
+    assert.equal(link.room.text(), 'hello +ann');
+  });
+
+  it('knows which page it is live for', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    assert.equal(ann.session.isLiveFor(PAGE), true);
+    assert.equal(ann.session.isLiveFor('other'), false);
   });
 });
