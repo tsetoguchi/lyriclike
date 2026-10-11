@@ -87,14 +87,25 @@ function refreshSharingUi() {
   if (typeof refreshPageSharing === 'function') refreshPageSharing();
 }
 
-// live.js loads after this file, so early calls find no session yet.
-function liveSession() {
+// live.js loads after this file, so early calls find no session yet. Not
+// named liveSession: live.js sets window.liveSession, which would replace a
+// global function of that name.
+function currentLiveSession() {
   return window.liveSession || null;
 }
 
 function isLive() {
-  const session = liveSession();
+  const session = currentLiveSession();
   return Boolean(session && session.isLive());
+}
+
+// The text the open live page's room last confirmed, kept with the draft so a
+// reload can rebase what is on screen onto the room. null off a live page.
+let liveBase = null;
+
+function closeLiveSession() {
+  liveBase = null;
+  if (currentLiveSession()) currentLiveSession().close();
 }
 
 // Up here, not with the rest of the sample code, because naming the page
@@ -460,12 +471,13 @@ function showLyric(lyric) {
 
   setSaveIndicator('');
   updatePanelHeader();
-  if (liveSession()) liveSession().follow(lyric);
+  liveBase = null;
+  if (currentLiveSession()) currentLiveSession().follow(lyric);
 }
 
 // A new page is on screen but not on the server, so its first save creates it.
 function startBlankPage(title) {
-  if (liveSession()) liveSession().close();
+  closeLiveSession();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = title;
@@ -569,7 +581,7 @@ async function renameLyric(id, oldTitle) {
 async function renameCurrentPage() {
   const pageId = currentLyricId;
   if (isLive()) {
-    liveSession().rename(currentTitle);
+    currentLiveSession().rename(currentTitle);
     return;
   }
   await waitForSaves();
@@ -639,7 +651,7 @@ async function waitForSaves() {
 // false when that failed, and the page must stay open so nothing is lost.
 async function flushSave() {
   // Leaving a live page waits for the room to save its words, or stays.
-  if (isLive()) return liveSession().flush();
+  if (isLive()) return currentLiveSession().flush();
   if (pendingConflict) return keepMineAsCopy();
   clearTimeout(saveTimer);
   saveTimer = null;
@@ -800,7 +812,7 @@ function keepMine() {
 // The page on screen can no longer be saved where it is, so its words move to
 // a new page of the writer's own. The save that follows creates it.
 function saveAsNewPage({ message }) {
-  if (liveSession()) liveSession().close();
+  closeLiveSession();
   currentLyricId = crypto.randomUUID();
   currentTitle = copyTitle(currentTitle);
   currentRevision = null;
@@ -831,6 +843,7 @@ function saveDraft() {
     revision: currentRevision,
     dirty: hasUnsavedEdits(),
     info: currentPageInfo,
+    liveBase: isLive() ? liveBase : null,
   }));
 }
 
@@ -985,13 +998,51 @@ async function reconcileRestoredDraft() {
   restoredDraft = null;
   if (!draft || draft.id !== currentLyricId) return;
 
-  if (draft.fromOldApp) {
+  if (draft.liveBase !== null) {
+    await reopenLiveDraft(draft);
+  } else if (draft.fromOldApp) {
     await checkOldAppDraft(draft.id);
   } else if (draft.revision !== null && !draft.dirty) {
     await refreshCleanDraft(draft.id);
   } else if (draft.revision !== null) {
     scheduleSave();
   }
+}
+
+// A draft of a live page goes back to its room: what is on screen is rebased
+// onto the room's text from the last text the room confirmed, so saved words
+// are not repeated and unsaved ones are kept. Off the switch, it is saved the
+// REST way like any other draft.
+async function reopenLiveDraft(draft) {
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${draft.id}`);
+  } catch {
+    return;
+  }
+  if (draft.id !== currentLyricId) return;
+  if (res.status === HTTP_NOT_FOUND) return keepOrDropLostDraft(draft);
+  if (!res.ok) return;
+  const lyric = await res.json();
+  if (!lyric.live) return reconcileAsRest(draft, lyric);
+  setPageInfo(lyric);
+  currentRevision = lyric.revision;
+  lastSavedBody = document.getElementById('lyrics').value;
+  liveBase = draft.liveBase;
+  currentLiveSession().open({ id: lyric.id, body: draft.liveBase, title: currentTitle });
+}
+
+function keepOrDropLostDraft(draft) {
+  if (document.getElementById('lyrics').value === draft.liveBase) return dropUnavailablePage();
+  saveAsNewPage({ message: LOST_ACCESS_MESSAGE });
+  performSave({ force: true });
+}
+
+function reconcileAsRest(draft, lyric) {
+  if (document.getElementById('lyrics').value === lyric.body) return showLyric(lyric);
+  lastSavedBody = draft.liveBase;
+  currentRevision = lyric.revision;
+  scheduleSave();
 }
 
 // Swaps a clean draft for the page as it is now. Anything typed while the
@@ -1053,6 +1104,10 @@ window.clearLyricState = clearLyricState;
 // further down, so it is read only when called.
 window.livePage = {
   setIndicator: setSaveIndicator,
+  onConfirmed(text) {
+    liveBase = text;
+    saveDraft();
+  },
   showSaved,
   onTitle(title) {
     currentTitle = title;
@@ -1083,7 +1138,7 @@ window.livePage = {
 // notebook list, in the rhymes panel, or in the draft kept on this device.
 // The draft is removed after the input event, which saves an empty one.
 function clearLyricState() {
-  if (liveSession()) liveSession().close();
+  closeLiveSession();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = DEFAULT_TITLE;
@@ -1244,6 +1299,7 @@ function restoreDraft() {
       revision: currentRevision,
       dirty: Boolean(draft.dirty),
       fromOldApp: !('revision' in draft),
+      liveBase: typeof draft.liveBase === 'string' ? draft.liveBase : null,
     };
     if (body) {
       const textarea = document.getElementById('lyrics');

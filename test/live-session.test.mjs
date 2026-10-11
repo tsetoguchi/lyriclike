@@ -46,6 +46,8 @@ function makeSession(identity, { body = LYRIC.body } = {}) {
     reload() { this.reloads += 1; },
     notice(text) { this.notices.push(text); },
     setReadOnly(isReadOnly) { this.readOnly = isReadOnly; },
+    confirmed: [],
+    onConfirmed(text) { this.confirmed.push(text); },
   };
   const env = {
     textarea, page, liveCore, createTextBinding: binding.createTextBinding,
@@ -295,5 +297,20 @@ describe('titles', () => {
     await runRoomAlarms();
     const stored = await db.prepare('SELECT title FROM lyrics WHERE id = ?').bind(PAGE).first();
     assert.equal(stored.title, 'Rain Song');
+  });
+});
+
+describe('the confirmed text', () => {
+  it('tells the page what the room has confirmed, for a reload to rebase on', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    assert.equal(ann.page.confirmed.at(-1), 'hello');
+    ann.textarea.type(5, '!');
+    await settle(ann);
+    assert.equal(ann.page.confirmed.at(-1), 'hello');
+    await runRoomAlarms();
+    await settle(ann);
+    assert.equal(ann.page.confirmed.at(-1), 'hello!');
   });
 });

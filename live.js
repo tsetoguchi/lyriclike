@@ -169,7 +169,15 @@
       else textarea.dispatchEvent(new Event('input'));
       this.applyRoomTitle();
       if (this.pendingTitle !== undefined) this.rename(this.pendingTitle);
+      this.reportConfirmed();
       this.updateIndicator();
+    }
+
+    // The page keeps the room-confirmed text with its draft, so a reload can
+    // rebase what is on screen onto the room without repeating saved words.
+    reportConfirmed() {
+      const { page } = this.env;
+      if (page.onConfirmed) page.onConfirmed(this.confirmed.getText(TEXT_FIELD).toString());
     }
 
     createBinding() {
@@ -214,6 +222,7 @@
         else unsaved.push(update);
       }
       this.pending = unsaved;
+      this.reportConfirmed();
       this.updateIndicator();
       if (!unsaved.length) this.resolveFlush(true);
     }
