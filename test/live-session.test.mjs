@@ -176,3 +176,84 @@ describe('syncing and typing', () => {
     assert.equal(ann.session.isLive(), false);
   });
 });
+
+describe('connection trouble', () => {
+  async function openedPair() {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    return { ann, bo };
+  }
+
+  it('reconnects after a drop, and edits made offline reach the others', async () => {
+    const { ann, bo } = await openedPair();
+    link.drop(link.sockets[0]);
+    await new Promise(resolve => setImmediate(resolve));
+    ann.textarea.type(5, ' offline');
+    clock.advance(5000);
+    assert.equal(ann.page.indicator.at(-1), TEXT.offline);
+    await settle(ann, bo);
+    assert.equal(bo.textarea.value, 'hello offline');
+  });
+
+  it('finds a socket iOS killed while the tab slept, and reconnects', async () => {
+    const { ann, bo } = await openedPair();
+    link.isDeaf = true;
+    ann.session.checkAlive();
+    await new Promise(resolve => setImmediate(resolve));
+    clock.advance(2001);
+    link.isDeaf = false;
+    ann.textarea.type(5, '!');
+    await settle(ann, bo);
+    assert.ok(link.sockets.length >= 3, 'a new socket was opened');
+    assert.equal(bo.textarea.value, 'hello!');
+  });
+
+  it('sends a keepalive ping every 30 seconds', async () => {
+    const { ann } = await openedPair();
+    const socket = link.sockets[0];
+    clock.advance(30_000);
+    assert.ok(socket.sent.includes('ping'));
+    assert.equal(ann.page.reloads, 0);
+  });
+
+  it('reloads on 4001, at the old app', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.sockets[0].closeFromServer(protocol.CLOSE.OLD_PROTOCOL);
+    await settle(ann);
+    assert.equal(ann.page.reloads, 1);
+    assert.equal(link.sockets.length, 1, 'no reconnect');
+  });
+
+  it('reports a page no longer shared, saying whether words were unsaved', async () => {
+    const { bo } = await openedPair();
+    link.isDeaf = true;
+    bo.textarea.type(0, 'x');
+    link.isDeaf = false;
+    await link.room.evict(BO.email);
+    await settle(bo);
+    assert.deepEqual(bo.page.unavailable, [{ hasUnsaved: true }]);
+  });
+
+  it('hands a signed-out close to the page', async () => {
+    const { bo } = await openedPair();
+    link.sockets[1].closeFromServer(protocol.CLOSE.SIGNED_OUT);
+    await settle(bo);
+    assert.equal(bo.page.expired, 1);
+  });
+
+  it('goes read-only with a notice when there are too many tabs, and does not retry', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.sockets[0].closeFromServer(protocol.CLOSE.TOO_MANY_TABS);
+    await settle(ann);
+    assert.equal(ann.page.readOnly, true);
+    assert.deepEqual(ann.page.notices, [TEXT.tooManyTabs]);
+    assert.equal(link.sockets.length, 1);
+  });
+});

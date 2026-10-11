@@ -19,6 +19,7 @@ class LinkedSocket {
     this.readyState = 0;
     this.binaryType = 'blob';
     this.sent = [];
+    this.early = [];
     this.server = new FakeSocket();
     this.server.send = bytes => this.deliver(bytes);
     this.server.close = code => this.closeFromServer(code);
@@ -30,16 +31,22 @@ class LinkedSocket {
     }).then(() => hop(() => this.opened()));
   }
 
+  // Like a real WebSocket: what the server sent before the open event
+  // arrives right after it.
   opened() {
     if (this.readyState !== 0) return;
     this.readyState = OPEN;
     this.onopen?.();
+    for (const data of this.early.splice(0)) this.onmessage?.({ data });
   }
 
   deliver(bytes) {
     if (this.server.closed) throw new Error('send after close');
-    const copy = bytes.slice();
-    hop(() => { if (this.readyState === OPEN) this.onmessage?.({ data: copy.buffer }); });
+    const data = bytes.slice().buffer;
+    hop(() => {
+      if (this.readyState === 0) this.early.push(data);
+      else if (this.readyState === OPEN) this.onmessage?.({ data });
+    });
   }
 
   send(data) {

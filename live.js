@@ -15,6 +15,14 @@
   const SEND_EVERY_MS = 200;
   const FLUSH_WAIT_MS = 5000;
   const SOCKET_OPEN = 1;
+  const KEEPALIVE_MS = 30000;
+  const PONG_WAIT_MS = 2000;
+  const OFFLINE_NOTICE_MS = 5000;
+  const RECONNECT_FIRST_MS = 1000;
+  const RECONNECT_MAX_MS = 30000;
+  const NORMAL_CLOSE = 1000;
+  const PING = 'ping';
+  const PONG = 'pong';
 
   const TEXT = Object.freeze({
     saving: 'Saving...',
@@ -95,13 +103,18 @@
       if (socket !== this.socket) return;
       this.outbox = [];
       socket.send(this.deps.protocol.encodeSyncStep1(this.working));
+      this.startKeepalive();
       this.clearTimer('offline');
       this.isOffline = false;
       this.updateIndicator();
     }
 
     onMessage(socket, data) {
-      if (socket !== this.socket || typeof data === 'string') return;
+      if (socket !== this.socket) return;
+      if (typeof data === 'string') {
+        if (data === PONG) this.clearTimer('pong');
+        return;
+      }
       const message = this.deps.protocol.readRoomMessage(new Uint8Array(data));
       if (message.kind === 'hello') this.onHello(message);
       else if (message.kind === 'persisted') this.onPersisted(message.snapshot);
@@ -255,9 +268,83 @@
 
     // ── Closing ──
 
-    onClose(socket) {
+    onClose(socket, code) {
       if (socket !== this.socket) return;
       this.socket = null;
+      this.clearTimer('keepalive');
+      this.clearTimer('pong');
+      if (this.isClosed) return;
+      const stop = this.stopFor(code);
+      if (stop) return stop();
+      this.setTimer('offline', OFFLINE_NOTICE_MS, () => {
+        this.isOffline = true;
+        this.updateIndicator();
+      });
+      this.scheduleReconnect();
+    }
+
+    // Codes after which reconnecting would not help.
+    stopFor(code) {
+      const { CLOSE } = this.deps.protocol;
+      const { page } = this.env;
+      const stops = {
+        [CLOSE.OLD_PROTOCOL]: () => page.reload(),
+        [CLOSE.UNSHARED]: () => page.onUnavailable({ hasUnsaved: this.pending.length > 0 }),
+        [CLOSE.PAGE_DELETED]: () => page.onUnavailable({ hasUnsaved: this.pending.length > 0 }),
+        [CLOSE.SIGNED_OUT]: () => page.onSessionExpired(),
+        [CLOSE.ROOM_FULL]: () => this.goReadOnly(TEXT.roomFull),
+        [CLOSE.TOO_MANY_TABS]: () => this.goReadOnly(TEXT.tooManyTabs),
+      };
+      return stops[code] || null;
+    }
+
+    goReadOnly(text) {
+      this.env.page.setReadOnly(true);
+      this.env.page.notice(text);
+    }
+
+    // Jitter, so a deploy restart does not bring every client back at once.
+    scheduleReconnect() {
+      const ceiling = Math.min(RECONNECT_MAX_MS, RECONNECT_FIRST_MS * 2 ** this.attempts);
+      this.attempts += 1;
+      const delay = ceiling / 2 + (this.env.random() * ceiling) / 2;
+      this.setTimer('reconnect', delay, () => this.connect());
+    }
+
+    reconnectNow() {
+      if (this.isClosed || this.socket) return;
+      this.clearTimer('reconnect');
+      this.connect();
+    }
+
+    // iOS reports a socket it killed while the tab slept as still open, so
+    // on becoming visible a ping must come back within 2 s (spec §3.2).
+    checkAlive() {
+      if (this.isClosed) return;
+      if (!this.socket) return this.reconnectNow();
+      if (!this.isOpen()) return;
+      this.socket.send(PING);
+      this.setTimer('pong', PONG_WAIT_MS, () => this.dropDeadSocket());
+    }
+
+    dropDeadSocket() {
+      const dead = this.socket;
+      this.socket = null;
+      this.clearTimer('keepalive');
+      try {
+        dead.close(NORMAL_CLOSE);
+      } catch {
+        // Already gone; its close event is ignored, since it is no longer this.socket.
+      }
+      this.connect();
+    }
+
+    // Answered by the room's auto-response, which does not wake it.
+    startKeepalive() {
+      this.setTimer('keepalive', KEEPALIVE_MS, () => {
+        if (this.isOpen()) this.socket.send(PING);
+        this.startKeepalive();
+      });
     }
 
     close() {
@@ -265,7 +352,7 @@
       for (const name of Object.keys(this.timers)) this.clearTimer(name);
       this.resolveFlush(this.pending.length === 0);
       this.binding?.destroy();
-      if (this.socket) this.socket.close(1000);
+      if (this.socket) this.socket.close(NORMAL_CLOSE);
       this.socket = null;
       this.working.destroy();
       this.confirmed.destroy();
