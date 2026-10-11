@@ -459,8 +459,8 @@
     return keyed.map(({ entry }) => entry);
   }
 
-  // Buried words stay last, sorted by the same rule. A–Z skips this: a list
-  // that reaches Z and starts again at A reads as broken.
+  // Buried words stay last, sorted by the same rule. The panel folds them
+  // behind their own button, so A–Z starting over there does not read as broken.
   function sortHeadAndTail(entries, sortPart) {
     const head = entries.filter(({ tier }) => tier !== BURIED_TIER);
     const tail = entries.filter(({ tier }) => tier === BURIED_TIER);
@@ -475,7 +475,7 @@
       return sortHeadAndTail(entries, (part) => part.sort(comparePopularity(ranks)));
     }
     if (order === 'alphabetical') {
-      return entries.slice().sort(compareAlphabetical);
+      return sortHeadAndTail(entries, (part) => part.sort(compareAlphabetical));
     }
     if (order === 'random') {
       return sortHeadAndTail(entries, (part) => sortByShuffleKey(part, seed));

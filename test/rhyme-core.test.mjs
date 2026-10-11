@@ -716,10 +716,10 @@ describe('sortRhymeEntries, popular', () => {
 });
 
 describe('sortRhymeEntries, alphabetical', () => {
-  it('sorts buried words in with the rest, so A–Z never starts over', () => {
+  it('sorts buried words A–Z after the rest, where the panel folds them', () => {
     assert.deepEqual(words(sortRhymeEntries(SORT_ENTRIES, 'alphabetical', SORT_CONTEXT)), [
-      'apart', 'bart', 'chart', 'dart', 'mozart', 'part',
-      'rampart', 'smart', 'sort', 'start'
+      'apart', 'chart', 'dart', 'part', 'sort', 'start',
+      'bart', 'mozart', 'rampart', 'smart'
     ]);
   });
 
