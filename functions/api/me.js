@@ -1,4 +1,5 @@
 import { checkCurrentPassword, describeAccount } from '../_accounts.js';
+import { closeRoom, evictFromRoom } from '../_live.js';
 import { DAY_MS } from '../_ratelimit.js';
 import { readJsonBody } from '../_request.js';
 import {
@@ -51,7 +52,21 @@ async function refuseWithoutPassword(request, env, userId) {
   return response || null;
 }
 
-export async function onRequestDelete({ request, env }) {
+// The rooms an account's deletion must close (its shared pages) and leave
+// (pages shared with it). Read before the delete batch removes the rows.
+async function roomsToLeave(env, user) {
+  const db = env.lyricalmiracle_db;
+  const [owned, joined] = await Promise.all([
+    db.prepare('SELECT id FROM lyrics WHERE user_id = ? AND EXISTS ' +
+      '(SELECT 1 FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id)').bind(user.id).all(),
+    db.prepare('SELECT lyric_id AS id FROM lyric_shares WHERE email_normalized = ?')
+      .bind(user.email_normalized).all(),
+  ]);
+  return { owned: owned.results.map(row => row.id), joined: joined.results.map(row => row.id) };
+}
+
+export async function onRequestDelete(context) {
+  const { request, env } = context;
   const { user, response } = await requireUser(request, env);
   if (response) return response;
 
@@ -60,6 +75,7 @@ export async function onRequestDelete({ request, env }) {
 
   await writeLog(env, request, { userId: user.id, event: 'delete_account' });
 
+  const rooms = await roomsToLeave(env, user);
   await env.lyricalmiracle_db.batch([
     env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
     // Shares on this user's pages, then this user's access to other pages.
@@ -81,6 +97,8 @@ export async function onRequestDelete({ request, env }) {
     ).bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
+  for (const id of rooms.owned) closeRoom(context, id);
+  for (const id of rooms.joined) evictFromRoom(context, id, user.email_normalized);
 
   const headers = new Headers();
   headers.append('Set-Cookie', clearedSessionCookie(new URL(request.url)));

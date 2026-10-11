@@ -8,6 +8,7 @@ import {
   EMAIL_POOL, INVITE_ADDRESS_DAILY_LIMIT, INVITE_SENDER_DAILY_LIMIT, POOL_DAILY_LIMIT,
   emailSkippedEvent, inviteSenderName, sendInviteEmail,
 } from '../../../_email.js';
+import { evictFromRoom } from '../../../_live.js';
 import { DAY_MS, hitRateLimit, peekRateLimit } from '../../../_ratelimit.js';
 import { readJsonBody } from '../../../_request.js';
 import { jsonError, normalizeEmail, requireUser, sha256Hex, writeLog } from '../../../_shared.js';
@@ -172,7 +173,8 @@ export async function onRequestPost(context) {
 
 // The owner removes anyone; an editor can only remove themselves ("Leave").
 // The address rides in the body, not the URL, so it stays out of request logs.
-export async function onRequestDelete({ request, env, params }) {
+export async function onRequestDelete(context) {
+  const { request, env, params } = context;
   const { user, response } = await requireUser(request, env);
   if (response) return response;
 
@@ -186,5 +188,6 @@ export async function onRequestDelete({ request, env, params }) {
 
   await db(env).prepare('DELETE FROM lyric_shares WHERE lyric_id = ? AND email_normalized = ?')
     .bind(lyric.id, target.normalized).run();
+  evictFromRoom(context, lyric.id, target.normalized);
   return new Response(null, { status: 204 });
 }

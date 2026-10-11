@@ -1,4 +1,5 @@
 import { requireUser, writeLog } from '../../_shared.js';
+import { closeRoom, evictFromRoom, isLivePage } from '../../_live.js';
 import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
 const MAX_TITLE_LENGTH = 300;
@@ -11,6 +12,11 @@ const PAGE_COLUMNS = `id, title, body, revision, updated_at, created_at, user_id
   (SELECT count(*) FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id) AS share_count,
   (SELECT COALESCE(NULLIF(users.name, ''), users.email) FROM users
     WHERE users.id = lyrics.user_id) AS owner_name`;
+
+// Whose the page is and whether it is shared: together with the switch,
+// whether the page is live.
+const LIVE_COLUMNS = `user_id AS owner_id,
+  (SELECT count(*) FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id) AS share_count`;
 
 function notFound() {
   return new Response(null, { status: 404 });
@@ -26,10 +32,11 @@ function findOpenable(env, id, user, columns) {
 
 // The answer to a save that lost the race: what is on the server now, so the
 // app can show the conflict bar, and "Keep mine" can retry on this revision.
-function conflict(lyric) {
-  return Response.json(
-    { error: 'conflict', body: lyric.body, title: lyric.title, revision: lyric.revision },
-    { status: 409 });
+function conflict(env, lyric) {
+  return Response.json({
+    error: 'conflict', body: lyric.body, title: lyric.title, revision: lyric.revision,
+    live: isLivePage(env, lyric),
+  }, { status: 409 });
 }
 
 export async function onRequestGet({ request, env, params }) {
@@ -40,8 +47,10 @@ export async function onRequestGet({ request, env, params }) {
   // not send the whole page every few seconds.
   const metaOnly = new URL(request.url).searchParams.get('meta') === '1';
   if (metaOnly) {
-    const meta = await findOpenable(env, params.id, user, 'revision, title, updated_at');
-    return meta ? Response.json(meta) : notFound();
+    const meta = await findOpenable(env, params.id, user, `revision, title, updated_at, ${LIVE_COLUMNS}`);
+    if (!meta) return notFound();
+    const { revision, title, updated_at: updatedAt } = meta;
+    return Response.json({ revision, title, updated_at: updatedAt, live: isLivePage(env, meta) });
   }
 
   const found = await findOpenable(env, params.id, user, PAGE_COLUMNS);
@@ -49,7 +58,7 @@ export async function onRequestGet({ request, env, params }) {
   const { owner_id: ownerId, ...lyric } = found;
   const role = ownerId === user.id ? 'owner' : 'editor';
   if (role === 'editor') await recordFirstOpen(request, env, params.id, user);
-  return Response.json({ ...lyric, role });
+  return Response.json({ ...lyric, role, live: isLivePage(env, found) });
 }
 
 // Once per person, ever, for the growth numbers: did the invite get opened.
@@ -117,12 +126,14 @@ async function updateLyric(env, id, user, { body, baseRevision }, now) {
   const saved = await env.lyricalmiracle_db.prepare(`
     UPDATE lyrics SET body = ?, updated_at = ?, revision = revision + 1
     WHERE id = ? AND revision = ? AND ${CAN_OPEN}
-    RETURNING revision
+    RETURNING revision, ${LIVE_COLUMNS}
   `).bind(body, now, id, baseRevision, ...canOpenParams(user)).first();
-  if (saved) return Response.json({ id, updated_at: now, revision: saved.revision });
+  if (saved) {
+    return Response.json({ id, updated_at: now, revision: saved.revision, live: isLivePage(env, saved) });
+  }
 
-  const current = await findOpenable(env, id, user, 'title, body, revision');
-  return current ? conflict(current) : notFound();
+  const current = await findOpenable(env, id, user, `title, body, revision, ${LIVE_COLUMNS}`);
+  return current ? conflict(env, current) : notFound();
 }
 
 async function createLyric(request, env, id, user, { title = '', body }, now) {
@@ -155,8 +166,8 @@ async function saveFromOldTab(request, env, id, user, { title, body }, now) {
     return Response.json({ id, title, updated_at: now, revision: saved.revision });
   }
 
-  const current = await findOpenable(env, id, user, 'title, body, revision');
-  return current ? conflict(current) : notFound();
+  const current = await findOpenable(env, id, user, `title, body, revision, ${LIVE_COLUMNS}`);
+  return current ? conflict(env, current) : notFound();
 }
 
 // Renames. No revision check and no bump: the last rename wins, which is fine
@@ -179,15 +190,21 @@ export async function onRequestPatch({ request, env, params }) {
   return Response.json({ id: params.id, title, updated_at: now });
 }
 
-export async function onRequestDelete({ request, env, params }) {
+export async function onRequestDelete(context) {
+  const { request, env, params } = context;
   const { user, response } = await requireUser(request, env);
   if (response) return response;
+
+  // Read before the batch removes them: a room exists only for a shared page.
+  const shared = await env.lyricalmiracle_db.prepare(
+    'SELECT 1 FROM lyric_shares WHERE lyric_id = ? LIMIT 1'
+  ).bind(params.id).first();
 
   // The owner deletes the page and its share list; the owner check sits in
   // the share delete too, so nobody else can wipe a page's list this way. An
   // editor calling this only leaves: their own row goes, the page stays.
   const db = env.lyricalmiracle_db;
-  await db.batch([
+  const [, pageDeleted, editorLeft] = await db.batch([
     db.prepare(
       'DELETE FROM lyric_shares WHERE lyric_id IN (SELECT id FROM lyrics WHERE id = ? AND user_id = ?)'
     ).bind(params.id, user.id),
@@ -197,5 +214,7 @@ export async function onRequestDelete({ request, env, params }) {
     ).bind(params.id, user.email_normalized),
   ]);
 
+  if (shared && pageDeleted.meta.changes > 0) closeRoom(context, params.id);
+  else if (editorLeft.meta.changes > 0) evictFromRoom(context, params.id, user.email_normalized);
   return new Response(null, { status: 204 });
 }

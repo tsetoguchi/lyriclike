@@ -330,7 +330,7 @@ describe('revisions', () => {
 
     assert.equal(stale.status, 409);
     assert.deepEqual(await stale.json(),
-      { error: 'conflict', body: 'newer', title: ALICE_TITLE, revision: 1 });
+      { error: 'conflict', body: 'newer', title: ALICE_TITLE, revision: 1, live: false });
     assert.equal((await readStoredLyric(ALICE_LYRIC_ID)).body, 'newer');
     assert.equal(await revisionOf(ALICE_LYRIC_ID), 1);
   });
@@ -420,9 +420,9 @@ describe('renaming', () => {
 });
 
 describe('the poll', () => {
-  it('gets only the revision, title and time', async () => {
+  it('gets only the revision, title, time and whether the page is live', async () => {
     const response = await getLyricMeta(alice.sid, ALICE_LYRIC_ID);
-    assert.deepEqual(Object.keys(await response.json()).sort(), ['revision', 'title', 'updated_at']);
+    assert.deepEqual(Object.keys(await response.json()).sort(), ['live', 'revision', 'title', 'updated_at']);
   });
 
   it('gets 404 for a stranger', async () => {
