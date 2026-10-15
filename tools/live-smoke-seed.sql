@@ -1,7 +1,7 @@
 -- Local-only data for tools/live-smoke.mjs. Never run against a remote database.
 -- The session ids are the sha256 of smoke-token-ann and smoke-token-bo.
-DELETE FROM lyric_shares WHERE lyric_id = 'smoke-page';
-DELETE FROM lyrics WHERE id = 'smoke-page';
+DELETE FROM lyric_shares WHERE lyric_id IN ('smoke-page', 'smoke-solo');
+DELETE FROM lyrics WHERE id IN ('smoke-page', 'smoke-solo');
 DELETE FROM sessions WHERE user_id IN ('smoke-ann', 'smoke-bo');
 DELETE FROM users WHERE id IN ('smoke-ann', 'smoke-bo');
 INSERT INTO users (id, email, email_normalized, name, created_at) VALUES
@@ -14,3 +14,5 @@ INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at) 
   ('smoke-page', 'smoke-ann', 'Smoke', 'hello', 0, 1, 1);
 INSERT INTO lyric_shares (lyric_id, email_normalized, email, user_id, had_account, emailed, created_at) VALUES
   ('smoke-page', 'bo@smoke.test', 'bo@smoke.test', 'smoke-bo', 1, 0, 1);
+INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at) VALUES
+  ('smoke-solo', 'smoke-ann', 'Solo', 'alone', 0, 1, 1);
