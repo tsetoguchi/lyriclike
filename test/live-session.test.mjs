@@ -73,10 +73,31 @@ function textOf(update) {
   return doc.getText('body').toString();
 }
 
+// The page went away (a reload, a closed browser) with `draft` as its last
+// stored draft. A new page load shows the draft's words and reopens from
+// the same device's copy. Closing the old connection stands in for the
+// page dying: its socket goes, and nothing more is written.
+function reload(client, identity, draft = client.page.drafts.at(-1)) {
+  client.session.connection.close();
+  const again = makeSession(identity, { body: draft.text, store: client.store });
+  again.restore = { copyAt: draft.stamp, shown: draft.text };
+  return again;
+}
+
 // Lets messages cross, runs due frames, and moves the clock a little, until
 // nothing is left moving.
 async function settle(...clients) {
   for (let round = 0; round < 30; round += 1) {
+    await new Promise(resolve => setImmediate(resolve));
+    for (const client of clients) for (const frame of client.frames.splice(0)) frame();
+    clock.advance(250);
+  }
+}
+
+// Like settle, but moving the clock only about a second: enough to sync and
+// send, well inside the 5 s a flush waits.
+async function settleBriefly(...clients) {
+  for (let round = 0; round < 4; round += 1) {
     await new Promise(resolve => setImmediate(resolve));
     for (const client of clients) for (const frame of client.frames.splice(0)) frame();
     clock.advance(250);
@@ -352,7 +373,7 @@ describe('review fixes', () => {
     flushing.then(() => { isDone = true; });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(isDone, false, 'must wait for the sync');
-    await settle(ann);
+    await settleBriefly(ann);
     await runRoomAlarms();
     await settle(ann);
     assert.equal(await flushing, true);
@@ -561,5 +582,162 @@ describe('the local copy', () => {
     ann.session.close();
     await hop();
     assert.equal(link.room.text(), 'hello!');
+  });
+});
+
+describe('reloading', () => {
+  async function openedPair() {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    return { ann, bo };
+  }
+
+  it('picks up after a quick reload without repeating words the room already has', async () => {
+    const { ann, bo } = await openedPair();
+    ann.textarea.type(5, ' world');
+    await settle(ann, bo);
+    const again = reload(ann, ANN);
+    bo.textarea.type(0, 'oh ');
+    await settle(bo);
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again, bo);
+    assert.equal(again.textarea.value, 'oh hello world');
+    assert.equal(bo.textarea.value, 'oh hello world');
+  });
+
+  it('re-sends edits the room never got', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.isDeaf = true;
+    ann.textarea.type(5, '!');
+    await settle(ann);
+    link.isDeaf = false;
+    const again = reload(ann, ANN);
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again);
+    assert.equal(link.room.text(), 'hello!');
+    assert.equal(again.textarea.value, 'hello!');
+  });
+
+  it('keeps words typed after a reload, before the first sync', async () => {
+    const { ann, bo } = await openedPair();
+    ann.textarea.type(5, ' world');
+    await settle(ann, bo);
+    const again = reload(ann, ANN);
+    const opening = again.session.open({ ...LYRIC, restore: again.restore });
+    again.textarea.type(0, 'well ');
+    await opening;
+    await settle(again, bo);
+    assert.equal(again.textarea.value, 'well hello world');
+    assert.equal(bo.textarea.value, 'well hello world');
+  });
+
+  it('takes the copy when the page went before its draft caught up', async () => {
+    const { ann, bo } = await openedPair();
+    ann.textarea.type(5, ' world');
+    await settle(ann, bo);
+    const olderDraft = ann.page.drafts.at(-1);
+    ann.textarea.type(11, '!');
+    ann.session.saveLocalCopy();
+    await hop();
+    const again = reload(ann, ANN, olderDraft);
+    assert.equal(again.textarea.value, 'hello world', 'the draft is behind');
+    bo.textarea.type(0, 'oh ');
+    await settle(bo);
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again, bo);
+    assert.equal(again.textarea.value, 'oh hello world!');
+    assert.equal(bo.textarea.value, 'oh hello world!');
+  });
+
+  it('opens without a copy when storage fails, keeping what was typed', async () => {
+    const ann = makeSession(ANN, { body: 'hello there' });
+    ann.store.isBroken = true;
+    await ann.session.open({ ...LYRIC, restore: { copyAt: 5, shown: 'hello there' } });
+    await settle(ann);
+    assert.equal(ann.textarea.value, 'hello there');
+    assert.equal(link.room.text(), 'hello there');
+  });
+
+  it('sets aside a copy it cannot read', async () => {
+    const ann = makeSession(ANN, { body: 'hello!' });
+    await ann.store.save({ id: PAGE, epoch: 'e', savedAt: 5, working: 'garbage', confirmed: new Uint8Array(), pending: [] });
+    await ann.session.open({ ...LYRIC, restore: { copyAt: 5, shown: 'hello!' } });
+    await settle(ann);
+    assert.equal(link.room.text(), 'hello!');
+  });
+
+  it('two tabs on one page: a reload of one loses nothing the other typed', async () => {
+    const store = createFakeLiveStore();
+    const tab1 = makeSession(ANN, { store });
+    const tab2 = makeSession(ANN, { store });
+    await tab1.session.open(LYRIC);
+    await tab2.session.open(LYRIC);
+    await settle(tab1, tab2);
+    tab2.textarea.type(5, ' two');
+    await settle(tab1, tab2);
+    tab1.textarea.type(9, ' one');
+    await settle(tab1, tab2);
+    const drafts = [...tab1.page.drafts, ...tab2.page.drafts].sort((a, b) => a.stamp - b.stamp);
+    const again = reload(tab1, ANN, drafts.at(-1));
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again, tab2);
+    assert.equal(again.textarea.value, 'hello two one');
+    assert.equal(tab2.textarea.value, 'hello two one');
+  });
+
+  it("does not let go before the first sync, even when the room's saved snapshot arrives first", async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    ann.textarea.type(5, '!');
+    let wasSyncedWhenLetGo = null;
+    const flushing = ann.session.flush().then(isSaved => {
+      wasSyncedWhenLetGo = ann.session.connection.isSynced;
+      return isSaved;
+    });
+    await settleBriefly(ann);
+    await runRoomAlarms();
+    await settle(ann);
+    assert.equal(await flushing, true);
+    assert.equal(wasSyncedWhenLetGo, true);
+  });
+});
+
+describe('unsaved words in a copy', () => {
+  async function copyWith(type) {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    if (type) {
+      link.isDeaf = true;
+      ann.textarea.type(5, type);
+      await settle(ann);
+    }
+    ann.session.connection.close();
+    return ann;
+  }
+
+  it('finds pending updates', async () => {
+    const ann = await copyWith('!');
+    assert.equal(await ann.session.hasUnsavedWords(PAGE, 'hello!'), true);
+  });
+
+  it('finds a screen that differs from the copy', async () => {
+    const ann = await copyWith(null);
+    assert.equal(await ann.session.hasUnsavedWords(PAGE, 'hello?'), true);
+  });
+
+  it('finds nothing when the copy is saved and matches the screen', async () => {
+    const ann = await copyWith(null);
+    assert.equal(await ann.session.hasUnsavedWords(PAGE, 'hello'), false);
+  });
+
+  it('counts no copy as unsaved, so words are never dropped', async () => {
+    const ann = makeSession(ANN);
+    assert.equal(await ann.session.hasUnsavedWords(PAGE, 'hello'), true);
   });
 });

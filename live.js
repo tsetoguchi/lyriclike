@@ -48,8 +48,27 @@
     return mapped;
   }
 
+  // A copy is used only if it has the shape this version writes; anything
+  // else (an older format, a damaged store) is set aside.
+  function isUsableCopy(record) {
+    return Boolean(record)
+      && typeof record.epoch === 'string' && typeof record.savedAt === 'number'
+      && record.working instanceof Uint8Array && record.confirmed instanceof Uint8Array
+      && Array.isArray(record.pending) && record.pending.every(update => update instanceof Uint8Array);
+  }
+
+  function textOfUpdate(Y, update) {
+    const doc = new Y.Doc();
+    try {
+      Y.applyUpdate(doc, update);
+      return doc.getText(TEXT_FIELD).toString();
+    } finally {
+      doc.destroy();
+    }
+  }
+
   class PageConnection {
-    constructor(env, deps, { id, body, title }) {
+    constructor(env, deps, { id, body, title, restore = null }, record = null) {
       this.env = env;
       this.deps = deps;
       this.dmp = new deps.DiffMatchPatch();
@@ -67,7 +86,10 @@
       this.isClosed = false;
       this.wasSaving = false;
       this.lastStamp = 0;
+      this.hasConfirmedText = false;
+      this.isCopyAhead = false;
       this.makeDocs();
+      if (record) this.restoreOrSetAside(record, restore || {});
     }
 
     makeDocs() {
@@ -76,6 +98,46 @@
       this.confirmed = new Y.Doc();
       this.working.on('update', (update, origin) => this.onWorkingUpdate(update, origin));
       this.working.getMap(META_FIELD).observe(event => this.onMetaChange(event));
+    }
+
+    // ── Resuming from the local copy ──
+
+    // An unreadable copy is set aside: the page opens as if there were none.
+    restoreOrSetAside(record, draft) {
+      try {
+        this.restore(record, draft);
+      } catch {
+        this.working.destroy();
+        this.confirmed.destroy();
+        this.makeDocs();
+      }
+    }
+
+    // A reload resumes from the copy: the same docs, epoch and unsaved
+    // updates, so the room's normal sync re-sends exactly what it lacks,
+    // and only words typed since loading are rebased.
+    restore(record, { copyAt, shown }) {
+      const { Y } = this.deps;
+      Y.applyUpdate(this.working, record.working, REMOTE_ORIGIN);
+      Y.applyUpdate(this.confirmed, record.confirmed, REMOTE_ORIGIN);
+      this.copyText = this.working.getText(TEXT_FIELD).toString();
+      this.pending = record.pending.slice();
+      this.epoch = record.epoch;
+      this.lastStamp = record.savedAt;
+      this.base = this.copyText;
+      this.hasConfirmedText = true;
+      // The copy was written after the draft on screen: the page went
+      // before its draft caught up, so the copy's words are the real start.
+      this.isCopyAhead = typeof copyAt === 'number' && record.savedAt > copyAt;
+      this.shown = shown;
+    }
+
+    // What this tab adds to the room: the screen, or, when the copy is ahead
+    // of the draft that was shown, the copy plus whatever was typed since.
+    localText(onScreen) {
+      if (!this.isCopyAhead) return onScreen;
+      if (onScreen === this.shown) return this.copyText;
+      return this.env.liveCore.rebase(this.deps.Y, this.dmp, this.shown, onScreen, this.copyText);
     }
 
     // ── Timers ──
@@ -176,7 +238,8 @@
     finishSync() {
       const { textarea } = this.env;
       const roomText = this.working.getText(TEXT_FIELD).toString();
-      const local = textarea.value;
+      const onScreen = textarea.value;
+      const local = this.localText(onScreen);
       const selection = { start: textarea.selectionStart, end: textarea.selectionEnd };
       // Matching the room already means everything typed reached it; a
       // rebase would only insert those words a second time.
@@ -186,10 +249,11 @@
       textarea.value = roomText;
       this.binding = this.createBinding();
       this.isSynced = true;
+      this.isCopyAhead = false;
       this.attempts = 0;
       if (merged !== roomText) this.binding.applyLocalText(merged);
       else textarea.dispatchEvent(new Event('input'));
-      this.keepSelection(selection, local, merged);
+      this.keepSelection(selection, onScreen, merged);
       this.applyRoomTitle();
       if (this.pendingTitle !== undefined) this.rename(this.pendingTitle);
       this.persistNow();
@@ -254,7 +318,9 @@
       this.pending = unsaved;
       this.schedulePersist();
       this.updateIndicator();
-      if (!unsaved.length) this.resolveFlush(true);
+      // The room greets with its saved snapshot before the first sync ends;
+      // words typed while connecting are not pending yet, so that is no "saved".
+      if (!unsaved.length && this.isSynced) this.resolveFlush(true);
     }
 
     updateIndicator() {
@@ -485,12 +551,13 @@
     // Live from this moment, so REST saves stand aside even while the
     // bundle loads; anything typed meanwhile is rebased at the first sync.
     // Each open gets a token, so a slow load for an earlier open can never
-    // attach a second connection to the editor.
-    open({ id, body, title }) {
+    // attach a second connection to the editor. A reload passes `restore`
+    // and resumes from the page's copy.
+    open({ id, body, title, restore = null }) {
       if (this.isLiveFor(id)) return this.opening;
-      this.close();
+      this.close({ keepCopy: Boolean(restore) });
       const token = this.token;
-      this.wanted = { id, body, title };
+      this.wanted = { id, body, title, restore };
       this.opening = this.start(token);
       return this.opening;
     }
@@ -503,22 +570,24 @@
         return this.retryStart(token);
       }
       if (token !== this.token) return;
-      await this.dropOldCopy(this.wanted.id);
+      const record = await this.takeCopy(this.wanted);
       if (token !== this.token) return;
-      this.connection = new PageConnection(this.env, deps, this.wanted);
+      this.connection = new PageConnection(this.env, deps, this.wanted, isUsableCopy(record) ? record : null);
       if (this.pendingTitle !== undefined) this.connection.rename(this.pendingTitle);
       this.pendingTitle = undefined;
       this.connection.connect();
     }
 
-    // A fresh open starts clean, so a copy left from an earlier visit can
-    // never be mistaken for this one's.
-    async dropOldCopy(id) {
+    // A reload resumes from the page's copy. Any other open starts clean, so
+    // a copy left from an earlier visit can never be mistaken for this one's.
+    async takeCopy({ id, restore }) {
       try {
+        if (restore) return await this.env.store.load(id);
         await this.env.store.remove(id);
       } catch {
         // Storage that fails leaves the page to open without a copy.
       }
+      return null;
     }
 
     // The bundle did not load (offline, most likely). The page stays live,
@@ -578,6 +647,19 @@
         await this.env.store.clear();
       } catch {
         // Nothing more can be done; the draft is removed all the same.
+      }
+    }
+
+    // Whether a page's copy holds words its room never saved: updates still
+    // pending, or a screen that differs from the copy. Not knowing counts as
+    // yes, so words are never dropped.
+    async hasUnsavedWords(id, screenText) {
+      try {
+        const [deps, record] = await Promise.all([this.env.loadDeps(), this.env.store.load(id)]);
+        if (!isUsableCopy(record)) return true;
+        return record.pending.length > 0 || textOfUpdate(deps.Y, record.working) !== screenText;
+      } catch {
+        return true;
       }
     }
 
