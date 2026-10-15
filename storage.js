@@ -53,6 +53,13 @@ const UNSAVED_LEAVE_MESSAGE =
   "Your newest words on this page aren't saved yet, so it stays open. Try again in a moment.";
 // A live draft whose page could not be fetched at load tries again this often.
 const REOPEN_RETRY_MS = 5000;
+const SIGN_OUT_HEADING = 'Log out';
+const UNSAVED_SIGN_OUT_MESSAGE =
+  "Your newest words on this page aren't saved yet, most likely because you're offline. "
+  + "If you log out now, they're lost.";
+// The room saves at most every 5 seconds, so signing out waits for one save
+// and a little more.
+const SIGN_OUT_WAIT_MS = 8000;
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -717,6 +724,22 @@ async function flushLivePage() {
   if (!isSaved) showNotice(UNSAVED_LEAVE_MESSAGE);
   return isSaved;
 }
+
+// Signing out ends this device's copy of a live page. Words on their way
+// get a few seconds to reach the room; if they cannot (offline), the
+// writer decides whether to lose them.
+async function confirmSignOut() {
+  if (!isLiveDraft) return true;
+  if (isLive() && await currentLiveSession().flush(SIGN_OUT_WAIT_MS)) return true;
+  const answer = await openDialog({
+    heading: SIGN_OUT_HEADING,
+    message: UNSAVED_SIGN_OUT_MESSAGE,
+    confirmLabel: 'Log out anyway',
+    danger: true,
+  });
+  return answer === true;
+}
+window.confirmSignOut = confirmSignOut;
 
 // The sample verse is not the visitor's writing, so it goes out as an empty
 // page. The answer is only used if its page is still the one open: a slow
