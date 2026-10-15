@@ -441,3 +441,33 @@ describe('review fixes', () => {
     assert.equal(ann.session.isLiveFor('other'), false);
   });
 });
+
+describe('going offline', () => {
+  it('says offline as soon as the browser reports it, and syncs on return', async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    ann.session.noteOffline();
+    assert.equal(ann.page.indicator.at(-1), TEXT.offline);
+    ann.textarea.type(5, '!');
+    assert.equal(ann.page.indicator.at(-1), TEXT.offline);
+    ann.session.reconnectNow();
+    await settle(ann, bo);
+    assert.equal(bo.textarea.value, 'hello!');
+    assert.notEqual(ann.page.indicator.at(-1), TEXT.offline);
+  });
+
+  it('treats a keepalive with no answer as a dead socket', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.isDeaf = true;
+    clock.advance(30_000);
+    clock.advance(2001);
+    assert.ok(link.sockets.length >= 2, 'a new socket was opened');
+    clock.advance(5000);
+    assert.equal(ann.page.indicator.at(-1), TEXT.offline);
+  });
+});

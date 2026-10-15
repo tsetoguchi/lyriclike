@@ -373,22 +373,49 @@
       this.setTimer('pong', PONG_WAIT_MS, () => this.dropDeadSocket());
     }
 
+    // A new socket may hang without opening or closing (iOS in airplane
+    // mode), so the offline notice is timed from here too.
     dropDeadSocket() {
+      this.closeSocketQuietly();
+      this.connect();
+      this.setTimer('offline', OFFLINE_NOTICE_MS, () => {
+        this.isOffline = true;
+        this.updateIndicator();
+      });
+    }
+
+    closeSocketQuietly() {
       const dead = this.socket;
       this.socket = null;
       this.clearTimer('keepalive');
+      this.clearTimer('pong');
+      if (!dead) return;
       try {
         dead.close(NORMAL_CLOSE);
       } catch {
         // Already gone; its close event is ignored, since it is no longer this.socket.
       }
-      this.connect();
     }
 
-    // Answered by the room's auto-response, which does not wake it.
+    // The browser says the network is gone. The socket may not notice for a
+    // long while, so it is dropped now; 'online' reconnects, and the backoff
+    // keeps trying meanwhile.
+    noteOffline() {
+      if (this.isClosed) return;
+      this.isOffline = true;
+      this.updateIndicator();
+      this.closeSocketQuietly();
+      this.scheduleReconnect();
+    }
+
+    // Answered by the room's auto-response, which does not wake it. No
+    // answer means the socket died without a close event.
     startKeepalive() {
       this.setTimer('keepalive', KEEPALIVE_MS, () => {
-        if (this.isOpen()) this.socket.send(PING);
+        if (this.isOpen()) {
+          this.socket.send(PING);
+          this.setTimer('pong', PONG_WAIT_MS, () => this.dropDeadSocket());
+        }
         this.startKeepalive();
       });
     }
@@ -498,6 +525,10 @@
     reconnectNow() {
       this.connection?.reconnectNow();
     }
+
+    noteOffline() {
+      this.connection?.noteOffline();
+    }
   }
 
   function loadScript(src) {
@@ -541,6 +572,7 @@
       if (!document.hidden) session.checkAlive();
     });
     window.addEventListener('online', () => session.reconnectNow());
+    window.addEventListener('offline', () => session.noteOffline());
   }
 
   const isBrowser = typeof document !== 'undefined' && Boolean(document.getElementById('lyrics'));
