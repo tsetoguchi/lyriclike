@@ -13,6 +13,7 @@ import liveCore from '../live-core.js';
 import live from '../live.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 import { createFakeClock } from './support/fake-clock.mjs';
+import { createFakeLiveStore } from './support/fake-live-store.mjs';
 import { FakeTextarea } from './support/fake-textarea.mjs';
 import { DiffMatchPatch, Y } from './support/live-deps.mjs';
 import { createRoomLink } from './support/room-link.mjs';
@@ -31,12 +32,13 @@ async function exec(sql, ...params) {
   await db.prepare(sql).bind(...params).run();
 }
 
-function makeSession(identity, { body = LYRIC.body, loadDeps } = {}) {
+function makeSession(identity, { body = LYRIC.body, loadDeps, store = createFakeLiveStore() } = {}) {
   const textarea = new FakeTextarea(body);
   const frames = [];
   const page = {
     indicator: [], titles: [], notices: [], unavailable: [], expired: 0, reloads: 0, readOnly: false,
     isTitleFocusedFlag: false,
+    drafts: [],
     setIndicator(text) { this.indicator.push(text); },
     showSaved() { this.indicator.push('Saved'); },
     onTitle(title) { this.titles.push(title); },
@@ -46,11 +48,11 @@ function makeSession(identity, { body = LYRIC.body, loadDeps } = {}) {
     reload() { this.reloads += 1; },
     notice(text) { this.notices.push(text); },
     setReadOnly(isReadOnly) { this.readOnly = isReadOnly; },
-    confirmed: [],
-    onConfirmed(text) { this.confirmed.push(text); },
+    // The page writes its draft from this, so it records what the draft holds.
+    onLocalCopySaved(saved) { this.drafts.push(saved); },
   };
   const env = {
-    textarea, page, liveCore, createTextBinding: binding.createTextBinding,
+    textarea, page, store, liveCore, createTextBinding: binding.createTextBinding,
     loadDeps: loadDeps || (async () => ({ Y, DiffMatchPatch, protocol })),
     openSocket: path => link.connect(path, identity),
     now: clock.now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
@@ -60,7 +62,15 @@ function makeSession(identity, { body = LYRIC.body, loadDeps } = {}) {
     adjustScroll: () => {},
   };
   const session = new LiveSession(env);
-  return { session, textarea, page, frames };
+  return { session, textarea, page, frames, store };
+}
+
+const hop = () => new Promise(resolve => setImmediate(resolve));
+
+function textOf(update) {
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, update);
+  return doc.getText('body').toString();
 }
 
 // Lets messages cross, runs due frames, and moves the clock a little, until
@@ -300,21 +310,6 @@ describe('titles', () => {
   });
 });
 
-describe('the confirmed text', () => {
-  it('tells the page what the room has confirmed, for a reload to rebase on', async () => {
-    const ann = makeSession(ANN);
-    await ann.session.open(LYRIC);
-    await settle(ann);
-    assert.equal(ann.page.confirmed.at(-1), 'hello');
-    ann.textarea.type(5, '!');
-    await settle(ann);
-    assert.equal(ann.page.confirmed.at(-1), 'hello');
-    await runRoomAlarms();
-    await settle(ann);
-    assert.equal(ann.page.confirmed.at(-1), 'hello!');
-  });
-});
-
 describe('review fixes', () => {
   const DEPS = { Y, DiffMatchPatch, protocol };
 
@@ -362,17 +357,6 @@ describe('review fixes', () => {
     await settle(ann);
     assert.equal(await flushing, true);
     assert.equal(link.room.text(), 'hello!');
-  });
-
-  it("counts a co-writer's words as confirmed as soon as they arrive", async () => {
-    const ann = makeSession(ANN);
-    const bo = makeSession(BO);
-    await ann.session.open(LYRIC);
-    await bo.session.open(LYRIC);
-    await settle(ann, bo);
-    bo.textarea.type(5, ' world');
-    await settle(ann, bo);
-    assert.equal(ann.page.confirmed.at(-1), 'hello world');
   });
 
   it('keeps the caret after words typed while connecting', async () => {
@@ -469,5 +453,113 @@ describe('going offline', () => {
     assert.ok(link.sockets.length >= 2, 'a new socket was opened');
     clock.advance(5000);
     assert.equal(ann.page.indicator.at(-1), TEXT.offline);
+  });
+});
+
+describe('the local copy', () => {
+  it('is written at most every 500 ms while words change, and the draft follows it', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    const before = ann.store.writes;
+    ann.textarea.type(5, '!');
+    ann.textarea.type(6, '!');
+    clock.advance(499);
+    assert.equal(ann.store.writes, before);
+    clock.advance(1);
+    assert.equal(ann.store.writes, before + 1);
+    await hop();
+    const copy = await ann.store.load(PAGE);
+    assert.equal(textOf(copy.working), 'hello!!');
+    assert.equal(copy.epoch, link.room.epoch);
+    assert.deepEqual(ann.page.drafts.at(-1), { id: PAGE, stamp: copy.savedAt, text: 'hello!!' });
+  });
+
+  it('holds unsaved updates until the room has saved them', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, '!');
+    await settle(ann);
+    let copy = await ann.store.load(PAGE);
+    assert.equal(copy.pending.length, 1);
+    assert.equal(textOf(copy.confirmed), 'hello');
+    await runRoomAlarms();
+    await settle(ann);
+    copy = await ann.store.load(PAGE);
+    assert.equal(copy.pending.length, 0);
+    assert.equal(textOf(copy.confirmed), 'hello!');
+  });
+
+  it('is not written before the first sync', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    ann.textarea.type(5, '!');
+    clock.advance(1000);
+    assert.equal(ann.store.writes, 0);
+    assert.equal(ann.session.hasLocalCopy(), false);
+  });
+
+  it('starts clean: a fresh open drops a copy left from an earlier visit', async () => {
+    const store = createFakeLiveStore();
+    await store.save({ id: PAGE, epoch: 'old', savedAt: 1, working: new Uint8Array(), confirmed: new Uint8Array(), pending: [] });
+    const ann = makeSession(ANN, { store });
+    await ann.session.open(LYRIC);
+    assert.equal(await store.load(PAGE), null);
+  });
+
+  it('is removed when the page closes, and kept when asked', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.session.close({ keepCopy: true });
+    await hop();
+    assert.ok(await ann.store.load(PAGE));
+    ann.session.close();
+    await hop();
+    assert.equal(await ann.store.load(PAGE), null, 'a later close removes the kept copy');
+  });
+
+  it('forgets every copy at sign-out', async () => {
+    const ann = makeSession(ANN);
+    await ann.store.save({ id: 'a', epoch: 'e', savedAt: 1, working: new Uint8Array(), confirmed: new Uint8Array(), pending: [] });
+    await ann.store.save({ id: 'b', epoch: 'e', savedAt: 1, working: new Uint8Array(), confirmed: new Uint8Array(), pending: [] });
+    await ann.session.forgetAllCopies();
+    assert.equal(await ann.store.load('a'), null);
+    assert.equal(await ann.store.load('b'), null);
+  });
+
+  it("holds a co-writer's words in both docs only once they are on screen", async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    bo.textarea.type(5, ' world');
+    clock.advance(200);
+    for (let i = 0; i < 4; i += 1) await hop();
+    ann.session.saveLocalCopy();
+    await hop();
+    let copy = await ann.store.load(PAGE);
+    assert.equal(textOf(copy.working), 'hello', 'not on screen yet');
+    assert.equal(textOf(copy.confirmed), 'hello', 'so not confirmed yet either');
+    for (const frame of ann.frames.splice(0)) frame();
+    ann.session.saveLocalCopy();
+    await hop();
+    copy = await ann.store.load(PAGE);
+    assert.equal(textOf(copy.working), 'hello world');
+    assert.equal(textOf(copy.confirmed), 'hello world');
+  });
+
+  it('never fails the page when storage fails', async () => {
+    const ann = makeSession(ANN);
+    ann.store.isBroken = true;
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, '!');
+    await settle(ann);
+    ann.session.close();
+    await hop();
+    assert.equal(link.room.text(), 'hello!');
   });
 });

@@ -25,6 +25,9 @@
   const PONG = 'pong';
   // How long to wait before trying the bundle again when it failed to load.
   const DEPS_RETRY_MS = 5000;
+  // The local copy is written at most this often while words change: a
+  // long page on every keystroke would be the costliest thing typing does.
+  const PERSIST_EVERY_MS = 500;
 
   const TEXT = Object.freeze({
     saving: 'Saving...',
@@ -63,6 +66,7 @@
       this.isSynced = false;
       this.isClosed = false;
       this.wasSaving = false;
+      this.lastStamp = 0;
       this.makeDocs();
     }
 
@@ -159,14 +163,10 @@
         socket.send(protocol.encodeSyncStep2(this.working, message.payload));
         return;
       }
+      // Once synced, a co-writer's words reach both docs through the
+      // binding, on the frame that shows them (onWorkingUpdate).
+      if (this.isSynced) return this.binding.queueRemote(message.payload);
       Y.applyUpdate(this.confirmed, message.payload, REMOTE_ORIGIN);
-      if (this.isSynced) {
-        this.binding.queueRemote(message.payload);
-        // A co-writer re-sends anything the room loses, so their words count
-        // as confirmed now; a reload must not merge them in a second time.
-        this.reportConfirmed();
-        return;
-      }
       Y.applyUpdate(this.working, message.payload, REMOTE_ORIGIN);
       if (message.syncType === protocol.SYNC.STEP2) this.finishSync();
     }
@@ -192,7 +192,7 @@
       this.keepSelection(selection, local, merged);
       this.applyRoomTitle();
       if (this.pendingTitle !== undefined) this.rename(this.pendingTitle);
-      this.reportConfirmed();
+      this.persistNow();
       this.updateIndicator();
       if (!this.pending.length) this.resolveFlush(true);
     }
@@ -206,13 +206,6 @@
         mapThroughEdits(selection.start, edits), mapThroughEdits(selection.end, edits));
     }
 
-    // The page keeps the room-confirmed text with its draft, so a reload can
-    // rebase what is on screen onto the room without repeating saved words.
-    reportConfirmed() {
-      const { page } = this.env;
-      if (page.onConfirmed) page.onConfirmed(this.confirmed.getText(TEXT_FIELD).toString());
-    }
-
     createBinding() {
       const { env } = this;
       return env.createTextBinding({
@@ -224,8 +217,12 @@
 
     // ── Sending and saving ──
 
+    // A co-writer's words join the confirmed doc on the frame that shows
+    // them, so the confirmed doc never holds words the screen lacks.
     onWorkingUpdate(update, origin) {
-      if (origin === REMOTE_ORIGIN || !this.isSynced) return;
+      if (!this.isSynced) return;
+      this.schedulePersist();
+      if (origin === REMOTE_ORIGIN) return this.deps.Y.applyUpdate(this.confirmed, update, REMOTE_ORIGIN);
       this.pending.push(update);
       this.outbox.push(update);
       this.scheduleSend();
@@ -255,7 +252,7 @@
         else unsaved.push(update);
       }
       this.pending = unsaved;
-      this.reportConfirmed();
+      this.schedulePersist();
       this.updateIndicator();
       if (!unsaved.length) this.resolveFlush(true);
     }
@@ -286,6 +283,42 @@
     resolveFlush(isSaved) {
       this.clearTimer('flush');
       for (const resolve of this.flushWaiters.splice(0)) resolve(isSaved);
+    }
+
+    // ── The local copy ──
+
+    schedulePersist() {
+      if (this.timers.persist !== undefined) return;
+      this.setTimer('persist', PERSIST_EVERY_MS, () => this.persistNow());
+    }
+
+    // The page writes its draft only once the copy is on disk, stamped with
+    // the copy it matches, so a reload never finds a draft ahead of its copy.
+    persistNow() {
+      if (!this.isSynced || this.isClosed) return;
+      this.clearTimer('persist');
+      const record = this.copyRecord();
+      const saved = { id: this.id, stamp: record.savedAt, text: this.working.getText(TEXT_FIELD).toString() };
+      this.env.store.save(record)
+        .then(() => this.env.page.onLocalCopySaved(saved))
+        .catch(() => {
+          // A copy that could not be written leaves a reload to rebase the draft.
+        });
+    }
+
+    // savedAt only grows within a tab, so two copies are never mistaken
+    // for each other even within one millisecond.
+    copyRecord() {
+      const { Y } = this.deps;
+      this.lastStamp = Math.max(this.env.now(), this.lastStamp + 1);
+      return {
+        id: this.id,
+        epoch: this.epoch,
+        savedAt: this.lastStamp,
+        working: Y.encodeStateAsUpdate(this.working),
+        confirmed: Y.encodeStateAsUpdate(this.confirmed),
+        pending: this.pending.slice(),
+      };
     }
 
     // ── Titles ──
@@ -440,6 +473,7 @@
       this.wanted = null;
       this.token = 0;
       this.opening = Promise.resolve();
+      this.keptCopyId = null;
     }
 
     follow(lyric) {
@@ -469,10 +503,22 @@
         return this.retryStart(token);
       }
       if (token !== this.token) return;
+      await this.dropOldCopy(this.wanted.id);
+      if (token !== this.token) return;
       this.connection = new PageConnection(this.env, deps, this.wanted);
       if (this.pendingTitle !== undefined) this.connection.rename(this.pendingTitle);
       this.pendingTitle = undefined;
       this.connection.connect();
+    }
+
+    // A fresh open starts clean, so a copy left from an earlier visit can
+    // never be mistaken for this one's.
+    async dropOldCopy(id) {
+      try {
+        await this.env.store.remove(id);
+      } catch {
+        // Storage that fails leaves the page to open without a copy.
+      }
     }
 
     // The bundle did not load (offline, most likely). The page stays live,
@@ -486,7 +532,11 @@
       }, DEPS_RETRY_MS);
     }
 
-    close() {
+    // Closing a page removes its copy. A signed-out close keeps it, so
+    // signing back in (or a reload) picks the words up again; the next
+    // ordinary close removes it.
+    close({ keepCopy = false } = {}) {
+      const id = this.wanted ? this.wanted.id : this.keptCopyId;
       this.token += 1;
       this.wanted = null;
       this.pendingTitle = undefined;
@@ -494,6 +544,14 @@
       this.retryTimer = null;
       this.connection?.close();
       this.connection = null;
+      this.keptCopyId = keepCopy ? id : null;
+      if (id && !keepCopy) this.forgetCopy(id);
+    }
+
+    forgetCopy(id) {
+      this.env.store.remove(id).catch(() => {
+        // A copy that stays is cleared at sign-out, and a fresh open drops it.
+      });
     }
 
     isLive() {
@@ -502,6 +560,25 @@
 
     isLiveFor(id) {
       return this.wanted !== null && this.wanted.id === id;
+    }
+
+    // While synced, the page's draft is written with the copy, not on input.
+    hasLocalCopy() {
+      return Boolean(this.connection && this.connection.isSynced && !this.connection.isClosed);
+    }
+
+    saveLocalCopy() {
+      this.connection?.persistNow();
+    }
+
+    // Signing out and deleting the account leave no words on the device.
+    async forgetAllCopies() {
+      this.keptCopyId = null;
+      try {
+        await this.env.store.clear();
+      } catch {
+        // Nothing more can be done; the draft is removed all the same.
+      }
     }
 
     // Before a connection exists, words typed since opening cannot be saved
