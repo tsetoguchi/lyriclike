@@ -260,6 +260,8 @@
       } else {
         trackEvent('page_shared');
         showResult(data.emailed ? `Shared with ${data.email}.` : TEXT.NOT_EMAILED, data.emailed ? '' : data.link);
+        // The page on the owner's screen goes live now, without a reload.
+        if (data.live && page.id === currentLyricId) await goLiveAfterShare(page.id);
       }
       emailInput.value = '';
       await loadPeople();
@@ -481,6 +483,9 @@
     }
     if (res.ok) {
       const meta = await res.json();
+      // The page went live (shared from another device, or the switch turned
+      // on): its room takes over from the poll.
+      if (meta.live) return goLiveFromRest();
       if (meta.revision > currentRevision) await takeTheirWords(id);
       else if (meta.title !== currentTitle) takeTheirTitle(meta.title);
     }

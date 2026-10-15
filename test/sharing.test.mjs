@@ -110,7 +110,7 @@ describe('sharing a page', () => {
     const response = await share(alice.sid, 'Bob@Example.com');
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), {
-      status: 'shared', email: 'Bob@Example.com', emailed: true, link: `${BASE_URL}/#shared=${PAGE}`,
+      status: 'shared', email: 'Bob@Example.com', emailed: true, link: `${BASE_URL}/#shared=${PAGE}`, live: false,
     });
 
     const [mail] = services.mail;

@@ -116,3 +116,21 @@ describe('room calls', () => {
     assert.deepEqual(calls(), []);
   });
 });
+
+describe('sharing a page', () => {
+  function shareAs(sid, id, email) {
+    return call(shares.onRequestPost, 'POST', `/api/lyrics/${id}/shares`, { sid, json: { email }, params: { id } });
+  }
+
+  it('tells the owner the page is live now', async () => {
+    const res = await shareAs('sid-ann', SOLO, 'cy@example.com');
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).live, true);
+  });
+
+  it('says not live when the switch is off', async () => {
+    env.LIVE_EDITING = 'off';
+    const res = await shareAs('sid-ann', SOLO, 'cy@example.com');
+    assert.equal((await res.json()).live, false);
+  });
+});

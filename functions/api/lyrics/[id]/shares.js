@@ -8,7 +8,7 @@ import {
   EMAIL_POOL, INVITE_ADDRESS_DAILY_LIMIT, INVITE_SENDER_DAILY_LIMIT, POOL_DAILY_LIMIT,
   emailSkippedEvent, inviteSenderName, sendInviteEmail,
 } from '../../../_email.js';
-import { evictFromRoom } from '../../../_live.js';
+import { evictFromRoom, isLiveFor } from '../../../_live.js';
 import { DAY_MS, hitRateLimit, peekRateLimit } from '../../../_ratelimit.js';
 import { readJsonBody } from '../../../_request.js';
 import { jsonError, normalizeEmail, requireUser, sha256Hex, writeLog } from '../../../_shared.js';
@@ -168,6 +168,9 @@ export async function onRequestPost(context) {
     email: target.email,
     emailed: willMail || room.reason === 'suppressed',
     link: pageLink(request, lyric.id),
+    // Only the owner shares, so the switch goes by this user: the page on
+    // their screen is live from now on.
+    live: isLiveFor(env, user.id),
   });
 }
 

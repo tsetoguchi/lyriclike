@@ -757,12 +757,17 @@ async function sendSave(force) {
     return;
   }
   if (res.ok) {
-    const { revision } = await res.json();
+    const { revision, live } = await res.json();
     savedAs(body, revision);
+    if (live) goLiveFromRest();
     return;
   }
   if (res.status === HTTP_CONFLICT) {
-    handleConflict(await res.json(), body);
+    const theirs = await res.json();
+    // A create that meets an existing page keeps the conflict bar: there
+    // is no earlier text of ours to rebase from.
+    if (theirs.live && !isCreate) return goLiveAfterConflict(theirs, body);
+    handleConflict(theirs, body);
     return;
   }
   if (res.status === HTTP_NOT_FOUND) {
@@ -867,6 +872,49 @@ function keepMine() {
   currentRevision = theirs.revision;
   clearConflict();
   performSave({ force: true });
+}
+
+// The page went live while this tab saved it the REST way (shared from
+// another device, or the switch just turned on). Live from here: the last
+// text the server took is the base, and anything typed since is rebased
+// onto the room's text, so the conflict bar never shows.
+function goLiveFromRest() {
+  const session = currentLiveSession();
+  if (!session || isLiveDraft) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  saveQueued = false;
+  queuedForce = false;
+  clearConflict();
+  setSaveIndicator('');
+  isLiveDraft = true;
+  session.open({ id: currentLyricId, body: lastSavedBody, title: currentTitle });
+  writeDraft();
+}
+
+// A save refused because the page went live. If the refused save, or one
+// whose answer was lost, is what the server holds, it landed and is the
+// base; otherwise the last save that landed is.
+function goLiveAfterConflict(theirs, sentBody) {
+  if (theirs.body === sentBody || theirs.body === unansweredBody) lastSavedBody = theirs.body;
+  currentRevision = theirs.revision;
+  unansweredBody = null;
+  goLiveFromRest();
+}
+
+// The owner shared the page on screen and it is live now. The save due (or
+// on its way) goes first, so live mode starts from what the server holds.
+async function goLiveAfterShare(id) {
+  if (id !== currentLyricId || isLiveDraft) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  try {
+    await performSave();
+    await waitForSaves();
+  } catch {
+    // A failed save leaves the older base; the rebase keeps the words.
+  }
+  if (id === currentLyricId && !isLiveDraft) goLiveFromRest();
 }
 
 // The page on screen can no longer be saved where it is, so its words move to
