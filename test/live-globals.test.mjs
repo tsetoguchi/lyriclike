@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-const WINDOW_NAMES = ['liveSession', 'livePage', 'LiveCore', 'LiveBinding', 'Live', 'LiveDeps'];
+const WINDOW_NAMES = ['liveSession', 'livePage', 'LiveCore', 'LiveBinding', 'LiveStore', 'Live', 'LiveDeps'];
 const SCRIPTS = [...readFileSync(new URL('../index.html', import.meta.url), 'utf8')
   .matchAll(/<script src="([^"]+\.js)"><\/script>/g)].map(match => match[1]);
 

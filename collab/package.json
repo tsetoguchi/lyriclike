@@ -9,6 +9,7 @@
     "diff-match-patch": "1.0.5"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "fake-indexeddb": "6.2.5"
   }
 }
