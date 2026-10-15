@@ -854,8 +854,14 @@ header .nav-icon circle {
 }
 
 /* A shared page in the notebook says whose it is, in pencil. */
+/* The owner stays in view beside a long title, but a long name or email
+   takes at most half the row and ends in an ellipsis, clear of the icons. */
 .lyrics-list-owner {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-left: var(--space-2);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
@@ -2720,6 +2726,7 @@ body.sidebar-open #sidebar-scrim {
 .lyrics-list-open {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: baseline;
   padding: var(--space-2) var(--space-3);
