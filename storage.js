@@ -48,6 +48,11 @@ const HTTP_CONFLICT = 409;
 // A 4001 from a live room reloads the page; a stale cache must not loop it.
 const RELOAD_GUARD_KEY = 'live_reloaded_at';
 const RELOAD_GUARD_MS = 60 * 1000;
+// Leaving a live page waits for its room to save the newest words.
+const UNSAVED_LEAVE_MESSAGE =
+  "Your newest words on this page aren't saved yet, so it stays open. Try again in a moment.";
+// A live draft whose page could not be fetched at load tries again this often.
+const REOPEN_RETRY_MS = 5000;
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -99,13 +104,41 @@ function isLive() {
   return Boolean(session && session.isLive());
 }
 
-// The text the open live page's room last confirmed, kept with the draft so a
-// reload can rebase what is on screen onto the room. null off a live page.
-let liveBase = null;
+// Whether the page on screen is live, or waiting to reopen live: its draft
+// says so, and a reload reopens it from the device's local copy (live.js).
+// It outlasts a signed-out close, so signing back in picks the page up.
+let isLiveDraft = false;
+// The savedAt of the local copy the stored draft's words come from, so a
+// reload can tell which of the two is newer. null when there is none.
+let liveCopyStamp = null;
 
 function closeLiveSession() {
-  liveBase = null;
+  isLiveDraft = false;
+  liveCopyStamp = null;
   if (currentLiveSession()) currentLiveSession().close();
+}
+
+// Signed out mid-session: off the room, but the local copy stays.
+function suspendLiveSession() {
+  if (currentLiveSession()) currentLiveSession().close({ keepCopy: true });
+}
+
+function liveHasLocalCopy() {
+  const session = currentLiveSession();
+  return Boolean(session && session.hasLocalCopy());
+}
+
+// Signing out and deleting the account leave no live words on the device.
+// forgetAllCopies never rejects.
+function forgetLiveCopies() {
+  const session = currentLiveSession();
+  if (session) session.forgetAllCopies();
+}
+
+// The room saves a live page, and one waiting to reopen live; a REST save
+// would only meet it as a 409.
+function isRoomSaved() {
+  return isLiveDraft || isLive();
 }
 
 // Up here, not with the rest of the sample code, because naming the page
@@ -464,6 +497,8 @@ function showLyric(lyric) {
   // Off the old page's room before its editor changes, so nothing of the new
   // page is ever sent there.
   closeLiveSession();
+  // Before the input event below, so its draft is marked live.
+  isLiveDraft = Boolean(lyric.live);
   currentLyricId = lyric.id;
   currentTitle = lyric.title;
   currentRevision = lyric.revision;
@@ -478,8 +513,6 @@ function showLyric(lyric) {
 
   setSaveIndicator('');
   updatePanelHeader();
-  // D1's text is a sound base for a reload until the room confirms more.
-  liveBase = lyric.live ? lyric.body : null;
   if (session) session.follow(lyric);
 }
 
@@ -625,7 +658,7 @@ async function renameCurrentPage() {
 function scheduleSave() {
   if (!window.currentUser) return;
   // The room saves a live page; the draft still records it.
-  if (isLive()) return;
+  if (isRoomSaved()) return;
   clearTimeout(saveTimer);
   setSaveIndicator('Unsaved');
   saveTimer = setTimeout(performSave, 1000);
@@ -663,8 +696,12 @@ async function waitForSaves() {
 // caught in an unresolved conflict are kept as a page of their own. Returns
 // false when that failed, and the page must stay open so nothing is lost.
 async function flushSave() {
-  // Leaving a live page waits for the room to save its words, or stays.
-  if (isLive()) return currentLiveSession().flush();
+  if (isLive()) return flushLivePage();
+  // Offline at load, waiting to reopen live: its words are not safe to leave.
+  if (isLiveDraft) {
+    showNotice(UNSAVED_LEAVE_MESSAGE);
+    return false;
+  }
   if (pendingConflict) return keepMineAsCopy();
   clearTimeout(saveTimer);
   saveTimer = null;
@@ -673,12 +710,20 @@ async function flushSave() {
   return true;
 }
 
+// Leaving a live page waits for the room to save its words, or stays, and
+// says so where phones show it.
+async function flushLivePage() {
+  const isSaved = await currentLiveSession().flush();
+  if (!isSaved) showNotice(UNSAVED_LEAVE_MESSAGE);
+  return isSaved;
+}
+
 // The sample verse is not the visitor's writing, so it goes out as an empty
 // page. The answer is only used if its page is still the one open: a slow
 // save on one page must not hand its revision to the next.
 async function sendSave(force) {
   // A live page is saved by its room; a REST save would only meet it as a 409.
-  if (isLive()) return;
+  if (isRoomSaved()) return;
   if (pendingConflict) return;
   const typed = document.getElementById('lyrics').value;
   if (!force) {
@@ -846,7 +891,18 @@ function hasUnsavedEdits() {
   return document.getElementById('lyrics').value !== lastSavedBody;
 }
 
+// A synced live page writes its local copy, and the draft follows once
+// that is on disk (followLocalCopy), so a reload never finds the two out
+// of step.
 function saveDraft() {
+  if (liveHasLocalCopy()) {
+    currentLiveSession().saveLocalCopy();
+    return;
+  }
+  writeDraft();
+}
+
+function writeDraft() {
   // The sample is not the visitor's writing, and a draft holding it would
   // make them look like a returning visitor next time. The revision and
   // whether there are unsaved edits come back with it on reload.
@@ -858,8 +914,20 @@ function saveDraft() {
     revision: currentRevision,
     dirty: hasUnsavedEdits(),
     info: currentPageInfo,
-    liveBase,
+    live: isLiveDraft,
+    copyAt: liveCopyStamp,
   }));
+}
+
+// The local copy is on disk, so the draft can show its words. While
+// synced, a co-writer's words may already be on screen past the copy, so
+// the draft waits for the next copy rather than hold words the copy lacks.
+// Off sync (after a signed-out close), only this person's typing can differ.
+function followLocalCopy({ id, stamp, text }) {
+  if (id !== currentLyricId || !isLiveDraft) return;
+  if (document.getElementById('lyrics').value !== text && liveHasLocalCopy()) return;
+  liveCopyStamp = stamp;
+  writeDraft();
 }
 
 // ── Page notice ──
@@ -939,7 +1007,8 @@ function formatDate(ts) {
 }
 
 document.getElementById('lyrics').addEventListener('input', () => {
-  saveDraft();
+  // A synced live page's draft goes out with its local copy (saveDraft).
+  if (!liveHasLocalCopy()) writeDraft();
   scheduleSave();
 });
 
@@ -1013,7 +1082,7 @@ async function reconcileRestoredDraft() {
   restoredDraft = null;
   if (!draft || draft.id !== currentLyricId) return;
 
-  if (draft.liveBase !== null) {
+  if (draft.live) {
     await reopenLiveDraft(draft);
   } else if (draft.fromOldApp) {
     await checkOldAppDraft(draft.id);
@@ -1024,39 +1093,56 @@ async function reconcileRestoredDraft() {
   }
 }
 
-// A draft of a live page goes back to its room: what is on screen is rebased
-// onto the room's text from the last text the room confirmed, so saved words
-// are not repeated and unsaved ones are kept. Off the switch, it is saved the
-// REST way like any other draft.
+// A draft of a live page goes back to its room from the device's local
+// copy, so saved words are not repeated and unsaved ones are sent again.
+// Off the switch, it is saved the REST way like any other draft.
 async function reopenLiveDraft(draft) {
   clearTimeout(saveTimer);
   let res;
   try {
     res = await fetch(`/api/lyrics/${draft.id}`);
   } catch {
-    return;
+    return retryReopen(draft);
   }
   if (draft.id !== currentLyricId) return;
   if (res.status === HTTP_NOT_FOUND) return keepOrDropLostDraft(draft);
   if (!res.ok) return;
   const lyric = await res.json();
-  if (!lyric.live) return reconcileAsRest(draft, lyric);
+  if (!lyric.live) return reconcileAsRest(lyric);
   setPageInfo(lyric);
   currentRevision = lyric.revision;
   lastSavedBody = document.getElementById('lyrics').value;
-  liveBase = draft.liveBase;
-  currentLiveSession().open({ id: lyric.id, body: draft.liveBase, title: currentTitle });
+  isLiveDraft = true;
+  currentLiveSession().open({
+    id: lyric.id, body: lyric.body, title: currentTitle,
+    restore: { copyAt: draft.copyAt, shown: draft.shown },
+  });
 }
 
-function keepOrDropLostDraft(draft) {
-  if (document.getElementById('lyrics').value === draft.liveBase) return dropUnavailablePage();
+// The page could not be fetched (offline at load). It waits, saved by
+// nobody, and tries again while it is still the page on screen.
+function retryReopen(draft) {
+  setTimeout(() => {
+    if (draft.id === currentLyricId && isLiveDraft && !isLive()) reopenLiveDraft(draft);
+  }, REOPEN_RETRY_MS);
+}
+
+async function keepOrDropLostDraft(draft) {
+  const screen = document.getElementById('lyrics').value;
+  const hasUnsaved = await currentLiveSession().hasUnsavedWords(draft.id, screen);
+  if (draft.id !== currentLyricId) return;
+  if (!hasUnsaved) return dropUnavailablePage();
   saveAsNewPage({ message: LOST_ACCESS_MESSAGE });
   performSave({ force: true });
 }
 
-function reconcileAsRest(draft, lyric) {
+// The page is no longer live (unshared, or the switch is off): its words
+// are saved the REST way, like any other draft.
+function reconcileAsRest(lyric) {
+  isLiveDraft = false;
+  liveCopyStamp = null;
   if (document.getElementById('lyrics').value === lyric.body) return showLyric(lyric);
-  lastSavedBody = draft.liveBase;
+  lastSavedBody = lyric.body;
   currentRevision = lyric.revision;
   scheduleSave();
 }
@@ -1141,10 +1227,7 @@ function clearOfflineNotice() {
 // further down, so it is read only when called.
 window.livePage = {
   setIndicator: showLiveIndicator,
-  onConfirmed(text) {
-    liveBase = text;
-    saveDraft();
-  },
+  onLocalCopySaved: followLocalCopy,
   showSaved() {
     clearOfflineNotice();
     showSaved();
@@ -1162,7 +1245,13 @@ window.livePage = {
     saveAsNewPage({ message: LOST_ACCESS_MESSAGE });
     performSave({ force: true });
   },
-  onSessionExpired: () => { if (window.handleSessionExpired) window.handleSessionExpired(); },
+  // Signed out mid-session: the words stay on screen and in the local copy,
+  // and signing back in (here, or after a reload) reopens the page live.
+  onSessionExpired() {
+    restoredDraft = { id: currentLyricId, revision: currentRevision, dirty: true, fromOldApp: false, live: true };
+    suspendLiveSession();
+    if (window.handleSessionExpired) window.handleSessionExpired();
+  },
   reload() {
     saveDraft();
     const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY)) || 0;
@@ -1179,6 +1268,7 @@ window.livePage = {
 // The draft is removed after the input event, which saves an empty one.
 function clearLyricState() {
   closeLiveSession();
+  forgetLiveCopies();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = DEFAULT_TITLE;
@@ -1339,11 +1429,15 @@ function restoreDraft() {
       revision: currentRevision,
       dirty: Boolean(draft.dirty),
       fromOldApp: !('revision' in draft),
-      liveBase: typeof draft.liveBase === 'string' ? draft.liveBase : null,
+      // Drafts written before the local copy marked a live page with liveBase.
+      live: draft.live === true || typeof draft.liveBase === 'string',
+      copyAt: Number.isSafeInteger(draft.copyAt) ? draft.copyAt : null,
+      shown: body || '',
     };
     // Kept until the reconcile, so the draft written again below (and any
     // written while offline) still marks the page as live.
-    liveBase = restoredDraft.liveBase;
+    isLiveDraft = restoredDraft.live;
+    liveCopyStamp = restoredDraft.copyAt;
     if (body) {
       const textarea = document.getElementById('lyrics');
       textarea.value = body;

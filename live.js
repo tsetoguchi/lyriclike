@@ -736,6 +736,7 @@
     const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
     return {
       textarea, loadDeps, liveCore: root.LiveCore, createTextBinding: root.LiveBinding.createTextBinding,
+      store: root.LiveStore.createLiveStore(root),
       openSocket: path => new WebSocket(`${scheme}://${location.host}${path}`),
       now: () => Date.now(),
       setTimeout: (fn, ms) => setTimeout(fn, ms),
@@ -752,8 +753,12 @@
     const session = new LiveSession(browserEnv());
     root.liveSession = session;
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) session.checkAlive();
+      // A phone can drop a hidden tab without a pagehide, so the copy is
+      // written on the way out too.
+      if (document.hidden) session.saveLocalCopy();
+      else session.checkAlive();
     });
+    window.addEventListener('pagehide', () => session.saveLocalCopy());
     window.addEventListener('online', () => session.reconnectNow());
     window.addEventListener('offline', () => session.noteOffline());
   }

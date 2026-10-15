@@ -435,9 +435,10 @@
   let lastTyped = 0;
 
   function pollingWanted() {
-    // A live page gets other people's edits from its room, not the poll.
-    const isLive = Boolean(window.liveSession && window.liveSession.isLive());
-    return Boolean(window.currentUser) && currentRevision !== null && isShared() && !document.hidden && !isLive;
+    // A live page, or one waiting to reopen live, gets other people's edits
+    // from its room, not the poll.
+    return Boolean(window.currentUser) && currentRevision !== null && isShared() && !document.hidden
+      && !isLiveDraft;
   }
 
   function schedulePoll() {
