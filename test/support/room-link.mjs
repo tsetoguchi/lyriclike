@@ -75,10 +75,32 @@ class LinkedSocket {
   }
 }
 
+// A socket made while the network is down: it never opens and closes
+// abnormally, the way a browser's does.
+class RefusedSocket {
+  constructor() {
+    this.readyState = 0;
+    this.sent = [];
+    hop(() => {
+      this.readyState = CLOSED;
+      this.onclose?.({ code: ABNORMAL });
+    });
+  }
+
+  send() {
+    throw new Error('not open');
+  }
+
+  close() {
+    this.readyState = CLOSED;
+  }
+}
+
 export function createRoomLink({ db, lyricId }) {
   const host = createRoomHost({ db, lyricId });
-  const link = { host, room: new RoomCore(host), sockets: [], isDeaf: false };
+  const link = { host, room: new RoomCore(host), sockets: [], isDeaf: false, offline: new Set() };
   link.connect = (path, identity) => {
+    if (link.offline.has(identity.userId)) return new RefusedSocket();
     const socket = new LinkedSocket(link, path, identity);
     link.sockets.push(socket);
     return socket;

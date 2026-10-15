@@ -741,3 +741,67 @@ describe('unsaved words in a copy', () => {
     assert.equal(await ann.session.hasUnsavedWords(PAGE, 'hello'), true);
   });
 });
+
+describe('after the room emptied', () => {
+  // The room writes back, waits its 10 minutes and empties, keeping only
+  // the epoch's final snapshot.
+  async function emptyTheRoom() {
+    // The room's leave runs async; let it finish and set its alarm first.
+    await settle();
+    await runRoomAlarms();
+    assert.equal(link.host.storage.loadState().snapshot, null, 'the room emptied');
+    console.log('DBG d1', (await db.prepare('SELECT body FROM lyrics WHERE id = ?').bind(PAGE).first()).body, link.host.logs.map(l => l.event).join(','));
+  }
+
+  it('after a reload: reached edits once, unreached ones kept', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, ' world');
+    await settle(ann);
+    link.isDeaf = true;
+    ann.textarea.type(11, '!');
+    await settle(ann);
+    link.isDeaf = false;
+    const again = reload(ann, ANN);
+    await emptyTheRoom();
+    const bo = makeSession(BO, { body: 'hello world' });
+    await bo.session.open({ ...LYRIC, body: 'hello world' });
+    await settle(bo);
+    bo.textarea.type(0, 'oh ');
+    await settle(bo);
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again, bo);
+    assert.equal(again.textarea.value, 'oh hello world!');
+    assert.equal(bo.textarea.value, 'oh hello world!');
+  });
+
+  it('keeps the tab open through it: reached edits once, unreached ones kept', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, ' world');
+    await settle(ann);
+    link.isDeaf = true;
+    ann.textarea.type(11, '!');
+    clock.advance(200);
+    link.isDeaf = false;
+    link.offline.add(ANN.userId);
+    link.drop(link.sockets[0]);
+    await settle(ann);
+    await emptyTheRoom();
+    const bo = makeSession(BO, { body: 'hello world' });
+    await bo.session.open({ ...LYRIC, body: 'hello world' });
+    await settle(bo);
+    bo.textarea.type(0, 'oh ');
+    await settle(bo, ann);
+    // Back online. The backoff has grown, so move the clock past its 30 s
+    // ceiling; a refused socket still closing gets its hop first.
+    link.offline.delete(ANN.userId);
+    await hop();
+    clock.advance(30_000);
+    await settle(ann, bo);
+    assert.equal(ann.textarea.value, 'oh hello world!');
+    assert.equal(bo.textarea.value, 'oh hello world!');
+  });
+});

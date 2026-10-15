@@ -201,21 +201,42 @@
     }
 
     // A new epoch means the room emptied and re-seeded from D1 while this tab
-    // was away: its doc shares no history with ours, so start over from what
-    // the room confirmed and rebase what is on screen onto the room's text.
+    // was away: its doc shares no history with ours. The copy is brought up
+    // to date first (until the next sync, drafts are plain text written on
+    // top of it). The old epoch's final snapshot says which pending updates
+    // reached the room before it emptied; those reached D1 and the new seed
+    // too, so they count as confirmed. Then the tab starts over from the
+    // room, rebasing what is on screen.
     onHello(hello) {
-      if (this.epoch && hello.epoch !== this.epoch) this.restartFromRoom();
+      if (this.epoch && hello.epoch !== this.epoch) {
+        this.persistNow();
+        this.confirmFrom(hello.oldEpochSnapshot);
+        this.restartFromRoom();
+      }
       this.epoch = hello.epoch;
     }
 
+    // Without a snapshot (the room keeps the last 20 epochs), the base is the
+    // confirmed text as it is, which can repeat a few seconds of typing.
+    confirmFrom(snapshot) {
+      if (!snapshot) return;
+      const { Y } = this.deps;
+      this.pending = this.pending.filter(update => {
+        if (!this.env.liveCore.isUpdateSaved(Y, update, snapshot)) return true;
+        Y.applyUpdate(this.confirmed, update, REMOTE_ORIGIN);
+        return false;
+      });
+    }
+
     restartFromRoom() {
-      if (this.isSynced) this.base = this.confirmed.getText(TEXT_FIELD).toString();
+      if (this.isSynced || this.hasConfirmedText) this.base = this.confirmed.getText(TEXT_FIELD).toString();
       this.binding?.destroy();
       this.binding = null;
       this.working.destroy();
       this.confirmed.destroy();
       this.pending = [];
       this.isSynced = false;
+      this.hasConfirmedText = false;
       this.makeDocs();
     }
 
