@@ -28,7 +28,7 @@
 
   const TEXT = Object.freeze({
     saving: 'Saving...',
-    offline: 'Offline — changes will sync',
+    offline: 'Offline, changes will sync',
     tooLong: 'This page is at its length limit.',
     roomFull: 'Too many people are on this page right now. It is read-only for you.',
     tooManyTabs: 'This page is open in too many of your tabs. It is read-only here.',

@@ -1116,15 +1116,39 @@ loadLyricsList();
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
 window.clearLyricState = clearLyricState;
 
+// Phones hide the title row and the save indicator in it, so being offline
+// is shown in the notice strip, which every screen size shows.
+let isOfflineNoticeShown = false;
+
+function showLiveIndicator(text) {
+  const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
+  setSaveIndicator(isOffline ? '' : text);
+  if (isOffline) {
+    showNotice(text);
+    isOfflineNoticeShown = true;
+  } else {
+    clearOfflineNotice();
+  }
+}
+
+function clearOfflineNotice() {
+  if (!isOfflineNoticeShown) return;
+  isOfflineNoticeShown = false;
+  hideNotice();
+}
+
 // What the live session shows on the page (live.js). titleEl is declared
 // further down, so it is read only when called.
 window.livePage = {
-  setIndicator: setSaveIndicator,
+  setIndicator: showLiveIndicator,
   onConfirmed(text) {
     liveBase = text;
     saveDraft();
   },
-  showSaved,
+  showSaved() {
+    clearOfflineNotice();
+    showSaved();
+  },
   onTitle(title) {
     currentTitle = title;
     updatePanelHeader();
