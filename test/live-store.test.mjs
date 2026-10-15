@@ -84,3 +84,20 @@ describe('without IndexedDB', () => {
     assert.ok(createLiveStore({ indexedDB: new IDBFactory() }) instanceof LiveStore);
   });
 });
+
+describe('a connection that fails another way', () => {
+  it('retries once on a new connection, as for Safari losing its database server', async () => {
+    const db = await store.database();
+    const real = db.transaction.bind(db);
+    let failures = 0;
+    db.transaction = (...args) => {
+      if (failures === 0) {
+        failures += 1;
+        throw Object.assign(new Error('Connection to Indexed Database server lost'), { name: 'UnknownError' });
+      }
+      return real(...args);
+    };
+    await store.save(RECORD);
+    assert.deepEqual(await store.load('page-1'), RECORD);
+  });
+});

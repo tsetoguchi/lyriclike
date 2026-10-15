@@ -116,12 +116,30 @@ function isLive() {
 // It outlasts a signed-out close, so signing back in picks the page up.
 let isLiveDraft = false;
 // The savedAt of the local copy the stored draft's words come from, so a
-// reload can tell which of the two is newer. null when there is none.
+// reload can tell which of the two is newer, and that copy's words. Typing
+// before the first sync moves the draft's body on but leaves these, so a
+// reload whose copy is newer still knows what that typing was added to.
+// null when there is none.
 let liveCopyStamp = null;
+let liveCopyText = null;
+// The text the room had saved at that copy: the base a reload falls back to
+// when the copy itself is gone. A few seconds of typing can then repeat, but
+// nothing is lost.
+let liveConfirmedText = null;
+// What the page had on its way out past the last copy that landed, as a
+// base64 Yjs update (live.js saveOnLeaving). null once a copy holds it.
+let liveDelta = null;
+
+function forgetLiveCopyMarks() {
+  liveCopyStamp = null;
+  liveCopyText = null;
+  liveConfirmedText = null;
+  liveDelta = null;
+}
 
 function closeLiveSession() {
   isLiveDraft = false;
-  liveCopyStamp = null;
+  forgetLiveCopyMarks();
   if (currentLiveSession()) currentLiveSession().close();
 }
 
@@ -987,6 +1005,9 @@ function writeDraft() {
     info: currentPageInfo,
     live: isLiveDraft,
     copyAt: liveCopyStamp,
+    copyText: liveCopyText,
+    liveBase: liveConfirmedText,
+    liveDelta,
   }));
 }
 
@@ -994,10 +1015,24 @@ function writeDraft() {
 // synced, a co-writer's words may already be on screen past the copy, so
 // the draft waits for the next copy rather than hold words the copy lacks.
 // Off sync (after a signed-out close), only this person's typing can differ.
-function followLocalCopy({ id, stamp, text }) {
+function followLocalCopy({ id, stamp, text, confirmed }) {
   if (id !== currentLyricId || !isLiveDraft) return;
   if (document.getElementById('lyrics').value !== text && liveHasLocalCopy()) return;
   liveCopyStamp = stamp;
+  liveCopyText = text;
+  liveConfirmedText = confirmed;
+  liveDelta = null;
+  writeDraft();
+}
+
+// The page is going (pagehide, hidden): the draft is written now, with the
+// changes past the last copy that landed, since the copy on its way may not.
+function keepDraftOnLeaving({ id, stamp, text, confirmed, delta }) {
+  if (id !== currentLyricId || !isLiveDraft) return;
+  liveCopyStamp = stamp;
+  liveCopyText = text;
+  liveConfirmedText = confirmed;
+  liveDelta = delta;
   writeDraft();
 }
 
@@ -1131,7 +1166,19 @@ function isPadUnused() {
 
 // Signing in lands on the page last worked on, the way a reload does, rather
 // than on a blank one. Words typed before signing in stay where they are.
+// Whether the notebook has been opened since this page loaded.
+let hasOpenedNotebook = false;
+
+// live.js and sharing.js load after this file, and opening the notebook
+// can reopen a live page, so it waits until every script has run.
+function whenScriptsReady() {
+  if (document.readyState !== 'loading') return Promise.resolve();
+  return new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+}
+
 async function openNotebook() {
+  hasOpenedNotebook = true;
+  await whenScriptsReady();
   refreshSharingUi();
   const lyrics = await loadLyricsList();
   await reconcileRestoredDraft();
@@ -1177,7 +1224,10 @@ async function reopenLiveDraft(draft) {
   }
   if (draft.id !== currentLyricId) return;
   if (res.status === HTTP_NOT_FOUND) return keepOrDropLostDraft(draft);
-  if (!res.ok) return;
+  // Signed out, the reopen waits for signing in; any other failure is tried
+  // again, or the page would stay unsaved and impossible to leave.
+  if (res.status === HTTP_UNAUTHORIZED) return;
+  if (!res.ok) return retryReopen(draft);
   const lyric = await res.json();
   if (!lyric.live) return reconcileAsRest(lyric);
   setPageInfo(lyric);
@@ -1185,8 +1235,8 @@ async function reopenLiveDraft(draft) {
   lastSavedBody = document.getElementById('lyrics').value;
   isLiveDraft = true;
   currentLiveSession().open({
-    id: lyric.id, body: lyric.body, title: currentTitle,
-    restore: { copyAt: draft.copyAt, shown: draft.shown },
+    id: lyric.id, body: draft.liveBase ?? lyric.body, title: currentTitle,
+    restore: { copyAt: draft.copyAt, shown: draft.shown, delta: draft.liveDelta },
   });
 }
 
@@ -1211,7 +1261,7 @@ async function keepOrDropLostDraft(draft) {
 // are saved the REST way, like any other draft.
 function reconcileAsRest(lyric) {
   isLiveDraft = false;
-  liveCopyStamp = null;
+  forgetLiveCopyMarks();
   if (document.getElementById('lyrics').value === lyric.body) return showLyric(lyric);
   lastSavedBody = lyric.body;
   currentRevision = lyric.revision;
@@ -1299,6 +1349,7 @@ function clearOfflineNotice() {
 window.livePage = {
   setIndicator: showLiveIndicator,
   onLocalCopySaved: followLocalCopy,
+  onLeaving: keepDraftOnLeaving,
   showSaved() {
     clearOfflineNotice();
     showSaved();
@@ -1503,12 +1554,19 @@ function restoreDraft() {
       // Drafts written before the local copy marked a live page with liveBase.
       live: draft.live === true || typeof draft.liveBase === 'string',
       copyAt: Number.isSafeInteger(draft.copyAt) ? draft.copyAt : null,
-      shown: body || '',
+      copyText: typeof draft.copyText === 'string' ? draft.copyText : null,
+      liveBase: typeof draft.liveBase === 'string' ? draft.liveBase : null,
+      liveDelta: typeof draft.liveDelta === 'string' ? draft.liveDelta : null,
     };
+    // The words the copy at copyAt held: typing before a sync is not in them.
+    restoredDraft.shown = restoredDraft.copyText ?? (body || '');
     // Kept until the reconcile, so the draft written again below (and any
     // written while offline) still marks the page as live.
     isLiveDraft = restoredDraft.live;
     liveCopyStamp = restoredDraft.copyAt;
+    liveCopyText = restoredDraft.copyText;
+    liveConfirmedText = restoredDraft.liveBase;
+    liveDelta = restoredDraft.liveDelta;
     if (body) {
       const textarea = document.getElementById('lyrics');
       textarea.value = body;
@@ -1520,3 +1578,10 @@ function restoreDraft() {
 
 if (isFirstVisit()) showSample();
 else restoreDraft();
+
+// Every app script is revalidated on load, so the sign-in check can answer
+// while this file is still on its way; auth.js then finds no openNotebook to
+// call, and a reloaded draft (a live one above all) would never be picked up.
+whenScriptsReady().then(() => {
+  if (window.currentUser && !hasOpenedNotebook) openNotebook();
+});

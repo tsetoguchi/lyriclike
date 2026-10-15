@@ -9,9 +9,6 @@
   const DB_NAME = 'live-pages';
   const DB_VERSION = 1;
   const STORE_NAME = 'pages';
-  // What a connection the browser closed throws (Safari closes them after a
-  // while in the background); a new connection works.
-  const CLOSED_CONNECTION = 'InvalidStateError';
 
   function openDatabase(factory) {
     return new Promise((resolve, reject) => {
@@ -50,12 +47,13 @@
     }
 
     // Every call waits on the same opening, so transactions start in the
-    // order the calls were made.
+    // order the calls were made. A failure is tried once more on a new
+    // connection: Safari closes them in the background (InvalidStateError)
+    // or loses its database server (UnknownError), and a new one works.
     async run(mode, work) {
       try {
         return await runTransaction(await this.database(), mode, work);
-      } catch (err) {
-        if (!err || err.name !== CLOSED_CONNECTION) throw err;
+      } catch {
         this.opening = null;
         return runTransaction(await this.database(), mode, work);
       }

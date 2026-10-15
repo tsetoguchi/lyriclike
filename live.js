@@ -57,6 +57,17 @@
       && Array.isArray(record.pending) && record.pending.every(update => update instanceof Uint8Array);
   }
 
+  // The draft is text, so a Yjs update rides in it as base64.
+  function bytesToBase64(bytes) {
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  }
+
+  function base64ToBytes(text) {
+    return Uint8Array.from(atob(text), char => char.charCodeAt(0));
+  }
+
   function textOfUpdate(Y, update) {
     const doc = new Y.Doc();
     try {
@@ -86,6 +97,9 @@
       this.isClosed = false;
       this.wasSaving = false;
       this.lastStamp = 0;
+      this.isCopyFailing = false;
+      // What the last copy that landed holds, so leaving can add what came after.
+      this.committedVector = null;
       this.hasConfirmedText = false;
       this.isCopyAhead = false;
       this.makeDocs();
@@ -116,12 +130,20 @@
     // A reload resumes from the copy: the same docs, epoch and unsaved
     // updates, so the room's normal sync re-sends exactly what it lacks,
     // and only words typed since loading are rebased.
-    restore(record, { copyAt, shown }) {
+    restore(record, { copyAt, shown, delta }) {
       const { Y } = this.deps;
       Y.applyUpdate(this.working, record.working, REMOTE_ORIGIN);
       Y.applyUpdate(this.confirmed, record.confirmed, REMOTE_ORIGIN);
+      const pending = record.pending.slice();
+      // What the page had on its way out, past this copy: unsent typing and a
+      // co-writer's words. Yjs ignores what the copy already holds.
+      if (typeof delta === 'string') {
+        const update = base64ToBytes(delta);
+        Y.applyUpdate(this.working, update, REMOTE_ORIGIN);
+        pending.push(update);
+      }
       this.copyText = this.working.getText(TEXT_FIELD).toString();
-      this.pending = record.pending.slice();
+      this.pending = pending;
       this.epoch = record.epoch;
       this.lastStamp = record.savedAt;
       this.base = this.copyText;
@@ -385,12 +407,33 @@
       if (!this.isSynced || this.isClosed) return;
       this.clearTimer('persist');
       const record = this.copyRecord();
-      const saved = { id: this.id, stamp: record.savedAt, text: this.working.getText(TEXT_FIELD).toString() };
-      this.env.store.save(record)
-        .then(() => this.env.page.onLocalCopySaved(saved))
-        .catch(() => {
-          // A copy that could not be written leaves a reload to rebase the draft.
-        });
+      const vector = this.deps.Y.encodeStateVector(this.working);
+      const saved = {
+        id: this.id, stamp: record.savedAt,
+        text: this.working.getText(TEXT_FIELD).toString(),
+        confirmed: this.confirmed.getText(TEXT_FIELD).toString(),
+      };
+      // While writes fail, the page goes back to writing its draft on input
+      // (hasLocalCopy), so typing is never in neither place.
+      this.env.store.save(record).then(() => {
+        this.isCopyFailing = false;
+        this.committedVector = vector;
+        this.env.page.onLocalCopySaved(saved);
+      }, () => {
+        this.isCopyFailing = true;
+      });
+      return saved;
+    }
+
+    // Leaving (pagehide, hidden): the IndexedDB write may not finish before
+    // the page goes. So the draft, written at once, also carries everything
+    // since the last copy that landed, as a Yjs update; on top of that copy
+    // or a newer one, applying it twice changes nothing.
+    saveOnLeaving() {
+      if (!this.isSynced || this.isClosed) return;
+      const delta = this.deps.Y.encodeStateAsUpdate(this.working, this.committedVector || undefined);
+      const saved = this.persistNow();
+      this.env.page.onLeaving({ ...saved, delta: bytesToBase64(delta) });
     }
 
     // savedAt only grows within a tab, so two copies are never mistaken
@@ -657,11 +700,16 @@
 
     // While synced, the page's draft is written with the copy, not on input.
     hasLocalCopy() {
-      return Boolean(this.connection && this.connection.isSynced && !this.connection.isClosed);
+      const { connection } = this;
+      return Boolean(connection && connection.isSynced && !connection.isClosed && !connection.isCopyFailing);
     }
 
     saveLocalCopy() {
       this.connection?.persistNow();
+    }
+
+    saveOnLeaving() {
+      this.connection?.saveOnLeaving();
     }
 
     // Signing out and deleting the account leave no words on the device.
@@ -755,10 +803,10 @@
     document.addEventListener('visibilitychange', () => {
       // A phone can drop a hidden tab without a pagehide, so the copy is
       // written on the way out too.
-      if (document.hidden) session.saveLocalCopy();
+      if (document.hidden) session.saveOnLeaving();
       else session.checkAlive();
     });
-    window.addEventListener('pagehide', () => session.saveLocalCopy());
+    window.addEventListener('pagehide', () => session.saveOnLeaving());
     window.addEventListener('online', () => session.reconnectNow());
     window.addEventListener('offline', () => session.noteOffline());
   }

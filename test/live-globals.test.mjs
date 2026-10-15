@@ -25,3 +25,19 @@ describe('global names', () => {
     });
   }
 });
+
+// sharing.js can be served fresh while a cached storage.js is older (both are
+// no-cache, but a tab can hold one stale). Names storage.js added for live
+// editing are only read behind a typeof guard there, so a stale storage.js
+// cannot throw a ReferenceError in the poll.
+const STORAGE_LIVE_NAMES = ['isLiveDraft', 'goLiveFromRest', 'goLiveAfterShare'];
+
+describe('sharing.js and newer storage.js names', () => {
+  const lines = readFileSync(new URL('../sharing.js', import.meta.url), 'utf8').split('\n');
+  for (const name of STORAGE_LIVE_NAMES) {
+    it(`reads ${name} only behind a typeof guard`, () => {
+      const unguarded = lines.filter(line => line.includes(name) && !line.includes(`typeof ${name}`));
+      assert.deepEqual(unguarded, []);
+    });
+  }
+});

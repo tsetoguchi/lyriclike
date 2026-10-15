@@ -50,6 +50,8 @@ function makeSession(identity, { body = LYRIC.body, loadDeps, store = createFake
     setReadOnly(isReadOnly) { this.readOnly = isReadOnly; },
     // The page writes its draft from this, so it records what the draft holds.
     onLocalCopySaved(saved) { this.drafts.push(saved); },
+    // On the way out the draft is written at once, with the newest changes.
+    onLeaving(saved) { this.drafts.push(saved); },
   };
   const env = {
     textarea, page, store, liveCore, createTextBinding: binding.createTextBinding,
@@ -80,7 +82,7 @@ function textOf(update) {
 function reload(client, identity, draft = client.page.drafts.at(-1)) {
   client.session.connection.close();
   const again = makeSession(identity, { body: draft.text, store: client.store });
-  again.restore = { copyAt: draft.stamp, shown: draft.text };
+  again.restore = { copyAt: draft.stamp, shown: draft.text, delta: draft.delta };
   return again;
 }
 
@@ -493,7 +495,7 @@ describe('the local copy', () => {
     const copy = await ann.store.load(PAGE);
     assert.equal(textOf(copy.working), 'hello!!');
     assert.equal(copy.epoch, link.room.epoch);
-    assert.deepEqual(ann.page.drafts.at(-1), { id: PAGE, stamp: copy.savedAt, text: 'hello!!' });
+    assert.deepEqual(ann.page.drafts.at(-1), { id: PAGE, stamp: copy.savedAt, text: 'hello!!', confirmed: 'hello' });
   });
 
   it('holds unsaved updates until the room has saved them', async () => {
@@ -750,7 +752,6 @@ describe('after the room emptied', () => {
     await settle();
     await runRoomAlarms();
     assert.equal(link.host.storage.loadState().snapshot, null, 'the room emptied');
-    console.log('DBG d1', (await db.prepare('SELECT body FROM lyrics WHERE id = ?').bind(PAGE).first()).body, link.host.logs.map(l => l.event).join(','));
   }
 
   it('after a reload: reached edits once, unreached ones kept', async () => {
@@ -842,5 +843,85 @@ describe('signing out', () => {
     clock.advance(2001);
     await hop();
     assert.equal(result, false);
+  });
+});
+
+describe('review fixes, 3b', () => {
+  it("tells the page the room's confirmed text with each copy, a base for a reload with no copy", async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    ann.textarea.type(5, ' world');
+    await settle(ann, bo);
+    await runRoomAlarms();
+    await settle(ann, bo);
+    const draft = ann.page.drafts.at(-1);
+    assert.equal(draft.confirmed, 'hello world');
+    // The copy is gone (another tab dropped it); the reload falls back to the draft's confirmed text.
+    ann.session.connection.close();
+    await ann.store.clear();
+    bo.textarea.type(0, 'oh ');
+    await settle(bo);
+    const again = makeSession(ANN, { body: draft.text, store: ann.store });
+    await again.session.open({ ...LYRIC, body: draft.confirmed, restore: { copyAt: draft.stamp, shown: draft.text } });
+    await settle(again, bo);
+    assert.equal(again.textarea.value, 'oh hello world');
+  });
+
+  it('stops counting on the copy while saving it fails, so the draft takes the words', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    assert.equal(ann.session.hasLocalCopy(), true);
+    ann.store.isBroken = true;
+    ann.textarea.type(5, '!');
+    await settle(ann);
+    assert.equal(ann.session.hasLocalCopy(), false);
+    ann.store.isBroken = false;
+    ann.textarea.type(6, '?');
+    await settle(ann);
+    assert.equal(ann.session.hasLocalCopy(), true);
+  });
+});
+
+describe('leaving before the last copy lands', () => {
+  it('keeps words typed just before the page went, sent or not', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    ann.textarea.type(5, ' world');
+    ann.store.isHanging = true;
+    ann.session.saveOnLeaving();
+    const again = reload(ann, ANN);
+    ann.store.isHanging = false;
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again);
+    assert.equal(again.textarea.value, 'hello world');
+    assert.equal(link.room.text(), 'hello world');
+  });
+
+  it("doubles nothing a co-writer typed since the last copy", async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await ann.session.open(LYRIC);
+    await bo.session.open(LYRIC);
+    await settle(ann, bo);
+    ann.store.isHanging = true;
+    bo.textarea.type(0, 'oh ');
+    await settle(ann, bo);
+    ann.textarea.type(8, ' world');
+    clock.advance(200);
+    await hop();
+    ann.session.saveOnLeaving();
+    const again = reload(ann, ANN);
+    ann.store.isHanging = false;
+    bo.textarea.type(0, 'so ');
+    await settle(bo);
+    await again.session.open({ ...LYRIC, restore: again.restore });
+    await settle(again, bo);
+    assert.equal(again.textarea.value, 'so oh hello world');
+    assert.equal(bo.textarea.value, 'so oh hello world');
   });
 });

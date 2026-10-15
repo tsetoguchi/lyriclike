@@ -5,8 +5,11 @@ export function createFakeLiveStore() {
   const store = {
     writes: 0,
     isBroken: false,
+    // A page that went before its write finished: the save never lands.
+    isHanging: false,
     async save(record) {
       failIfBroken();
+      if (store.isHanging) return new Promise(() => {});
       store.writes += 1;
       records.set(record.id, structuredClone(record));
     },

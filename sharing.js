@@ -261,7 +261,8 @@
         trackEvent('page_shared');
         showResult(data.emailed ? `Shared with ${data.email}.` : TEXT.NOT_EMAILED, data.emailed ? '' : data.link);
         // The page on the owner's screen goes live now, without a reload.
-        if (data.live && page.id === currentLyricId) await goLiveAfterShare(page.id);
+        const isOpenPageLive = data.live && page.id === currentLyricId;
+        if (isOpenPageLive && typeof goLiveAfterShare === 'function') await goLiveAfterShare(page.id);
       }
       emailInput.value = '';
       await loadPeople();
@@ -438,9 +439,10 @@
 
   function pollingWanted() {
     // A live page, or one waiting to reopen live, gets other people's edits
-    // from its room, not the poll.
+    // from its room, not the poll. storage.js's live names are read behind
+    // typeof: a tab can hold an older cached storage.js without them.
     return Boolean(window.currentUser) && currentRevision !== null && isShared() && !document.hidden
-      && !isLiveDraft;
+      && !(typeof isLiveDraft !== 'undefined' && isLiveDraft);
   }
 
   function schedulePoll() {
@@ -485,7 +487,7 @@
       const meta = await res.json();
       // The page went live (shared from another device, or the switch turned
       // on): its room takes over from the poll.
-      if (meta.live) return goLiveFromRest();
+      if (meta.live && typeof goLiveFromRest === 'function') return goLiveFromRest();
       if (meta.revision > currentRevision) await takeTheirWords(id);
       else if (meta.title !== currentTitle) takeTheirTitle(meta.title);
     }
