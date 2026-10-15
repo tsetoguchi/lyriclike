@@ -357,13 +357,13 @@
 
     // Words typed before the first sync are not pending yet, but they are not
     // saved either, so leaving waits for the sync too.
-    flush() {
+    flush(waitMs = FLUSH_WAIT_MS) {
       const hasUnsyncedTyping = !this.isSynced && this.env.textarea.value !== this.base;
       if (!this.pending.length && !hasUnsyncedTyping) return Promise.resolve(true);
       this.sendOutbox();
       return new Promise(resolve => {
         this.flushWaiters.push(resolve);
-        this.setTimer('flush', FLUSH_WAIT_MS, () => this.resolveFlush(false));
+        this.setTimer('flush', waitMs, () => this.resolveFlush(false));
       });
     }
 
@@ -456,7 +456,10 @@
         [CLOSE.OLD_PROTOCOL]: () => page.reload(),
         [CLOSE.UNSHARED]: () => page.onUnavailable({ hasUnsaved: this.pending.length > 0 }),
         [CLOSE.PAGE_DELETED]: () => page.onUnavailable({ hasUnsaved: this.pending.length > 0 }),
-        [CLOSE.SIGNED_OUT]: () => page.onSessionExpired(),
+        [CLOSE.SIGNED_OUT]: () => {
+          this.persistNow();
+          page.onSessionExpired();
+        },
         [CLOSE.ROOM_FULL]: () => this.goReadOnly(TEXT.roomFull),
         [CLOSE.TOO_MANY_TABS]: () => this.goReadOnly(TEXT.tooManyTabs),
       };
@@ -686,8 +689,8 @@
 
     // Before a connection exists, words typed since opening cannot be saved
     // yet, so leaving is refused rather than dropping them.
-    flush() {
-      if (this.connection) return this.connection.flush();
+    flush(waitMs) {
+      if (this.connection) return this.connection.flush(waitMs);
       if (!this.wanted) return Promise.resolve(true);
       return Promise.resolve(this.env.textarea.value === this.wanted.body);
     }

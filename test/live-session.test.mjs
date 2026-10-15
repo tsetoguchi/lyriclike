@@ -805,3 +805,42 @@ describe('after the room emptied', () => {
     assert.equal(bo.textarea.value, 'oh hello world!');
   });
 });
+
+describe('signing out', () => {
+  it('writes the copy on a signed-out close, so the words survive', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.isDeaf = true;
+    ann.textarea.type(0, 'x');
+    clock.advance(200);
+    link.isDeaf = false;
+    link.sockets[0].closeFromServer(protocol.CLOSE.SIGNED_OUT);
+    await hop();
+    await hop();
+    assert.equal(ann.page.expired, 1);
+    const copy = await ann.store.load(PAGE);
+    assert.equal(textOf(copy.working), 'xhello');
+    assert.equal(copy.pending.length, 1);
+    ann.session.close({ keepCopy: true });
+    assert.equal(ann.session.isLive(), false);
+    assert.equal(await ann.session.flush(), true, 'leaving is no longer refused');
+    assert.ok(await ann.store.load(PAGE), 'the copy stays for signing back in');
+  });
+
+  it('waits as long as asked before giving up on a flush', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.isDeaf = true;
+    ann.textarea.type(5, '!');
+    let result = null;
+    ann.session.flush(8000).then(isSaved => { result = isSaved; });
+    clock.advance(6000);
+    await hop();
+    assert.equal(result, null, 'still waiting after 6 s');
+    clock.advance(2001);
+    await hop();
+    assert.equal(result, false);
+  });
+});
