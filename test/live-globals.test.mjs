@@ -60,6 +60,16 @@ describe('sharing.js and newer storage.js names', () => {
   }
 });
 
+describe('short names outside the presence scripts', () => {
+  for (const script of ['storage.js', 'sharing.js']) {
+    it(`${script} shortens names through window.LivePresence, guarded`, () => {
+      const source = readFileSync(new URL(`../${script}`, import.meta.url), 'utf8');
+      assert.match(source, /window\.LivePresence \? window\.LivePresence\.shortNameOf\(/);
+      assert.doesNotMatch(source, /(^|[^.])LivePresence\.shortNameOf/m);
+    });
+  }
+});
+
 describe('the poll going live', () => {
   it('waits for a save on its way, when storage.js can', () => {
     const source = readFileSync(new URL('../sharing.js', import.meta.url), 'utf8');

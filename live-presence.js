@@ -51,6 +51,15 @@
     return picked.map(firstLetter).join('').toLocaleUpperCase();
   }
 
+  // "Tao Setoguchi" is "Tao S.": the first name and the last name's first
+  // letter. A single name, and an email (someone with no name), stay whole.
+  function shortNameOf(name) {
+    const text = String(name || '').trim();
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length < 2 || text.includes('@')) return text;
+    return `${words[0]} ${firstLetter(words[words.length - 1])}.`;
+  }
+
   // Name and colour together: two people rarely share both.
   function personKey(user) {
     return `${user.name}\n${user.colour}`;
@@ -64,7 +73,10 @@
 
   function personOf(user) {
     const name = String(user.name);
-    return { key: personKey(user), name, initials: initialsOf(name), colour: screenColour(user.colour) };
+    return {
+      key: personKey(user), name, shortName: shortNameOf(name),
+      initials: initialsOf(name), colour: screenColour(user.colour),
+    };
   }
 
   // Everyone else: not this tab, and not this person's other tabs.
@@ -255,7 +267,7 @@
 
   const LivePresence = {
     SEND_EVERY_MS, EMPTY_VIEW,
-    colourFor, screenColour, initialsOf, peopleHere, caretsIn, encodeCursor, PresenceChannel,
+    colourFor, screenColour, initialsOf, shortNameOf, peopleHere, caretsIn, encodeCursor, PresenceChannel,
   };
 
   if (typeof module === 'object' && module.exports) {

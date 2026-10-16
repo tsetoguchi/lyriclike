@@ -219,7 +219,7 @@
       bar.classList.toggle('is-tag-shown', this.tagTimers.has(caret.clientID));
       const tag = document.createElement('span');
       tag.className = 'presence-tag';
-      tag.textContent = caret.name;
+      tag.textContent = caret.shortName;
       bar.append(tag);
       return bar;
     }

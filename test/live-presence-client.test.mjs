@@ -16,6 +16,7 @@ import { awarenessProtocol, Y } from './support/live-deps.mjs';
 
 const {
   EMPTY_VIEW, PresenceChannel, caretsIn, colourFor, encodeCursor, initialsOf, peopleHere, screenColour,
+  shortNameOf,
 } = livePresence;
 
 const BO = { name: 'Bo', colour: 'hsl(20 65% 42%)' };
@@ -42,6 +43,25 @@ describe('colours', () => {
   it('draws the room colour lighter for the dark card', () => {
     assert.equal(screenColour('hsl(200 65% 42%)'), 'hsl(200 70% 68%)');
     assert.equal(screenColour('red'), 'red');
+  });
+});
+
+describe('shortNameOf', () => {
+  it("keeps the first name and the last name's first letter", () => {
+    assert.equal(shortNameOf('Tao Setoguchi'), 'Tao S.');
+    assert.equal(shortNameOf('Mary Ann van Dyke'), 'Mary D.');
+    assert.equal(shortNameOf('  Tao   Setoguchi  '), 'Tao S.');
+  });
+
+  it('keeps whole letters: accents and CJK', () => {
+    assert.equal(shortNameOf('Bö 鈴木'), 'Bö 鈴.');
+    assert.equal(shortNameOf('émile Zola'), 'émile Z.');
+  });
+
+  it('leaves a single name and an email as they are', () => {
+    assert.equal(shortNameOf('Tao'), 'Tao');
+    assert.equal(shortNameOf('ann.lee@example.com'), 'ann.lee@example.com');
+    assert.equal(shortNameOf(''), '');
   });
 });
 

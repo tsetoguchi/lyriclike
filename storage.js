@@ -424,14 +424,62 @@ async function loadLyricsList() {
     if (shared.length > 0) {
       const label = document.createElement('h2');
       label.className = 'sidebar-label lyrics-list-group';
-      label.textContent = SHARED_GROUP_LABEL;
+      label.innerHTML = `<button type="button" class="list-group-toggle" data-group="shared" aria-expanded="true">`
+        + `${escapeHtml(SHARED_GROUP_LABEL)}${CHEVRON_ICON}</button>`;
       container.appendChild(label);
       for (const lyric of shared) container.appendChild(buildListItem(lyric));
     }
+    applyListFolds();
+    // The database may not have the live page's newest title yet.
+    if (isLive()) showListedTitle(currentLyricId, currentTitle);
     return lyrics;
   } catch {
     showListMessage(container, LOAD_FAILED_MESSAGE);
   }
+}
+
+// live-presence.js loads after this file and holds the one rule for short
+// names; a tab without it shows the name whole.
+function shortPersonName(name) {
+  return window.LivePresence ? window.LivePresence.shortNameOf(name) : name;
+}
+
+// Which notebook groups are folded, kept on this device. Both start open.
+const LIST_FOLDS_KEY = 'notebook_folds';
+const LIST_GROUPS = ['own', 'shared'];
+const CHEVRON_ICON = '<svg class="list-group-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>';
+
+function readListFolds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LIST_FOLDS_KEY) || '{}');
+    return { own: saved.own === true, shared: saved.shared === true };
+  } catch {
+    return { own: false, shared: false };
+  }
+}
+
+// A folded group hides its pages, except the one open on screen, so the
+// writer can always see where they are.
+function applyListFolds() {
+  const folds = readListFolds();
+  const container = document.getElementById('lyrics-list-items');
+  for (const group of LIST_GROUPS) {
+    container.classList.toggle(`is-${group}-folded`, folds[group]);
+    for (const toggle of document.querySelectorAll(`.list-group-toggle[data-group="${group}"]`)) {
+      toggle.setAttribute('aria-expanded', String(!folds[group]));
+    }
+  }
+}
+
+function toggleListGroup(group) {
+  const folds = readListFolds();
+  folds[group] = !folds[group];
+  try {
+    localStorage.setItem(LIST_FOLDS_KEY, JSON.stringify(folds));
+  } catch {
+    // Storage blocked: the fold still applies until the page reloads.
+  }
+  applyListFolds();
 }
 
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
@@ -441,13 +489,14 @@ const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16
 // A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
 // wait at the end of the row until it is hovered or focused. A page shared
 // with this person shows whose it is, and can be left rather than deleted.
-// The owner's name stays whole; only the title is cut short.
+// The owner shows as "Tao S.", short enough to stay whole beside the title.
 function buildListItem(lyric) {
   const item = document.createElement('div');
   item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
   item.dataset.id = lyric.id;
+  item.dataset.group = lyric.shared ? 'shared' : 'own';
   const title = escapeHtml(titleForName(lyric.title));
-  const owner = lyric.shared ? escapeHtml(lyric.owner_name || '') : '';
+  const owner = lyric.shared ? escapeHtml(shortPersonName(lyric.owner_name || '')) : '';
   const lastAction = lyric.shared
     ? `<button class="lyrics-action-btn lyrics-delete-btn" data-action="leave" aria-label="Leave ${title}" title="Leave">${LEAVE_ICON}</button>`
     : `<button class="lyrics-action-btn lyrics-delete-btn" data-action="delete" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>`;
@@ -498,8 +547,20 @@ function markActiveListItem() {
 
 // After a save, the list is only fetched again if it shows this page under
 // another title, or not at all.
+// On a live page the room writes a new title to the database up to 10 s
+// later, so asking the database now would bring the old one back; the
+// title on screen is the newest, and the list takes it from there.
 function refreshListIfBehind() {
-  if (listedTitles.get(currentLyricId) !== currentTitle) loadLyricsList();
+  if (listedTitles.get(currentLyricId) === currentTitle) return;
+  if (isLive()) showListedTitle(currentLyricId, currentTitle);
+  else loadLyricsList();
+}
+
+function showListedTitle(id, title) {
+  if (!listedTitles.has(id)) return;
+  listedTitles.set(id, title);
+  const row = document.querySelector(`.lyrics-list-item[data-id="${CSS.escape(id)}"] .lyrics-list-title`);
+  if (row) row.textContent = titleForName(title);
 }
 
 function showListMessage(container, message) {
@@ -637,6 +698,9 @@ function startBlankPage(title) {
   textarea.dispatchEvent(new Event('input'));
   setSaveIndicator('');
   updatePanelHeader();
+  // The page left behind is no longer the open one, so a folded group can
+  // put it away.
+  markActiveListItem();
 }
 
 async function createLyric() {
@@ -707,7 +771,7 @@ async function renameLyric(id, oldTitle) {
     updatePanelHeader();
     saveDraft();
     await renameCurrentPage();
-    loadLyricsList();
+    refreshListIfBehind();
     return;
   }
 
@@ -1432,6 +1496,14 @@ function dropUnavailablePage() {
   saveDraft();
   showNotice(UNAVAILABLE_MESSAGE);
 }
+
+// The group headings fold their pages. One listener, since the shared
+// heading is rebuilt with each list.
+document.getElementById('sidebar').addEventListener('click', event => {
+  const toggle = event.target.closest('.list-group-toggle');
+  if (toggle) toggleListGroup(toggle.dataset.group);
+});
+applyListFolds();
 loadLyricsList();
 
 // Expose state for autosave (step 6).
