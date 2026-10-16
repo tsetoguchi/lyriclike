@@ -9,7 +9,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { onRequest as apiMiddleware } from '../functions/api/_middleware.js';
 import * as live from '../functions/api/lyrics/[id]/live.js';
-import { isLiveFor } from '../functions/_live.js';
+import { coWritersClause, isLiveFor } from '../functions/_live.js';
 import { sha256Hex } from '../functions/_shared.js';
 import { BASE_URL, addSession, makeEnv } from './support/auth-harness.mjs';
 import { fakeRoomBinding } from './support/fake-room-binding.mjs';
@@ -54,6 +54,17 @@ describe('isLiveFor', () => {
     const allow = { LIVE_EDITING: 'allowlist', LIVE_EDITING_USERS: 'ann, dee' };
     assert.equal(isLiveFor(allow, 'ann'), true);
     assert.equal(isLiveFor(allow, 'bo'), false);
+  });
+
+  it('turns the switch into a condition on the page owner', () => {
+    assert.deepEqual(coWritersClause({ LIVE_EDITING: 'on' }), { sql: '1', params: [] });
+    assert.deepEqual(coWritersClause({ LIVE_EDITING: 'off' }), { sql: '0', params: [] });
+    assert.deepEqual(coWritersClause({}), { sql: '0', params: [] });
+    assert.deepEqual(coWritersClause({ LIVE_EDITING: 'allowlist', LIVE_EDITING_USERS: ' ' }), { sql: '0', params: [] });
+    assert.deepEqual(
+      coWritersClause({ LIVE_EDITING: 'allowlist', LIVE_EDITING_USERS: 'ann, dee' }),
+      { sql: 'lyrics.user_id IN (?, ?)', params: ['ann', 'dee'] },
+    );
   });
 });
 

@@ -21,6 +21,16 @@ export function isLivePage(env, { owner_id: ownerId, share_count: shareCount }) 
   return Number(shareCount) > 0 && isLiveFor(env, ownerId);
 }
 
+// Whether a shared page's co-writers may write, as SQL on lyrics.user_id,
+// so a save checks the switch in the same statement that writes. The owner
+// always may; with the switch off, co-writers only read (spec §8).
+export function coWritersClause(env) {
+  if (env.LIVE_EDITING === LIVE_ON) return { sql: '1', params: [] };
+  const owners = env.LIVE_EDITING === LIVE_ALLOWLIST ? [...allowlist(env)] : [];
+  if (!owners.length) return { sql: '0', params: [] };
+  return { sql: `lyrics.user_id IN (${owners.map(() => '?').join(', ')})`, params: owners };
+}
+
 export function roomStub(env, lyricId) {
   return env.PAGE_ROOM.get(env.PAGE_ROOM.idFromName(lyricId));
 }
