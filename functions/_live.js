@@ -37,11 +37,12 @@ export function roomStub(env, lyricId) {
 
 // After the D1 change, in the background: a slow or failed room call must
 // never fail the person's request, and the room's own re-check backs it up.
-async function callRoom(env, lyricId, path) {
+async function callRoom(env, lyricId, path, body) {
   if (!env.PAGE_ROOM) return;
   try {
     await roomStub(env, lyricId).fetch(`${ROOM_ORIGIN}${path}`, {
       method: 'POST', headers: { 'X-Room-Page': lyricId },
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (err) {
     console.error('room call failed', path, err);
@@ -53,7 +54,8 @@ function runLater(context, promise) {
 }
 
 export function evictFromRoom(context, lyricId, emailNormalized) {
-  runLater(context, callRoom(context.env, lyricId, `/evict?email=${encodeURIComponent(emailNormalized)}`));
+  // In the body, so the address stays out of the room's request logs.
+  runLater(context, callRoom(context.env, lyricId, '/evict', { email: emailNormalized }));
 }
 
 export function closeRoom(context, lyricId) {

@@ -11,6 +11,7 @@ export function fakeRoomBinding() {
         calls.push({
           page: id.name, url: request.url, method: request.method,
           headers: Object.fromEntries(request.headers),
+          body: await request.text(),
         });
         return new Response(null, { status: 204 });
       },

@@ -44,6 +44,13 @@ function calls() {
   });
 }
 
+// Who each /evict call names: in the body, so the address stays out of the
+// room's request logs.
+function evicted() {
+  return env.PAGE_ROOM.calls.filter(({ url }) => new URL(url).pathname === '/evict')
+    .map(({ page, body }) => `${page} ${JSON.parse(body).email}`);
+}
+
 function getAs(sid, id, query = '') {
   return call(lyricById.onRequestGet, 'GET', `/api/lyrics/${id}${query}`, { sid, params: { id } });
 }
@@ -94,13 +101,15 @@ describe('room calls', () => {
 
   it('evicts an editor who leaves', async () => {
     await deleteAs('sid-bo', SHARED);
-    assert.deepEqual(calls(), [`${SHARED} /evict?email=bo%40example.com`]);
+    assert.deepEqual(calls(), [`${SHARED} /evict`]);
+    assert.deepEqual(evicted(), [`${SHARED} bo@example.com`]);
   });
 
   it('evicts someone the owner takes off the page', async () => {
     await call(shares.onRequestDelete, 'DELETE', `/api/lyrics/${SHARED}/shares`,
       { sid: 'sid-ann', json: { email: 'bo@example.com' }, params: { id: SHARED } });
-    assert.deepEqual(calls(), [`${SHARED} /evict?email=bo%40example.com`]);
+    assert.deepEqual(calls(), [`${SHARED} /evict`]);
+    assert.deepEqual(evicted(), [`${SHARED} bo@example.com`]);
   });
 
   it("closes an owner's shared pages and evicts them elsewhere when their account goes", async () => {
@@ -108,7 +117,8 @@ describe('room calls', () => {
     await exec('INSERT INTO lyric_shares (lyric_id, email_normalized, email, user_id, had_account, emailed, created_at) ' +
       "VALUES ('bo-page', 'ann@example.com', 'ann@example.com', 'ann', 1, 0, 1)");
     await call(me.onRequestDelete, 'DELETE', '/api/me', { sid: 'sid-ann' });
-    assert.deepEqual(calls().sort(), [`${SHARED} /close`, 'bo-page /evict?email=ann%40example.com'].sort());
+    assert.deepEqual(calls().sort(), [`${SHARED} /close`, 'bo-page /evict'].sort());
+    assert.deepEqual(evicted(), ['bo-page ann@example.com']);
   });
 
   it('calls no room for a page that was never shared', async () => {

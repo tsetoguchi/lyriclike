@@ -5,6 +5,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { DiffMatchPatch } from './deps.js';
 import { colourFor } from './presence.js';
 import { RoomCore } from './room-core.js';
+import { readEvictEmail } from './room-requests.js';
 import { RoomStorage } from './room-storage.js';
 
 const HTTP_NO_CONTENT = 204;
@@ -52,7 +53,7 @@ export class PageRoom extends DurableObject {
     const pageId = request.headers.get('X-Room-Page');
     if (pageId && !this.storage.loadPageId()) this.storage.savePageId(pageId);
     if (url.pathname === '/evict') {
-      await this.core.evict(url.searchParams.get('email'));
+      await this.core.evict(await readEvictEmail(request));
       return new Response(null, { status: HTTP_NO_CONTENT });
     }
     if (url.pathname === '/close') {
