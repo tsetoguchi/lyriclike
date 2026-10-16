@@ -491,13 +491,20 @@ const ROLL_SPREAD_MS = 240;
 const ROLL_DONE_MS = 600;
 let rollTimer = null;
 
+// The row's own scrollHeight is wrong while it is folded: its contents are
+// centred, so half of them overflow above the top, where scrollHeight does
+// not count. Its children keep their full height either way.
+function measureRowHeight(row) {
+  return Math.max(0, ...[...row.children].map(child => child.offsetHeight));
+}
+
 function rollListGroup(group, isFolding) {
   const container = document.getElementById('lyrics-list-items');
   const rows = [...container.querySelectorAll(`.lyrics-list-item[data-group="${group}"]:not(.active)`)];
   if (isFolding) rows.reverse();
   // All heights are read before any style is written: reading after a write
   // makes the browser lay the page out again, once per row.
-  const heights = rows.map(row => row.scrollHeight);
+  const heights = rows.map(measureRowHeight);
   rows.forEach((row, order) => {
     row.style.setProperty('--row-height', `${heights[order]}px`);
     row.style.setProperty('--fold-order', String(order));
