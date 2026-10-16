@@ -745,20 +745,25 @@ header .nav-icon circle {
 }
 
 .presence-chip {
+  /* Small and quiet, so who is here never competes with the title. */
+  --chip-size: 20px;
+  --chip-text: 9.5px;
   display: inline-grid;
   place-items: center;
   /* A circle for one letter, a pill when two wide letters need the room. */
-  min-width: 24px;
-  height: 24px;
-  padding-inline: var(--space-1);
+  min-width: var(--chip-size);
+  height: var(--chip-size);
+  padding-inline: calc(var(--space-1) * 0.75);
   margin-left: calc(var(--space-1) * -1);
-  border: 2px solid var(--paper-card);
+  /* A thin ring in the header's own colour keeps overlapping circles apart. */
+  border: 1.5px solid var(--paper-card);
   border-radius: var(--radius-pill);
   background: var(--who, var(--ink-faded));
   color: var(--on-accent);
-  font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
+  font-family: var(--font-display);
+  font-size: var(--chip-text);
   font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
@@ -1135,7 +1140,7 @@ header .nav-icon circle {
    a form marks its blanks. */
 #lyrics-panel-title:hover {
   background: var(--ink-wash);
-  text-decoration: underline dotted var(--ink-faded);
+  text-decoration: underline solid var(--ink-faded);
   text-underline-offset: var(--space-1);
 }
 
