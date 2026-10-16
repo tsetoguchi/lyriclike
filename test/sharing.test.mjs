@@ -93,7 +93,8 @@ let bob;
 let carol;
 
 beforeEach(async () => {
-  env = makeEnv();
+  // Shared pages are live, as on the preview; tests of the switch set it.
+  env = makeEnv({ LIVE_EDITING: 'on' });
   services = stubServices();
   alice = await addUser('alice', { displayName: 'Alice' });
   bob = await addUser('bob');
@@ -110,7 +111,7 @@ describe('sharing a page', () => {
     const response = await share(alice.sid, 'Bob@Example.com');
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), {
-      status: 'shared', email: 'Bob@Example.com', emailed: true, link: `${BASE_URL}/#shared=${PAGE}`, live: false,
+      status: 'shared', email: 'Bob@Example.com', emailed: true, link: `${BASE_URL}/#shared=${PAGE}`, live: true,
     });
 
     const [mail] = services.mail;
@@ -289,6 +290,41 @@ describe('a shared page', () => {
     assert.equal(stored.body, 'bob wrote');
     assert.equal(stored.title, 'Bob named it');
     assert.equal(stored.user_id, alice.id);
+  });
+
+  it('with live editing off, lets the editor read but not save or rename', async () => {
+    env.LIVE_EDITING = 'off';
+    const page = await (await getPage(bob.sid)).json();
+    assert.equal(page.live, false);
+    assert.equal((await pollPage(bob.sid)).status, 200);
+    const saved = await savePage(bob.sid, { body: 'bob wrote', base_revision: 0 });
+    assert.equal(saved.status, 403);
+    assert.deepEqual(await saved.json(), { error: 'paused' });
+    assert.equal((await renamePage(bob.sid, 'Bob named it')).status, 403);
+    const stored = await storedPage();
+    assert.equal(stored.body, BODY);
+    assert.equal(stored.title, TITLE);
+  });
+
+  it('with live editing off, still lets the owner save and rename', async () => {
+    env.LIVE_EDITING = 'off';
+    assert.equal((await savePage(alice.sid, { body: 'alice wrote', base_revision: 0 })).status, 200);
+    assert.equal((await renamePage(alice.sid, 'Alice named it')).status, 200);
+    assert.equal((await storedPage()).body, 'alice wrote');
+  });
+
+  it("under the allowlist, a co-writer writes only on a listed owner's page", async () => {
+    env.LIVE_EDITING = 'allowlist';
+    env.LIVE_EDITING_USERS = 'user-carol';
+    assert.equal((await savePage(bob.sid, { body: 'bob wrote', base_revision: 0 })).status, 403);
+    env.LIVE_EDITING_USERS = 'user-carol, user-alice';
+    assert.equal((await savePage(bob.sid, { body: 'bob wrote', base_revision: 0 })).status, 200);
+  });
+
+  it('with live editing off, answers a stale co-writer save with 403, not the conflict bar', async () => {
+    assert.equal((await savePage(alice.sid, { body: 'alice wrote', base_revision: 0 })).status, 200);
+    env.LIVE_EDITING = 'off';
+    assert.equal((await savePage(bob.sid, { body: 'bob wrote', base_revision: 0 })).status, 403);
   });
 
   it('never lets an editor create over it or take it over', async () => {

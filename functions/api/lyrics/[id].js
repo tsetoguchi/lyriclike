@@ -1,5 +1,5 @@
 import { requireUser, writeLog } from '../../_shared.js';
-import { closeRoom, evictFromRoom, isLivePage } from '../../_live.js';
+import { closeRoom, coWritersClause, evictFromRoom, isLivePage } from '../../_live.js';
 import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
 const MAX_TITLE_LENGTH = 300;
@@ -20,6 +20,16 @@ const LIVE_COLUMNS = `user_id AS owner_id,
 
 function notFound() {
   return new Response(null, { status: 404 });
+}
+
+// A co-writer on a shared page while live editing is off: they may read,
+// and only the owner writes (spec §8), so there is no conflict between people.
+function paused() {
+  return Response.json({ error: 'paused' }, { status: 403 });
+}
+
+function isPausedFor(env, user, page) {
+  return page.owner_id !== user.id && !isLivePage(env, page);
 }
 
 // The page as this user may see it, or null. Missing and not theirs look the
@@ -121,19 +131,22 @@ export async function onRequestPut({ request, env, params }) {
 }
 
 // One statement, so two saves on the same revision cannot both pass. The
-// title is left alone: a stale tab must not undo someone's rename.
+// title is left alone: a stale tab must not undo someone's rename. The
+// switch is checked in it too, so a paused co-writer's save never lands.
 async function updateLyric(env, id, user, { body, baseRevision }, now) {
+  const writers = coWritersClause(env);
   const saved = await env.lyricalmiracle_db.prepare(`
     UPDATE lyrics SET body = ?, updated_at = ?, revision = revision + 1
-    WHERE id = ? AND revision = ? AND ${CAN_OPEN}
+    WHERE id = ? AND revision = ? AND ${CAN_OPEN} AND (lyrics.user_id = ? OR ${writers.sql})
     RETURNING revision, ${LIVE_COLUMNS}
-  `).bind(body, now, id, baseRevision, ...canOpenParams(user)).first();
+  `).bind(body, now, id, baseRevision, ...canOpenParams(user), user.id, ...writers.params).first();
   if (saved) {
     return Response.json({ id, updated_at: now, revision: saved.revision, live: isLivePage(env, saved) });
   }
 
   const current = await findOpenable(env, id, user, `title, body, revision, ${LIVE_COLUMNS}`);
-  return current ? conflict(env, current) : notFound();
+  if (!current) return notFound();
+  return isPausedFor(env, user, current) ? paused() : conflict(env, current);
 }
 
 async function createLyric(request, env, id, user, { title = '', body }, now) {
@@ -182,12 +195,20 @@ export async function onRequestPatch({ request, env, params }) {
   if (title.length > MAX_TITLE_LENGTH) return new Response('Title too long', { status: 413 });
 
   const now = Date.now();
+  const writers = coWritersClause(env);
   const renamed = await env.lyricalmiracle_db.prepare(
-    `UPDATE lyrics SET title = ?, updated_at = ? WHERE id = ? AND ${CAN_OPEN}`
-  ).bind(title, now, params.id, ...canOpenParams(user)).run();
-  if (renamed.meta.changes === 0) return notFound();
+    `UPDATE lyrics SET title = ?, updated_at = ?
+     WHERE id = ? AND ${CAN_OPEN} AND (lyrics.user_id = ? OR ${writers.sql})`
+  ).bind(title, now, params.id, ...canOpenParams(user), user.id, ...writers.params).run();
+  if (renamed.meta.changes === 0) return refusedRename(env, params.id, user);
 
   return Response.json({ id: params.id, title, updated_at: now });
+}
+
+async function refusedRename(env, id, user) {
+  const page = await findOpenable(env, id, user, LIVE_COLUMNS);
+  if (!page) return notFound();
+  return isPausedFor(env, user, page) ? paused() : notFound();
 }
 
 export async function onRequestDelete(context) {
