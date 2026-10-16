@@ -1709,19 +1709,6 @@ header .nav-icon circle {
   padding: var(--space-2) 0;
 }
 
-#rhyme-results::-webkit-scrollbar {
-  width: var(--scrollbar-width);
-}
-
-#rhyme-results::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#rhyme-results::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: var(--radius-sm);
-}
-
 .rhyme-group {
   margin-bottom: var(--space-1);
 }
@@ -2917,42 +2904,50 @@ body.sidebar-open #sidebar-scrim {
 /* A thin rail that stays faint until the list is under the pointer, then
    turns amber once grabbed, the way every other grip in the app does. The
    clear border insets the line so it is easier to catch than it looks. */
-#lyrics-list-items::-webkit-scrollbar {
+#lyrics-list-items::-webkit-scrollbar,
+#rhyme-results::-webkit-scrollbar {
   width: var(--scrollbar-rail-width);
 }
 
-#lyrics-list-items::-webkit-scrollbar-track {
+#lyrics-list-items::-webkit-scrollbar-track,
+#rhyme-results::-webkit-scrollbar-track {
   background: transparent;
 }
 
-#lyrics-list-items::-webkit-scrollbar-thumb {
+#lyrics-list-items::-webkit-scrollbar-thumb,
+#rhyme-results::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb-rest);
   background-clip: padding-box;
   border: var(--scrollbar-inset) solid transparent;
   border-radius: var(--scrollbar-rail-width);
 }
 
-#lyrics-list-items:hover::-webkit-scrollbar-thumb {
+#lyrics-list-items:hover::-webkit-scrollbar-thumb,
+#rhyme-results:hover::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
 }
 
-#lyrics-list-items::-webkit-scrollbar-thumb:hover {
+#lyrics-list-items::-webkit-scrollbar-thumb:hover,
+#rhyme-results::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover);
 }
 
-#lyrics-list-items::-webkit-scrollbar-thumb:active {
+#lyrics-list-items::-webkit-scrollbar-thumb:active,
+#rhyme-results::-webkit-scrollbar-thumb:active {
   background-color: var(--accent);
 }
 
 /* Chrome drops the rules above if it also sees scrollbar-color, so only
    browsers without them get the standard properties. */
 @supports not selector(::-webkit-scrollbar) {
-  #lyrics-list-items {
+  #lyrics-list-items,
+  #rhyme-results {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb-rest) transparent;
   }
 
-  #lyrics-list-items:hover {
+  #lyrics-list-items:hover,
+  #rhyme-results:hover {
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 }
