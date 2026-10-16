@@ -23,6 +23,9 @@
   const SLOW_AFTER_MS = 2 * 60 * 1000;
   const STOP_AFTER_MS = 15 * 60 * 1000;
   const COPIED_LABEL_MS = 2000;
+  // How long the dialog waits for its people list before showing anyway, so
+  // a slow connection still answers the click.
+  const OPEN_WAIT_MS = 600;
   const HTTP_OK = 200;
 
   const TEXT = Object.freeze({
@@ -151,8 +154,11 @@
     return TEXT.NOT_EMAILED;
   }
 
+  // Shows once the people list is in, so the dialog opens at its full size
+  // instead of growing under the reader.
   async function openShareDialog(id, title) {
-    dialogPage = { id, title, role: null };
+    const page = { id, title, role: null };
+    dialogPage = page;
     returnFocusTo = document.activeElement;
     byId('share-title').textContent = `Share “${titleForName(title)}”`;
     emailInput.value = '';
@@ -164,9 +170,13 @@
     setHidden('share-leave', true);
     setHidden('share-people-block', true);
     byId('share-people').innerHTML = '';
+    const loaded = loadPeople();
+    await Promise.race([loaded, new Promise(done => setTimeout(done, OPEN_WAIT_MS))]);
+    // Closed, or opened for another page, while it loaded.
+    if (dialogPage !== page) return;
     overlay.hidden = false;
     overlay.classList.add('open');
-    await loadPeople();
+    await loaded;
   }
 
   function closeShareDialog() {
