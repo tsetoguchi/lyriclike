@@ -26,7 +26,7 @@ jobs:
       - name: Look for skipped and failed mail in the last 24 hours
         env:
           CLOUDFLARE_D1_TOKEN: ${{ secrets.CLOUDFLARE_D1_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 2548933b4f272b70de5a6c50171000c3
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: 581d1db7-8372-4f83-a375-693388712173
         run: |
           cat > check.mjs <<'EOF'

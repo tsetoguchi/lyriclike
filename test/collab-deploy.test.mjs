@@ -39,6 +39,15 @@ describe('the room deploy workflow', () => {
     assert.match(WORKFLOW, /secrets\.CLOUDFLARE_WORKERS_TOKEN/);
   });
 
+  it('names no Cloudflare account id in any workflow, only a repo variable', () => {
+    const folder = new URL('../.github/workflows/', import.meta.url);
+    for (const file of readdirSync(folder)) {
+      const text = readFileSync(new URL(file, folder), 'utf8');
+      assert.doesNotMatch(text, /CLOUDFLARE_ACCOUNT_ID: [0-9a-f]{32}/, file);
+    }
+    assert.match(WORKFLOW, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ vars\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  });
+
   it('sends main to production and other branches to the preview room', () => {
     assert.match(WORKFLOW, /refs\/heads\/main/);
     assert.match(WORKFLOW, /deploy --env preview/);
