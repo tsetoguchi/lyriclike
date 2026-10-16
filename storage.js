@@ -585,6 +585,33 @@ function freezeUntilReload(message = NO_LIVE_SESSION_MESSAGE) {
   showNotice(message);
 }
 
+// live.js asks when reconnects keep failing. A refused upgrade looks like a
+// dropped socket, so the page asks the server: still live, keep trying; not
+// live (the switch went off), the words are saved the REST way, which for a
+// co-writer means read-only or a page of their own; gone, they are kept.
+async function checkStillLive() {
+  const id = currentLyricId;
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${id}`);
+  } catch {
+    return;
+  }
+  if (id !== currentLyricId || !isLive()) return;
+  if (res.status === HTTP_NOT_FOUND) return leaveUnavailableLivePage(id);
+  if (!res.ok) return;
+  const lyric = await res.json();
+  if (lyric.live) return;
+  closeLiveSession();
+  reconcileAsRest(lyric);
+}
+
+async function leaveUnavailableLivePage(id) {
+  const screen = document.getElementById('lyrics').value;
+  const hasUnsaved = await currentLiveSession().hasUnsavedWords(id, screen);
+  if (id === currentLyricId) window.livePage.onUnavailable({ hasUnsaved });
+}
+
 function refreshLivePageInfo(lyric) {
   if (lyric.role) setPageInfo(lyric);
   markActiveListItem();
@@ -855,9 +882,10 @@ async function sendSave(force) {
     handleConflict(theirs, body);
     return;
   }
-  if (res.status === HTTP_FORBIDDEN) {
-    // Live editing went off while this co-writer had words to save (a live
-    // draft reopened the REST way): they become a page of their own.
+  // Live editing went off while this co-writer had words to save (a live
+  // draft reopened the REST way): they become a page of their own. Only the
+  // server's own answer says so; a 403 from the edge is an ordinary failure.
+  if (res.status === HTTP_FORBIDDEN && !isCreate && await isPausedAnswer(res)) {
     saveAsNewPage({ message: PAUSED_COPY_MESSAGE });
     return;
   }
@@ -869,6 +897,14 @@ async function sendSave(force) {
     return;
   }
   setSaveIndicator('Save failed');
+}
+
+async function isPausedAnswer(res) {
+  try {
+    return (await res.json()).error === 'paused';
+  } catch {
+    return false;
+  }
 }
 
 function savedAs(body, revision) {
@@ -1450,6 +1486,7 @@ window.livePage = {
     location.reload();
   },
   notice: text => showNotice(text),
+  checkStillLive,
   setReadOnly: isReadOnly => { document.getElementById('lyrics').readOnly = isReadOnly; },
 };
 

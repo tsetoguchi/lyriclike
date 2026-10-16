@@ -20,6 +20,10 @@
   const OFFLINE_NOTICE_MS = 5000;
   const RECONNECT_FIRST_MS = 1000;
   const RECONNECT_MAX_MS = 30000;
+  // A refused upgrade looks like any dropped socket (1006). After this many
+  // failed tries in a row, the page asks the server whether it is still live:
+  // live editing may have been switched off, or the page unshared.
+  const LIVE_CHECK_EVERY_ATTEMPTS = 3;
   const NORMAL_CLOSE = 1000;
   const PING = 'ping';
   const PONG = 'pong';
@@ -583,6 +587,8 @@
     scheduleReconnect() {
       const ceiling = Math.min(RECONNECT_MAX_MS, RECONNECT_FIRST_MS * 2 ** this.attempts);
       this.attempts += 1;
+      // A page script cached from before this check has no such call.
+      if (this.attempts % LIVE_CHECK_EVERY_ATTEMPTS === 0) this.env.page.checkStillLive?.();
       const delay = ceiling / 2 + (this.env.random() * ceiling) / 2;
       this.setTimer('reconnect', delay, () => this.connect());
     }

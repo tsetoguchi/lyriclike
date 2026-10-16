@@ -45,6 +45,8 @@ function makeSession(identity, { body = LYRIC.body, loadDeps, store = createFake
     isTitleFocused() { return this.isTitleFocusedFlag; },
     onUnavailable(info) { this.unavailable.push(info); },
     onSessionExpired() { this.expired += 1; },
+    liveChecks: 0,
+    checkStillLive() { this.liveChecks += 1; },
     reload() { this.reloads += 1; },
     notice(text) { this.notices.push(text); },
     setReadOnly(isReadOnly) { this.readOnly = isReadOnly; },
@@ -450,6 +452,26 @@ describe('review fixes', () => {
 });
 
 describe('going offline', () => {
+  it('asks the page whether it is still live when reconnects keep being refused', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    // With the switch turned off, the front door refuses every upgrade.
+    link.offline.add(ANN.userId);
+    link.drop(link.sockets[0]);
+    await settle(ann);
+    assert.ok(ann.page.liveChecks >= 1);
+  });
+
+  it('does not ask after a drop that reconnects at once', async () => {
+    const ann = makeSession(ANN);
+    await ann.session.open(LYRIC);
+    await settle(ann);
+    link.drop(link.sockets[0]);
+    await settle(ann);
+    assert.equal(ann.page.liveChecks, 0);
+  });
+
   it('says offline as soon as the browser reports it, and syncs on return', async () => {
     const ann = makeSession(ANN);
     const bo = makeSession(BO);
