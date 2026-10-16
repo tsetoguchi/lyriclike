@@ -30,8 +30,9 @@
     SIGN_UP_TO_SEE: 'Create a free account with the email the page was shared with, to see it.',
     NOT_AVAILABLE: "This page isn't available to this account. If it was shared with you "
       + 'under another email, log in with that one.',
-    NOT_EMAILED: "Shared. We couldn't email them today, so copy the link and send it yourself.",
-    SEND_IT_YOURSELF: 'Copy the link and send it yourself.',
+    NOT_EMAILED: "Shared, but we couldn't email them today. "
+      + 'Copy the link and send it to them yourself.',
+    SEND_IT_YOURSELF: 'Copy the link and send it to them yourself.',
     LOAD_FAILED: "Couldn't load who has this page.",
     FAILED: 'Something went wrong. Try again.',
     STOP_QUESTION: "You won't get an email when someone shares a LyricLike page with this "
@@ -140,12 +141,12 @@
     const perDay = limit && limit.per_day;
     if (!perDay) return TEXT.NOT_EMAILED;
     if (limit.reason === 'address') {
-      return `Shared. Each person can get ${perDay} invite emails a day, and they've `
-        + `had today's. ${TEXT.SEND_IT_YOURSELF}`;
+      return `Shared, but we didn't email them. They've already gotten ${perDay} invite `
+        + `emails today, the daily limit. ${TEXT.SEND_IT_YOURSELF}`;
     }
     if (limit.reason === 'sender') {
-      return `Shared. You can send ${perDay} invite emails a day, and you've sent `
-        + `today's. ${TEXT.SEND_IT_YOURSELF}`;
+      return `Shared, but we didn't email them. You've sent ${perDay} invite emails `
+        + `today, the daily limit. ${TEXT.SEND_IT_YOURSELF}`;
     }
     return TEXT.NOT_EMAILED;
   }
