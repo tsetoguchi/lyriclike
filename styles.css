@@ -807,13 +807,6 @@ header .nav-icon circle {
   min-width: 0;
 }
 
-.share-hint {
-  font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
-  line-height: 1.5;
-  color: var(--ink-faded);
-}
-
 .share-result {
   display: flex;
   flex-direction: column;
