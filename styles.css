@@ -834,9 +834,11 @@ header .nav-icon circle {
   padding: var(--space-2) var(--space-6) var(--space-6);
 }
 
-/* Copy link sits alone on the left, like the link button in Google Docs. */
-.share-copy {
-  margin-right: auto;
+/* Copy link, and Leave for a co-writer, sit on the left like the link button
+   in Google Docs; Done or Share sits on the right. */
+.share-actions #share-done,
+.share-actions #share-submit {
+  margin-left: auto;
 }
 
 .share-copy[hidden],
@@ -917,7 +919,6 @@ header .nav-icon circle {
 }
 
 .share-result[hidden],
-.share-leave[hidden],
 .share-people-block[hidden] {
   display: none;
 }
@@ -987,18 +988,6 @@ header .nav-icon circle {
 .share-person-status {
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
-}
-
-.share-leave {
-  align-self: flex-start;
-  padding: 0;
-  background: none;
-  border: none;
-  font-family: var(--font-editor);
-  font-size: var(--text-footnote);
-  color: var(--danger);
-  text-decoration: underline;
-  cursor: pointer;
 }
 
 /* A shared page in the notebook says whose it is, in pencil. */

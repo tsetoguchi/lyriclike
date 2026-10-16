@@ -261,7 +261,6 @@
           <p class="modal-label" id="share-people-label">People with access</p>
           <ul id="share-people" class="share-people"></ul>
         </div>
-        <button type="button" id="share-leave" class="share-leave" hidden>Leave this page</button>
       </div>
       <div class="modal-actions share-actions">
         <button type="button" id="share-copy" class="toggle-btn tip-btn share-copy" hidden>
@@ -269,6 +268,13 @@
             <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/>
             <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>
           </svg><span id="share-copy-label" class="tip-btn-label">Copy link</span>
+        </button>
+        <button type="button" id="share-leave" class="toggle-btn tip-btn" hidden>
+          <svg class="tip-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4.2 20.9A2 2 0 0 0 6 22h12a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.7-1.7l-3.6-3.6A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v3.1"/>
+            <path d="M14 2v5a1 1 0 0 0 1 1h5"/>
+            <path d="M5 11l-3 3 3 3M2 14h10"/>
+          </svg><span class="tip-btn-label">Leave this page</span>
         </button>
         <button type="button" id="share-done" class="toggle-btn">Done</button>
         <button type="submit" id="share-submit" form="share-form"
