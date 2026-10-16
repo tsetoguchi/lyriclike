@@ -28,8 +28,18 @@ function isJson(request) {
   return type === JSON_MEDIA_TYPE;
 }
 
+// The one exception: a mail app's one-click unsubscribe is a cross-site POST
+// with a form body. The route needs no cookie; its signed token is the only
+// thing that lets it act, so a forged request can do nothing with it.
+const ONE_CLICK_STOP_PATH = '/api/invites/stop';
+
+function isOneClickStop(request) {
+  return request.method === 'POST' && new URL(request.url).pathname === ONE_CLICK_STOP_PATH;
+}
+
 function rejectForgedRequest(request) {
   if (SAFE_METHODS.has(request.method)) return null;
+  if (isOneClickStop(request)) return null;
   if (!isSameOrigin(request)) return new Response(null, { status: HTTP_FORBIDDEN });
   if (hasBody(request) && !isJson(request)) {
     return new Response(null, { status: HTTP_UNSUPPORTED_MEDIA_TYPE });
@@ -54,6 +64,8 @@ async function runRoute(context) {
 // which reads as the sign-in having failed.
 export async function onRequest(context) {
   const response = rejectForgedRequest(context.request) || await runRoute(context);
+  // Rebuilding a 101 would drop its webSocket, so the handoff goes out untouched.
+  if (response.status === 101) return response;
 
   const answer = new Response(response.body, response);
   // _headers does not apply to Function responses.

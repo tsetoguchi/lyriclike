@@ -20,6 +20,8 @@ const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
 const NEW_LYRIC_HEADING = 'Create page';
 const DELETE_LYRIC_HEADING = 'Delete page';
+const LEAVE_LYRIC_HEADING = 'Leave page';
+const SHARED_GROUP_LABEL = 'Shared with me';
 const RENAME_HEADING = 'Rename page';
 const LOADING_MESSAGE = 'Loading...';
 const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
@@ -35,10 +37,149 @@ const CREATE_ACCOUNT_MESSAGE =
   'Your notebook saves every page you write, so you can pick it up again on '
   + 'any device.';
 
+const CONFLICT_MESSAGE = 'Someone else changed this page.';
+// A page nobody else has can only have moved on in this person's other tab
+// or device.
+const OWN_CONFLICT_MESSAGE = 'This page was changed in another tab or device.';
+const NO_LIVE_SESSION_MESSAGE = 'Reload the page to edit it.';
+const PAUSED_MESSAGE = 'Live editing is paused. You can read this page.';
+const PAUSED_COPY_MESSAGE = 'Live editing is paused, so your newest words are saved as a new page.';
+const LOST_ACCESS_MESSAGE =
+  'You no longer have access to this page. Your text is saved as a new page.';
+const UNAVAILABLE_MESSAGE = "This page isn't available to this account.";
+const COPY_SUFFIX = ' (my copy)';
+const MAX_TITLE_LENGTH = 300;
+// HTTP_NOT_FOUND comes from app.js: the scripts share one global scope.
+const HTTP_CONFLICT = 409;
+const HTTP_FORBIDDEN = 403;
+// A 4001 from a live room reloads the page; a stale cache must not loop it.
+const RELOAD_GUARD_KEY = 'live_reloaded_at';
+const RELOAD_GUARD_MS = 60 * 1000;
+// Leaving a live page waits for its room to save the newest words.
+const UNSAVED_LEAVE_MESSAGE =
+  "Your newest words on this page aren't saved yet, so it stays open. Try again in a moment.";
+// A live draft whose page could not be fetched at load tries again this often.
+const REOPEN_RETRY_MS = 5000;
+const SIGN_OUT_HEADING = 'Log out';
+const UNSAVED_SIGN_OUT_MESSAGE =
+  "Your newest words on this page aren't saved yet, most likely because you're offline. "
+  + "If you log out now, they're lost.";
+// The room saves at most every 5 seconds, so signing out waits for one save
+// and a little more.
+const SIGN_OUT_WAIT_MS = 8000;
+
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
 let lastSavedBody = '';
 let saveTimer = null;
+// The server's count of saves for the open page, sent with each save so one
+// that lost a race is refused instead of erasing the other. null means the
+// page is not on the server yet, and its first save creates it.
+let currentRevision = null;
+// One save at a time: a second save sent before the first answers would carry
+// the same revision and be refused against the first. It waits here instead.
+let saveInFlight = null;
+let saveQueued = false;
+let queuedForce = false;
+// The body of a save that got no answer. It may have landed, so a 409 that
+// carries exactly this body is our own save, not someone else's.
+let unansweredBody = null;
+// What the server holds when a save was refused, until the writer picks
+// whose version to keep. Saving waits while it is set.
+let pendingConflict = null;
+// Whose the open page is and how many people have it. Sharing (sharing.js)
+// reads it for the Share button, the "Shared by" line and the poll.
+let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
+
+function setPageInfo(lyric) {
+  currentPageInfo = {
+    role: lyric.role === 'editor' ? 'editor' : 'owner',
+    shareCount: Number(lyric.share_count) || 0,
+    ownerName: typeof lyric.owner_name === 'string' ? lyric.owner_name : '',
+  };
+  refreshSharingUi();
+}
+
+// sharing.js loads after this file, so the first calls, from a restored
+// draft, come before it is there.
+function refreshSharingUi() {
+  if (typeof refreshPageSharing === 'function') refreshPageSharing();
+}
+
+// live.js loads after this file, so early calls find no session yet. Not
+// named liveSession: live.js sets window.liveSession, which would replace a
+// global function of that name.
+function currentLiveSession() {
+  return window.liveSession || null;
+}
+
+function isLive() {
+  const session = currentLiveSession();
+  return Boolean(session && session.isLive());
+}
+
+// Whether the page on screen is live, or waiting to reopen live: its draft
+// says so, and a reload reopens it from the device's local copy (live.js).
+// It outlasts a signed-out close, so signing back in picks the page up.
+let isLiveDraft = false;
+// Set while the page on screen is read-only for a reason this file gave:
+// live.js did not load, or live editing is paused for a co-writer. Nothing
+// can be typed there, so leaving it loses nothing.
+let isEditorLocked = false;
+// The savedAt of the local copy the stored draft's words come from, so a
+// reload can tell which of the two is newer, and that copy's words. Typing
+// before the first sync moves the draft's body on but leaves these, so a
+// reload whose copy is newer still knows what that typing was added to.
+// null when there is none.
+let liveCopyStamp = null;
+let liveCopyText = null;
+// The text the room had saved at that copy: the base a reload falls back to
+// when the copy itself is gone. A few seconds of typing can then repeat, but
+// nothing is lost.
+let liveConfirmedText = null;
+// What the page had on its way out past the last copy that landed, as a
+// base64 Yjs update (live.js saveOnLeaving). null once a copy holds it.
+let liveDelta = null;
+
+function forgetLiveCopyMarks() {
+  liveCopyStamp = null;
+  liveCopyText = null;
+  liveConfirmedText = null;
+  liveDelta = null;
+}
+
+function closeLiveSession() {
+  isLiveDraft = false;
+  forgetLiveCopyMarks();
+  if (currentLiveSession()) currentLiveSession().close();
+  // A page locked for want of a live session (showLyric) unlocks once
+  // another page is on screen.
+  unlockEditor();
+}
+
+// Signed out mid-session: off the room, but the local copy stays.
+function suspendLiveSession() {
+  if (currentLiveSession()) currentLiveSession().close({ keepCopy: true });
+}
+
+function liveHasLocalCopy() {
+  const session = currentLiveSession();
+  return Boolean(session && session.hasLocalCopy());
+}
+
+// Signing out and deleting the account leave no live words on the device.
+// forgetAllCopies never rejects.
+function forgetLiveCopies() {
+  const session = currentLiveSession();
+  if (session) session.forgetAllCopies();
+}
+
+// The room saves a live page, and one waiting to reopen live; a REST save
+// would only meet it as a 409.
+function isRoomSaved() {
+  return isLiveDraft || isLive();
+}
+
 // Up here, not with the rest of the sample code, because naming the page
 // reads it and the notebook can be drawn before that code runs.
 let sampleShowing = false;
@@ -54,7 +195,7 @@ let sampleShowing = false;
 let resolveDialog = null;
 let requiredAnswer = null;
 
-function openDialog({ heading, message, confirmLabel, danger, field }) {
+function openDialog({ heading, message, confirmLabel, danger, field, noCancel = false }) {
   const overlay = document.getElementById('dialog-overlay');
   const input = document.getElementById('dialog-input');
   const confirm = document.getElementById('dialog-confirm');
@@ -62,6 +203,8 @@ function openDialog({ heading, message, confirmLabel, danger, field }) {
   const fieldEl = document.getElementById('dialog-field');
 
   document.getElementById('dialog-title').textContent = heading;
+  // A dialog that only tells something has nothing to cancel.
+  document.getElementById('dialog-cancel').hidden = noCancel;
   confirm.textContent = confirmLabel;
   confirm.classList.toggle('danger-btn', Boolean(danger));
 
@@ -242,6 +385,7 @@ async function loadLyricsList() {
   // check answers there is nothing to say yet.
   if (window.currentUser === null) {
     showLocalPage(container);
+    if (typeof promptForPendingShare === 'function') promptForPendingShare();
     return;
   }
   if (window.currentUser === undefined) {
@@ -269,14 +413,20 @@ async function loadLyricsList() {
 
     const lyrics = await res.json();
     listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
-    if (lyrics.length === 0) {
+    const own = lyrics.filter(lyric => !lyric.shared);
+    const shared = lyrics.filter(lyric => lyric.shared);
+    if (own.length === 0) {
       showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
-      return;
+    } else {
+      container.innerHTML = '';
+      for (const lyric of own) container.appendChild(buildListItem(lyric));
     }
-
-    container.innerHTML = '';
-    for (const lyric of lyrics) {
-      container.appendChild(buildListItem(lyric));
+    if (shared.length > 0) {
+      const label = document.createElement('h2');
+      label.className = 'sidebar-label lyrics-list-group';
+      label.textContent = SHARED_GROUP_LABEL;
+      container.appendChild(label);
+      for (const lyric of shared) container.appendChild(buildListItem(lyric));
     }
     return lyrics;
   } catch {
@@ -285,21 +435,28 @@ async function loadLyricsList() {
 }
 
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
 
 // A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
-// wait at the end of the row until it is hovered or focused.
+// wait at the end of the row until it is hovered or focused. A page shared
+// with this person shows whose it is, and can be left rather than deleted.
+// The owner's name stays whole; only the title is cut short.
 function buildListItem(lyric) {
   const item = document.createElement('div');
   item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
   item.dataset.id = lyric.id;
   const title = escapeHtml(titleForName(lyric.title));
+  const owner = lyric.shared ? escapeHtml(lyric.owner_name || '') : '';
+  const lastAction = lyric.shared
+    ? `<button class="lyrics-action-btn lyrics-delete-btn" data-action="leave" aria-label="Leave ${title}" title="Leave">${LEAVE_ICON}</button>`
+    : `<button class="lyrics-action-btn lyrics-delete-btn" data-action="delete" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>`;
 
   item.innerHTML = `
-    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}">${title}</button>
+    <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}"><span class="lyrics-list-title">${title}</span>${owner ? `<span class="lyrics-list-owner">${owner}</span>` : ''}</button>
     <div class="lyrics-list-actions">
-      <button class="lyrics-action-btn" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
-      <button class="lyrics-action-btn lyrics-delete-btn" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>
+      <button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
+      ${lastAction}
     </div>
   `;
 
@@ -307,9 +464,14 @@ function buildListItem(lyric) {
     trackEvent('page_opened');
     loadLyric(lyric.id);
   });
-  const [renameBtn, deleteBtn] = item.querySelectorAll('.lyrics-action-btn');
-  renameBtn.addEventListener('click', () => renameLyric(lyric.id, lyric.title));
-  deleteBtn.addEventListener('click', () => deleteLyric(lyric.id, lyric.title));
+  const actions = {
+    rename: () => renameLyric(lyric.id, lyric.title),
+    delete: () => deleteLyric(lyric),
+    leave: () => deleteLyric(lyric),
+  };
+  for (const button of item.querySelectorAll('.lyrics-action-btn')) {
+    button.addEventListener('click', actions[button.dataset.action]);
+  }
   return item;
 }
 
@@ -344,14 +506,45 @@ function showListMessage(container, message) {
   container.innerHTML = '<div class="lyrics-list-empty">' + escapeHtml(message) + '</div>';
 }
 
+// Fetches a page and puts it on screen. Returns the fetch's status, or 0 when
+// the request itself failed. The save waiting on the page being left goes out
+// first, so its last words are not lost.
 async function loadLyric(id) {
-  const res = await fetch(`/api/lyrics/${id}`);
-  if (!res.ok) return;
+  if (!await flushSave()) return 0;
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${id}`);
+  } catch {
+    return 0;
+  }
+  if (!res.ok) return res.status;
   const lyric = await res.json();
 
+  showLyric(lyric);
+  markActiveListItem();
+  closeLyricsList();
+  return res.status;
+}
+
+// The revision and the saved text are set before the input event, which
+// would otherwise schedule a save of text that is already on the server.
+function showLyric(lyric) {
+  // The page already live on screen: its room has newer words than this
+  // copy, and writing it into the editor would send it to everyone as typing.
+  const session = currentLiveSession();
+  if (lyric.live && session && session.isLiveFor(lyric.id)) return refreshLivePageInfo(lyric);
+  // Off the old page's room before its editor changes, so nothing of the new
+  // page is ever sent there.
+  closeLiveSession();
+  // Before the input event below, so its draft is marked live.
+  isLiveDraft = Boolean(lyric.live);
   currentLyricId = lyric.id;
   currentTitle = lyric.title;
+  currentRevision = lyric.revision;
   lastSavedBody = lyric.body;
+  unansweredBody = null;
+  clearConflict();
+  if (lyric.role) setPageInfo(lyric);
 
   const textarea = document.getElementById('lyrics');
   textarea.value = lyric.body;
@@ -359,8 +552,91 @@ async function loadLyric(id) {
 
   setSaveIndicator('');
   updatePanelHeader();
+  if (session) session.follow(lyric);
+  // Live, but live.js did not load: the words would be kept from the REST
+  // save and from the room alike, so the page is read-only until a reload.
+  // A co-writer with live editing off may only read (spec §8).
+  if (isLiveDraft && !session) lockEditor(NO_LIVE_SESSION_MESSAGE);
+  else if (isPausedForMe(lyric)) lockEditor(PAUSED_MESSAGE);
+}
+
+function isPausedForMe(lyric) {
+  return lyric.role === 'editor' && !lyric.live;
+}
+
+// The title too: a paused co-writer's rename would be refused.
+function setEditorReadOnly(isReadOnly) {
+  document.getElementById('lyrics').readOnly = isReadOnly;
+  document.getElementById('lyrics-panel-title').contentEditable = isReadOnly ? 'false' : 'true';
+}
+
+function lockEditor(message) {
+  isEditorLocked = true;
+  freezeUntilReload(message);
+}
+
+function unlockEditor() {
+  if (isEditorLocked) hideNotice();
+  isEditorLocked = false;
+  setEditorReadOnly(false);
+}
+
+// A live draft reopened without live.js may hold unsaved words, so it is
+// frozen without the lock flag: leaving stays refused until a reload.
+function freezeUntilReload(message = NO_LIVE_SESSION_MESSAGE) {
+  setEditorReadOnly(true);
+  showNotice(message);
+}
+
+// live.js asks when reconnects keep failing. A refused upgrade looks like a
+// dropped socket, so the page asks the server: still live, keep trying; not
+// live (the switch went off), the words are saved the REST way, which for a
+// co-writer means read-only or a page of their own; gone, they are kept.
+async function checkStillLive() {
+  const id = currentLyricId;
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${id}`);
+  } catch {
+    return;
+  }
+  if (id !== currentLyricId || !isLive()) return;
+  if (res.status === HTTP_NOT_FOUND) return leaveUnavailableLivePage(id);
+  if (!res.ok) return;
+  const lyric = await res.json();
+  if (lyric.live) return;
+  closeLiveSession();
+  reconcileAsRest(lyric);
+}
+
+async function leaveUnavailableLivePage(id) {
+  const screen = document.getElementById('lyrics').value;
+  const hasUnsaved = await currentLiveSession().hasUnsavedWords(id, screen);
+  if (id === currentLyricId) window.livePage.onUnavailable({ hasUnsaved });
+}
+
+function refreshLivePageInfo(lyric) {
+  if (lyric.role) setPageInfo(lyric);
   markActiveListItem();
-  closeLyricsList();
+}
+
+// A new page is on screen but not on the server, so its first save creates it.
+function startBlankPage(title) {
+  closeLiveSession();
+  clearTimeout(saveTimer);
+  currentLyricId = crypto.randomUUID();
+  currentTitle = title;
+  currentRevision = null;
+  lastSavedBody = '';
+  unansweredBody = null;
+  clearConflict();
+  setPageInfo({});
+
+  const textarea = document.getElementById('lyrics');
+  textarea.value = '';
+  textarea.dispatchEvent(new Event('input'));
+  setSaveIndicator('');
+  updatePanelHeader();
 }
 
 async function createLyric() {
@@ -368,66 +644,56 @@ async function createLyric() {
   if (name === null) return;
   trackEvent('page_created');
 
-  currentLyricId = crypto.randomUUID();
-  currentTitle = name.trim() || DEFAULT_TITLE;
-  lastSavedBody = '';
-
-  const textarea = document.getElementById('lyrics');
-  textarea.value = '';
-  textarea.dispatchEvent(new Event('input'));
-
-  setSaveIndicator('');
-  updatePanelHeader();
+  if (!await flushSave()) return;
+  startBlankPage(name.trim() || DEFAULT_TITLE);
   saveDraft();
   closeLyricsList();
-  textarea.focus();
+  document.getElementById('lyrics').focus();
 
   await saveNewLyric();
 }
 
 // A lyric someone has just named belongs in the notebook straight away, even
-// with no words in it yet. performSave() deliberately skips an empty body, so
-// the first write goes out from here.
-async function saveNewLyric() {
-  if (!window.currentUser) return;
-
-  setSaveIndicator('Saving...');
-  try {
-    const res = await fetch(`/api/lyrics/${currentLyricId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: currentTitle, body: '' }),
-    });
-    if (!res.ok) { setSaveIndicator('Save failed'); return; }
-    lastSavedBody = '';
-    setSaveIndicator('Saved');
-    setTimeout(() => setSaveIndicator(''), 3000);
-    refreshListIfBehind();
-  } catch {
-    setSaveIndicator('Save failed');
-  }
+// with no words in it yet, so this save goes out with an empty body.
+function saveNewLyric() {
+  return performSave({ force: true });
 }
 
-async function deleteLyric(id, title) {
-  const confirmed = await openDialog({
-    heading: DELETE_LYRIC_HEADING,
-    message: `“${titleForName(title)}” will be deleted, along with everything written in it. This cannot be undone.`,
-    confirmLabel: 'Delete',
-    danger: true,
-  });
+// The server treats both the same way: the owner's call deletes the page,
+// an editor's only takes them off it. Only the words differ.
+async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
+  const confirmed = await openDialog(shared
+    ? {
+      heading: LEAVE_LYRIC_HEADING,
+      message: `You'll lose access to “${titleForName(title)}”. ${ownerName || 'Its owner'} keeps it.`,
+      confirmLabel: 'Leave',
+      danger: true,
+    }
+    : {
+      heading: DELETE_LYRIC_HEADING,
+      message: `“${titleForName(title)}” will be deleted, along with everything written in it. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
   if (!confirmed) return;
 
+  if (id === currentLyricId) {
+    clearTimeout(saveTimer);
+    await waitForSaves();
+  }
   await fetch(`/api/lyrics/${id}`, { method: 'DELETE' });
 
-  if (id === currentLyricId) {
-    currentLyricId = crypto.randomUUID();
-    currentTitle = DEFAULT_TITLE;
-    document.getElementById('lyrics').value = '';
-    document.getElementById('lyrics').dispatchEvent(new Event('input'));
-    updatePanelHeader();
-  }
+  if (id === currentLyricId) startBlankPage(DEFAULT_TITLE);
 
   loadLyricsList();
+}
+
+function sendRename(id, title) {
+  return fetch(`/api/lyrics/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
 }
 
 async function renameLyric(id, oldTitle) {
@@ -436,80 +702,486 @@ async function renameLyric(id, oldTitle) {
   const newTitle = entered.trim();
   if (!newTitle || newTitle === oldTitle) return;
 
-  const res = await fetch(`/api/lyrics/${id}`);
-  if (!res.ok) return;
-  const lyric = await res.json();
-
-  await fetch(`/api/lyrics/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: newTitle, body: lyric.body }),
-  });
-
   if (id === currentLyricId) {
     currentTitle = newTitle;
     updatePanelHeader();
+    saveDraft();
+    await renameCurrentPage();
+    loadLyricsList();
+    return;
   }
 
+  try {
+    await sendRename(id, newTitle);
+  } catch {
+    // The list below still shows the name the server has.
+  }
   loadLyricsList();
 }
 
-function scheduleSave() {
-  if (!window.currentUser) return;
-  clearTimeout(saveTimer);
-  setSaveIndicator('Unsaved');
-  saveTimer = setTimeout(performSave, 1000);
-}
-
-// A renamed page is saved even when its words have not changed, and even
-// when it has none yet: the name is what the notebook lists it by. The sample
-// verse is not the visitor's writing, so it goes out as an empty page.
-async function performSave({ titleChanged = false } = {}) {
-  const typed = document.getElementById('lyrics').value;
-  if (!titleChanged) {
-    if (!typed.trim()) return;
-    if (isSampleShowing()) return;
-    if (typed === lastSavedBody) return;
+// A rename touches only the title, so it never bumps the revision or runs
+// into someone else's words. A page not on the server yet has nothing to
+// rename; its create goes out instead, carrying the name. One whose create
+// is still on its way is renamed once that lands.
+async function renameCurrentPage() {
+  const pageId = currentLyricId;
+  if (isLive()) {
+    currentLiveSession().rename(currentTitle);
+    return;
   }
-  const body = isSampleShowing() ? '' : typed;
+  await waitForSaves();
+  if (pageId !== currentLyricId) return;
+  if (currentRevision === null) {
+    await performSave({ force: true });
+    return;
+  }
 
   setSaveIndicator('Saving...');
   try {
-    const res = await fetch(`/api/lyrics/${currentLyricId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: currentTitle, body }),
-    });
-
-    if (res.status === 401) {
+    const res = await sendRename(pageId, currentTitle);
+    if (res.status === HTTP_UNAUTHORIZED) {
       setSaveIndicator('Log in to save');
       if (window.handleSessionExpired) window.handleSessionExpired();
       return;
     }
-
     if (!res.ok) {
       setSaveIndicator('Save failed');
       return;
     }
-
-    lastSavedBody = body;
-    setSaveIndicator('Saved');
-    setTimeout(() => setSaveIndicator(''), 3000);
-    refreshListIfBehind();
+    showSaved();
   } catch {
     setSaveIndicator('Save failed');
   }
 }
 
+function scheduleSave() {
+  if (!window.currentUser) return;
+  // The room saves a live page; the draft still records it.
+  if (isRoomSaved()) return;
+  clearTimeout(saveTimer);
+  setSaveIndicator('Unsaved');
+  saveTimer = setTimeout(performSave, 1000);
+}
+
+// Saves the open page's words. Only one save is on the wire at a time; one
+// asked for meanwhile goes out when it answers, on the new revision. `force`
+// saves even an empty or unchanged body: a new page, a rename of a page not on
+// the server yet, and "Keep mine" all need that.
+function performSave({ force = false } = {}) {
+  if (!window.currentUser) return Promise.resolve();
+  if (saveInFlight) {
+    saveQueued = true;
+    queuedForce = queuedForce || force;
+    return saveInFlight;
+  }
+  saveInFlight = sendSave(force).finally(() => {
+    saveInFlight = null;
+    if (!saveQueued) return undefined;
+    const again = queuedForce;
+    saveQueued = false;
+    queuedForce = false;
+    return performSave({ force: again });
+  });
+  return saveInFlight;
+}
+
+// Resolves once no save is on the wire or waiting to follow one.
+async function waitForSaves() {
+  while (saveInFlight) await saveInFlight;
+}
+
+// Sends the save the 1-second timer is holding, then waits for it. Called
+// before leaving a page, so the timer cannot fire on the next one. Words
+// caught in an unresolved conflict are kept as a page of their own. Returns
+// false when that failed, and the page must stay open so nothing is lost.
+async function flushSave() {
+  if (isLive()) return flushLivePage();
+  // Offline at load, waiting to reopen live: its words are not safe to leave.
+  if (isLiveDraft && !isEditorLocked) {
+    showNotice(UNSAVED_LEAVE_MESSAGE);
+    return false;
+  }
+  if (pendingConflict) return keepMineAsCopy();
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  if (hasUnsavedEdits()) await performSave();
+  await waitForSaves();
+  return true;
+}
+
+// Leaving a live page waits for the room to save its words, or stays, and
+// says so where phones show it.
+async function flushLivePage() {
+  const isSaved = await currentLiveSession().flush();
+  if (!isSaved) showNotice(UNSAVED_LEAVE_MESSAGE);
+  return isSaved;
+}
+
+// Signing out ends this device's copy of a live page. Words on their way
+// get a few seconds to reach the room; if they cannot (offline), the
+// writer decides whether to lose them.
+async function confirmSignOut() {
+  // Words behind the conflict bar would go with the draft at sign-out, so
+  // they are kept as a page of their own first.
+  if (pendingConflict && !await keepMineAsCopy()) return askToLogOutAnyway();
+  if (!isLiveDraft) return true;
+  if (isLive() && await currentLiveSession().flush(SIGN_OUT_WAIT_MS)) return true;
+  return askToLogOutAnyway();
+}
+
+async function askToLogOutAnyway() {
+  const answer = await openDialog({
+    heading: SIGN_OUT_HEADING,
+    message: UNSAVED_SIGN_OUT_MESSAGE,
+    confirmLabel: 'Log out anyway',
+    danger: true,
+  });
+  return answer === true;
+}
+window.confirmSignOut = confirmSignOut;
+
+// The sample verse is not the visitor's writing, so it goes out as an empty
+// page. The answer is only used if its page is still the one open: a slow
+// save on one page must not hand its revision to the next.
+async function sendSave(force) {
+  // A live page is saved by its room; a REST save would only meet it as a 409.
+  if (isRoomSaved()) return;
+  if (pendingConflict) return;
+  const typed = document.getElementById('lyrics').value;
+  if (!force) {
+    if (!typed.trim()) return;
+    if (isSampleShowing()) return;
+    if (typed === lastSavedBody) return;
+  }
+  const body = isSampleShowing() ? '' : typed;
+  const pageId = currentLyricId;
+  const isCreate = currentRevision === null;
+  const payload = isCreate ? { title: currentTitle, body } : { body, base_revision: currentRevision };
+
+  setSaveIndicator('Saving...');
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${pageId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    unansweredBody = body;
+    if (pageId === currentLyricId) setSaveIndicator('Save failed');
+    return;
+  }
+  if (pageId !== currentLyricId) return;
+
+  if (res.status === HTTP_UNAUTHORIZED) {
+    setSaveIndicator('Log in to save');
+    if (window.handleSessionExpired) window.handleSessionExpired();
+    return;
+  }
+  if (res.ok) {
+    const { revision, live } = await res.json();
+    savedAs(body, revision);
+    if (live) goLiveFromRest();
+    return;
+  }
+  if (res.status === HTTP_CONFLICT) {
+    const theirs = await res.json();
+    // A create that meets an existing page keeps the conflict bar: there
+    // is no earlier text of ours to rebase from.
+    if (theirs.live && !isCreate) return goLiveAfterConflict(theirs, body);
+    handleConflict(theirs, body);
+    return;
+  }
+  // Live editing went off while this co-writer had words to save (a live
+  // draft reopened the REST way): they become a page of their own. Only the
+  // server's own answer says so; a 403 from the edge is an ordinary failure.
+  if (res.status === HTTP_FORBIDDEN && !isCreate && await isPausedAnswer(res)) {
+    saveAsNewPage({ message: PAUSED_COPY_MESSAGE });
+    return;
+  }
+  if (res.status === HTTP_NOT_FOUND) {
+    // A create that is refused means the id is someone else's. An update that
+    // is refused means the page was deleted, or its owner took this person
+    // off it, while they were typing.
+    saveAsNewPage({ message: isCreate ? null : LOST_ACCESS_MESSAGE });
+    return;
+  }
+  setSaveIndicator('Save failed');
+}
+
+async function isPausedAnswer(res) {
+  try {
+    return (await res.json()).error === 'paused';
+  } catch {
+    return false;
+  }
+}
+
+function savedAs(body, revision) {
+  lastSavedBody = body;
+  currentRevision = revision;
+  unansweredBody = null;
+  saveDraft();
+  showSaved();
+  refreshSharingUi();
+}
+
+function showSaved() {
+  setSaveIndicator('Saved');
+  setTimeout(() => setSaveIndicator(''), 3000);
+  refreshListIfBehind();
+}
+
+// A save that landed but whose answer was lost comes back as a 409 against
+// itself. That one is adopted, and anything typed since goes out on top.
+function handleConflict(theirs, sentBody) {
+  if (unansweredBody !== null && theirs.body === unansweredBody) {
+    savedAs(theirs.body, theirs.revision);
+    if (document.getElementById('lyrics').value !== lastSavedBody) saveQueued = true;
+    return;
+  }
+  if (theirs.body === sentBody) {
+    savedAs(theirs.body, theirs.revision);
+    return;
+  }
+  pendingConflict = theirs;
+  clearTimeout(saveTimer);
+  setSaveIndicator('Not saved');
+  const isOnlyMine = currentPageInfo.role === 'owner' && currentPageInfo.shareCount === 0;
+  showNotice(isOnlyMine ? OWN_CONFLICT_MESSAGE : CONFLICT_MESSAGE, [
+    { label: 'Load their version', onClick: loadTheirVersion },
+    { label: 'Keep mine', onClick: keepMine },
+  ], { closable: false });
+}
+
+function clearConflict() {
+  if (!pendingConflict) return;
+  pendingConflict = null;
+  hideNotice();
+}
+
+function copyTitle(title) {
+  return title.slice(0, MAX_TITLE_LENGTH - COPY_SUFFIX.length) + COPY_SUFFIX;
+}
+
+// Creates a page holding `body` under a fresh id. Returns whether it landed.
+async function createCopy(title, body) {
+  try {
+    const res = await fetch(`/api/lyrics/${crypto.randomUUID()}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: copyTitle(title), body }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// "Load their version": the writer's words become a new page first, so
+// nothing is lost either way. The clipboard would be overwritten and forgotten.
+async function loadTheirVersion() {
+  const theirs = pendingConflict;
+  if (!theirs) return;
+  if (!await keepMineAsCopy()) return;
+  showLyric({ id: currentLyricId, ...theirs });
+  saveDraft();
+  loadLyricsList();
+}
+
+// Saves the words on screen as their own page, leaving this one to whoever
+// changed it. Returns whether that worked; on failure the conflict stays up.
+async function keepMineAsCopy() {
+  if (!pendingConflict) return true;
+  setSaveIndicator('Saving...');
+  if (!await createCopy(currentTitle, document.getElementById('lyrics').value)) {
+    setSaveIndicator('Save failed');
+    return false;
+  }
+  setSaveIndicator('');
+  clearConflict();
+  return true;
+}
+
+// "Keep mine": saves over their version on purpose.
+function keepMine() {
+  const theirs = pendingConflict;
+  if (!theirs) return;
+  currentRevision = theirs.revision;
+  clearConflict();
+  performSave({ force: true });
+}
+
+// The page went live while this tab saved it the REST way (shared from
+// another device, or the switch just turned on). Live from here: the last
+// text the server took is the base, and anything typed since is rebased
+// onto the room's text, so the conflict bar never shows.
+function goLiveFromRest() {
+  const session = currentLiveSession();
+  if (!session || isLiveDraft) return;
+  // A paused co-writer's poll found the switch back on.
+  unlockEditor();
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  saveQueued = false;
+  queuedForce = false;
+  clearConflict();
+  setSaveIndicator('');
+  isLiveDraft = true;
+  session.open({ id: currentLyricId, body: lastSavedBody, title: currentTitle });
+  writeDraft();
+}
+
+// The poll found the page live. A save still on its way would land after
+// live mode took the last saved words as its base, and its words would be
+// rebased in a second time, so live mode waits for it.
+async function goLiveWhenSaved() {
+  const id = currentLyricId;
+  try {
+    await waitForSaves();
+  } catch {
+    // A failed save leaves the older base; the rebase keeps the words.
+  }
+  if (id === currentLyricId) goLiveFromRest();
+}
+
+// A save refused because the page went live. If the refused save, or one
+// whose answer was lost, is what the server holds, it landed and is the
+// base; otherwise the last save that landed is.
+function goLiveAfterConflict(theirs, sentBody) {
+  if (theirs.body === sentBody || theirs.body === unansweredBody) lastSavedBody = theirs.body;
+  currentRevision = theirs.revision;
+  unansweredBody = null;
+  goLiveFromRest();
+}
+
+// The owner shared the page on screen and it is live now. The save due (or
+// on its way) goes first, so live mode starts from what the server holds.
+async function goLiveAfterShare(id) {
+  if (id !== currentLyricId || isLiveDraft) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  try {
+    await performSave();
+    await waitForSaves();
+  } catch {
+    // A failed save leaves the older base; the rebase keeps the words.
+  }
+  if (id === currentLyricId && !isLiveDraft) goLiveFromRest();
+}
+
+// The page on screen can no longer be saved where it is, so its words move to
+// a new page of the writer's own. The save that follows creates it.
+function saveAsNewPage({ message }) {
+  closeLiveSession();
+  currentLyricId = crypto.randomUUID();
+  currentTitle = copyTitle(currentTitle);
+  currentRevision = null;
+  lastSavedBody = '';
+  unansweredBody = null;
+  setPageInfo({});
+  updatePanelHeader();
+  saveDraft();
+  saveQueued = true;
+  queuedForce = true;
+  if (message) showNotice(message);
+}
+
+// Whether the words on screen differ from what the server last had.
+function hasUnsavedEdits() {
+  return document.getElementById('lyrics').value !== lastSavedBody;
+}
+
+// A synced live page writes its local copy, and the draft follows once
+// that is on disk (followLocalCopy), so a reload never finds the two out
+// of step.
 function saveDraft() {
+  if (liveHasLocalCopy()) {
+    currentLiveSession().saveLocalCopy();
+    return;
+  }
+  writeDraft();
+}
+
+function writeDraft() {
   // The sample is not the visitor's writing, and a draft holding it would
-  // make them look like a returning visitor next time.
+  // make them look like a returning visitor next time. The revision and
+  // whether there are unsaved edits come back with it on reload.
   if (isSampleShowing()) return;
   localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
     id: currentLyricId,
     title: currentTitle,
     body: document.getElementById('lyrics').value,
+    revision: currentRevision,
+    dirty: hasUnsavedEdits(),
+    info: currentPageInfo,
+    live: isLiveDraft,
+    copyAt: liveCopyStamp,
+    copyText: liveCopyText,
+    liveBase: liveConfirmedText,
+    liveDelta,
   }));
+}
+
+// The local copy is on disk, so the draft can show its words. While
+// synced, a co-writer's words may already be on screen past the copy, so
+// the draft waits for the next copy rather than hold words the copy lacks.
+// Off sync (after a signed-out close), only this person's typing can differ.
+function followLocalCopy({ id, stamp, text, confirmed }) {
+  if (id !== currentLyricId || !isLiveDraft) return;
+  if (document.getElementById('lyrics').value !== text && liveHasLocalCopy()) return;
+  liveCopyStamp = stamp;
+  liveCopyText = text;
+  liveConfirmedText = confirmed;
+  liveDelta = null;
+  writeDraft();
+}
+
+// The page is going (pagehide, hidden): the draft is written now, with the
+// changes past the last copy that landed, since the copy on its way may not.
+function keepDraftOnLeaving({ id, stamp, text, confirmed, delta }) {
+  if (id !== currentLyricId || !isLiveDraft) return;
+  liveCopyStamp = stamp;
+  liveCopyText = text;
+  liveConfirmedText = confirmed;
+  liveDelta = delta;
+  writeDraft();
+}
+
+// ── Page notice ──
+
+// A strip under the title for what happened to the page: a save that someone
+// else beat, or a page this account can no longer open. Amber buttons are for
+// choices; a notice that only tells closes with a quiet ✕. The conflict bar
+// has no ✕: one of its two choices has to be made.
+function showNotice(text, actions = [], { closable = true } = {}) {
+  const notice = document.getElementById('page-notice');
+  document.getElementById('page-notice-text').textContent = text;
+  const buttons = document.getElementById('page-notice-actions');
+  buttons.innerHTML = '';
+  for (const { label, onClick } of actions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'sample-clear';
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    buttons.appendChild(button);
+  }
+  if (closable) {
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'lyrics-action-btn page-notice-close';
+    close.setAttribute('aria-label', 'Dismiss');
+    close.title = 'Dismiss';
+    close.textContent = '✕';
+    close.addEventListener('click', hideNotice);
+    buttons.appendChild(close);
+  }
+  notice.hidden = false;
+}
+
+function hideNotice() {
+  document.getElementById('page-notice').hidden = true;
 }
 
 function setSaveIndicator(text) {
@@ -553,7 +1225,8 @@ function formatDate(ts) {
 }
 
 document.getElementById('lyrics').addEventListener('input', () => {
-  saveDraft();
+  // A synced live page's draft goes out with its local copy (saveDraft).
+  if (!liveHasLocalCopy()) writeDraft();
   scheduleSave();
 });
 
@@ -574,8 +1247,7 @@ titleEl.addEventListener('blur', () => {
   if (newTitle !== currentTitle) {
     currentTitle = newTitle;
     saveDraft();
-    clearTimeout(saveTimer);
-    if (window.currentUser) performSave({ titleChanged: true });
+    if (window.currentUser) renameCurrentPage();
     else if (window.currentUser === null) loadLyricsList();
   }
 });
@@ -606,9 +1278,159 @@ function isPadUnused() {
 
 // Signing in lands on the page last worked on, the way a reload does, rather
 // than on a blank one. Words typed before signing in stay where they are.
+// Whether the notebook has been opened since this page loaded.
+let hasOpenedNotebook = false;
+
+// live.js and sharing.js load after this file, and opening the notebook
+// can reopen a live page, so it waits until every script has run.
+function whenScriptsReady() {
+  if (document.readyState !== 'loading') return Promise.resolve();
+  return new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+}
+
 async function openNotebook() {
+  hasOpenedNotebook = true;
+  await whenScriptsReady();
+  refreshSharingUi();
   const lyrics = await loadLyricsList();
+  await reconcileRestoredDraft();
+  if (typeof openPendingShare === 'function' && await openPendingShare()) return;
   if (lyrics && lyrics.length > 0 && isPadUnused()) await loadLyric(lyrics[0].id);
+}
+
+// What a reload put back on screen from the stored draft, until sign-in says
+// whose it is. null once dealt with.
+let restoredDraft = null;
+
+// A reload shows the stored draft at once, but on a shared page it can be
+// hours old. With no unsaved edits it is swapped for the page as it is now.
+// With edits, its next save carries its revision, so a stale one gets the
+// conflict bar instead of erasing newer work. A never-saved draft is left to
+// be created by its first save, as before.
+async function reconcileRestoredDraft() {
+  const draft = restoredDraft;
+  restoredDraft = null;
+  if (!draft || draft.id !== currentLyricId) return;
+
+  if (draft.live) {
+    await reopenLiveDraft(draft);
+  } else if (draft.fromOldApp) {
+    await checkOldAppDraft(draft.id);
+  } else if (draft.revision !== null && !draft.dirty) {
+    await refreshCleanDraft(draft.id);
+  } else if (draft.revision !== null) {
+    scheduleSave();
+  }
+}
+
+// A draft of a live page goes back to its room from the device's local
+// copy, so saved words are not repeated and unsaved ones are sent again.
+// Off the switch, it is saved the REST way like any other draft.
+async function reopenLiveDraft(draft) {
+  clearTimeout(saveTimer);
+  // live.js did not load. The draft may hold unsaved words, so the page
+  // stays (leaving is still refused) and asks for a reload.
+  if (!currentLiveSession()) return freezeUntilReload();
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${draft.id}`);
+  } catch {
+    return retryReopen(draft);
+  }
+  if (draft.id !== currentLyricId) return;
+  if (res.status === HTTP_NOT_FOUND) return keepOrDropLostDraft(draft);
+  // Signed out, the reopen waits for signing in; any other failure is tried
+  // again, or the page would stay unsaved and impossible to leave.
+  if (res.status === HTTP_UNAUTHORIZED) return;
+  if (!res.ok) return retryReopen(draft);
+  const lyric = await res.json();
+  if (!lyric.live) return reconcileAsRest(lyric);
+  setPageInfo(lyric);
+  currentRevision = lyric.revision;
+  lastSavedBody = document.getElementById('lyrics').value;
+  isLiveDraft = true;
+  currentLiveSession().open({
+    id: lyric.id, body: draft.liveBase ?? lyric.body, title: currentTitle,
+    restore: { copyAt: draft.copyAt, shown: draft.shown, delta: draft.liveDelta },
+  });
+}
+
+// The page could not be fetched (offline at load). It waits, saved by
+// nobody, and tries again while it is still the page on screen.
+function retryReopen(draft) {
+  setTimeout(() => {
+    if (draft.id === currentLyricId && isLiveDraft && !isLive()) reopenLiveDraft(draft);
+  }, REOPEN_RETRY_MS);
+}
+
+async function keepOrDropLostDraft(draft) {
+  const screen = document.getElementById('lyrics').value;
+  const hasUnsaved = await currentLiveSession().hasUnsavedWords(draft.id, screen);
+  if (draft.id !== currentLyricId) return;
+  if (!hasUnsaved) return dropUnavailablePage();
+  saveAsNewPage({ message: LOST_ACCESS_MESSAGE });
+  performSave({ force: true });
+}
+
+// The page is no longer live (unshared, or the switch is off): its words
+// are saved the REST way, like any other draft.
+function reconcileAsRest(lyric) {
+  isLiveDraft = false;
+  forgetLiveCopyMarks();
+  if (document.getElementById('lyrics').value === lyric.body) return showLyric(lyric);
+  lastSavedBody = lyric.body;
+  currentRevision = lyric.revision;
+  scheduleSave();
+}
+
+// Swaps a clean draft for the page as it is now. Anything typed while the
+// fetch was out wins: those words save on the draft's revision, and meet the
+// conflict bar if the page moved on. The same goes for a page that is gone:
+// with edits, its save turns them into "(my copy)".
+async function refreshCleanDraft(id) {
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${id}`);
+  } catch {
+    return;
+  }
+  if (id !== currentLyricId || hasUnsavedEdits()) return;
+  if (res.status === HTTP_NOT_FOUND) {
+    dropUnavailablePage();
+    return;
+  }
+  if (res.ok) showLyric(await res.json());
+}
+
+// A draft from before revisions says neither its revision nor whether it was
+// saved. The page is fetched to find out. Missing, it was never saved (or is
+// someone else's, which its first save finds out). Different, the writer
+// picks whose version to keep.
+async function checkOldAppDraft(id) {
+  let res;
+  try {
+    res = await fetch(`/api/lyrics/${id}`);
+  } catch {
+    return;
+  }
+  if (!res.ok || id !== currentLyricId) return;
+  const lyric = await res.json();
+
+  if (lyric.body === document.getElementById('lyrics').value) {
+    currentRevision = lyric.revision;
+    lastSavedBody = lyric.body;
+    saveDraft();
+    return;
+  }
+  handleConflict(lyric, null);
+}
+
+// A page with no unsaved edits that this account cannot open is let go,
+// with no copy made: a removed editor must not end up with the owner's page.
+function dropUnavailablePage() {
+  startBlankPage(DEFAULT_TITLE);
+  saveDraft();
+  showNotice(UNAVAILABLE_MESSAGE);
 }
 loadLyricsList();
 
@@ -616,14 +1438,88 @@ loadLyricsList();
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
 window.clearLyricState = clearLyricState;
 
+// Phones hide the title row and the save indicator in it, so being offline
+// is shown in the notice strip, which every screen size shows.
+let isOfflineNoticeShown = false;
+
+function showLiveIndicator(text) {
+  const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
+  setSaveIndicator(isOffline ? '' : text);
+  if (isOffline) {
+    showNotice(text);
+    isOfflineNoticeShown = true;
+  } else {
+    clearOfflineNotice();
+  }
+}
+
+function clearOfflineNotice() {
+  if (!isOfflineNoticeShown) return;
+  isOfflineNoticeShown = false;
+  hideNotice();
+}
+
+// What the live session shows on the page (live.js). titleEl is declared
+// further down, so it is read only when called.
+window.livePage = {
+  setIndicator: showLiveIndicator,
+  onLocalCopySaved: followLocalCopy,
+  onLeaving: keepDraftOnLeaving,
+  showSaved() {
+    clearOfflineNotice();
+    showSaved();
+  },
+  onTitle(title) {
+    currentTitle = title;
+    updatePanelHeader();
+    saveDraft();
+    refreshListIfBehind();
+  },
+  isTitleFocused: () => document.activeElement === titleEl,
+  // Unsaved words become a page of the writer's own, as with a REST save.
+  onUnavailable({ hasUnsaved }) {
+    if (!hasUnsaved) return dropUnavailablePage();
+    saveAsNewPage({ message: LOST_ACCESS_MESSAGE });
+    performSave({ force: true });
+  },
+  // Signed out mid-session: the words stay on screen and in the local copy,
+  // and signing back in (here, or after a reload) reopens the page live.
+  onSessionExpired() {
+    restoredDraft = { id: currentLyricId, revision: currentRevision, dirty: true, fromOldApp: false, live: true };
+    suspendLiveSession();
+    if (window.handleSessionExpired) window.handleSessionExpired();
+  },
+  reload() {
+    saveDraft();
+    const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY)) || 0;
+    if (Date.now() - last < RELOAD_GUARD_MS) return;
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+    location.reload();
+  },
+  notice: text => showNotice(text),
+  checkStillLive,
+  setReadOnly: isReadOnly => { document.getElementById('lyrics').readOnly = isReadOnly; },
+};
+
 // Signing out must not leave the last account's lyric on screen, in the
 // notebook list, in the rhymes panel, or in the draft kept on this device.
 // The draft is removed after the input event, which saves an empty one.
 function clearLyricState() {
+  closeLiveSession();
+  forgetLiveCopies();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = DEFAULT_TITLE;
   lastSavedBody = '';
+  currentRevision = null;
+  unansweredBody = null;
+  saveQueued = false;
+  queuedForce = false;
+  restoredDraft = null;
+  pendingConflict = null;
+  hideNotice();
+  setPageInfo({});
+  if (typeof forgetPendingShare === 'function') forgetPendingShare();
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
   textarea.dispatchEvent(new Event('input'));
@@ -752,11 +1648,41 @@ function restoreDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (!raw) return;
-    const { id, title, body } = JSON.parse(raw);
+    const draft = JSON.parse(raw);
+    const { id, title, body } = draft;
     // A page with a name but no words yet still comes back under its name.
     if (!body && (!title || title === DEFAULT_TITLE)) return;
     currentLyricId = id || currentLyricId;
     currentTitle = title || DEFAULT_TITLE;
+    // Set before the input event below, which writes the draft again.
+    currentRevision = Number.isSafeInteger(draft.revision) ? draft.revision : null;
+    if (draft.info && typeof draft.info === 'object') {
+      setPageInfo({
+        role: draft.info.role, share_count: draft.info.shareCount, owner_name: draft.info.ownerName,
+      });
+    }
+    lastSavedBody = currentRevision !== null && !draft.dirty ? (body || '') : '';
+    restoredDraft = {
+      id: currentLyricId,
+      revision: currentRevision,
+      dirty: Boolean(draft.dirty),
+      fromOldApp: !('revision' in draft),
+      // Drafts written before the local copy marked a live page with liveBase.
+      live: draft.live === true || typeof draft.liveBase === 'string',
+      copyAt: Number.isSafeInteger(draft.copyAt) ? draft.copyAt : null,
+      copyText: typeof draft.copyText === 'string' ? draft.copyText : null,
+      liveBase: typeof draft.liveBase === 'string' ? draft.liveBase : null,
+      liveDelta: typeof draft.liveDelta === 'string' ? draft.liveDelta : null,
+    };
+    // The words the copy at copyAt held: typing before a sync is not in them.
+    restoredDraft.shown = restoredDraft.copyText ?? (body || '');
+    // Kept until the reconcile, so the draft written again below (and any
+    // written while offline) still marks the page as live.
+    isLiveDraft = restoredDraft.live;
+    liveCopyStamp = restoredDraft.copyAt;
+    liveCopyText = restoredDraft.copyText;
+    liveConfirmedText = restoredDraft.liveBase;
+    liveDelta = restoredDraft.liveDelta;
     if (body) {
       const textarea = document.getElementById('lyrics');
       textarea.value = body;
@@ -768,3 +1694,10 @@ function restoreDraft() {
 
 if (isFirstVisit()) showSample();
 else restoreDraft();
+
+// Every app script is revalidated on load, so the sign-in check can answer
+// while this file is still on its way; auth.js then finds no openNotebook to
+// call, and a reloaded draft (a live one above all) would never be picked up.
+whenScriptsReady().then(() => {
+  if (window.currentUser && !hasOpenedNotebook) openNotebook();
+});

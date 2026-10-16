@@ -3,7 +3,7 @@
 // Tokens ride in the URL fragment, so they never reach request logs.
 
 import { DAY_MS, checkRateLimit, hitRateLimit, peekRateLimit } from './_ratelimit.js';
-import { jsonError, sha256Hex, writeLog } from './_shared.js';
+import { base64Url, jsonError, sha256Hex, writeLog } from './_shared.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const RESEND_TIMEOUT_MS = 5000;
@@ -11,12 +11,13 @@ const RESEND_TIMEOUT_MS = 5000;
 export const SIGNUP_LINK_HOURS = 24;
 export const RESET_LINK_MINUTES = 30;
 
-// Mail per address per day, and a daily budget kept under Resend's free cap.
-// Signup mail has its own pool, so abuse that gets past Turnstile cannot use
-// up the quota that reset mail depends on.
+// Mail per address per day, and a daily budget kept under Resend's free cap
+// of 100. Signup and invite mail each have their own pool, so abuse that gets
+// past Turnstile, or a burst of shares, cannot use up the quota that reset
+// mail depends on.
 const ADDRESS_DAILY_LIMIT = 5;
-export const EMAIL_POOL = Object.freeze({ SIGNUP: 'signup', ACCOUNT: 'account' });
-const POOL_DAILY_LIMIT = Object.freeze({ signup: 60, account: 30 });
+export const EMAIL_POOL = Object.freeze({ SIGNUP: 'signup', ACCOUNT: 'account', INVITE: 'invite' });
+export const POOL_DAILY_LIMIT = Object.freeze({ signup: 40, account: 30, invite: 30 });
 
 // A pool that reaches this share of its cap emails ALERT_EMAIL, so a busy day
 // shows up before mail starts being refused.
@@ -64,8 +65,10 @@ function baseUrl(env) {
   return env.APP_BASE_URL.replace(/\/+$/, '');
 }
 
-function linkTo(env, key, token) {
-  return token ? `${baseUrl(env)}/#${key}=${token}` : baseUrl(env) + '/';
+// `more` adds further key=value pairs after the first, joined with '&'.
+function linkTo(env, key, token, more = '') {
+  if (!token) return baseUrl(env) + '/';
+  return `${baseUrl(env)}/#${key}=${token}` + (more ? `&${more}` : '');
 }
 
 function fontFaceRules(env) {
@@ -75,9 +78,14 @@ function fontFaceRules(env) {
 }
 
 // A light template, since many mail clients invert or strip dark styles. One
-// button, in amber with dark text because white on amber fails contrast.
-function renderEmail(env, { heading, paragraphs, button, footer }) {
-  const text = [heading, '', ...paragraphs, '', `${button.label}: ${button.url}`, '', footer]
+// button, in amber with dark text because white on amber fails contrast. An
+// optional footer link (the invite's stop link) goes in both parts.
+function renderEmail(env, { heading, paragraphs, button, footer, footerLink }) {
+  const footerText = footerLink ? `${footer} ${footerLink.label}: ${footerLink.url}` : footer;
+  const footerHtml = escapeHtml(footer) + (footerLink
+    ? ` <a href="${escapeHtml(footerLink.url)}" style="color:${FADED_INK};">${escapeHtml(footerLink.label)}</a>`
+    : '');
+  const text = [heading, '', ...paragraphs, '', `${button.label}: ${button.url}`, '', footerText]
     .join('\n');
   const html = `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -90,7 +98,7 @@ ${fontFaceRules(env)}
 <h1 style="font-family:${FONT_BODY};font-weight:700;font-size:20px;line-height:1.3;margin:0 0 16px;">${escapeHtml(heading)}</h1>
 ${paragraphs.map(p => `<p style="font-size:15px;line-height:1.5;margin:0 0 12px;">${escapeHtml(p)}</p>`).join('\n')}
 <p style="margin:24px 0;"><a href="${escapeHtml(button.url)}" style="display:inline-block;padding:12px 20px;background:${AMBER};color:${INK};text-decoration:none;border-radius:6px;font-family:${FONT_BODY};font-weight:700;font-size:15px;">${escapeHtml(button.label)}</a></p>
-<p style="font-family:${FONT_BODY};font-style:italic;font-size:13px;line-height:1.5;color:${FADED_INK};margin:0;">${escapeHtml(footer)}</p>
+<p style="font-family:${FONT_BODY};font-style:italic;font-size:13px;line-height:1.5;color:${FADED_INK};margin:0;">${footerHtml}</p>
 </div></body></html>`;
   return { text, html };
 }
@@ -173,6 +181,109 @@ function googleAddedMessage(env, token) {
   };
 }
 
+// ── Invites ──
+
+export const INVITE_SENDER_DAILY_LIMIT = 5;
+export const INVITE_ADDRESS_DAILY_LIMIT = 2;
+const INVITE_TITLE_MAX = 60;
+const INVITE_NAME_MAX = 40;
+const STOP_LINK_LABEL = 'Stop emails like this.';
+
+// The stop token is "{hash}.{hmac}": the sha256 of the address, signed with
+// INVITE_SIGNING_SECRET. It never holds the address, so the one-click URL
+// keeps it out of request logs, and nobody can stop mail to someone else.
+async function signingKey(env) {
+  if (!env.INVITE_SIGNING_SECRET) throw new Error('INVITE_SIGNING_SECRET is not set');
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(env.INVITE_SIGNING_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+export async function inviteStopToken(env, emailNormalized) {
+  const hash = await sha256Hex(emailNormalized);
+  const signature = await crypto.subtle.sign('HMAC', await signingKey(env), new TextEncoder().encode(hash));
+  return `${hash}.${base64Url(new Uint8Array(signature))}`;
+}
+
+function fromBase64Url(text) {
+  const padded = text.replaceAll('-', '+').replaceAll('_', '/') + '==='.slice((text.length + 3) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
+// Returns the address hash a valid token carries, or null. The compare is
+// crypto.subtle.verify, which takes the same time however much matches.
+export async function verifyStopToken(env, token) {
+  if (typeof token !== 'string' || token.length > 200) return null;
+  const match = /^([0-9a-f]{64})\.([A-Za-z0-9_-]{43})$/.exec(token);
+  if (!match) return null;
+  try {
+    const ok = await crypto.subtle.verify('HMAC', await signingKey(env), fromBase64Url(match[2]),
+      new TextEncoder().encode(match[1]));
+    return ok ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+// Anyone picks their own name and page title, and both go in a subject line.
+// One line each, and short, so neither can pass for a message.
+function oneLine(text, max) {
+  const flat = String(text).replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return flat.length > max ? flat.slice(0, max - 1).trimEnd() + '…' : flat;
+}
+
+export function inviteSenderName(user) {
+  return oneLine(user.name || '', INVITE_NAME_MAX) || user.email;
+}
+
+function inviteMessage(env, { senderName, title, lyricId, hasAccount, stopUrl }) {
+  const sender = oneLine(senderName, INVITE_NAME_MAX);
+  const pageTitle = oneLine(title, INVITE_TITLE_MAX) || 'Untitled';
+  const stopLink = { label: STOP_LINK_LABEL, url: stopUrl };
+  const content = hasAccount
+    ? {
+      heading: `${sender} shared a page with you`,
+      paragraphs: [`${sender} shared “${pageTitle}” with you on LyricLike. You can read it and edit it.`],
+      button: { label: 'Open the page', url: linkTo(env, 'shared', lyricId) },
+      footer: `You got this because ${sender} shared a page with this address.`,
+    }
+    : {
+      heading: `${sender} shared a page with you`,
+      paragraphs: [
+        `${sender} is writing on LyricLike and wants you in on “${pageTitle}”.`,
+        'Create a free account with this email to read it and write with them.',
+      ],
+      button: { label: 'Sign up to see it', url: linkTo(env, 'shared', lyricId, 'signup=1') },
+      footer: 'Not interested?',
+    };
+  return {
+    subject: `${sender} shared "${pageTitle}" with you`,
+    ...renderEmail(env, { ...content, footerLink: stopLink }),
+  };
+}
+
+// Invite limits are checked by the share route before it answers, so the
+// sender can be told when no mail went. This only builds and sends. Both mail
+// apps' one-click unsubscribe and the footer link reach the stop route.
+export async function sendInviteEmail(context, { to, senderName, title, lyricId, hasAccount }) {
+  try {
+    const { env } = context;
+    const token = await inviteStopToken(env, to.trim().toLowerCase());
+    const oneClickUrl = `${baseUrl(env)}/api/invites/stop?token=${token}`;
+    const message = inviteMessage(env, {
+      senderName, title, lyricId, hasAccount, stopUrl: linkTo(env, 'stop_token', token),
+    });
+    const headers = {
+      'List-Unsubscribe': `<${oneClickUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    };
+    const { ok } = await sendEmail(env, { to, ...message, headers });
+    if (!ok) await logEmailEvent(context, 'email_failed');
+  } catch (err) {
+    console.error('invite email error', err);
+    await logEmailEvent(context, 'email_failed');
+  }
+}
+
 function quotaWarningMessage(env, pool, count) {
   const limit = POOL_DAILY_LIMIT[pool];
   return {
@@ -191,14 +302,17 @@ function quotaWarningMessage(env, pool, count) {
   };
 }
 
-// A thin adapter: one fetch. Returns { ok } and never throws.
-export async function sendEmail(env, { to, subject, text, html }) {
+// A thin adapter: one fetch. Returns { ok } and never throws. `headers` are
+// extra mail headers, such as List-Unsubscribe.
+export async function sendEmail(env, { to, subject, text, html, headers }) {
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return { ok: false };
+  const message = { from: env.EMAIL_FROM, to: [to], subject, text, html };
+  if (headers) message.headers = headers;
   try {
     const response = await fetch(RESEND_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text, html }),
+      body: JSON.stringify(message),
       signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
     });
     return { ok: response.ok };
@@ -215,15 +329,23 @@ async function logEmailEvent({ env, request }, event) {
   }
 }
 
-// Counts this send against the address and the pool. Returns the pool's count
-// so far today, or null when either is out of room. The address is checked
-// first, so a refused address does not spend the pool's budget.
+// The event logged when a mail is skipped. The reason goes in the name,
+// because the logs table has no room for more: a full pool is the one to act
+// on, a busy address is normal.
+export function emailSkippedEvent(reason, pool) {
+  return reason === 'pool' ? `email_skipped_pool_${pool}` : 'email_skipped_address';
+}
+
+// Counts this send against the address and the pool. Returns { count }, the
+// pool's count so far today, or { skipped } naming which one is out of room.
+// The address is checked first, so a refused address does not spend the
+// pool's budget.
 async function claimEmailSlot(env, pool, to) {
   const perAddress = await checkRateLimit(
     env, `email:addr:${await sha256Hex(to.trim().toLowerCase())}`, ADDRESS_DAILY_LIMIT, DAY_MS);
-  if (!perAddress.allowed) return null;
+  if (!perAddress.allowed) return { skipped: 'address' };
   const { count } = await hitRateLimit(env, `email:pool:${pool}`, DAY_MS);
-  return count <= POOL_DAILY_LIMIT[pool] ? count : null;
+  return count <= POOL_DAILY_LIMIT[pool] ? { count } : { skipped: 'pool' };
 }
 
 function alertThreshold(pool) {
@@ -246,9 +368,9 @@ async function warnIfPoolFilling(context, pool, count) {
 // or DNS problem shows up.
 async function deliverEmail(context, pool, to, build) {
   try {
-    const count = await claimEmailSlot(context.env, pool, to);
-    if (count === null) {
-      await logEmailEvent(context, 'email_skipped');
+    const { count, skipped } = await claimEmailSlot(context.env, pool, to);
+    if (skipped) {
+      await logEmailEvent(context, emailSkippedEvent(skipped, pool));
       return;
     }
     const message = build(context.env);

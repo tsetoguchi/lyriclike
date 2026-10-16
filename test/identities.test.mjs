@@ -254,6 +254,27 @@ describe('Google sign-in callback: linking ladder', () => {
     assert.deepEqual(await events(), ['signup']);
   });
 
+  it('3. picks up the pages already shared with the new address', async () => {
+    await database().batch([
+      database().prepare(
+        'INSERT INTO users (id, email, email_normalized, name, created_at) VALUES (?, ?, ?, ?, ?)'
+      ).bind('owner', 'owner@example.com', 'owner@example.com', 'Owner', 1),
+      database().prepare(
+        'INSERT INTO lyrics (id, user_id, title, body, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind('page', 'owner', 'T', 'B', 1, 1),
+      database().prepare(
+        'INSERT INTO lyric_shares (lyric_id, email_normalized, email, had_account, emailed, created_at) ' +
+        'VALUES (?, ?, ?, 0, 1, ?)'
+      ).bind('page', 'ann@example.com', 'ann@example.com', 1),
+    ]);
+    await signIn();
+
+    const [user] = await query("SELECT id FROM users WHERE email_normalized = 'ann@example.com'");
+    const [row] = await query('SELECT user_id FROM lyric_shares');
+    assert.equal(row.user_id, user.id);
+    assert.deepEqual(await events(), ['signup', 'share_signup']);
+  });
+
   it('3. falls back to the account a concurrent sign-in created first', async () => {
     await addLocalAccount();
     // The lookup ran before the other request committed, so it saw nothing;

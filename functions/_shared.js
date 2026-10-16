@@ -193,8 +193,10 @@ export async function getSession(request, env, { refresh = false } = {}) {
   ).bind(sessionId, now).first();
   if (!session) return null;
 
+  // email_normalized is what shared pages are matched on, so every access
+  // check has it without another query.
   const user = await env.lyricalmiracle_db.prepare(
-    'SELECT id, email, name FROM users WHERE id = ?'
+    'SELECT id, email, email_normalized, name FROM users WHERE id = ?'
   ).bind(session.user_id).first();
   if (!user) return null;
 

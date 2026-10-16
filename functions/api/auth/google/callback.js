@@ -1,6 +1,7 @@
 import { findUserByEmail, issueResetToken } from '../../../_accounts.js';
 import { sendGoogleAddedEmail } from '../../../_email.js';
 import { runInBackground } from '../../../_request.js';
+import { claimShares } from '../../../_shares.js';
 import {
   SESSION_COOKIE_MAX_AGE, cookieHeader, createSession, normalizeEmail, parseCookies, sessionCookie,
   writeLog,
@@ -93,6 +94,7 @@ async function createGoogleUser(env, request, profile, sub) {
     insertIdentity(env, userId, sub),
   ]);
   await writeLog(env, request, { userId, event: 'signup' });
+  await claimShares(env, request, userId, profile.emailNormalized);
   return userId;
 }
 

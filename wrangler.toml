@@ -26,3 +26,16 @@ binding = "lyricalmiracle_db"
 database_name = "lyricalmiracle-db-preview"
 database_id = "1f06dc81-fde4-46f4-b958-65d7b8bd13ef"
 migrations_dir = "migrations"
+
+# Live editing: each shared page's room is a Durable Object in its own Worker
+# (collab/), since a Pages project cannot host one. Deploy collab/ before any
+# Pages build that binds it.
+[[durable_objects.bindings]]
+name = "PAGE_ROOM"
+class_name = "PageRoom"
+script_name = "lyricalmiracle-collab"
+
+[[env.preview.durable_objects.bindings]]
+name = "PAGE_ROOM"
+class_name = "PageRoom"
+script_name = "lyricalmiracle-collab-preview"

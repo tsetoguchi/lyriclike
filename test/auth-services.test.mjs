@@ -14,7 +14,9 @@ import * as reset from '../functions/api/auth/password/reset.js';
 import * as signup from '../functions/api/auth/signup.js';
 import * as confirm from '../functions/api/auth/signup/confirm.js';
 import * as me from '../functions/api/me.js';
-import { sendConfirmSignupEmail, sendEmail, sendResetEmail } from '../functions/_email.js';
+import {
+  EMAIL_POOL, POOL_DAILY_LIMIT, emailSkippedEvent, sendConfirmSignupEmail, sendEmail, sendResetEmail,
+} from '../functions/_email.js';
 import { verifyTurnstile } from '../functions/_turnstile.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 import {
@@ -91,6 +93,7 @@ describe('/api/me', () => {
 
     assert.deepEqual(body, {
       id: 'google-1', email: 'ann@example.com', name: 'Ann', has_password: false, providers: ['google'],
+      can_share: false,
     });
     assert.strictEqual(body.has_password, false);
   });
@@ -285,42 +288,70 @@ describe('email', () => {
       await sendResetEmail(context(), { to: 'A@Example.com', token: 'a'.repeat(64) });
     }
     assert.equal(services.mail.length, 5);
-    assert.deepEqual((await events(env)).filter(e => e === 'email_skipped'), ['email_skipped']);
+    assert.deepEqual(await events(env), ['email_skipped_address']);
   });
 
   it('keeps signup mail from using up the pool reset mail depends on', async () => {
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 50; i++) {
       await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
     }
-    assert.equal(services.mail.length, 60);
+    assert.equal(services.mail.length, 40);
 
     await sendResetEmail(context(), { to: 'real@example.com', token: 'a'.repeat(64) });
-    assert.equal(services.mail.length, 61);
+    assert.equal(services.mail.length, 41);
+  });
+
+  it('logs which pool was full, apart from a busy address', async () => {
+    for (let i = 0; i < 31; i++) {
+      await sendResetEmail(context(), { to: `r${i}@example.com`, token: 'a'.repeat(64) });
+    }
+    assert.equal(services.mail.length, 30);
+    assert.deepEqual(await events(env), ['email_skipped_pool_account']);
+  });
+
+  it('keeps the three daily pools within the free plan of 100', () => {
+    assert.deepEqual(POOL_DAILY_LIMIT, { signup: 40, account: 30, invite: 30 });
+    assert.deepEqual(Object.values(EMAIL_POOL).sort(), Object.keys(POOL_DAILY_LIMIT).sort());
+    assert.equal(emailSkippedEvent('pool', EMAIL_POOL.INVITE), 'email_skipped_pool_invite');
+    assert.equal(emailSkippedEvent('address', EMAIL_POOL.INVITE), 'email_skipped_address');
+  });
+
+  it('passes extra mail headers to Resend, and none when not given', async () => {
+    const headers = { 'List-Unsubscribe': '<https://lyriclike.com/api/invites/stop?token=x>' };
+    await sendEmail(env, { to: 'a@example.com', subject: 's', text: 't', html: 'h', headers });
+    await sendEmail(env, { to: 'a@example.com', subject: 's', text: 't', html: 'h' });
+
+    assert.deepEqual(services.mail[0].headers, headers);
+    assert.equal('headers' in services.mail[1], false);
   });
 
   it('emails ALERT_EMAIL once when a pool reaches 70% of its daily cap', async () => {
     env = makeEnv({ ALERT_EMAIL: 'owner@example.com' });
-    for (let i = 0; i < 60; i++) {
+    const cap = POOL_DAILY_LIMIT.signup;
+    for (let i = 0; i < cap; i++) {
       await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
     }
     const alerts = services.mail.filter(m => m.to[0] === 'owner@example.com');
 
     assert.equal(alerts.length, 1);
-    assert.match(alerts[0].subject, /signup email is at 42 of 60/);
+    assert.match(alerts[0].subject,
+      new RegExp(`signup email is at ${Math.ceil(cap * 0.7)} of ${cap}`));
     assert.deepEqual((await events(env)).filter(e => e === 'email_quota_warning'),
       ['email_quota_warning']);
   });
 
   it('sends no warning when ALERT_EMAIL is not set', async () => {
-    for (let i = 0; i < 45; i++) {
+    const cap = POOL_DAILY_LIMIT.signup;
+    for (let i = 0; i < cap; i++) {
       await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
     }
-    assert.equal(services.mail.length, 45);
+    assert.equal(services.mail.length, cap);
   });
 
   it('turns signups away with 503 once the signup pool is spent, for any address', async () => {
     await addPasswordUser(env, { email: 'taken@example.com' });
-    for (let i = 0; i < 60; i++) {
+    const cap = POOL_DAILY_LIMIT.signup;
+    for (let i = 0; i < cap; i++) {
       await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
     }
     const attempt = email => post(signup, env, '/api/auth/signup',
@@ -335,7 +366,7 @@ describe('email', () => {
       assert.equal(error.code, 'email_unavailable');
       assert.match(error.message, /Try again tomorrow, or continue with Google/);
     }
-    assert.equal(services.mail.length, 60);
+    assert.equal(services.mail.length, cap);
   });
 
   it('turns reset requests away with 503 once the account pool is spent', async () => {

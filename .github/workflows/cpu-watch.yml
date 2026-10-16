@@ -24,7 +24,7 @@ jobs:
       - name: Look for failed function runs in the last 24 hours
         env:
           CLOUDFLARE_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 2548933b4f272b70de5a6c50171000c3
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           cat > check.mjs <<'EOF'
           // A client that hung up early is not the app's fault.

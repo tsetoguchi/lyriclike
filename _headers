@@ -69,6 +69,31 @@
 /storage.js
   Cache-Control: no-cache
 
+/sharing.js
+  Cache-Control: no-cache
+
+/live-core.js
+  Cache-Control: no-cache
+
+/live-binding.js
+  Cache-Control: no-cache
+
+/live-store.js
+  Cache-Control: no-cache
+
+/live-presence.js
+  Cache-Control: no-cache
+
+/live-presence-view.js
+  Cache-Control: no-cache
+
+/live.js
+  Cache-Control: no-cache
+
+# The bundle's name carries its versions, so it never changes in place.
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /sample-verse.js
   Cache-Control: no-cache
 

@@ -1374,6 +1374,9 @@ function matchWordCase(original, replacement) {
 function replacePickedWord(word) {
   console.assert(typeof word === 'string', 'replacePickedWord: word must be a string');
   if (!pickedBounds || typeof word !== 'string' || word === '') return false;
+  // setRangeText ignores readOnly, so a page that is read-only (live editing
+  // paused, or waiting for a reload) would change and lose the swap.
+  if (textareaEl.readOnly) return false;
   const start = pickedBounds.start;
   const end = pickedBounds.end;
   const replacement = matchWordCase(textareaEl.value.slice(start, end), word);

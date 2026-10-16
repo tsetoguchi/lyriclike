@@ -694,17 +694,27 @@
   // An emailed link opens its view straight away. Nothing is sent until the
   // person enters their password, so a mail scanner fetching the link does
   // nothing.
+  function isAuthLink(link) {
+    return Boolean(link) && (link.kind === 'confirm' || link.kind === 'reset');
+  }
+
   function openAuthLink(link) {
-    if (!link || typeof link.token !== 'string') return;
+    if (!isAuthLink(link) || typeof link.token !== 'string') return;
     linkToken = link.token;
     openAuthModal({ view: link.kind === 'reset' ? VIEW.RESET : VIEW.CONFIRM });
   }
 
-  openAuthLink(window.authLink);
-  window.authLink = null;
+  // Shared-page and stop links are left in window.authLink for sharing.js.
+  if (isAuthLink(window.authLink)) {
+    openAuthLink(window.authLink);
+    window.authLink = null;
+  }
   // A link opened in a tab that already shows the app only changes the
   // fragment, so the page does not load again.
   window.addEventListener('hashchange', () => {
-    if (window.takeAuthLink) openAuthLink(window.takeAuthLink());
+    if (!window.takeAuthLink) return;
+    const link = window.takeAuthLink();
+    if (isAuthLink(link)) openAuthLink(link);
+    else if (link && window.openShareLink) window.openShareLink(link);
   });
 })();

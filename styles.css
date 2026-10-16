@@ -627,6 +627,315 @@ header .nav-icon circle {
   border-color: var(--accent);
 }
 
+/* What happened to the page: a save someone else beat, or a page this
+   account can no longer open. It sits between the title and the text, lined
+   up with both, and wraps on a phone rather than covering the words. */
+.page-notice {
+  width: 100%;
+  max-width: var(--sheet-width);
+  margin-inline: auto;
+  padding: 0 var(--space-5) var(--space-3)
+    calc(var(--sheet-syllables) + var(--editor-pad));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+}
+
+.page-notice[hidden] {
+  display: none;
+}
+
+.page-notice-text {
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--ink);
+}
+
+.page-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.page-notice-close {
+  font-size: var(--text-caption-1);
+}
+
+/* ── Sharing ── */
+
+/* Pushed to the far end of the title row, out of the title's way. */
+.share-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+}
+
+.share-btn-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.share-btn[hidden] {
+  display: none;
+}
+
+/* "Shared by Ann" or "Shared with 3 people", in pencil under the title.
+   It opens the same dialog as the button, since phones have no title row. */
+.page-sharing {
+  width: 100%;
+  max-width: var(--sheet-width);
+  margin: calc(-1 * var(--space-2)) auto 0;
+  padding: 0 var(--space-5) var(--space-2)
+    calc(var(--sheet-syllables) + var(--editor-pad));
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.page-sharing:hover {
+  color: var(--ink);
+}
+
+.page-sharing[hidden] {
+  display: none;
+}
+
+/* "Share this page", on a page nobody else has yet. Phones only: desktop has
+   the Share button beside the title. */
+.page-sharing.page-sharing-invite {
+  display: none;
+  color: var(--accent);
+}
+
+.share-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Who is here: initials in each person's colour, overlapping a little.
+   It opens the same people list as Share. */
+.presence-people {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.presence-people[hidden] {
+  display: none;
+}
+
+.presence-chip {
+  display: inline-grid;
+  place-items: center;
+  /* A circle for one letter, a pill when two wide letters need the room. */
+  min-width: 24px;
+  height: 24px;
+  padding-inline: var(--space-1);
+  margin-left: calc(var(--space-1) * -1);
+  border: 2px solid var(--paper-card);
+  border-radius: var(--radius-pill);
+  background: var(--who, var(--ink-faded));
+  color: var(--on-accent);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.presence-chip:first-child {
+  margin-left: 0;
+}
+
+.presence-note {
+  margin-left: var(--space-2);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  color: var(--ink-faded);
+}
+
+/* In the title row just before Share, which then gives up its auto margin. */
+.presence-header {
+  margin-left: auto;
+}
+
+.presence-header:not([hidden]) + .share-btn {
+  margin-left: var(--space-2);
+}
+
+/* Phones only (below); desktop shows the title row's copy. */
+.page-presence {
+  display: none;
+}
+
+/* While anyone else is here, the initials say more than "Shared with 3 people". */
+.lyrics-panel[data-people] .page-sharing {
+  display: none;
+}
+
+.share-row .modal-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-hint {
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  line-height: 1.5;
+  color: var(--ink-faded);
+}
+
+.share-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.share-result-text {
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.share-result-text.is-error {
+  color: var(--danger);
+}
+
+/* Nothing to share yet: a plain outline, turning amber once there is. */
+.toggle-btn.modal-confirm:disabled {
+  background: transparent;
+  border-color: var(--ink-border);
+  color: var(--ink-faded);
+  cursor: default;
+}
+
+.share-result[hidden],
+.share-leave[hidden],
+.share-people-block[hidden] {
+  display: none;
+}
+
+.share-people-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.share-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.share-person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+}
+
+.share-person + .share-person {
+  border-top: var(--hairline) solid var(--rule);
+}
+
+/* The letter the rhyme scheme would give: bold, in a ring of hairline. */
+.share-person-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: 50%;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+.share-person.is-owner .share-person-initial {
+  border-color: var(--accent-border);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.share-person-you {
+  color: var(--ink-faded);
+}
+
+.share-person-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.share-person-status {
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.share-leave {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  color: var(--danger);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A shared page in the notebook says whose it is, in pencil. */
+/* The owner stays in view beside a long title, but a long name or email
+   takes at most half the row and ends in an ellipsis, clear of the icons. */
+.lyrics-list-owner {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: var(--space-2);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.sidebar-label.lyrics-list-group {
+  padding: var(--space-5) var(--space-3) var(--space-2);
+}
+
 /* It arrives in answer to the first pick, so it fades in rather than pops. */
 .sample-clear:not([hidden]) {
   animation: sample-clear-arrive var(--duration-slow) ease-out;
@@ -997,6 +1306,62 @@ header .nav-icon circle {
   #lyrics-highlight .rhyme-mark {
     text-decoration-color: var(--mark);
     text-decoration-thickness: 3px;
+  }
+}
+
+/* ── Presence: co-writers on a live page (live-presence-view.js) ──
+   Two layers laid out exactly like #lyrics-highlight: selection tints
+   under its letters, carets and name tags over them. Rhyme marks are
+   underlines and the picked word an amber wash, so a person's mark is the
+   one thing drawn upright: a thin bar, with a faint tint for a selection. */
+
+.presence-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.presence-selection {
+  position: absolute;
+  border-radius: var(--hairline);
+  background: color-mix(in srgb, var(--who) 22%, transparent);
+}
+
+.presence-caret {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: var(--hairline);
+  background: var(--who);
+}
+
+.presence-tag {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) 0;
+  background: var(--who);
+  color: var(--on-accent);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-bold);
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity var(--duration-slow) ease-out, transform var(--duration-slow) ease-out;
+}
+
+.presence-caret.is-tag-shown .presence-tag {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presence-tag {
+    transform: none;
+    transition: none;
   }
 }
 
@@ -2482,6 +2847,9 @@ body.sidebar-open #sidebar-scrim {
 .lyrics-list-open {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: baseline;
   padding: var(--space-2) var(--space-3);
   background: none;
   border: none;
@@ -2490,9 +2858,13 @@ body.sidebar-open #sidebar-scrim {
   font-size: var(--text-subhead);
   text-align: left;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.lyrics-list-title {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: pointer;
 }
 
 /* Out of sight until the row is hovered or reached by keyboard, so the list
@@ -2785,6 +3157,34 @@ body.sidebar-open #sidebar-scrim {
 
   .panel-header {
     display: none;
+  }
+
+  /* With no title row above them, these need their own space from the tabs. */
+  .page-notice,
+  .page-sharing {
+    padding-top: var(--space-3);
+  }
+
+  .page-sharing {
+    margin-top: 0;
+  }
+
+  .page-sharing.page-sharing-invite:not([hidden]) {
+    display: block;
+  }
+
+  .page-sharing:not([hidden]) + .page-notice {
+    padding-top: 0;
+  }
+
+  /* The title row is hidden, so who is here takes the sharing line's spot. */
+  .page-presence:not([hidden]) {
+    display: flex;
+    width: 100%;
+    max-width: var(--sheet-width);
+    margin: 0 auto;
+    padding: var(--space-3) var(--space-5) var(--space-2)
+      calc(var(--sheet-syllables) + var(--editor-pad));
   }
 
   .resize-handle {

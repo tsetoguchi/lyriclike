@@ -72,8 +72,17 @@ function endSession() {
 }
 
 async function signOut() {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  endSession();
+  const button = document.getElementById('settings-sign-out-btn');
+  button.disabled = true;
+  try {
+    // Live words still on their way get a moment to save, and offline the
+    // writer decides (storage.js).
+    if (window.confirmSignOut && !await window.confirmSignOut()) return;
+    await fetch('/api/auth/logout', { method: 'POST' });
+    endSession();
+  } finally {
+    button.disabled = false;
+  }
 }
 
 document.getElementById('settings-sign-out-btn').addEventListener('click', signOut);
