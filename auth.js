@@ -1,4 +1,7 @@
 const GOOGLE_SIGN_IN_URL = '/api/auth/google/start';
+// How long the account panel waits for its password row before showing
+// anyway, so a slow connection still answers the click.
+const ACCOUNT_OPEN_WAIT_MS = 600;
 
 async function initAuth() {
   try {
@@ -33,9 +36,14 @@ function showSignIn() {
   if (window.refreshNotebook) window.refreshNotebook();
 }
 
-function openAccountSettings() {
+// Shows once the password row is settled, so the panel opens at its full
+// size instead of growing under the reader.
+async function openAccountSettings() {
   document.getElementById('settings-user-email').textContent = window.currentUser?.email || '';
-  if (window.showAccountSecurity) window.showAccountSecurity(window.currentUser);
+  if (window.showAccountSecurity) {
+    const settled = window.showAccountSecurity(window.currentUser);
+    await Promise.race([settled, new Promise(done => setTimeout(done, ACCOUNT_OPEN_WAIT_MS))]);
+  }
   document.getElementById('account-settings-overlay').classList.add('open');
 }
 
