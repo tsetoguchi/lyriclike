@@ -1987,6 +1987,18 @@ header .nav-icon circle {
   background: var(--ink-wash);
 }
 
+/* Full width so the folded words start on a line of their own. */
+.buried-label {
+  flex-basis: 100%;
+  margin-top: var(--space-3);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+}
+
+.rhyme-word.is-buried {
+  opacity: 0.6;
+}
+
 .no-rhymes {
   display: block;
   padding: var(--space-2) 0;

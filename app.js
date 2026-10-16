@@ -9,8 +9,7 @@ const MIN_WORD_LENGTH = 2;
 // A group opens on its best words and keeps the rest behind "Show all".
 const INITIAL_RESULTS_PER_GROUP = 30;
 const BURIED_TIER = 'buried';
-const BURIED_BUTTON_PREFIX = 'Show ';
-const BURIED_BUTTON_SUFFIX = ' names and rare words';
+const BURIED_SECTION_LABEL = 'Names and rare words';
 const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
@@ -208,10 +207,18 @@ function findRhymes(targetWord) {
 // ── Results rendering ──
 
 // Every chip looks the same, so no word is pushed as the one to reach for.
-function buildChipsHtml(key, entries) {
+function buildChipsHtml(key, entries, extraClass = '') {
   return entries.map(function toChip(entry) {
-    return `<span class="rhyme-word color-${key}">${entry.word}</span>`;
+    return `<span class="rhyme-word color-${key}${extraClass}">${entry.word}</span>`;
   }).join('');
+}
+
+// The folded words come last under their own heading, dimmed, so "Show all"
+// can open everything without the junk mixing in with the usable words.
+function buildBuriedSectionHtml(key, buried) {
+  if (buried.length === 0) return '';
+  const label = `<div class="buried-label">${BURIED_SECTION_LABEL}</div>`;
+  return label + buildChipsHtml(key, buried, ' is-buried');
 }
 
 // Names and rare words are folded away until asked for. A group of nothing
@@ -229,11 +236,9 @@ function buildGroupBodyHtml(key, entries) {
 
   const { shown, buried } = splitBuriedEntries(entries);
   let html = buildChipsHtml(key, shown.slice(0, INITIAL_RESULTS_PER_GROUP));
-  if (shown.length > INITIAL_RESULTS_PER_GROUP) {
-    html += `<button class="show-more-btn" data-type="${key}">Show all ${shown.length}</button>`;
-  }
-  if (buried.length > 0) {
-    html += `<button class="show-more-btn show-buried-btn" data-type="${key}">${BURIED_BUTTON_PREFIX}${buried.length}${BURIED_BUTTON_SUFFIX}</button>`;
+  const hasMore = shown.length > INITIAL_RESULTS_PER_GROUP || buried.length > 0;
+  if (hasMore) {
+    html += `<button class="show-more-btn" data-type="${key}">Show all ${entries.length}</button>`;
   }
   return html;
 }
@@ -1313,24 +1318,13 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     return;
   }
 
-  // Names and rare words, folded behind their own button
-  const showBuriedBtn = clicked.closest('.show-buried-btn');
-  if (showBuriedBtn && currentResults) {
-    const type = showBuriedBtn.dataset.type;
-    const { buried } = splitBuriedEntries(currentResults[type]);
-    showBuriedBtn.insertAdjacentHTML('beforebegin', buildChipsHtml(type, buried));
-    showBuriedBtn.remove();
-    trackEvent('rhyme_show_buried', { group: type });
-    return;
-  }
-
-  // Show all: the rest of the group, short of the folded names and rare words
+  // Show all: the rest of the group, then the names and rare words
   const showMoreBtn = clicked.closest('.show-more-btn');
   if (showMoreBtn && currentResults) {
     const type = showMoreBtn.dataset.type;
-    const { shown } = splitBuriedEntries(currentResults[type]);
-    const rest = shown.slice(INITIAL_RESULTS_PER_GROUP);
-    showMoreBtn.insertAdjacentHTML('beforebegin', buildChipsHtml(type, rest));
+    const { shown, buried } = splitBuriedEntries(currentResults[type]);
+    const rest = buildChipsHtml(type, shown.slice(INITIAL_RESULTS_PER_GROUP));
+    showMoreBtn.insertAdjacentHTML('beforebegin', rest + buildBuriedSectionHtml(type, buried));
     showMoreBtn.remove();
     trackEvent('rhyme_show_all', { group: type });
     return;
