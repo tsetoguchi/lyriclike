@@ -806,15 +806,32 @@ header .nav-icon circle {
 
 /* No rule under the title: the dialog reads as one card. */
 #share-panel .modal-header {
-  padding-bottom: 0;
   border-bottom: none;
   font-size: var(--text-title-3);
   font-weight: var(--weight-regular);
 }
 
-/* Sizes step down by role: title, field, names, label, status, message. */
+/* Taller rows, so the list breathes like the rest of the dialog. */
 #share-panel .share-person {
-  font-size: var(--text-subhead);
+  min-height: 52px;
+}
+
+/* Roomier than the other dialogs: a wider margin, and more air between parts. */
+#share-panel .modal-header {
+  padding: var(--space-6) var(--space-6) 0;
+}
+
+#share-panel .modal-body {
+  gap: var(--space-6);
+  padding: var(--space-6);
+}
+
+#share-panel .share-people-block {
+  gap: var(--space-3);
+}
+
+#share-panel .modal-actions {
+  padding: var(--space-2) var(--space-6) var(--space-6);
 }
 
 /* Copy link sits alone on the left, like the link button in Google Docs. */
