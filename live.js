@@ -28,6 +28,15 @@
   // The local copy is written at most this often while words change: a
   // long page on every keystroke would be the costliest thing typing does.
   const PERSIST_EVERY_MS = 500;
+  // Anything that can move the caret. selectionchange fires on the textarea
+  // in current browsers; the others cover older ones.
+  const SELECTION_EVENTS = ['input', 'select', 'selectionchange', 'keyup', 'pointerup', 'focus'];
+
+  // Without the presence script (a test that does not need it, or a tab
+  // where it failed to load) the page edits as before and shows nobody.
+  const NO_PRESENCE = Object.freeze({
+    attach() {}, receive() {}, refresh() {}, selectionMoved() {}, announce() {}, restart() {}, destroy() {},
+  });
 
   const TEXT = Object.freeze({
     saving: 'Saving...',
@@ -104,6 +113,8 @@
       this.isCopyAhead = false;
       this.makeDocs();
       if (record) this.restoreOrSetAside(record, restore || {});
+      this.presence = this.makePresence();
+      this.watchSelection();
     }
 
     makeDocs() {
@@ -162,6 +173,42 @@
       return this.env.liveCore.rebase(this.deps.Y, this.dmp, this.shown, onScreen, this.copyText);
     }
 
+    // ── Presence ──
+
+    makePresence() {
+      const { env, deps } = this;
+      if (!env.livePresence) return NO_PRESENCE;
+      return new env.livePresence.PresenceChannel({
+        deps, clock: env, me: env.me ? env.me() : null,
+        show: view => env.showPresence(view),
+        send: bytes => this.sendIfOpen(bytes),
+        readSelection: () => this.ownSelection(),
+      });
+    }
+
+    // Only a focused editor has a caret worth showing; a page just opened
+    // has its caret at the end, where nobody put it.
+    ownSelection() {
+      const { textarea } = this.env;
+      if (!this.isSynced || !this.env.isFocused()) return null;
+      return { start: textarea.selectionStart, end: textarea.selectionEnd, direction: textarea.selectionDirection };
+    }
+
+    watchSelection() {
+      this.onSelection = () => this.presence.selectionMoved();
+      for (const type of SELECTION_EVENTS) this.env.textarea.addEventListener(type, this.onSelection);
+    }
+
+    unwatchSelection() {
+      for (const type of SELECTION_EVENTS) this.env.textarea.removeEventListener(type, this.onSelection);
+    }
+
+    sendIfOpen(bytes) {
+      if (!this.isOpen()) return false;
+      this.socket.send(bytes);
+      return true;
+    }
+
     // ── Timers ──
 
     setTimer(name, ms, fn) {
@@ -208,6 +255,8 @@
       this.clearTimer('offline');
       this.isOffline = false;
       this.updateIndicator();
+      // A reconnect: the room forgot this tab's presence with the old socket.
+      if (this.isSynced) this.presence.announce();
     }
 
     onMessage(socket, data) {
@@ -219,6 +268,7 @@
       const message = this.deps.protocol.readRoomMessage(new Uint8Array(data));
       if (message.kind === 'hello') this.onHello(message);
       else if (message.kind === 'persisted') this.onPersisted(message.snapshot);
+      else if (message.kind === 'presence') this.presence.receive(message.update);
       else if (message.kind === 'sync') this.onSync(socket, message);
     }
 
@@ -251,6 +301,7 @@
     }
 
     restartFromRoom() {
+      this.presence.attach(null);
       if (this.isSynced || this.hasConfirmedText) this.base = this.confirmed.getText(TEXT_FIELD).toString();
       this.binding?.destroy();
       this.binding = null;
@@ -299,6 +350,8 @@
       this.keepSelection(selection, onScreen, merged);
       this.applyRoomTitle();
       if (this.pendingTitle !== undefined) this.rename(this.pendingTitle);
+      this.presence.attach(this.working);
+      this.presence.announce();
       this.persistNow();
       this.updateIndicator();
       if (!this.pending.length) this.resolveFlush(true);
@@ -328,6 +381,8 @@
     // them, so the confirmed doc never holds words the screen lacks.
     onWorkingUpdate(update, origin) {
       if (!this.isSynced) return;
+      // Carets are positions in the text, so they move with it.
+      this.presence.refresh();
       this.schedulePersist();
       if (origin === REMOTE_ORIGIN) return this.deps.Y.applyUpdate(this.confirmed, update, REMOTE_ORIGIN);
       this.pending.push(update);
@@ -482,6 +537,7 @@
       this.clearTimer('keepalive');
       this.clearTimer('pong');
       if (this.isClosed) return;
+      this.presence.restart();
       const stop = this.stopFor(code);
       if (stop) return stop();
       this.setTimer('offline', OFFLINE_NOTICE_MS, () => {
@@ -556,6 +612,7 @@
       this.clearTimer('keepalive');
       this.clearTimer('pong');
       if (!dead) return;
+      this.presence.restart();
       try {
         dead.close(NORMAL_CLOSE);
       } catch {
@@ -592,6 +649,8 @@
       this.resolveFlush(this.pending.length === 0);
       if (this.isReadOnly) this.env.page.setReadOnly(false);
       this.binding?.destroy();
+      this.unwatchSelection();
+      this.presence.destroy();
       if (this.socket) this.socket.close(NORMAL_CLOSE);
       this.socket = null;
       this.working.destroy();
@@ -794,6 +853,9 @@
       isFocused: () => document.activeElement === textarea,
       adjustScroll: px => { if (scroller) scroller.scrollTop += px; },
       get page() { return root.livePage; },
+      livePresence: root.LivePresence,
+      me: () => root.currentUser || null,
+      showPresence: () => {},
     };
   }
 
