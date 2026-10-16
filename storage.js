@@ -479,7 +479,35 @@ function toggleListGroup(group) {
   } catch {
     // Storage blocked: the fold still applies until the page reloads.
   }
+  rollListGroup(group, folds[group]);
+}
+
+// A click rolls the rows one after another: folding takes the bottom one
+// first, unfolding brings the top one down first. Loads and refreshes do
+// not roll, since only the click asked for it.
+const ROLL_STEP_MS = 30;
+const ROLL_SPREAD_MS = 240;
+// Longer than the last row's delay plus its own roll (--duration-base).
+const ROLL_DONE_MS = 600;
+let rollTimer = null;
+
+function rollListGroup(group, isFolding) {
+  const container = document.getElementById('lyrics-list-items');
+  const rows = [...container.querySelectorAll(`.lyrics-list-item[data-group="${group}"]:not(.active)`)];
+  if (isFolding) rows.reverse();
+  rows.forEach((row, order) => {
+    row.style.setProperty('--row-height', `${row.scrollHeight}px`);
+    row.style.setProperty('--fold-order', String(order));
+  });
+  const step = Math.min(ROLL_STEP_MS, ROLL_SPREAD_MS / Math.max(rows.length, 1));
+  container.style.setProperty('--fold-step', `${step}ms`);
+  container.classList.add('is-rolling');
+  // The rows take their measured height before the fold changes, so the
+  // roll starts from it rather than jumping.
+  void container.offsetHeight;
   applyListFolds();
+  clearTimeout(rollTimer);
+  rollTimer = setTimeout(() => container.classList.remove('is-rolling'), ROLL_DONE_MS);
 }
 
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';

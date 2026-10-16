@@ -973,11 +973,31 @@ header .nav-icon circle {
 
 #lyrics-list-items.is-own-folded .lyrics-list-item[data-group="own"]:not(.active),
 #lyrics-list-items.is-shared-folded .lyrics-list-item[data-group="shared"]:not(.active) {
-  display: none;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(calc(var(--space-2) * -1));
+  visibility: hidden;
+}
+
+/* While a click rolls a group, each row moves from its own measured height
+   (--row-height) to none and back, after its place in the roll
+   (--fold-order times --fold-step), so the list unrolls like paper. */
+#lyrics-list-items.is-rolling .lyrics-list-item {
+  --fold-delay: calc(var(--fold-order, 0) * var(--fold-step, 0ms));
+  max-height: var(--row-height);
+  overflow: hidden;
+  transition:
+    background var(--duration-fast),
+    max-height var(--duration-base) ease-in-out var(--fold-delay),
+    opacity var(--duration-base) ease-out var(--fold-delay),
+    transform var(--duration-base) ease-out var(--fold-delay),
+    visibility var(--duration-base) linear var(--fold-delay);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .list-group-chevron {
+  .list-group-chevron,
+  #lyrics-list-items.is-rolling .lyrics-list-item {
     transition: none;
   }
 }
