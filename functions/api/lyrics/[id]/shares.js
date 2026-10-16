@@ -89,7 +89,7 @@ async function inviteMailRoom(env, user, addressHash) {
     [INVITE_POOL_KEY, POOL_DAILY_LIMIT.invite, 'pool'],
   ];
   for (const [key, limit, reason] of limits) {
-    if (!(await peekRateLimit(env, key, limit, DAY_MS)).allowed) return { reason };
+    if (!(await peekRateLimit(env, key, limit, DAY_MS)).allowed) return { reason, limit };
   }
   return { keys: limits.map(([key]) => key) };
 }
@@ -185,14 +185,16 @@ export async function onRequestPost(context) {
   // The same answer whether or not the address has an account, so this box
   // can't test which emails are signed up. An opted-out address reads as
   // emailed too: whether someone opted out is theirs to keep.
+  const emailed = willMail || room.reason === 'suppressed';
   return Response.json({
     status: 'shared',
     email: target.email,
-    emailed: willMail || room.reason === 'suppressed',
+    emailed,
     link: pageLink(request, lyric.id),
     // Only the owner shares, so the switch goes by this user: the page on
     // their screen is live from now on.
     live: isLiveFor(env, user.id),
+    ...(emailed ? {} : { email_limit: { reason: room.reason, per_day: room.limit } }),
   });
 }
 

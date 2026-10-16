@@ -30,7 +30,9 @@
     SIGN_UP_TO_SEE: 'Create a free account with the email the page was shared with, to see it.',
     NOT_AVAILABLE: "This page isn't available to this account. If it was shared with you "
       + 'under another email, log in with that one.',
-    NOT_EMAILED: "Shared. We couldn't email them today, so send them this link yourself.",
+    NOT_EMAILED: "Shared, but we couldn't email them today. "
+      + 'Copy the link and send it to them yourself.',
+    SEND_IT_YOURSELF: 'Copy the link and send it to them yourself.',
     LOAD_FAILED: "Couldn't load who has this page.",
     FAILED: 'Something went wrong. Try again.',
     STOP_QUESTION: "You won't get an email when someone shares a LyricLike page with this "
@@ -112,13 +114,41 @@
 
   // What happened after Share or Remove. Errors read in red; a success is a
   // quiet line, since the new row in the list already shows it.
-  function showResult(text, link, { error = false } = {}) {
+  function showResult(text, { error = false } = {}) {
     byId('share-result').hidden = !text;
     byId('share-result-text').textContent = text || '';
     byId('share-result-text').classList.toggle('is-error', error);
-    copyLink = link || '';
-    copyButton.hidden = !link;
-    copyButton.textContent = 'Copy link';
+  }
+
+  // Share takes Done's place while there is an address to send to.
+  function updateActions() {
+    const hasEmail = Boolean(emailInput.value.trim());
+    submitButton.hidden = !hasEmail;
+    byId('share-done').hidden = hasEmail;
+  }
+
+  // The link only opens for people on the page, so it is offered once
+  // someone is.
+  function showCopyLink(page, hasPeople) {
+    copyLink = hasPeople ? `${location.origin}/#shared=${page.id}` : '';
+    copyButton.hidden = !hasPeople;
+    byId('share-copy-label').textContent = 'Copy link';
+  }
+
+  // Names the daily limit that stopped the invite email. The number comes from
+  // the server, so the words never drift from the real limit.
+  function notEmailedText(limit) {
+    const perDay = limit && limit.per_day;
+    if (!perDay) return TEXT.NOT_EMAILED;
+    if (limit.reason === 'address') {
+      return `Shared, but we didn't email them. They've already gotten ${perDay} invite `
+        + `emails today, the daily limit. ${TEXT.SEND_IT_YOURSELF}`;
+    }
+    if (limit.reason === 'sender') {
+      return `Shared, but we didn't email them. You've sent ${perDay} invite emails `
+        + `today, the daily limit. ${TEXT.SEND_IT_YOURSELF}`;
+    }
+    return TEXT.NOT_EMAILED;
   }
 
   async function openShareDialog(id, title) {
@@ -126,7 +156,9 @@
     returnFocusTo = document.activeElement;
     byId('share-title').textContent = `Share “${titleForName(title)}”`;
     emailInput.value = '';
-    submitButton.disabled = true;
+    submitButton.disabled = false;
+    updateActions();
+    showCopyLink(dialogPage, false);
     showResult('');
     form.hidden = true;
     setHidden('share-leave', true);
@@ -194,7 +226,7 @@
       if (!res.ok) throw new Error(String(res.status));
       data = await res.json();
     } catch {
-      if (page === dialogPage) showResult(TEXT.LOAD_FAILED, '', { error: true });
+      if (page === dialogPage) showResult(TEXT.LOAD_FAILED, { error: true });
       return;
     }
     if (page !== dialogPage) return;
@@ -202,7 +234,7 @@
       showPeople(page, data);
     } catch (err) {
       console.error('share dialog', err);
-      showResult(TEXT.LOAD_FAILED, '', { error: true });
+      showResult(TEXT.LOAD_FAILED, { error: true });
     }
   }
 
@@ -221,6 +253,7 @@
     setHidden('share-people-label', !isOwner);
     setHidden('share-leave', isOwner);
     setHidden('share-people-block', data.people.length === 0);
+    showCopyLink(page, data.people.length > 0);
 
     const myEmail = window.currentUser ? String(window.currentUser.email || '').toLowerCase() : '';
     list.innerHTML = '';
@@ -264,14 +297,15 @@
       const data = await res.json().catch(() => null);
       if (page !== dialogPage) return;
       if (!res.ok) {
-        showResult(errorMessage(data), '', { error: true });
+        showResult(errorMessage(data), { error: true });
         return;
       }
       if (data.status === 'already_shared') {
         showResult(`Already shared with ${data.email}.`);
       } else {
         trackEvent('page_shared');
-        showResult(data.emailed ? `Shared with ${data.email}.` : TEXT.NOT_EMAILED, data.emailed ? '' : data.link);
+        if (data.emailed) showResult(`Shared with ${data.email}.`);
+        else showResult(notEmailedText(data.email_limit));
         // The page on the owner's screen goes live now, without a reload.
         const isOpenPageLive = data.live && page.id === currentLyricId;
         if (isOpenPageLive && typeof goLiveAfterShare === 'function') await goLiveAfterShare(page.id);
@@ -279,9 +313,10 @@
       emailInput.value = '';
       await loadPeople();
     } catch {
-      if (page === dialogPage) showResult(TEXT.FAILED, '', { error: true });
+      if (page === dialogPage) showResult(TEXT.FAILED, { error: true });
     } finally {
-      submitButton.disabled = !emailInput.value.trim();
+      submitButton.disabled = false;
+      updateActions();
     }
   }
 
@@ -294,9 +329,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      showResult(res.ok ? '' : TEXT.FAILED, '', { error: !res.ok });
+      showResult(res.ok ? '' : TEXT.FAILED, { error: !res.ok });
     } catch {
-      showResult(TEXT.FAILED, '', { error: true });
+      showResult(TEXT.FAILED, { error: true });
     }
     if (page === dialogPage) await loadPeople();
   }
@@ -312,16 +347,20 @@
   async function copyShareLink() {
     try {
       await navigator.clipboard.writeText(copyLink);
-      copyButton.textContent = 'Copied';
-      setTimeout(() => { copyButton.textContent = 'Copy link'; }, COPIED_LABEL_MS);
+      byId('share-copy-label').textContent = 'Copied';
+      copyButton.classList.add('is-copied');
+      setTimeout(() => {
+        byId('share-copy-label').textContent = 'Copy link';
+        copyButton.classList.remove('is-copied');
+      }, COPIED_LABEL_MS);
     } catch {
-      // The link is in the message too, for copying by hand.
-      byId('share-result-text').textContent = `${TEXT.NOT_EMAILED} ${copyLink}`;
+      // Shown in the message instead, for copying by hand.
+      showResult(copyLink);
     }
   }
 
   form.addEventListener('submit', sharePage);
-  emailInput.addEventListener('input', () => { submitButton.disabled = !emailInput.value.trim(); });
+  emailInput.addEventListener('input', updateActions);
   copyButton.addEventListener('click', copyShareLink);
   byId('share-leave').addEventListener('click', leavePage);
   byId('share-done').addEventListener('click', closeShareDialog);
