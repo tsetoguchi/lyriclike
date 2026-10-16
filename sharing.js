@@ -62,7 +62,11 @@
   }
 
   function sharingLine() {
-    if (currentPageInfo.role === 'editor') return `Shared by ${currentPageInfo.ownerName || 'someone'}`;
+    if (currentPageInfo.role === 'editor') {
+      const owner = currentPageInfo.ownerName || 'someone';
+      // "Tao S.": live-presence.js loads after this file and holds the rule.
+      return `Shared by ${window.LivePresence ? window.LivePresence.shortNameOf(owner) : owner}`;
+    }
     const count = currentPageInfo.shareCount;
     if (count === 0) return '';
     return `Shared with ${count} ${count === 1 ? 'person' : 'people'}`;

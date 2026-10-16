@@ -434,6 +434,12 @@ async function loadLyricsList() {
   }
 }
 
+// live-presence.js loads after this file and holds the one rule for short
+// names; a tab without it shows the name whole.
+function shortPersonName(name) {
+  return window.LivePresence ? window.LivePresence.shortNameOf(name) : name;
+}
+
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
 const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
@@ -441,13 +447,13 @@ const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16
 // A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
 // wait at the end of the row until it is hovered or focused. A page shared
 // with this person shows whose it is, and can be left rather than deleted.
-// The owner's name stays whole; only the title is cut short.
+// The owner shows as "Tao S.", short enough to stay whole beside the title.
 function buildListItem(lyric) {
   const item = document.createElement('div');
   item.className = 'lyrics-list-item' + (lyric.id === currentLyricId ? ' active' : '');
   item.dataset.id = lyric.id;
   const title = escapeHtml(titleForName(lyric.title));
-  const owner = lyric.shared ? escapeHtml(lyric.owner_name || '') : '';
+  const owner = lyric.shared ? escapeHtml(shortPersonName(lyric.owner_name || '')) : '';
   const lastAction = lyric.shared
     ? `<button class="lyrics-action-btn lyrics-delete-btn" data-action="leave" aria-label="Leave ${title}" title="Leave">${LEAVE_ICON}</button>`
     : `<button class="lyrics-action-btn lyrics-delete-btn" data-action="delete" aria-label="Delete ${title}" title="Delete">${TRASH_ICON}</button>`;
