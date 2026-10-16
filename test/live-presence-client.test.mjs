@@ -7,11 +7,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { colourFor as roomColourFor } from '../collab/src/presence.js';
+import { decodePresence, colourFor as roomColourFor } from '../collab/src/presence.js';
+import * as protocol from '../collab/src/protocol.js';
 import livePresence from '../live-presence.js';
-import { Y } from './support/live-deps.mjs';
+import { createFakeClock } from './support/fake-clock.mjs';
+import { awarenessProtocol, Y } from './support/live-deps.mjs';
 
-const { caretsIn, colourFor, encodeCursor, initialsOf, peopleHere, screenColour } = livePresence;
+const {
+  EMPTY_VIEW, PresenceChannel, caretsIn, colourFor, encodeCursor, initialsOf, peopleHere, screenColour,
+} = livePresence;
 
 const BO = { name: 'Bo', colour: 'hsl(20 65% 42%)' };
 const AL = { name: 'Al', colour: 'hsl(30 65% 42%)' };
@@ -121,5 +125,144 @@ describe('caretsIn', () => {
       [2, { user: AL, cursor: { anchor: { nonsense: true }, head: 5 } }],
     ]);
     assert.deepEqual(caretsIn(Y, doc, states, 0, ME), []);
+  });
+});
+
+function makeChannel({ me = ME } = {}) {
+  const clock = createFakeClock();
+  const harness = { clock, sent: [], views: [], selection: null, isOpen: true };
+  harness.channel = new PresenceChannel({
+    deps: { Y, awarenessProtocol, protocol }, clock, me,
+    send: bytes => {
+      if (harness.isOpen) harness.sent.push(bytes);
+      return harness.isOpen;
+    },
+    show: view => harness.views.push(view),
+    readSelection: () => harness.selection,
+  });
+  return harness;
+}
+
+// What a presence message the channel sent says about this tab.
+function sentState(bytes) {
+  const message = protocol.readRoomMessage(bytes);
+  return decodePresence(message.update)[0].state;
+}
+
+// Another tab's presence, as the room relays it: stamped with a user.
+function remoteUpdate(state) {
+  const other = new awarenessProtocol.Awareness(new Y.Doc());
+  other.setLocalState(state);
+  const update = awarenessProtocol.encodeAwarenessUpdate(other, [other.clientID]);
+  other.destroy();
+  return update;
+}
+
+describe('PresenceChannel', () => {
+  it("turns off the library's 15-second renewal and 30-second drop", () => {
+    const realSet = globalThis.setInterval;
+    const realClear = globalThis.clearInterval;
+    const made = [];
+    const cleared = [];
+    globalThis.setInterval = (fn, ms) => {
+      const handle = realSet(fn, ms);
+      made.push(handle);
+      return handle;
+    };
+    globalThis.clearInterval = handle => {
+      cleared.push(handle);
+      realClear(handle);
+    };
+    let harness;
+    try {
+      harness = makeChannel();
+    } finally {
+      globalThis.setInterval = realSet;
+      globalThis.clearInterval = realClear;
+    }
+    assert.ok(made.length > 0 && made.every(handle => cleared.includes(handle)));
+    harness.channel.destroy();
+  });
+
+  it('announces with no caret when the editor has none', () => {
+    const harness = makeChannel();
+    harness.channel.attach(docWith('hello'));
+    harness.channel.announce();
+    assert.deepEqual(sentState(harness.sent[0]), { cursor: null });
+    harness.channel.destroy();
+  });
+
+  it('reads the selection when the message goes, at most every 300 ms', () => {
+    const harness = makeChannel();
+    const doc = docWith('hello');
+    harness.channel.attach(doc);
+    harness.selection = { start: 1, end: 1, direction: 'forward' };
+    harness.channel.selectionMoved();
+    harness.selection = { start: 2, end: 2, direction: 'forward' };
+    harness.clock.advance(0);
+    assert.equal(harness.sent.length, 1);
+    const cursor = sentState(harness.sent[0]).cursor;
+    assert.equal(caretsIn(Y, doc, new Map([[1, { user: BO, cursor }]]), 0, ME)[0].head, 2);
+    harness.selection = { start: 3, end: 3, direction: 'forward' };
+    harness.channel.selectionMoved();
+    harness.clock.advance(299);
+    assert.equal(harness.sent.length, 1);
+    harness.clock.advance(1);
+    assert.equal(harness.sent.length, 2);
+    harness.channel.destroy();
+  });
+
+  it('sends nothing when the caret did not move, or there is none', () => {
+    const harness = makeChannel();
+    harness.channel.attach(docWith('hello'));
+    harness.selection = { start: 1, end: 1, direction: 'forward' };
+    harness.channel.selectionMoved();
+    harness.clock.advance(1000);
+    harness.channel.selectionMoved();
+    harness.clock.advance(1000);
+    harness.selection = null;
+    harness.channel.selectionMoved();
+    harness.clock.advance(1000);
+    assert.equal(harness.sent.length, 1);
+    harness.channel.destroy();
+  });
+
+  it('tries again later when the socket was not open', () => {
+    const harness = makeChannel();
+    harness.channel.attach(docWith('hello'));
+    harness.selection = { start: 1, end: 1, direction: 'forward' };
+    harness.isOpen = false;
+    harness.channel.selectionMoved();
+    harness.clock.advance(1000);
+    harness.isOpen = true;
+    harness.channel.selectionMoved();
+    harness.clock.advance(1000);
+    assert.equal(harness.sent.length, 1);
+    harness.channel.destroy();
+  });
+
+  it('shows who the room says is here, and ignores an unreadable message', () => {
+    const harness = makeChannel();
+    harness.channel.receive(remoteUpdate({ user: BO, cursor: null }));
+    harness.channel.receive(new Uint8Array([9, 9]));
+    assert.deepEqual(harness.views.at(-1).people.map(person => person.name), ['Bo']);
+    harness.channel.destroy();
+  });
+
+  it('forgets everyone on restart, and starts again with a new client id', () => {
+    const harness = makeChannel();
+    harness.channel.receive(remoteUpdate({ user: BO, cursor: null }));
+    const oldID = harness.channel.awareness.clientID;
+    harness.channel.restart();
+    assert.deepEqual(harness.views.at(-1).people, []);
+    assert.notEqual(harness.channel.awareness.clientID, oldID);
+    harness.channel.destroy();
+  });
+
+  it('shows nothing once destroyed', () => {
+    const harness = makeChannel();
+    harness.channel.receive(remoteUpdate({ user: BO, cursor: null }));
+    harness.channel.destroy();
+    assert.equal(harness.views.at(-1), EMPTY_VIEW);
   });
 });

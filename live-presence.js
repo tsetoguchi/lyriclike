@@ -7,6 +7,7 @@
   'use strict';
 
   const TEXT_FIELD = 'body';
+  const ROOM_ORIGIN = 'room';
   // With typing's 5 messages a second and the keepalive, a tab stays well
   // under the room's limit of 20.
   const SEND_EVERY_MS = 300;
@@ -119,9 +120,128 @@
     return { anchor: toJSON(isBackward ? end : start), head: toJSON(isBackward ? start : end) };
   }
 
+  // One per connection: this tab's awareness, what it sends, and the view
+  // of everyone else it hands to the page.
+  class PresenceChannel {
+    // readSelection gives the editor's selection, or null when this tab
+    // has no caret to show (not synced yet, or the editor not focused).
+    constructor({ deps, clock, send, me, show, readSelection }) {
+      Object.assign(this, { deps, clock, send, me, show, readSelection });
+      this.doc = null;
+      this.sentJson = null;
+      this.lastSentAt = -Infinity;
+      this.timer = null;
+      this.makeAwareness();
+    }
+
+    // A fresh awareness, and so a fresh client id, per socket: when a socket
+    // closes the room says its id left, at a clock the old id cannot pass.
+    makeAwareness() {
+      const { awarenessProtocol, Y } = this.deps;
+      this.awarenessDoc = new Y.Doc();
+      this.awareness = new awarenessProtocol.Awareness(this.awarenessDoc);
+      // Its timer re-sends every 15 s, which would wake the room, and drops
+      // anyone quiet for 30 s, which would drop a reader. The room's leave
+      // message says who has gone (spec §4.3).
+      clearInterval(this.awareness._checkInterval);
+      this.awareness.on('change', () => this.refresh());
+    }
+
+    attach(doc) {
+      this.doc = doc;
+      this.refresh();
+    }
+
+    receive(update) {
+      try {
+        this.deps.awarenessProtocol.applyAwarenessUpdate(this.awareness, update, ROOM_ORIGIN);
+      } catch {
+        // An unreadable presence message costs a caret, not the page.
+      }
+    }
+
+    view() {
+      const states = this.awareness.getStates();
+      const ownID = this.awareness.clientID;
+      return {
+        people: peopleHere(states, ownID, this.me),
+        carets: this.doc ? caretsIn(this.deps.Y, this.doc, states, ownID, this.me) : [],
+      };
+    }
+
+    refresh() {
+      this.show(this.view());
+    }
+
+    // The selection is read when the message goes, after the binding has
+    // put the keystroke into the doc, so the position names the right letter.
+    selectionMoved() {
+      if (this.timer !== null) return;
+      const wait = Math.max(0, this.lastSentAt + SEND_EVERY_MS - this.clock.now());
+      this.timer = this.clock.setTimeout(() => {
+        this.timer = null;
+        this.sendIfMoved();
+      }, wait);
+    }
+
+    currentCursor() {
+      const selection = this.doc ? this.readSelection() : null;
+      return selection ? encodeCursor(this.deps.Y, this.doc.getText(TEXT_FIELD), selection) : null;
+    }
+
+    sendIfMoved() {
+      const cursor = this.currentCursor();
+      if (!cursor || JSON.stringify(cursor) === this.sentJson) return;
+      this.publish(cursor);
+    }
+
+    // Sent on every (re)join, caret or not, so others see this person
+    // before they click into the page.
+    announce() {
+      this.clearTimer();
+      this.publish(this.currentCursor());
+    }
+
+    publish(cursor) {
+      const { awarenessProtocol, protocol } = this.deps;
+      this.awareness.setLocalState({ cursor });
+      const update = awarenessProtocol.encodeAwarenessUpdate(this.awareness, [this.awareness.clientID]);
+      if (!this.send(protocol.encodePresence(update))) return;
+      this.sentJson = JSON.stringify(cursor);
+      this.lastSentAt = this.clock.now();
+    }
+
+    // The socket went. Everyone else is forgotten, since nobody would say
+    // who left meanwhile; the room's greeting on the next socket refills it.
+    restart() {
+      this.clearTimer();
+      this.dropAwareness();
+      this.sentJson = null;
+      this.makeAwareness();
+      this.refresh();
+    }
+
+    dropAwareness() {
+      this.awareness.destroy();
+      this.awarenessDoc.destroy();
+    }
+
+    clearTimer() {
+      if (this.timer === null) return;
+      this.clock.clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    destroy() {
+      this.clearTimer();
+      this.dropAwareness();
+      this.show(EMPTY_VIEW);
+    }
+  }
+
   const LivePresence = {
     SEND_EVERY_MS, EMPTY_VIEW,
-    colourFor, screenColour, initialsOf, peopleHere, caretsIn, encodeCursor,
+    colourFor, screenColour, initialsOf, peopleHere, caretsIn, encodeCursor, PresenceChannel,
   };
 
   if (typeof module === 'object' && module.exports) {
