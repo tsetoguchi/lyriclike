@@ -747,8 +747,10 @@ header .nav-icon circle {
 .presence-chip {
   display: inline-grid;
   place-items: center;
-  width: 24px;
+  /* A circle for one letter, a pill when two wide letters need the room. */
+  min-width: 24px;
   height: 24px;
+  padding-inline: var(--space-1);
   margin-left: calc(var(--space-1) * -1);
   border: 2px solid var(--paper-card);
   border-radius: var(--radius-pill);
