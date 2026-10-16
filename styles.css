@@ -727,11 +727,6 @@ header .nav-icon circle {
   color: var(--accent);
 }
 
-.share-row {
-  display: flex;
-  gap: var(--space-2);
-}
-
 /* Who is here: initials in each person's colour, overlapping a little.
    It opens the same people list as Share. */
 .presence-people {
@@ -802,17 +797,30 @@ header .nav-icon circle {
   display: none;
 }
 
-.share-row .modal-input {
-  flex: 1;
-  min-width: 0;
+.share-result {
+  margin-top: calc(-1 * var(--space-2));
 }
 
-.share-result {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+/* Copy link sits alone on the left, like the link button in Google Docs. */
+.share-copy {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-2);
-  margin-top: calc(-1 * var(--space-2));
+  margin-right: auto;
+}
+
+.share-copy[hidden],
+.share-actions [hidden] {
+  display: none;
+}
+
+.share-copy-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .share-result-text {
