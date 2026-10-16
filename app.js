@@ -273,8 +273,10 @@ function buildGroupHtml(key, name, desc, words) {
         <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
       </span>
     </button>
-    <div class="description">${desc}</div>
-    <div class="rhyme-group-body"></div>
+    <div class="rhyme-group-fold">
+      <div class="description">${desc}</div>
+      <div class="rhyme-group-body"></div>
+    </div>
   </div>`;
 }
 
@@ -316,6 +318,93 @@ function setGroupOpen(group, isOpen) {
 function rememberOpenGroups() {
   const open = resultsEl.querySelectorAll('.rhyme-group.open');
   openRhymeTypes = new Set(Array.from(open, (group) => group.dataset.type));
+}
+
+// A click rolls a group like a notebook heading: the group unrolls to its
+// height while its lines arrive top first, and folds away bottom first.
+// Opening a word does not roll, since only the click asked for it. The
+// names differ from storage.js's, which shares this global scope.
+const GROUP_ROLL_MS = 200;
+const GROUP_ROLL_STEP_MS = 30;
+const GROUP_ROLL_SPREAD_MS = 240;
+const GROUP_ROLL_SLIDE = 'translateY(-8px)';
+const GROUP_FOLDING_CLASS = 'is-folding';
+
+function isMotionReduced() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function listFoldItems(fold) {
+  const body = fold.querySelector('.rhyme-group-body');
+  return [fold.querySelector('.description'), ...body.children];
+}
+
+// The lines top to bottom: the description, then each row of chips. Rows
+// below the panel's bottom edge are left out, since no one sees them roll.
+function measureFoldLines(fold) {
+  const panelBottom = resultsEl.getBoundingClientRect().bottom;
+  const lines = [];
+  let lineTop = null;
+  for (const item of listFoldItems(fold)) {
+    const top = Math.round(item.getBoundingClientRect().top);
+    if (top > panelBottom) break;
+    if (top !== lineTop) lines.push([]);
+    lineTop = top;
+    lines[lines.length - 1].push(item);
+  }
+  return lines;
+}
+
+function planGroupRoll(fold, isOpening) {
+  const lines = measureFoldLines(fold);
+  if (!isOpening) lines.reverse();
+  const spreadStep = GROUP_ROLL_SPREAD_MS / Math.max(lines.length, 1);
+  const step = Math.min(GROUP_ROLL_STEP_MS, spreadStep);
+  const total = GROUP_ROLL_MS + step * Math.max(lines.length - 1, 0);
+  return { height: fold.offsetHeight, lines, step, total };
+}
+
+// A folding group stays shown until its roll ends; the fill holds each line
+// folded until then, and the clean-up lets the group hide.
+function stopGroupRoll(group, fold) {
+  for (const animation of fold.getAnimations({ subtree: true })) animation.cancel();
+  group.classList.remove(GROUP_FOLDING_CLASS);
+}
+
+function rollLine(item, isOpening, delay) {
+  const frames = [
+    { opacity: 0, transform: GROUP_ROLL_SLIDE },
+    { opacity: 1, transform: 'none' },
+  ];
+  if (!isOpening) frames.reverse();
+  const fill = isOpening ? 'backwards' : 'forwards';
+  item.animate(frames, { duration: GROUP_ROLL_MS, delay, easing: 'ease-out', fill });
+}
+
+function playGroupRoll(group, fold, plan, isOpening) {
+  const heights = ['0px', `${plan.height}px`];
+  if (!isOpening) heights.reverse();
+  if (!isOpening) group.classList.add(GROUP_FOLDING_CLASS);
+  const fill = isOpening ? 'none' : 'forwards';
+  const unroll = fold.animate(
+    { height: heights },
+    { duration: plan.total, easing: 'ease-in-out', fill },
+  );
+  plan.lines.forEach((line, order) => {
+    for (const item of line) rollLine(item, isOpening, order * plan.step);
+  });
+  // A new click cancels the roll, which rejects this; that click cleans up.
+  unroll.finished.then(() => stopGroupRoll(group, fold), () => {});
+}
+
+// The group is measured while it shows: after opening, or before folding.
+function rollGroup(group, isOpening) {
+  const fold = group.querySelector('.rhyme-group-fold');
+  if (fold) stopGroupRoll(group, fold);
+  if (isOpening) setGroupOpen(group, true);
+  const plan = fold && !isMotionReduced() ? planGroupRoll(fold, isOpening) : null;
+  if (!isOpening) setGroupOpen(group, false);
+  if (plan) playGroupRoll(group, fold, plan, isOpening);
 }
 
 function renderResults(word, results) {
@@ -1312,7 +1401,7 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     if (!group) return;
     const isOpening = !group.classList.contains('open');
     if (isOpening) populateGroupBody(group);
-    setGroupOpen(group, isOpening);
+    rollGroup(group, isOpening);
     rememberOpenGroups();
     if (isOpening) trackEvent('rhyme_group_opened', { group: group.dataset.type });
     return;
