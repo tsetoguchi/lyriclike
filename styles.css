@@ -809,6 +809,7 @@ header .nav-icon circle {
   padding-bottom: 0;
   border-bottom: none;
   font-size: var(--text-title-3);
+  font-weight: var(--weight-regular);
 }
 
 /* Sizes step down by role: title, field, names, label, status, message. */
