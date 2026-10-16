@@ -21,6 +21,7 @@ const SHARES_PER_SENDER_PER_DAY = 20;
 const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -69,6 +70,9 @@ export async function onRequestGet({ request, env, params }) {
 
   return Response.json({
     role: lyric.user_id === user.id ? 'owner' : 'editor',
+    // Whether the dialog offers the invite form: only to the owner, and only
+    // while the switch lets them share.
+    can_share: lyric.user_id === user.id && isLiveFor(env, user.id),
     owner: { name: owner.name || '', email: owner.email },
     people: shares.results.map(row => ({ email: row.email, joined: Boolean(row.joined) })),
   });
@@ -103,6 +107,11 @@ export async function onRequestPost(context) {
   const lyric = await db(env).prepare('SELECT id, title FROM lyrics WHERE id = ? AND user_id = ?')
     .bind(params.id, user.id).first();
   if (!lyric) return notFound();
+  // Sharing follows live editing's switch (spec §8): a page is only shared
+  // when it can be edited live, so co-writers never race each other's saves.
+  if (!isLiveFor(env, user.id)) {
+    return jsonError(HTTP_FORBIDDEN, 'sharing_paused', 'Sharing is paused right now.');
+  }
 
   const target = readEmail(await readJsonBody(request));
   if (!target) return jsonError(HTTP_BAD_REQUEST, 'invalid_email', "That doesn't look like an email address.");

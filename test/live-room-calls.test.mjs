@@ -128,9 +128,10 @@ describe('sharing a page', () => {
     assert.equal((await res.json()).live, true);
   });
 
-  it('says not live when the switch is off', async () => {
+  it('refuses to share at all when the switch is off', async () => {
     env.LIVE_EDITING = 'off';
     const res = await shareAs('sid-ann', SOLO, 'cy@example.com');
-    assert.equal((await res.json()).live, false);
+    assert.equal(res.status, 403);
+    assert.equal((await res.json()).error.code, 'sharing_paused');
   });
 });

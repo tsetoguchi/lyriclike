@@ -93,6 +93,7 @@ describe('/api/me', () => {
 
     assert.deepEqual(body, {
       id: 'google-1', email: 'ann@example.com', name: 'Ann', has_password: false, providers: ['google'],
+      can_share: false,
     });
     assert.strictEqual(body.has_password, false);
   });

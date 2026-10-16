@@ -1,6 +1,7 @@
 // Account lookups and the session hand-off shared by the password routes, the
 // Google callback and /api/me.
 
+import { isLiveFor } from './_live.js';
 import {
   PASSWORD_PROBLEM, PASSWORD_PROBLEM_MESSAGE, checkPasswordPolicy, isBreachedPassword,
   verifyPassword,
@@ -50,6 +51,8 @@ export async function describeAccount(env, userId) {
     name: row.name,
     has_password: Boolean(row.has_password),
     providers: row.providers ? row.providers.split(',').sort() : [],
+    // The Share button follows live editing's switch (spec §8).
+    can_share: isLiveFor(env, row.id),
   };
 }
 

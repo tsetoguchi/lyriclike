@@ -183,6 +183,34 @@ describe('sharing a page', () => {
     assert.equal((await share(carol.sid, 'dave@example.com')).status, 404);
     assert.equal((await shareRows()).length, 1);
   });
+
+  it('with live editing off, refuses a new share and adds nobody', async () => {
+    env.LIVE_EDITING = 'off';
+    const response = await share(alice.sid, 'bob@example.com');
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'sharing_paused');
+    assert.deepEqual(await shareRows(), []);
+  });
+
+  it('under the allowlist, lets only a listed owner share', async () => {
+    env.LIVE_EDITING = 'allowlist';
+    env.LIVE_EDITING_USERS = 'user-carol';
+    assert.equal((await share(alice.sid, 'bob@example.com')).status, 403);
+    env.LIVE_EDITING_USERS = 'user-alice';
+    assert.equal((await share(alice.sid, 'bob@example.com')).status, 200);
+  });
+
+  it('tells the owner, in the share list, whether they can share now', async () => {
+    assert.equal((await (await listShares(alice.sid)).json()).can_share, true);
+    env.LIVE_EDITING = 'off';
+    assert.equal((await (await listShares(alice.sid)).json()).can_share, false);
+  });
+
+  it('says in the account whether this person can share', async () => {
+    assert.equal((await (await call(me, 'GET', '/api/me', { sid: alice.sid })).json()).can_share, true);
+    env.LIVE_EDITING = 'off';
+    assert.equal((await (await call(me, 'GET', '/api/me', { sid: alice.sid })).json()).can_share, false);
+  });
 });
 
 describe('invite limits', () => {
@@ -292,6 +320,10 @@ describe('a shared page', () => {
     assert.equal(stored.user_id, alice.id);
   });
 
+  it('never offers a co-writer the invite form', async () => {
+    assert.equal((await (await listShares(bob.sid)).json()).can_share, false);
+  });
+
   it('with live editing off, lets the editor read but not save or rename', async () => {
     env.LIVE_EDITING = 'off';
     const page = await (await getPage(bob.sid)).json();
@@ -367,6 +399,7 @@ describe('a shared page', () => {
     const forOwner = await (await listShares(alice.sid)).json();
     assert.deepEqual(forOwner, {
       role: 'owner',
+      can_share: true,
       owner: { name: 'Alice', email: 'alice@example.com' },
       people: [{ email: 'bob@example.com', joined: true }],
     });
