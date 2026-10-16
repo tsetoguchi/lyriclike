@@ -12,6 +12,13 @@
   const PLOSIVES = new Set(['B', 'D', 'G', 'P', 'T', 'K']);
   const FRICATIVES = new Set(['V', 'DH', 'Z', 'ZH', 'JH', 'F', 'TH', 'S', 'SH', 'CH']);
   const NASALS = new Set(['M', 'N', 'NG']);
+  // CMUdict spells the vowel of "year" IH R and of "here" IY R, but before an
+  // R that ends the syllable both are one sound, closer to "see" than "sit".
+  // Treated as its own vowel, "year" rhymes with "here" and stops matching
+  // "sit". An R that starts the next syllable ("mirror") keeps the plain IH.
+  const NEAR_SOURCE_VOWELS = new Set(['IH', 'IY']);
+  const NEAR_VOWEL = 'IR';
+  const R_CONSONANT = 'R';
   // Cot-caught merger: AA (got/hot) ≈ AO (lost/caught)
   const MERGED_VOWELS = new Map([['AA', 'AO'], ['AO', 'AA']]);
   const PRIMARY_STRESS = 1;
@@ -114,11 +121,18 @@
     return NOT_FOUND;
   }
 
+  function isNearVowel(vowel, coda) {
+    if (!NEAR_SOURCE_VOWELS.has(vowel) || coda[0] !== R_CONSONANT) return false;
+    return coda.length === 1 || !isVowel(coda[1]);
+  }
+
   function splitAtVowel(phonemes, vowelIdx) {
+    const vowel = stripStress(phonemes[vowelIdx]);
+    const coda = phonemes.slice(vowelIdx + 1).map(stripStress);
     return {
       onset: phonemes.slice(0, vowelIdx).map(stripStress),
-      vowel: stripStress(phonemes[vowelIdx]),
-      coda: phonemes.slice(vowelIdx + 1).map(stripStress)
+      vowel: isNearVowel(vowel, coda) ? NEAR_VOWEL : vowel,
+      coda
     };
   }
 
@@ -459,8 +473,8 @@
     return keyed.map(({ entry }) => entry);
   }
 
-  // Buried words stay last, sorted by the same rule. A–Z skips this: a list
-  // that reaches Z and starts again at A reads as broken.
+  // Buried words stay last, sorted by the same rule. The panel folds them
+  // behind their own button, so A–Z starting over there does not read as broken.
   function sortHeadAndTail(entries, sortPart) {
     const head = entries.filter(({ tier }) => tier !== BURIED_TIER);
     const tail = entries.filter(({ tier }) => tier === BURIED_TIER);
@@ -475,7 +489,7 @@
       return sortHeadAndTail(entries, (part) => part.sort(comparePopularity(ranks)));
     }
     if (order === 'alphabetical') {
-      return entries.slice().sort(compareAlphabetical);
+      return sortHeadAndTail(entries, (part) => part.sort(compareAlphabetical));
     }
     if (order === 'random') {
       return sortHeadAndTail(entries, (part) => sortByShuffleKey(part, seed));

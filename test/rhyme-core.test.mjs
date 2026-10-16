@@ -117,6 +117,38 @@ describe('classifyRhyme', () => {
   });
 });
 
+describe('the vowel before R in "year"', () => {
+  const NEAR_WORDS = {
+    year: ['Y', 'IH1', 'R'],
+    here: ['HH', 'IY1', 'R'],
+    weird: ['W', 'IH1', 'R', 'D'],
+    sit: ['S', 'IH1', 'T'],
+    mirror: ['M', 'IH1', 'R', 'ER0'],
+    fifth: ['F', 'IH1', 'F', 'TH']
+  };
+
+  function classifyNear(target, candidate) {
+    return classifyRhyme(
+      extractRhymePart(NEAR_WORDS[target]),
+      extractRhymePart(NEAR_WORDS[candidate])
+    );
+  }
+
+  it('rhymes "year" with "here", though CMUdict spells them IH R and IY R', () => {
+    assert.equal(classifyNear('year', 'here'), 'perfect');
+  });
+
+  it('keeps "year" from matching the "sit" vowel', () => {
+    assert.equal(classifyNear('year', 'sit'), null);
+    assert.equal(classifyNear('weird', 'sit'), null);
+  });
+
+  it('leaves "mirror" on plain IH, its R starting the next syllable', () => {
+    assert.equal(extractRhymePart(NEAR_WORDS.mirror).vowel, 'IH');
+    assert.equal(classifyNear('mirror', 'fifth'), 'assonance');
+  });
+});
+
 describe('findRhymes', () => {
   it('groups rhymes by type, filtered and ranked', () => {
     assert.deepEqual(findRhymes(INDEX, 'cat', FILTERS), {
@@ -716,10 +748,10 @@ describe('sortRhymeEntries, popular', () => {
 });
 
 describe('sortRhymeEntries, alphabetical', () => {
-  it('sorts buried words in with the rest, so A–Z never starts over', () => {
+  it('sorts buried words A–Z after the rest, where the panel folds them', () => {
     assert.deepEqual(words(sortRhymeEntries(SORT_ENTRIES, 'alphabetical', SORT_CONTEXT)), [
-      'apart', 'bart', 'chart', 'dart', 'mozart', 'part',
-      'rampart', 'smart', 'sort', 'start'
+      'apart', 'chart', 'dart', 'part', 'sort', 'start',
+      'bart', 'mozart', 'rampart', 'smart'
     ]);
   });
 

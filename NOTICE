@@ -113,7 +113,9 @@ License: https://creativecommons.org/licenses/by-sa/4.0/
 
 Unmodified. Used to order rhyme results by how common each word is: at
 build time for the rhyme pages, and to order english-words.json above,
-which the site does serve. The frequency list itself is not served.
+which the site does serve. The rhyme-page build also uses it to choose
+which common words get a page once the popular searches run out. The
+frequency list itself is not served.
 
 Source: https://github.com/hermitdave/FrequencyWords
 Upstream revision: 525f9b560de45753a5ea01069454e72e9aa541c6

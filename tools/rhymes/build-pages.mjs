@@ -13,26 +13,38 @@ import rhymeCore from '../../rhyme-core.js';
 
 const { buildRhymeIndex, findRhymes, hasRhymeEntry } = rhymeCore;
 
-const MAX_PAGES = 1000;
+const MAX_PAGES = 5000;
 // Below this a page is too thin to be worth indexing.
 const MIN_LISTED_RHYMES = 10;
 const RELATED_COUNT = 24;
 const OUTPUT_DIR = new URL('rhymes/', REPO_ROOT);
 const STYLESHEET_SOURCE = new URL('./page.css', import.meta.url);
+// Windows can't create a folder with these names, so a page for "con" left the
+// repo impossible to check out there.
+const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
 
 // Autocomplete surfaces slang and fragments ("ty"), so a page also needs the
 // word to be on the same English list the editor filters results with.
-// A crude word gets no page of its own, the same as it never leads a list.
+// A crude word gets no page of its own, the same as it never leads a list,
+// and neither does a word ad networks treat as sensitive.
 function isPageCandidate(word, index, data) {
   const { filters } = data;
   if (!filters.englishWords.has(word) || filters.blocklist.has(word)) return false;
-  return !data.crude.has(word) && hasRhymeEntry(index, word);
+  if (data.crude.has(word) || data.pageExcluded.has(word)) return false;
+  if (WINDOWS_RESERVED_NAME.test(word)) return false;
+  return hasRhymeEntry(index, word);
+}
+
+// Popular searches lead; once they run out, common words fill the rest in
+// frequency order, so the pages still go to the words most likely searched.
+function candidateWords(data) {
+  return [...data.popularWords, ...data.frequentWords];
 }
 
 function selectPages(index, data) {
   const pages = [];
   const seen = new Set();
-  for (const word of data.popularWords) {
+  for (const word of candidateWords(data)) {
     if (pages.length >= MAX_PAGES) break;
     if (seen.has(word) || !isPageCandidate(word, index, data)) continue;
     seen.add(word);
@@ -70,12 +82,12 @@ async function writePage(path, html) {
 }
 
 async function writeRhymePages(pages, index, data) {
-  const { ranks, names, crude } = data;
+  const { ranks, names, crude, pageExcluded } = data;
   const pageWords = new Set(pages.map((page) => page.word));
   for (let position = 0; position < pages.length; position++) {
     const { word, results } = pages[position];
     const related = pickRelated(pages, position);
-    const model = buildPageModel({ word, results, index, ranks, names, crude, related });
+    const model = buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related });
     await writePage(rhymePagePath(word), renderRhymePage(model, pageWords));
   }
 }
