@@ -103,13 +103,17 @@
     return { start: Math.min(anchor, head), end: Math.max(anchor, head), head };
   }
 
+  // One caret per tab. A connection the room never saw close (a phone that
+  // slept) lingers beside the tab's new one; the newer comes later in the map.
   function caretsIn(Y, doc, states, ownClientID, me) {
-    const carets = [];
+    const byTab = new Map();
     for (const [clientID, state] of othersIn(states, ownClientID, me)) {
+      const tab = state.tab === undefined ? `client:${clientID}` : `tab:${state.tab}`;
       const caret = caretOf(Y, doc, state.cursor);
-      if (caret) carets.push({ clientID, ...personOf(state.user), ...caret });
+      byTab.delete(tab);
+      if (caret) byTab.set(tab, { clientID, ...personOf(state.user), ...caret });
     }
-    return carets;
+    return [...byTab.values()];
   }
 
   // The head is where the caret blinks: a selection made backwards has it
@@ -131,6 +135,9 @@
       this.sentJson = null;
       this.lastSentAt = -Infinity;
       this.timer = null;
+      // Kept across sockets, so others can tell this tab's new connection
+      // from one the room has not yet seen close. It names nobody.
+      this.tab = globalThis.crypto.randomUUID();
       this.makeAwareness();
     }
 
@@ -204,11 +211,18 @@
 
     publish(cursor) {
       const { awarenessProtocol, protocol } = this.deps;
-      this.awareness.setLocalState({ cursor });
+      this.awareness.setLocalState({ cursor, tab: this.tab });
       const update = awarenessProtocol.encodeAwarenessUpdate(this.awareness, [this.awareness.clientID]);
       if (!this.send(protocol.encodePresence(update))) return;
       this.sentJson = JSON.stringify(cursor);
       this.lastSentAt = this.clock.now();
+    }
+
+    // A hidden tab (a phone locked or switched away) takes its caret down,
+    // since its socket may die without the room hearing for a long while.
+    hide() {
+      this.clearTimer();
+      this.publish(null);
     }
 
     // The socket went. Everyone else is forgotten, since nobody would say

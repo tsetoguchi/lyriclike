@@ -119,6 +119,16 @@ describe('caretsIn', () => {
     assert.deepEqual(caretsIn(Y, mine, states, 0, ME), []);
   });
 
+  it('shows one caret per tab: the newest, when an old connection lingers', () => {
+    const doc = docWith('hello world');
+    const states = new Map([
+      [1, { user: BO, tab: 't1', cursor: cursorIn(doc, 2) }],
+      [2, { user: BO, tab: 't1', cursor: cursorIn(doc, 7) }],
+      [3, { user: BO, tab: 't2', cursor: cursorIn(doc, 9) }],
+    ]);
+    assert.deepEqual(caretsIn(Y, doc, states, 0, ME).map(caret => caret.head), [7, 9]);
+  });
+
   it('skips a state with no caret, and a malformed one', () => {
     const doc = docWith('hello');
     const states = new Map([
@@ -189,7 +199,9 @@ describe('PresenceChannel', () => {
     const harness = makeChannel();
     harness.channel.attach(docWith('hello'));
     harness.channel.announce();
-    assert.deepEqual(sentState(harness.sent[0]), { cursor: null });
+    const state = sentState(harness.sent[0]);
+    assert.equal(state.cursor, null);
+    assert.equal(typeof state.tab, 'string');
     harness.channel.destroy();
   });
 

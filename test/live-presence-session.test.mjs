@@ -280,4 +280,35 @@ describe('connection trouble', () => {
     await settle(ann, bo);
     assert.deepEqual(headsOf(ann), [4]);
   });
+
+  it('shows one caret for a co-writer whose old connection the room never saw close', async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await openAll(ann, bo);
+    moveCaret(bo, 1);
+    await settle(ann, bo);
+    // The phone's socket died without the room hearing: no leave goes out.
+    const dead = bo.session.connection.socket;
+    dead.readyState = 3;
+    setImmediate(() => dead.onclose?.({ code: 1006 }));
+    await settle(ann, bo);
+    moveCaret(bo, 4);
+    await settle(ann, bo);
+    assert.deepEqual(headsOf(ann), [4]);
+  });
+
+  it("takes a co-writer's caret away while their tab is hidden, and back when shown", async () => {
+    const ann = makeSession(ANN);
+    const bo = makeSession(BO);
+    await openAll(ann, bo);
+    moveCaret(bo, 3);
+    await settle(ann, bo);
+    bo.session.presenceHidden();
+    await settle(ann, bo);
+    assert.deepEqual(namesHere(ann), ['Bo']);
+    assert.deepEqual(headsOf(ann), []);
+    bo.session.presenceShown();
+    await settle(ann, bo);
+    assert.deepEqual(headsOf(ann), [3]);
+  });
 });

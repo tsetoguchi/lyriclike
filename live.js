@@ -203,6 +203,14 @@
       for (const type of SELECTION_EVENTS) this.env.textarea.removeEventListener(type, this.onSelection);
     }
 
+    presenceHidden() {
+      if (this.isSynced) this.presence.hide();
+    }
+
+    presenceShown() {
+      if (this.isSynced) this.presence.announce();
+    }
+
     sendIfOpen(bytes) {
       if (!this.isOpen()) return false;
       this.socket.send(bytes);
@@ -812,6 +820,14 @@
       this.connection?.checkAlive();
     }
 
+    presenceHidden() {
+      this.connection?.presenceHidden();
+    }
+
+    presenceShown() {
+      this.connection?.presenceShown();
+    }
+
     reconnectNow() {
       this.connection?.reconnectNow();
     }
@@ -874,8 +890,13 @@
     document.addEventListener('visibilitychange', () => {
       // A phone can drop a hidden tab without a pagehide, so the copy is
       // written on the way out too.
-      if (document.hidden) session.saveOnLeaving();
-      else session.checkAlive();
+      if (document.hidden) {
+        session.saveOnLeaving();
+        session.presenceHidden();
+      } else {
+        session.checkAlive();
+        session.presenceShown();
+      }
     });
     window.addEventListener('pagehide', () => session.saveOnLeaving());
     window.addEventListener('online', () => session.reconnectNow());
