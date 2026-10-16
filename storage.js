@@ -38,6 +38,7 @@ const CREATE_ACCOUNT_MESSAGE =
   + 'any device.';
 
 const CONFLICT_MESSAGE = 'Someone else changed this page.';
+const NO_LIVE_SESSION_MESSAGE = 'Reload the page to edit it.';
 const LOST_ACCESS_MESSAGE =
   'You no longer have access to this page. Your text is saved as a new page.';
 const UNAVAILABLE_MESSAGE = "This page isn't available to this account.";
@@ -141,6 +142,9 @@ function closeLiveSession() {
   isLiveDraft = false;
   forgetLiveCopyMarks();
   if (currentLiveSession()) currentLiveSession().close();
+  // A page locked for want of a live session (showLyric) unlocks once
+  // another page is on screen.
+  document.getElementById('lyrics').readOnly = false;
 }
 
 // Signed out mid-session: off the room, but the local copy stays.
@@ -539,6 +543,14 @@ function showLyric(lyric) {
   setSaveIndicator('');
   updatePanelHeader();
   if (session) session.follow(lyric);
+  // Live, but live.js did not load: the words would be kept from the REST
+  // save and from the room alike, so the page is read-only until a reload.
+  if (isLiveDraft && !session) lockWithoutLiveSession();
+}
+
+function lockWithoutLiveSession() {
+  document.getElementById('lyrics').readOnly = true;
+  showNotice(NO_LIVE_SESSION_MESSAGE);
 }
 
 function refreshLivePageInfo(lyric) {
@@ -931,6 +943,19 @@ function goLiveFromRest() {
   isLiveDraft = true;
   session.open({ id: currentLyricId, body: lastSavedBody, title: currentTitle });
   writeDraft();
+}
+
+// The poll found the page live. A save still on its way would land after
+// live mode took the last saved words as its base, and its words would be
+// rebased in a second time, so live mode waits for it.
+async function goLiveWhenSaved() {
+  const id = currentLyricId;
+  try {
+    await waitForSaves();
+  } catch {
+    // A failed save leaves the older base; the rebase keeps the words.
+  }
+  if (id === currentLyricId) goLiveFromRest();
 }
 
 // A save refused because the page went live. If the refused save, or one

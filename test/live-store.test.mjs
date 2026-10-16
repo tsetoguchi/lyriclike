@@ -32,6 +32,24 @@ describe('the copy store', () => {
     assert.deepEqual(await store.load('page-1'), RECORD);
   });
 
+  it('steps aside when a newer version of the app upgrades the database', async () => {
+    const factory = new IDBFactory();
+    const copies = new LiveStore(factory);
+    await copies.save(RECORD);
+    const upgraded = await new Promise((resolve, reject) => {
+      const request = factory.open('live-pages', 2);
+      // Closing the old connection lets a failing run end instead of hanging.
+      request.onblocked = () => copies.database().then(db => {
+        db.close();
+        reject(new Error('blocked by the open copy store'));
+      });
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    assert.equal(upgraded.version, 2);
+    upgraded.close();
+  });
+
   it('gives null for a page it has no copy of', async () => {
     assert.equal(await store.load('nothing'), null);
   });

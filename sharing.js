@@ -487,6 +487,7 @@
       const meta = await res.json();
       // The page went live (shared from another device, or the switch turned
       // on): its room takes over from the poll.
+      if (meta.live && typeof goLiveWhenSaved === 'function') return goLiveWhenSaved();
       if (meta.live && typeof goLiveFromRest === 'function') return goLiveFromRest();
       if (meta.revision > currentRevision) await takeTheirWords(id);
       else if (meta.title !== currentTitle) takeTheirTitle(meta.title);

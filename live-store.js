@@ -14,7 +14,13 @@
     return new Promise((resolve, reject) => {
       const request = factory.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        // A newer app, in another tab, is upgrading the database: step aside
+        // rather than block it. The next call opens again.
+        db.onversionchange = () => db.close();
+        resolve(db);
+      };
       request.onerror = () => reject(request.error);
     });
   }

@@ -39,7 +39,7 @@ describe('global names', () => {
 // no-cache, but a tab can hold one stale). Names storage.js added for live
 // editing are only read behind a typeof guard there, so a stale storage.js
 // cannot throw a ReferenceError in the poll.
-const STORAGE_LIVE_NAMES = ['isLiveDraft', 'goLiveFromRest', 'goLiveAfterShare'];
+const STORAGE_LIVE_NAMES = ['isLiveDraft', 'goLiveFromRest', 'goLiveAfterShare', 'goLiveWhenSaved'];
 
 describe('sharing.js and newer storage.js names', () => {
   const lines = readFileSync(new URL('../sharing.js', import.meta.url), 'utf8').split('\n');
@@ -49,4 +49,11 @@ describe('sharing.js and newer storage.js names', () => {
       assert.deepEqual(unguarded, []);
     });
   }
+});
+
+describe('the poll going live', () => {
+  it('waits for a save on its way, when storage.js can', () => {
+    const source = readFileSync(new URL('../sharing.js', import.meta.url), 'utf8');
+    assert.match(source, /typeof goLiveWhenSaved === 'function'\) return goLiveWhenSaved\(\)/);
+  });
 });
