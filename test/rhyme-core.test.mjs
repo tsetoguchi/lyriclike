@@ -383,6 +383,11 @@ describe('groupRhymeMarks', () => {
     dont: [['D', 'OW1', 'N', 'T']],
     tonight: [['T', 'AH0', 'N', 'AY1', 'T']],
     away: [['AH0', 'W', 'EY1']],
+    like: [['L', 'AY1', 'K']],
+    dislike: [['D', 'IH0', 'S', 'L', 'AY1', 'K']],
+    slight: [['S', 'L', 'AY1', 'T']],
+    delight: [['D', 'IH0', 'L', 'AY1', 'T']],
+    polite: [['P', 'AH0', 'L', 'AY1', 'T']],
     yeah: [['Y', 'AE1']],
     o: [['OW1']],
     show: [['SH', 'OW1']],
@@ -483,6 +488,28 @@ describe('groupRhymeMarks', () => {
     for (const word of ['tonight', 'night', 'away', 'way']) {
       assert.equal(marked.includes(word), false, `${word} should not be marked`);
     }
+  });
+
+  it('does not mark a prefix that ends in a consonant, like dislike / like', () => {
+    const lines = ['I like it but you dislike it', 'and so we go'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const marked = marks[0].map((m) => textOf(lines[0], m));
+    assert.equal(marked.includes('like'), false);
+    assert.equal(marked.includes('dislike'), false);
+  });
+
+  it('marks words whose extra opening is not a syllable, like slight / light', () => {
+    const lines = ['a slight light', 'and so we go'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const marked = marks[0].map((m) => textOf(lines[0], m));
+    assert.deepEqual(marked.sort(), ['light', 'slight']);
+  });
+
+  it('marks two different prefixes on one syllable, like polite / delight', () => {
+    const lines = ['so polite and such delight', 'and so we go'];
+    const { marks } = groupRhymeMarks(MARK_INDEX, lines);
+    const marked = marks[0].map((m) => textOf(lines[0], m));
+    assert.deepEqual(marked.sort(), ['delight', 'polite']);
   });
 
   it('never marks a sung filler', () => {

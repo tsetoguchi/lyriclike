@@ -885,23 +885,27 @@
 
   // ── Pair tests ──
 
-  // The consonants that open the stressed syllable: L for both "light" and
-  // "delight", S T for both "stand" and "understand".
-  function stressedOnsetCluster(part) {
-    let start = part.onset.length;
-    while (start > 0 && !isVowel(part.onset[start - 1])) start--;
-    return part.onset.slice(start).join(' ');
+  // Whether the longer onset is the shorter one with whole syllables in front:
+  // "dislike" is "like" under "dis", but "slight" is not "light" under "s".
+  function isPrefixedOnset(longer, shorter) {
+    const extra = longer.length - shorter.length;
+    if (extra <= 0) return false;
+    if (longer.slice(extra).join(' ') !== shorter.join(' ')) return false;
+    return longer.slice(0, extra).some(isVowel);
   }
 
   function hasSameStressedOpening(part1, part2) {
     if (!part1 || !part2) return false;
-    return vowelsMatch(part1.vowel, part2.vowel)
-      && stressedOnsetCluster(part1) === stressedOnsetCluster(part2);
+    if (!vowelsMatch(part1.vowel, part2.vowel)) return false;
+    return part1.onset.join(' ') === part2.onset.join(' ')
+      || isPrefixedOnset(part1.onset, part2.onset)
+      || isPrefixedOnset(part2.onset, part1.onset);
   }
 
   // The same word twice is a refrain, and so is the same stressed syllable
-  // under a prefix or suffix ("way/away", "night/tonight", "keep/keeps") —
-  // the call classifyRhyme() already makes for "knight/night".
+  // under a prefix or suffix ("way/away", "like/dislike", "keep/keeps") —
+  // the call classifyRhyme() already makes for "knight/night". Two different
+  // prefixes ("polite/delight") still rhyme.
   function isRepeat(a, b) {
     if (a.text === b.text) return true;
     if (!a.splits || !b.splits) return false;
