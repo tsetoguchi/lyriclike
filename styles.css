@@ -2214,29 +2214,49 @@ header .nav-icon circle {
   transform: none;
 }
 
-/* The address is the title: it is what the panel is about, and it tells
-   the writer which account they are in at a glance. */
+/* Set like the share dialog: a large regular-weight title, with the
+   address under it so the writer sees which account they are in. */
 .account-settings-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-2) 0 var(--space-5);
+  padding: var(--space-6) var(--space-3) 0 var(--space-6);
+}
+
+.account-settings-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.account-settings-title {
+  margin: 0;
+  font-family: var(--font-editor);
+  font-size: var(--text-title-3);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
 }
 
 .account-settings-header .settings-value {
-  flex: 1;
-  font-size: var(--text-body);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-tight);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+}
+
+/* The close button sits level with the title. */
+.account-settings-header .icon-btn {
+  margin-top: calc(-1 * var(--space-2));
 }
 
 /* Space, not rules, groups the panel. The one wider gap sets deleting apart
    from everything else. */
 .account-settings-body {
-  padding: var(--space-4) var(--space-5) var(--space-5);
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .settings-section {
@@ -2255,7 +2275,7 @@ header .nav-icon circle {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: var(--text-subhead);
+  font-size: var(--text-footnote);
 }
 
 .settings-label {

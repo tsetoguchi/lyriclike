@@ -170,9 +170,13 @@
   </nav>
   </div>
   <div id="account-settings-overlay">
-    <div id="account-settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-user-email">
+    <div id="account-settings-panel" role="dialog" aria-modal="true" aria-labelledby="account-settings-title"
+         aria-describedby="settings-user-email">
       <div class="account-settings-header">
-        <span id="settings-user-email" class="settings-value"></span>
+        <div class="account-settings-heading">
+          <h2 id="account-settings-title" class="account-settings-title">Account</h2>
+          <span id="settings-user-email" class="settings-value"></span>
+        </div>
         <button id="close-account-settings-btn" class="icon-btn" aria-label="Close">&#x2715;</button>
       </div>
       <div class="account-settings-body">
