@@ -116,6 +116,9 @@ function isLive() {
 // says so, and a reload reopens it from the device's local copy (live.js).
 // It outlasts a signed-out close, so signing back in picks the page up.
 let isLiveDraft = false;
+// Set while a live page is read-only because live.js did not load. Nothing
+// can be typed there, so leaving it loses nothing.
+let isLockedWithoutSession = false;
 // The savedAt of the local copy the stored draft's words come from, so a
 // reload can tell which of the two is newer, and that copy's words. Typing
 // before the first sync moves the draft's body on but leaves these, so a
@@ -144,6 +147,8 @@ function closeLiveSession() {
   if (currentLiveSession()) currentLiveSession().close();
   // A page locked for want of a live session (showLyric) unlocks once
   // another page is on screen.
+  if (isLockedWithoutSession) hideNotice();
+  isLockedWithoutSession = false;
   document.getElementById('lyrics').readOnly = false;
 }
 
@@ -549,6 +554,7 @@ function showLyric(lyric) {
 }
 
 function lockWithoutLiveSession() {
+  isLockedWithoutSession = true;
   document.getElementById('lyrics').readOnly = true;
   showNotice(NO_LIVE_SESSION_MESSAGE);
 }
@@ -735,7 +741,7 @@ async function waitForSaves() {
 async function flushSave() {
   if (isLive()) return flushLivePage();
   // Offline at load, waiting to reopen live: its words are not safe to leave.
-  if (isLiveDraft) {
+  if (isLiveDraft && !isLockedWithoutSession) {
     showNotice(UNSAVED_LEAVE_MESSAGE);
     return false;
   }
