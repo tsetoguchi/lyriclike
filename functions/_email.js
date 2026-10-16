@@ -264,9 +264,11 @@ function inviteMessage(env, { senderName, title, lyricId, hasAccount, stopUrl })
 }
 
 // Invite limits are checked by the share route before it answers, so the
-// sender can be told when no mail went. This only builds and sends. Both mail
-// apps' one-click unsubscribe and the footer link reach the stop route.
-export async function sendInviteEmail(context, { to, senderName, title, lyricId, hasAccount }) {
+// sender can be told when no mail went. This builds, sends and, from
+// `poolCount`, warns the owner when the pool is filling. Both mail apps'
+// one-click unsubscribe and the footer link reach the stop route.
+export async function sendInviteEmail(
+  context, { to, senderName, title, lyricId, hasAccount, poolCount }) {
   try {
     const { env } = context;
     const token = await inviteStopToken(env, to.trim().toLowerCase());
@@ -280,6 +282,7 @@ export async function sendInviteEmail(context, { to, senderName, title, lyricId,
     };
     const { ok } = await sendEmail(env, { to, ...message, headers });
     if (!ok) await logEmailEvent(context, 'email_failed');
+    await warnIfPoolFilling(context, EMAIL_POOL.INVITE, poolCount);
   } catch (err) {
     console.error('invite email error', err);
     await logEmailEvent(context, 'email_failed');
