@@ -38,6 +38,9 @@ const CREATE_ACCOUNT_MESSAGE =
   + 'any device.';
 
 const CONFLICT_MESSAGE = 'Someone else changed this page.';
+// A page nobody else has can only have moved on in this person's other tab
+// or device.
+const OWN_CONFLICT_MESSAGE = 'This page was changed in another tab or device.';
 const NO_LIVE_SESSION_MESSAGE = 'Reload the page to edit it.';
 const PAUSED_MESSAGE = 'Live editing is paused. You can read this page.';
 const PAUSED_COPY_MESSAGE = 'Live editing is paused, so your newest words are saved as a new page.';
@@ -818,8 +821,15 @@ async function flushLivePage() {
 // get a few seconds to reach the room; if they cannot (offline), the
 // writer decides whether to lose them.
 async function confirmSignOut() {
+  // Words behind the conflict bar would go with the draft at sign-out, so
+  // they are kept as a page of their own first.
+  if (pendingConflict && !await keepMineAsCopy()) return askToLogOutAnyway();
   if (!isLiveDraft) return true;
   if (isLive() && await currentLiveSession().flush(SIGN_OUT_WAIT_MS)) return true;
+  return askToLogOutAnyway();
+}
+
+async function askToLogOutAnyway() {
   const answer = await openDialog({
     heading: SIGN_OUT_HEADING,
     message: UNSAVED_SIGN_OUT_MESSAGE,
@@ -937,7 +947,8 @@ function handleConflict(theirs, sentBody) {
   pendingConflict = theirs;
   clearTimeout(saveTimer);
   setSaveIndicator('Not saved');
-  showNotice(CONFLICT_MESSAGE, [
+  const isOnlyMine = currentPageInfo.role === 'owner' && currentPageInfo.shareCount === 0;
+  showNotice(isOnlyMine ? OWN_CONFLICT_MESSAGE : CONFLICT_MESSAGE, [
     { label: 'Load their version', onClick: loadTheirVersion },
     { label: 'Keep mine', onClick: keepMine },
   ], { closable: false });
