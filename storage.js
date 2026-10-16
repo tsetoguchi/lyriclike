@@ -495,8 +495,11 @@ function rollListGroup(group, isFolding) {
   const container = document.getElementById('lyrics-list-items');
   const rows = [...container.querySelectorAll(`.lyrics-list-item[data-group="${group}"]:not(.active)`)];
   if (isFolding) rows.reverse();
+  // All heights are read before any style is written: reading after a write
+  // makes the browser lay the page out again, once per row.
+  const heights = rows.map(row => row.scrollHeight);
   rows.forEach((row, order) => {
-    row.style.setProperty('--row-height', `${row.scrollHeight}px`);
+    row.style.setProperty('--row-height', `${heights[order]}px`);
     row.style.setProperty('--fold-order', String(order));
   });
   const step = Math.min(ROLL_STEP_MS, ROLL_SPREAD_MS / Math.max(rows.length, 1));
