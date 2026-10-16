@@ -825,7 +825,7 @@ header .nav-icon circle {
 
 .share-result-text {
   font-family: var(--font-editor);
-  font-size: var(--text-footnote);
+  font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   line-height: 1.5;
   color: var(--ink);
