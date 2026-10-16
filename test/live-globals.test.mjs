@@ -20,6 +20,15 @@ describe('global names', () => {
     assert.ok(SCRIPTS.includes('storage.js') && SCRIPTS.includes('live.js'));
   });
 
+  it('storage.js declares each new lock helper once', () => {
+    const source = readFileSync(new URL('../storage.js', import.meta.url), 'utf8');
+    for (const name of ['lockEditor', 'unlockEditor', 'setEditorReadOnly']) {
+      const declarations = source.split('\n').filter(line => line.startsWith(`function ${name}(`));
+      assert.equal(declarations.length, 1, name);
+    }
+    assert.doesNotMatch(source, /isLockedWithoutSession|lockWithoutLiveSession/);
+  });
+
   it('loads the presence scripts before live.js', () => {
     const at = name => SCRIPTS.indexOf(name);
     assert.ok(at('live-presence.js') > -1 && at('live-presence.js') < at('live-presence-view.js'));

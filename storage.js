@@ -39,6 +39,8 @@ const CREATE_ACCOUNT_MESSAGE =
 
 const CONFLICT_MESSAGE = 'Someone else changed this page.';
 const NO_LIVE_SESSION_MESSAGE = 'Reload the page to edit it.';
+const PAUSED_MESSAGE = 'Live editing is paused. You can read this page.';
+const PAUSED_COPY_MESSAGE = 'Live editing is paused, so your newest words are saved as a new page.';
 const LOST_ACCESS_MESSAGE =
   'You no longer have access to this page. Your text is saved as a new page.';
 const UNAVAILABLE_MESSAGE = "This page isn't available to this account.";
@@ -46,6 +48,7 @@ const COPY_SUFFIX = ' (my copy)';
 const MAX_TITLE_LENGTH = 300;
 // HTTP_NOT_FOUND comes from app.js: the scripts share one global scope.
 const HTTP_CONFLICT = 409;
+const HTTP_FORBIDDEN = 403;
 // A 4001 from a live room reloads the page; a stale cache must not loop it.
 const RELOAD_GUARD_KEY = 'live_reloaded_at';
 const RELOAD_GUARD_MS = 60 * 1000;
@@ -116,9 +119,10 @@ function isLive() {
 // says so, and a reload reopens it from the device's local copy (live.js).
 // It outlasts a signed-out close, so signing back in picks the page up.
 let isLiveDraft = false;
-// Set while a live page is read-only because live.js did not load. Nothing
+// Set while the page on screen is read-only for a reason this file gave:
+// live.js did not load, or live editing is paused for a co-writer. Nothing
 // can be typed there, so leaving it loses nothing.
-let isLockedWithoutSession = false;
+let isEditorLocked = false;
 // The savedAt of the local copy the stored draft's words come from, so a
 // reload can tell which of the two is newer, and that copy's words. Typing
 // before the first sync moves the draft's body on but leaves these, so a
@@ -147,9 +151,7 @@ function closeLiveSession() {
   if (currentLiveSession()) currentLiveSession().close();
   // A page locked for want of a live session (showLyric) unlocks once
   // another page is on screen.
-  if (isLockedWithoutSession) hideNotice();
-  isLockedWithoutSession = false;
-  document.getElementById('lyrics').readOnly = false;
+  unlockEditor();
 }
 
 // Signed out mid-session: off the room, but the local copy stays.
@@ -550,17 +552,37 @@ function showLyric(lyric) {
   if (session) session.follow(lyric);
   // Live, but live.js did not load: the words would be kept from the REST
   // save and from the room alike, so the page is read-only until a reload.
-  if (isLiveDraft && !session) lockWithoutLiveSession();
+  // A co-writer with live editing off may only read (spec §8).
+  if (isLiveDraft && !session) lockEditor(NO_LIVE_SESSION_MESSAGE);
+  else if (isPausedForMe(lyric)) lockEditor(PAUSED_MESSAGE);
 }
 
-function lockWithoutLiveSession() {
-  isLockedWithoutSession = true;
-  freezeUntilReload();
+function isPausedForMe(lyric) {
+  return lyric.role === 'editor' && !lyric.live;
 }
 
-function freezeUntilReload() {
-  document.getElementById('lyrics').readOnly = true;
-  showNotice(NO_LIVE_SESSION_MESSAGE);
+// The title too: a paused co-writer's rename would be refused.
+function setEditorReadOnly(isReadOnly) {
+  document.getElementById('lyrics').readOnly = isReadOnly;
+  document.getElementById('lyrics-panel-title').contentEditable = isReadOnly ? 'false' : 'true';
+}
+
+function lockEditor(message) {
+  isEditorLocked = true;
+  freezeUntilReload(message);
+}
+
+function unlockEditor() {
+  if (isEditorLocked) hideNotice();
+  isEditorLocked = false;
+  setEditorReadOnly(false);
+}
+
+// A live draft reopened without live.js may hold unsaved words, so it is
+// frozen without the lock flag: leaving stays refused until a reload.
+function freezeUntilReload(message = NO_LIVE_SESSION_MESSAGE) {
+  setEditorReadOnly(true);
+  showNotice(message);
 }
 
 function refreshLivePageInfo(lyric) {
@@ -745,7 +767,7 @@ async function waitForSaves() {
 async function flushSave() {
   if (isLive()) return flushLivePage();
   // Offline at load, waiting to reopen live: its words are not safe to leave.
-  if (isLiveDraft && !isLockedWithoutSession) {
+  if (isLiveDraft && !isEditorLocked) {
     showNotice(UNSAVED_LEAVE_MESSAGE);
     return false;
   }
@@ -831,6 +853,12 @@ async function sendSave(force) {
     // is no earlier text of ours to rebase from.
     if (theirs.live && !isCreate) return goLiveAfterConflict(theirs, body);
     handleConflict(theirs, body);
+    return;
+  }
+  if (res.status === HTTP_FORBIDDEN) {
+    // Live editing went off while this co-writer had words to save (a live
+    // draft reopened the REST way): they become a page of their own.
+    saveAsNewPage({ message: PAUSED_COPY_MESSAGE });
     return;
   }
   if (res.status === HTTP_NOT_FOUND) {
@@ -944,6 +972,8 @@ function keepMine() {
 function goLiveFromRest() {
   const session = currentLiveSession();
   if (!session || isLiveDraft) return;
+  // A paused co-writer's poll found the switch back on.
+  unlockEditor();
   clearTimeout(saveTimer);
   saveTimer = null;
   saveQueued = false;
