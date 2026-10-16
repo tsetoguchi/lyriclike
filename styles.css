@@ -804,6 +804,12 @@ header .nav-icon circle {
   margin-bottom: var(--space-2);
 }
 
+/* No rule under the title: the dialog reads as one card. */
+#share-panel .modal-header {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
 /* Copy link sits alone on the left, like the link button in Google Docs. */
 .share-copy {
   display: inline-flex;
