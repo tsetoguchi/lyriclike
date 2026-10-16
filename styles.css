@@ -141,6 +141,9 @@
   --space-8: 32px;
   --space-10: 40px;
 
+  /* How much of a shared page's title shows before it trails off. */
+  --shared-title-width: 15ch;
+
   /* The smallest a control should be under a fingertip. */
   --tap-target: 44px;
 
@@ -990,13 +993,16 @@ header .nav-icon circle {
   color: var(--ink-faded);
 }
 
-/* A shared page in the notebook says whose it is, in pencil. */
-/* The owner stays in view beside a long title, but a long name or email
-   takes at most half the row and ends in an ellipsis, clear of the icons. */
+/* A shared page in the notebook says whose it is, in pencil. Its title
+   gets a fixed column so every owner name starts at the same spot. */
+.lyrics-list-title:has(+ .lyrics-list-owner) {
+  flex: 0 0 auto;
+  width: min(var(--shared-title-width), 65%);
+}
+
 .lyrics-list-owner {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
-  max-width: 50%;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-left: var(--space-2);
