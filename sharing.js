@@ -31,6 +31,7 @@
     NOT_AVAILABLE: "This page isn't available to this account. If it was shared with you "
       + 'under another email, log in with that one.',
     NOT_EMAILED: "Shared. We couldn't email them today, so send them this link yourself.",
+    SEND_IT_YOURSELF: 'Send them this link yourself.',
     LOAD_FAILED: "Couldn't load who has this page.",
     FAILED: 'Something went wrong. Try again.',
     STOP_QUESTION: "You won't get an email when someone shares a LyricLike page with this "
@@ -119,6 +120,22 @@
     copyLink = link || '';
     copyButton.hidden = !link;
     copyButton.textContent = 'Copy link';
+  }
+
+  // Names the daily limit that stopped the invite email. The number comes from
+  // the server, so the words never drift from the real limit.
+  function notEmailedText(limit) {
+    const perDay = limit && limit.per_day;
+    if (!perDay) return TEXT.NOT_EMAILED;
+    if (limit.reason === 'address') {
+      return `Shared. Each person can get ${perDay} invite emails a day, and they've `
+        + `had today's. ${TEXT.SEND_IT_YOURSELF}`;
+    }
+    if (limit.reason === 'sender') {
+      return `Shared. You can send ${perDay} invite emails a day, and you've sent `
+        + `today's. ${TEXT.SEND_IT_YOURSELF}`;
+    }
+    return TEXT.NOT_EMAILED;
   }
 
   async function openShareDialog(id, title) {
@@ -271,7 +288,8 @@
         showResult(`Already shared with ${data.email}.`);
       } else {
         trackEvent('page_shared');
-        showResult(data.emailed ? `Shared with ${data.email}.` : TEXT.NOT_EMAILED, data.emailed ? '' : data.link);
+        if (data.emailed) showResult(`Shared with ${data.email}.`);
+        else showResult(notEmailedText(data.email_limit), data.link);
         // The page on the owner's screen goes live now, without a reload.
         const isOpenPageLive = data.live && page.id === currentLyricId;
         if (isOpenPageLive && typeof goLiveAfterShare === 'function') await goLiveAfterShare(page.id);

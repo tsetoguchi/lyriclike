@@ -220,6 +220,7 @@ describe('invite limits', () => {
 
     assert.equal(sixth.status, 'shared');
     assert.equal(sixth.emailed, false);
+    assert.deepEqual(sixth.email_limit, { reason: 'sender', per_day: 5 });
     assert.equal(services.mail.length, 5);
     assert.equal((await shareRows()).length, 6);
     assert.equal((await shareRows())[5].emailed, 0);
@@ -236,6 +237,7 @@ describe('invite limits', () => {
     const third = await (await share(carol.sid, 'target@example.com', 'carol-page')).json();
 
     assert.equal(third.emailed, false);
+    assert.deepEqual(third.email_limit, { reason: 'address', per_day: 2 });
     assert.equal(services.mail.length, 2);
     assert.ok((await events(env)).includes('email_skipped_address'));
 
