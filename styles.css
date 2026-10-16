@@ -150,6 +150,7 @@
 
   /* Type scale — iOS Dynamic Type at the default size. Every label in the
      app is one of these; nothing sits between two steps. */
+  --text-caption-2: 11px;
   --text-caption-1: 12px;
   --text-footnote: 13px;
   --text-subhead: 15px;
@@ -825,7 +826,7 @@ header .nav-icon circle {
 
 .share-result-text {
   font-family: var(--font-editor);
-  font-size: var(--text-caption-1);
+  font-size: var(--text-caption-2);
   font-weight: var(--weight-regular);
   line-height: 1.5;
   color: var(--ink);
