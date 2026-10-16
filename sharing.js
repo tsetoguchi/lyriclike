@@ -68,18 +68,26 @@
     return `Shared with ${count} ${count === 1 ? 'person' : 'people'}`;
   }
 
+  // Live editing's switch decides who may start a share (spec §8). The
+  // server checks it too; this keeps the button from offering what it refuses.
+  function canShare() {
+    return Boolean(window.currentUser && window.currentUser.can_share);
+  }
+
   // Only a page that is on the server can be shared. An editor gets the same
   // button, to see who else is on the page.
   function refreshPageSharing() {
     const signedIn = Boolean(window.currentUser);
     const button = byId('share-btn');
-    button.hidden = !signedIn || currentRevision === null;
     const isEditor = currentPageInfo.role === 'editor';
+    // An already-shared page keeps the button, so its owner can still see
+    // and remove people with sharing paused.
+    button.hidden = !signedIn || currentRevision === null || (!isEditor && !isShared() && !canShare());
     button.innerHTML = (isEditor ? PEOPLE_BUTTON_ICON : SHARE_BUTTON_ICON)
       + `<span>${isEditor ? 'People' : 'Share'}</span>`;
 
     const line = byId('page-sharing');
-    const canInvite = signedIn && currentRevision !== null && !isEditor && !isShared();
+    const canInvite = signedIn && currentRevision !== null && !isEditor && !isShared() && canShare();
     line.textContent = signedIn ? sharingLine() || (canInvite ? 'Share this page' : '') : '';
     line.classList.toggle('page-sharing-invite', canInvite);
     line.hidden = !line.textContent;
@@ -204,7 +212,7 @@
     byId('share-title').textContent = isOwner
       ? `Share “${titleForName(page.title)}”`
       : `People on “${titleForName(page.title)}”`;
-    form.hidden = !isOwner;
+    form.hidden = !data.can_share;
     // An editor's dialog is headed "People on …" already.
     setHidden('share-people-label', !isOwner);
     setHidden('share-leave', isOwner);
@@ -224,7 +232,7 @@
       saveDraft();
       refreshPageSharing();
     }
-    if (isOwner) setTimeout(() => emailInput.focus(), FOCUS_DELAY_MS);
+    if (data.can_share) setTimeout(() => emailInput.focus(), FOCUS_DELAY_MS);
   }
 
   function errorMessage(data) {
