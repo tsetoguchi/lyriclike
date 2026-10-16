@@ -2217,14 +2217,10 @@ header .nav-icon circle {
 /* Set like the share dialog: a large regular-weight title, with the
    address under it so the writer sees which account they are in. */
 .account-settings-header {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-6) var(--space-3) 0 var(--space-6);
+  padding: var(--space-6) var(--space-6) 0;
 }
 
 .account-settings-heading {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -2245,18 +2241,11 @@ header .nav-icon circle {
   color: var(--ink-faded);
 }
 
-/* The close button sits level with the title. */
-.account-settings-header .icon-btn {
-  margin-top: calc(-1 * var(--space-2));
-}
-
-/* Space, not rules, groups the panel. The one wider gap sets deleting apart
-   from everything else. */
+/* One list of rows, ruled like the share dialog's people. */
 .account-settings-body {
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
 }
 
 .settings-section {
@@ -2265,9 +2254,8 @@ header .nav-icon circle {
   gap: var(--space-1);
 }
 
-.settings-delete {
-  margin-top: var(--space-3);
-  align-items: flex-start;
+.settings-item + .settings-item {
+  border-top: var(--hairline) solid var(--rule);
 }
 
 .settings-row {
@@ -2275,7 +2263,18 @@ header .nav-icon circle {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  min-height: 52px;
   font-size: var(--text-footnote);
+}
+
+/* Sign out on the left, Done on the right, as Copy link and Done sit in
+   the share dialog. */
+#account-settings-panel .account-settings-actions {
+  padding: var(--space-2) var(--space-6) var(--space-6);
+}
+
+.account-sign-out {
+  margin-right: auto;
 }
 
 .settings-label {
@@ -2289,30 +2288,13 @@ header .nav-icon circle {
   overflow-wrap: anywhere; /* a long email address wraps instead of widening the panel */
 }
 
-/* Signing out is the one thing most people open this panel to do, so it is
-   the only solid button in it. */
-.settings-btn {
-  min-height: var(--tap-target);
-  padding: var(--space-3) var(--space-4);
-  background: var(--ink-wash-strong);
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--ink);
-  font-family: var(--font-editor);
-  font-size: var(--text-footnote);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: background var(--duration-fast);
-}
-
-.settings-btn:hover {
-  background: var(--ink-wash);
-}
-
 /* Small actions read as text, so they do not compete with signing out. The
    padding keeps a finger-sized target without drawing a box. */
 .settings-link {
+  display: inline-flex;
+  align-items: center;
   min-height: var(--tap-target);
+  text-decoration: none;
   margin: calc(var(--space-3) * -1) calc(var(--space-2) * -1);
   padding: var(--space-3) var(--space-2);
   background: none;
@@ -2348,6 +2330,7 @@ header .nav-icon circle {
 
 /* The change-password form opens in place, under its button. */
 .settings-section[hidden],
+.settings-link[hidden],
 .security-form[hidden],
 .settings-hint[hidden] {
   display: none;
@@ -2358,7 +2341,8 @@ header .nav-icon circle {
 }
 
 /* Changing the password: only the email and the form stay in the panel. */
-.is-changing-password .settings-section:not(#security-section) {
+.is-changing-password .settings-section:not(#security-section),
+.is-changing-password .account-settings-actions {
   display: none;
 }
 

@@ -177,10 +177,9 @@
           <h2 id="account-settings-title" class="account-settings-title">Account</h2>
           <span id="settings-user-email" class="settings-value"></span>
         </div>
-        <button id="close-account-settings-btn" class="icon-btn" aria-label="Close">&#x2715;</button>
       </div>
       <div class="account-settings-body">
-        <div id="security-section" class="settings-section" hidden>
+        <div id="security-section" class="settings-section settings-item" hidden>
           <div class="settings-row">
             <span class="settings-label">Password</span>
             <button id="change-password-btn" class="settings-link" type="button" hidden
@@ -211,13 +210,22 @@
           </form>
           <p id="security-status" class="settings-hint" aria-live="polite" hidden></p>
         </div>
-        <div class="settings-section">
-          <button id="settings-sign-out-btn" class="settings-btn" type="button">Sign out</button>
+        <div class="settings-section settings-item">
+          <div class="settings-row">
+            <span class="settings-label">Privacy</span>
+            <a class="settings-link" href="/privacy/" aria-label="Read the privacy policy">Read</a>
+          </div>
         </div>
-        <div class="settings-section settings-delete">
-          <button id="settings-delete-account-btn" class="settings-link danger-link" type="button">Delete account</button>
-          <a class="settings-link" href="/privacy/">Privacy</a>
+        <div class="settings-section settings-item">
+          <div class="settings-row">
+            <button id="settings-delete-account-btn" class="settings-link danger-link"
+                    type="button">Delete account</button>
+          </div>
         </div>
+      </div>
+      <div class="modal-actions account-settings-actions">
+        <button id="settings-sign-out-btn" class="toggle-btn account-sign-out" type="button">Sign out</button>
+        <button id="close-account-settings-btn" class="toggle-btn" type="button">Done</button>
       </div>
     </div>
   </div>
