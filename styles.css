@@ -798,8 +798,10 @@ header .nav-icon circle {
   display: none;
 }
 
+/* Tucked under the field it answers, with room before the list. */
 .share-result {
   margin-top: calc(-1 * var(--space-2));
+  margin-bottom: var(--space-2);
 }
 
 /* Copy link sits alone on the left, like the link button in Google Docs. */
