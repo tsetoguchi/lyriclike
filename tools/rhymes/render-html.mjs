@@ -64,7 +64,7 @@ function renderHead({ title, description, path }) {
 <meta property="og:image:alt" content="${PREVIEW_IMAGE_ALT}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#141922">
-<link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
+<link rel="apple-touch-icon" href="/assets/icons/icon-v2-180.png">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">
 <script src="${ANALYTICS_PATH}"></script>
 </head>`;
@@ -72,7 +72,7 @@ function renderHead({ title, description, path }) {
 
 function renderSiteHeader() {
   return `<header class="site-header"><div class="site-header-inner">
-<a class="wordmark" href="/"><img src="/assets/wordmark.png" alt="${SITE_NAME}" width="89" height="28"></a>
+<a class="wordmark" href="/"><img src="/assets/wordmark.png" alt="${SITE_NAME}" width="98" height="28"></a>
 <a class="header-link" href="${RHYMES_PATH}">Rhyming dictionary</a>
 </div></header>`;
 }

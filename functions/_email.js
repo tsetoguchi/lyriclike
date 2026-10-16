@@ -46,7 +46,7 @@ const FONT_BODY = "'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica
 // Same-size box as the wordmark's 267x84 file, drawn for a light background:
 // the header wordmark's pale lettering would vanish on it.
 const LOGO_PATH = 'assets/wordmark-light.png';
-const LOGO_WIDTH = 102;
+const LOGO_WIDTH = 112;
 const LOGO_HEIGHT = 32;
 
 const FONT_FACES = [
