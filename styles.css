@@ -1786,6 +1786,21 @@ header .nav-icon circle {
   display: flex;
 }
 
+/* The description and chips roll as one, clipped to the fold's height
+   while it unrolls (see rollGroup() in app.js). A folding group keeps them
+   shown until the roll ends. */
+.rhyme-group-fold {
+  overflow: hidden;
+}
+
+.rhyme-group.is-folding .rhyme-group-body {
+  display: flex;
+}
+
+.rhyme-group.is-folding .description {
+  display: block;
+}
+
 /* A sort change fades the chips in from part-way, never from blank: when a
    reshuffle happens to look alike, the fade is what shows it did anything. */
 @keyframes rhyme-resort {
