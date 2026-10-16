@@ -81,6 +81,12 @@
 /live-store.js
   Cache-Control: no-cache
 
+/live-presence.js
+  Cache-Control: no-cache
+
+/live-presence-view.js
+  Cache-Control: no-cache
+
 /live.js
   Cache-Control: no-cache
 

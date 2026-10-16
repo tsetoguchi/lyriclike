@@ -728,6 +728,69 @@ header .nav-icon circle {
   gap: var(--space-2);
 }
 
+/* Who is here: initials in each person's colour, overlapping a little.
+   It opens the same people list as Share. */
+.presence-people {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.presence-people[hidden] {
+  display: none;
+}
+
+.presence-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: calc(var(--space-1) * -1);
+  border: 2px solid var(--paper-card);
+  border-radius: var(--radius-pill);
+  background: var(--who, var(--ink-faded));
+  color: var(--on-accent);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.presence-chip:first-child {
+  margin-left: 0;
+}
+
+.presence-note {
+  margin-left: var(--space-2);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  color: var(--ink-faded);
+}
+
+/* In the title row just before Share, which then gives up its auto margin. */
+.presence-header {
+  margin-left: auto;
+}
+
+.presence-header:not([hidden]) + .share-btn {
+  margin-left: var(--space-2);
+}
+
+/* Phones only (below); desktop shows the title row's copy. */
+.page-presence {
+  display: none;
+}
+
+/* While anyone else is here, the initials say more than "Shared with 3 people". */
+.lyrics-panel[data-people] .page-sharing {
+  display: none;
+}
+
 .share-row .modal-input {
   flex: 1;
   min-width: 0;
@@ -1241,6 +1304,62 @@ header .nav-icon circle {
   #lyrics-highlight .rhyme-mark {
     text-decoration-color: var(--mark);
     text-decoration-thickness: 3px;
+  }
+}
+
+/* ── Presence: co-writers on a live page (live-presence-view.js) ──
+   Two layers laid out exactly like #lyrics-highlight: selection tints
+   under its letters, carets and name tags over them. Rhyme marks are
+   underlines and the picked word an amber wash, so a person's mark is the
+   one thing drawn upright: a thin bar, with a faint tint for a selection. */
+
+.presence-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.presence-selection {
+  position: absolute;
+  border-radius: var(--hairline);
+  background: color-mix(in srgb, var(--who) 22%, transparent);
+}
+
+.presence-caret {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: var(--hairline);
+  background: var(--who);
+}
+
+.presence-tag {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) 0;
+  background: var(--who);
+  color: var(--on-accent);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-bold);
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity var(--duration-slow) ease-out, transform var(--duration-slow) ease-out;
+}
+
+.presence-caret.is-tag-shown .presence-tag {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presence-tag {
+    transform: none;
+    transition: none;
   }
 }
 
@@ -3054,6 +3173,16 @@ body.sidebar-open #sidebar-scrim {
 
   .page-sharing:not([hidden]) + .page-notice {
     padding-top: 0;
+  }
+
+  /* The title row is hidden, so who is here takes the sharing line's spot. */
+  .page-presence:not([hidden]) {
+    display: flex;
+    width: 100%;
+    max-width: var(--sheet-width);
+    margin: 0 auto;
+    padding: var(--space-3) var(--space-5) var(--space-2)
+      calc(var(--sheet-syllables) + var(--editor-pad));
   }
 
   .resize-handle {

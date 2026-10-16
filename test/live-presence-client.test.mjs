@@ -10,6 +10,7 @@ import { describe, it } from 'node:test';
 import { decodePresence, colourFor as roomColourFor } from '../collab/src/presence.js';
 import * as protocol from '../collab/src/protocol.js';
 import livePresence from '../live-presence.js';
+import presenceView from '../live-presence-view.js';
 import { createFakeClock } from './support/fake-clock.mjs';
 import { awarenessProtocol, Y } from './support/live-deps.mjs';
 
@@ -264,5 +265,20 @@ describe('PresenceChannel', () => {
     harness.channel.receive(remoteUpdate({ user: BO, cursor: null }));
     harness.channel.destroy();
     assert.equal(harness.views.at(-1), EMPTY_VIEW);
+  });
+});
+
+describe('the initials row', () => {
+  const people = ['Al', 'Bo', 'Cy', 'Di', 'Ed', 'Flo'].map(name => ({ name }));
+
+  it('shows four people and counts the rest', () => {
+    const { shown, extra } = presenceView.chipModel(people);
+    assert.deepEqual(shown.map(entry => entry.name), ['Al', 'Bo', 'Cy', 'Di']);
+    assert.equal(extra, 2);
+  });
+
+  it('names everyone for screen readers', () => {
+    assert.equal(presenceView.peopleLabel(people.slice(0, 2)), 'Here now: Al, Bo');
+    assert.equal(presenceView.peopleLabel([]), '');
   });
 });

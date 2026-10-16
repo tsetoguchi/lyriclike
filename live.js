@@ -837,6 +837,15 @@
     return loadScript(LIVE_DEPS_SRC).then(() => root.LiveDeps);
   }
 
+  // Made once per page. A tab whose view script did not load draws nothing
+  // and still edits.
+  function presencePainter() {
+    const painter = root.LivePresenceView ? root.LivePresenceView.createPainter(document) : null;
+    return view => {
+      if (painter) painter.show(view);
+    };
+  }
+
   function browserEnv() {
     const textarea = document.getElementById('lyrics');
     const scroller = document.querySelector('.lyrics-area');
@@ -855,7 +864,7 @@
       get page() { return root.livePage; },
       livePresence: root.LivePresence,
       me: () => root.currentUser || null,
-      showPresence: () => {},
+      showPresence: presencePainter(),
     };
   }
 

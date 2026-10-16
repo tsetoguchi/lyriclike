@@ -8,13 +8,22 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-const WINDOW_NAMES = ['liveSession', 'livePage', 'LiveCore', 'LiveBinding', 'LiveStore', 'Live', 'LiveDeps'];
+const WINDOW_NAMES = [
+  'liveSession', 'livePage', 'LiveCore', 'LiveBinding', 'LiveStore', 'Live', 'LiveDeps',
+  'LivePresence', 'LivePresenceView',
+];
 const SCRIPTS = [...readFileSync(new URL('../index.html', import.meta.url), 'utf8')
   .matchAll(/<script src="([^"]+\.js)"><\/script>/g)].map(match => match[1]);
 
 describe('global names', () => {
   it('lists the app scripts', () => {
     assert.ok(SCRIPTS.includes('storage.js') && SCRIPTS.includes('live.js'));
+  });
+
+  it('loads the presence scripts before live.js', () => {
+    const at = name => SCRIPTS.indexOf(name);
+    assert.ok(at('live-presence.js') > -1 && at('live-presence.js') < at('live-presence-view.js'));
+    assert.ok(at('live-presence-view.js') < at('live.js'));
   });
 
   for (const script of SCRIPTS) {

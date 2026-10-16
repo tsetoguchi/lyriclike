@@ -83,8 +83,10 @@
         <span id="lyrics-panel-title" contenteditable="true" spellcheck="false"
               data-placeholder="Untitled page" aria-label="Page title"></span>
         <span id="save-indicator"></span>
+        <button type="button" id="presence-header" class="presence-people presence-header" hidden></button>
         <button type="button" id="share-btn" class="toggle-btn share-btn" hidden>Share</button>
       </div>
+      <button type="button" id="page-presence" class="presence-people page-presence" hidden></button>
       <button type="button" id="page-sharing" class="page-sharing" hidden></button>
       <div class="page-notice" id="page-notice" role="status" hidden>
         <span class="page-notice-text" id="page-notice-text"></span>
@@ -99,7 +101,9 @@
         </div>
         <div class="syllable-gutter" id="syllable-gutter"></div>
         <div class="lyrics-wrapper">
+          <div id="presence-under" class="presence-layer" aria-hidden="true"></div>
           <div id="lyrics-highlight" aria-hidden="true"></div>
+          <div id="presence-over" class="presence-layer" aria-hidden="true"></div>
           <textarea id="lyrics" placeholder="Write your lyrics"
                     autocomplete="off" autocorrect="on" autocapitalize="sentences"
                     spellcheck="false"></textarea>
@@ -324,6 +328,8 @@
   <script src="live-core.js"></script>
   <script src="live-binding.js"></script>
   <script src="live-store.js"></script>
+  <script src="live-presence.js"></script>
+  <script src="live-presence-view.js"></script>
   <script src="live.js"></script>
   <script src="back-button.js"></script>
 </body>
