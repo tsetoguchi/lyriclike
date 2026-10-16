@@ -254,6 +254,21 @@ describe('invite limits', () => {
     assert.equal(await counter(`email:invite:addr:${await sha256Hex('bob@example.com')}`), 0);
   });
 
+  it('emails ALERT_EMAIL once when the invite pool reaches 70% of its cap', async () => {
+    env.ALERT_EMAIL = 'owner@example.com';
+    const threshold = Math.ceil(30 * 0.7);
+    await setCounter('email:pool:invite', threshold - 2);
+    await share(alice.sid, 'friend0@example.com');
+    await share(alice.sid, 'friend1@example.com');
+    await share(alice.sid, 'friend2@example.com');
+    const alerts = services.mail.filter(m => m.to[0] === 'owner@example.com');
+
+    assert.equal(alerts.length, 1);
+    assert.match(alerts[0].subject, new RegExp(`invite email is at ${threshold} of 30`));
+    assert.deepEqual((await events(env)).filter(e => e === 'email_quota_warning'),
+      ['email_quota_warning']);
+  });
+
   it('refuses the 21st share in a day with 429 and adds no row', async () => {
     await setCounter(`share:rows:${alice.id}`, 20);
     const response = await share(alice.sid, 'bob@example.com');

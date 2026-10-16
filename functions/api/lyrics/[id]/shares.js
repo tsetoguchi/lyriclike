@@ -18,6 +18,7 @@ const MAX_PEOPLE_PER_PAGE = 25;
 // Rows as well as mail: past the mail limit, a spammer could still fill
 // strangers' "Shared with me" lists, one new page every 25 people.
 const SHARES_PER_SENDER_PER_DAY = 20;
+const INVITE_POOL_KEY = `email:pool:${EMAIL_POOL.INVITE}`;
 const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 const HTTP_BAD_REQUEST = 400;
@@ -85,12 +86,23 @@ async function inviteMailRoom(env, user, addressHash) {
   const limits = [
     [`email:invite:sender:${user.id}`, INVITE_SENDER_DAILY_LIMIT, 'sender'],
     [`email:invite:addr:${addressHash}`, INVITE_ADDRESS_DAILY_LIMIT, 'address'],
-    [`email:pool:${EMAIL_POOL.INVITE}`, POOL_DAILY_LIMIT.invite, 'pool'],
+    [INVITE_POOL_KEY, POOL_DAILY_LIMIT.invite, 'pool'],
   ];
   for (const [key, limit, reason] of limits) {
     if (!(await peekRateLimit(env, key, limit, DAY_MS)).allowed) return { reason };
   }
   return { keys: limits.map(([key]) => key) };
+}
+
+// Counts the invite against all three limits. Returns the pool's count so
+// far today, which decides whether the owner gets the quota warning.
+async function spendInviteMail(env, keys) {
+  let poolCount = 0;
+  for (const key of keys) {
+    const { count } = await hitRateLimit(env, key, DAY_MS);
+    if (key === INVITE_POOL_KEY) poolCount = count;
+  }
+  return poolCount;
 }
 
 function isSuppressed(env, addressHash) {
@@ -155,13 +167,14 @@ export async function onRequestPost(context) {
   await writeLog(env, request, { userId: user.id, event: 'share_sent' });
 
   if (willMail) {
-    for (const key of room.keys) await hitRateLimit(env, key, DAY_MS);
+    const poolCount = await spendInviteMail(env, room.keys);
     context.waitUntil(sendInviteEmail(context, {
       to: target.email,
       senderName: inviteSenderName(user),
       title: lyric.title,
       lyricId: lyric.id,
       hasAccount: Boolean(account),
+      poolCount,
     }));
   } else if (room.reason === 'pool' || room.reason === 'address') {
     await writeLog(env, request, { userId: user.id, event: emailSkippedEvent(room.reason, EMAIL_POOL.INVITE) });
