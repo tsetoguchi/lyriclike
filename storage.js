@@ -428,6 +428,8 @@ async function loadLyricsList() {
       container.appendChild(label);
       for (const lyric of shared) container.appendChild(buildListItem(lyric));
     }
+    // The database may not have the live page's newest title yet.
+    if (isLive()) showListedTitle(currentLyricId, currentTitle);
     return lyrics;
   } catch {
     showListMessage(container, LOAD_FAILED_MESSAGE);
@@ -504,8 +506,20 @@ function markActiveListItem() {
 
 // After a save, the list is only fetched again if it shows this page under
 // another title, or not at all.
+// On a live page the room writes a new title to the database up to 10 s
+// later, so asking the database now would bring the old one back; the
+// title on screen is the newest, and the list takes it from there.
 function refreshListIfBehind() {
-  if (listedTitles.get(currentLyricId) !== currentTitle) loadLyricsList();
+  if (listedTitles.get(currentLyricId) === currentTitle) return;
+  if (isLive()) showListedTitle(currentLyricId, currentTitle);
+  else loadLyricsList();
+}
+
+function showListedTitle(id, title) {
+  if (!listedTitles.has(id)) return;
+  listedTitles.set(id, title);
+  const row = document.querySelector(`.lyrics-list-item[data-id="${CSS.escape(id)}"] .lyrics-list-title`);
+  if (row) row.textContent = titleForName(title);
 }
 
 function showListMessage(container, message) {
@@ -713,7 +727,7 @@ async function renameLyric(id, oldTitle) {
     updatePanelHeader();
     saveDraft();
     await renameCurrentPage();
-    loadLyricsList();
+    refreshListIfBehind();
     return;
   }
 
