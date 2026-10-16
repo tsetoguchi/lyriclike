@@ -218,7 +218,12 @@
         </div>
       </div>
       <div class="modal-actions account-settings-actions">
-        <button id="settings-sign-out-btn" class="toggle-btn account-sign-out" type="button">Sign out</button>
+        <button id="settings-sign-out-btn" class="toggle-btn tip-btn account-sign-out" type="button">
+          <svg class="tip-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/>
+            <path d="M15 8l4 4-4 4M19 12H9"/>
+          </svg><span class="tip-btn-label">Sign out</span>
+        </button>
         <button id="close-account-settings-btn" class="toggle-btn" type="button">Done</button>
       </div>
     </div>
@@ -259,11 +264,11 @@
         <button type="button" id="share-leave" class="share-leave" hidden>Leave this page</button>
       </div>
       <div class="modal-actions share-actions">
-        <button type="button" id="share-copy" class="toggle-btn share-copy" hidden>
-          <svg class="share-copy-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <button type="button" id="share-copy" class="toggle-btn tip-btn share-copy" hidden>
+          <svg class="tip-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/>
             <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>
-          </svg><span id="share-copy-label" class="share-copy-tip">Copy link</span>
+          </svg><span id="share-copy-label" class="tip-btn-label">Copy link</span>
         </button>
         <button type="button" id="share-done" class="toggle-btn">Done</button>
         <button type="submit" id="share-submit" form="share-form"
