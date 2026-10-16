@@ -555,6 +555,10 @@ function showLyric(lyric) {
 
 function lockWithoutLiveSession() {
   isLockedWithoutSession = true;
+  freezeUntilReload();
+}
+
+function freezeUntilReload() {
   document.getElementById('lyrics').readOnly = true;
   showNotice(NO_LIVE_SESSION_MESSAGE);
 }
@@ -1247,6 +1251,9 @@ async function reconcileRestoredDraft() {
 // Off the switch, it is saved the REST way like any other draft.
 async function reopenLiveDraft(draft) {
   clearTimeout(saveTimer);
+  // live.js did not load. The draft may hold unsaved words, so the page
+  // stays (leaving is still refused) and asks for a reload.
+  if (!currentLiveSession()) return freezeUntilReload();
   let res;
   try {
     res = await fetch(`/api/lyrics/${draft.id}`);
