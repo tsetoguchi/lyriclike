@@ -826,6 +826,42 @@ header .nav-icon circle {
   stroke-linecap: round;
 }
 
+/* Just the icon; its words show above it on hover, and after a copy. */
+.modal-actions .share-copy {
+  position: relative;
+  justify-content: center;
+  min-width: var(--tap-target);
+  padding: var(--space-2);
+}
+
+.share-copy-tip {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--paper-card);
+  font-size: var(--text-caption-1);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast);
+}
+
+.share-copy:focus-visible .share-copy-tip,
+.share-copy.is-copied .share-copy-tip {
+  opacity: 1;
+}
+
+/* Only where hover is real, so a tap on a phone doesn't leave it stuck. */
+@media (hover: hover) {
+  .share-copy:hover .share-copy-tip {
+    opacity: 1;
+  }
+}
+
 .share-result-text {
   font-family: var(--font-editor);
   font-size: var(--text-caption-2);

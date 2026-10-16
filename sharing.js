@@ -348,7 +348,11 @@
     try {
       await navigator.clipboard.writeText(copyLink);
       byId('share-copy-label').textContent = 'Copied';
-      setTimeout(() => { byId('share-copy-label').textContent = 'Copy link'; }, COPIED_LABEL_MS);
+      copyButton.classList.add('is-copied');
+      setTimeout(() => {
+        byId('share-copy-label').textContent = 'Copy link';
+        copyButton.classList.remove('is-copied');
+      }, COPIED_LABEL_MS);
     } catch {
       // Shown in the message instead, for copying by hand.
       showResult(copyLink);
