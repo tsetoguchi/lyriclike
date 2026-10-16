@@ -808,6 +808,12 @@ header .nav-icon circle {
 #share-panel .modal-header {
   padding-bottom: 0;
   border-bottom: none;
+  font-size: var(--text-title-3);
+}
+
+/* Sizes step down by role: title, field, names, label, status, message. */
+#share-panel .share-person {
+  font-size: var(--text-subhead);
 }
 
 /* Copy link sits alone on the left, like the link button in Google Docs. */
