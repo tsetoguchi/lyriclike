@@ -46,22 +46,21 @@ node tools/rhymes/build-pages.mjs
 git diff --stat rhymes sitemap.xml
 ```
 
-**Inside Dropbox this rebuild currently crashes halfway** with `EBUSY:
-rmdir` and leaves thousands of pages deleted. Dropbox locks folders while it
-syncs. Pause Dropbox syncing first. If it crashes anyway, put everything
-back with:
+The rebuild writes LF line endings and the checkout has CRLF, so `git
+status` marks all 5,000 pages modified even when nothing changed. Trust
+`git diff --stat`: empty means identical. To clear the noise, run
+`git checkout -- rhymes sitemap.xml`, which also restores everything if a
+rebuild ever stops halfway.
 
-```bash
-git checkout -- rhymes sitemap.xml
-```
-
-Then `git status --short rhymes` must print nothing before you go on.
+A new folder under `rhymes/` after a rebuild is a new page. Check
+`git status --short --ignored rhymes`: an ignored page never deploys.
 
 ## Common mistakes
 
 | Symptom | Cause |
 |---|---|
-| Thousands of `D rhymes/...` in git status | A rebuild crashed. Restore with `git checkout` above |
+| Thousands of `M rhymes/...` but an empty diff | Line endings only. See above |
+| A sitemap page is 404 on the live site | A `.gitignore` rule hides its folder. `test/sitemap-pages.test.mjs` catches this |
 | Unknown word shows the app | `404.html` missing or moved |
 | Word in the editor but no page | It's in `tools/rhymes/page-excluded-words.json`, or a name, rare or crude word. On purpose |
 | A page folder can't be pulled on Windows | Reserved names (`con`, `nul`, `aux`...) need special handling |

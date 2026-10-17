@@ -22,6 +22,9 @@ const STYLESHEET_SOURCE = new URL('./page.css', import.meta.url);
 // Windows can't create a folder with these names, so a page for "con" left the
 // repo impossible to check out there.
 const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
+// Node waits retryDelay × attempt between tries, so 10 tries span about 5.5s.
+const BUSY_RETRIES = 10;
+const BUSY_RETRY_DELAY_MS = 100;
 
 // Autocomplete surfaces slang and fragments ("ty"), so a page also needs the
 // word to be on the same English list the editor filters results with.
@@ -69,10 +72,14 @@ async function resetOutputDir() {
     throw new Error(`Refusing to clear unexpected output directory ${OUTPUT_DIR}`);
   }
   // Empties the folder rather than removing it: on Windows, Dropbox or an
-  // open preview holds the folder itself and rmdir fails with EBUSY.
+  // open preview holds the folder itself and rmdir fails with EBUSY. Dropbox
+  // also locks page folders for a moment while it syncs, so each delete
+  // retries instead of failing halfway.
   await mkdir(OUTPUT_DIR, { recursive: true });
   const entries = await readdir(OUTPUT_DIR);
-  await Promise.all(entries.map((name) => rm(new URL(name, OUTPUT_DIR), { recursive: true, force: true })));
+  await Promise.all(entries.map((name) => rm(new URL(name, OUTPUT_DIR), {
+    recursive: true, force: true, maxRetries: BUSY_RETRIES, retryDelay: BUSY_RETRY_DELAY_MS,
+  })));
 }
 
 async function writePage(path, html) {

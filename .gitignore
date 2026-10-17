@@ -39,7 +39,7 @@ instructions.txt
 .playwright-mcp/
 
 # Internal planning docs (new ones stay local; already-tracked files here are unaffected)
-plans/
+/plans/
 
 
 # Dependencies (collab/ pins its own; run npm ci --prefix collab)
