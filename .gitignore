@@ -6,7 +6,8 @@
 .wrangler/
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/skills/
 
 # Temp files
 *.tmp.*
