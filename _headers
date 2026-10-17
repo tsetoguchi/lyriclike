@@ -1,7 +1,7 @@
 # script-src keeps 'unsafe-inline' on purpose: Cloudflare injects an inline bot-detection
 # snippet (/cdn-cgi/challenge-platform/scripts/jsd) into HTML served on lyriclike.com. Its
 # token changes on every request, so it cannot be allowed by hash. No file in this repo has
-# an inline script. To drop 'unsafe-inline', turn off JavaScript Detections in Cloudflare
+# an inline script that runs (the JSON-LD blocks are data, which CSP leaves alone). To drop 'unsafe-inline', turn off JavaScript Detections in Cloudflare
 # (Security > Bots) first, then check the console on lyriclike.com for CSP errors.
 /*
   X-Frame-Options: DENY

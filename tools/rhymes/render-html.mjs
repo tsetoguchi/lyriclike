@@ -40,7 +40,14 @@ function joinWithAnd(items) {
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
-function renderHead({ title, description, path }) {
+// JSON-LD sits in a <script> tag, so "<" is escaped to keep a word from
+// closing it early. It is data, not code: browsers never run it.
+function renderStructuredData(data) {
+  const json = JSON.stringify({ '@context': 'https://schema.org', ...data }).replace(/</g, '\\u003c');
+  return `\n<script type="application/ld+json">${json}</script>`;
+}
+
+function renderHead({ title, description, path, structuredData }) {
   if (description.length > MAX_DESCRIPTION_LENGTH) {
     throw new Error(`Description for ${path} is ${description.length} characters: ${description}`);
   }
@@ -66,7 +73,7 @@ function renderHead({ title, description, path }) {
 <meta name="theme-color" content="#141922">
 <link rel="apple-touch-icon" href="/assets/icons/icon-v2-180.png">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">
-<script src="${ANALYTICS_PATH}"></script>
+<script src="${ANALYTICS_PATH}"></script>${structuredData ? renderStructuredData(structuredData) : ''}
 </head>`;
 }
 
@@ -178,11 +185,23 @@ function describeRhymePage(model) {
   return buildRhymeDescription(model, 0);
 }
 
+// Matches the visible breadcrumb, so search results can show the same trail.
+function rhymeBreadcrumb(word) {
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Rhyming dictionary', item: SITE_ORIGIN + RHYMES_PATH },
+      { '@type': 'ListItem', position: 2, name: word, item: SITE_ORIGIN + rhymePagePath(word) }
+    ]
+  };
+}
+
 export function renderRhymePage(model, pageWords) {
   const head = {
     title: `Words That Rhyme With ${capitalize(model.word)} | ${SITE_NAME}`,
     description: describeRhymePage(model),
-    path: rhymePagePath(model.word)
+    path: rhymePagePath(model.word),
+    structuredData: rhymeBreadcrumb(model.word)
   };
   const main = `<nav class="breadcrumb"><a href="${RHYMES_PATH}">Rhyming dictionary</a> › ${escapeHtml(model.word)}</nav>
 <h1>Words that rhyme with ${escapeHtml(model.word)}</h1>
