@@ -178,6 +178,41 @@ h1 {
   margin-bottom: var(--space-6);
 }
 
+.ipa { white-space: nowrap; }
+
+/* The word's own meaning, read before the lists: one line per part of
+   speech, the part of speech tagged like a group header's count. */
+.meaning {
+  margin-bottom: var(--space-6);
+}
+
+.meaning h2 { margin-bottom: var(--space-2); }
+
+.meaning-base {
+  color: var(--ink-faded);
+  margin-bottom: var(--space-2);
+}
+
+.sense-list {
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pos {
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+  background: var(--ink-wash);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  margin-right: var(--space-1);
+  vertical-align: 1px;
+}
+
+.example {
+  color: var(--ink-faded);
+}
+
 /* The one call to act on the page, drawn as the app draws its own: a card
    like its dialogs, and the solid amber button Sign up uses. */
 .cta {

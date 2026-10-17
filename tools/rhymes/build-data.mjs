@@ -38,13 +38,19 @@ async function loadPageExcludedWords() {
   return new Set(JSON.parse(await readText(TOOLS_DIR, 'page-excluded-words.json')));
 }
 
+// What each page word means, as written by collect-definitions.mjs. A word
+// WordNet has nothing for is null.
+async function loadDefinitions() {
+  return JSON.parse(await readText(TOOLS_DIR, 'definitions.json'));
+}
+
 // Most-searched first, as written by collect-popular-words.mjs.
 async function loadPopularWords() {
   return firstColumn(await readText(TOOLS_DIR, 'popular-words.tsv'));
 }
 
 export async function loadBuildData() {
-  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords, pageExcluded] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords, pageExcluded, definitions] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json').then((words) => new Set(words)),
     readRepoJson('blocklist.json').then((words) => new Set(words)),
@@ -52,8 +58,9 @@ export async function loadBuildData() {
     readRepoJson('crude-words.json').then((words) => new Set(words)),
     loadFrequentWords(),
     loadPopularWords(),
-    loadPageExcludedWords()
+    loadPageExcludedWords(),
+    loadDefinitions()
   ]);
   const ranks = rankWords(frequentWords);
-  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords, pageExcluded };
+  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords, pageExcluded, definitions };
 }
