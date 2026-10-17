@@ -81,13 +81,26 @@ async function writePage(path, html) {
   await writeFile(new URL('index.html', dir), html);
 }
 
+// collect-definitions.mjs reads the page list from sitemap.xml, so a word
+// that just got its page has no entry until it is run again.
+function warnAboutMissingMeanings(pages, definitions) {
+  const missing = pages.map((page) => page.word).filter((word) => !(word in definitions));
+  if (missing.length === 0) return;
+  console.warn(`${missing.length} pages have no entry in definitions.json (${missing.slice(0, 5).join(', ')}…). ` +
+    'Run collect-definitions.mjs, then build the pages again.');
+}
+
 async function writeRhymePages(pages, index, data) {
-  const { ranks, names, crude, pageExcluded } = data;
+  const { ranks, names, crude, pageExcluded, definitions, dictionary } = data;
+  warnAboutMissingMeanings(pages, definitions);
   const pageWords = new Set(pages.map((page) => page.word));
   for (let position = 0; position < pages.length; position++) {
     const { word, results } = pages[position];
     const related = pickRelated(pages, position);
-    const model = buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related });
+    const meaning = definitions[word] || null;
+    // The first pronunciation, the same one the syllable count reads.
+    const pronunciation = dictionary[word][0];
+    const model = buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related, meaning, pronunciation });
     await writePage(rhymePagePath(word), renderRhymePage(model, pageWords));
   }
 }

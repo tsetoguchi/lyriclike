@@ -3,6 +3,7 @@
 // HTML lives in render-html.mjs.
 
 import rhymeCore from '../../rhyme-core.js';
+import { toIpa } from './pronounce.mjs';
 
 const { RHYME_TYPES, countSyllables, getStressedSyllable, rankRhymeWords, tierRhymeWords } = rhymeCore;
 
@@ -75,13 +76,15 @@ export function countListedRhymes(results) {
   return RHYME_TYPES.reduce((sum, { key }) => sum + results[key].length, 0);
 }
 
-export function buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related }) {
+export function buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related, meaning, pronunciation }) {
   const targetSyllables = countSyllables(index, word);
   const context = { index, ranks, names, crude, pageExcluded, word };
   return {
     word,
     syllables: targetSyllables,
     stressedSyllable: getStressedSyllable(index, word),
+    ipa: toIpa(pronunciation),
+    meaning,
     totalRhymes: countListedRhymes(results),
     summary: buildSummary(results, context),
     sections: buildSections(results, context),

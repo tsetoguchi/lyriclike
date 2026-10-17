@@ -91,21 +91,24 @@ function renderCallToAction() {
 </aside>`;
 }
 
-function renderFooter() {
+function renderFooter({ withMeanings }) {
+  const meanings = withMeanings
+    ? '\nMeanings from <a href="https://wordnet.princeton.edu/">WordNet</a>, © Princeton University.'
+    : '';
   return `<footer class="site-footer">
-<p>Pronunciations from the <a href="https://github.com/cmusphinx/cmudict">CMU Pronouncing Dictionary</a>.
+<p>Pronunciations from the <a href="https://github.com/cmusphinx/cmudict">CMU Pronouncing Dictionary</a>.${meanings}
 <a href="${RHYMES_PATH}">All rhyme pages</a> · <a href="/">LyricLike</a></p>
 </footer>`;
 }
 
-function renderDocument(head, main) {
+function renderDocument(head, main, { withMeanings = false } = {}) {
   return `${renderHead(head)}
 <body>
 ${renderSiteHeader()}
 <main class="page">
 ${main}
 </main>
-${renderFooter()}
+${renderFooter({ withMeanings })}
 </body>
 </html>
 `;
@@ -152,11 +155,30 @@ function renderSummarySentence(model) {
   return `${noPerfect} Words that share its vowel or ending sound include ${examples}.`;
 }
 
+// The pronunciation is the word's own, so this line differs even between
+// two pages whose rhyme lists are the same.
 function renderSyllableFact(model) {
-  const subject = quoted(capitalize(model.word));
+  const subject = `${quoted(capitalize(model.word))} <span class="ipa">/${model.ipa}/</span>`;
   if (model.syllables === 1) return `${subject} has one syllable.`;
   const ordinal = ORDINALS[model.stressedSyllable - 1] || `number ${model.stressedSyllable}`;
   return `${subject} has ${model.syllables} syllables, stressed on the ${ordinal}.`;
+}
+
+function renderSense({ pos, definition, example }) {
+  const shown = example ? ` <q class="example">${escapeHtml(example)}</q>` : '';
+  return `<li><span class="pos">${pos}</span> ${escapeHtml(definition)}.${shown}</li>`;
+}
+
+function renderMeaning(model) {
+  const { meaning, word } = model;
+  if (!meaning) return '';
+  const form = meaning.base
+    ? `\n<p class="meaning-base">${quoted(capitalize(word))} is a form of ${quoted(meaning.base)}.</p>`
+    : '';
+  return `<section class="meaning">
+<h2>What ${escapeHtml(word)} means</h2>${form}
+<ul class="sense-list">${meaning.senses.map(renderSense).join('')}</ul>
+</section>`;
 }
 
 function renderRelated(related) {
@@ -207,10 +229,11 @@ export function renderRhymePage(model, pageWords) {
 <h1>Words that rhyme with ${escapeHtml(model.word)}</h1>
 <p class="answer">${renderSummarySentence(model)}</p>
 <p class="fact">${renderSyllableFact(model)}</p>
+${renderMeaning(model)}
 ${renderCallToAction()}
 ${model.sections.map((section) => renderSection(section, pageWords)).join('\n')}
 ${renderRelated(model.related)}`;
-  return renderDocument(head, main);
+  return renderDocument(head, main, { withMeanings: Boolean(model.meaning) });
 }
 
 // ── Hub page ──
