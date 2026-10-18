@@ -151,6 +151,22 @@ function resetMessage(env, token) {
   };
 }
 
+function setPasswordMessage(env, token) {
+  return {
+    subject: 'Add a password to your LyricLike account',
+    ...renderEmail(env, {
+      heading: 'Add a password',
+      paragraphs: [
+        'Open the link to choose a password. You can then sign in with your email and ' +
+          'password, as well as with Google.',
+        `The link works for ${RESET_LINK_MINUTES} minutes and can be used once.`,
+      ],
+      button: { label: 'Choose a password', url: linkTo(env, 'reset_token', token) },
+      footer: "If you didn't ask for this, ignore this email. Your account stays as it is.",
+    }),
+  };
+}
+
 function passwordChangedMessage(env) {
   return {
     subject: 'Your LyricLike password was changed',
@@ -413,6 +429,10 @@ export function sendExistingAccountEmail(context, { to }) {
 
 export function sendResetEmail(context, { to, token }) {
   return deliverEmail(context, EMAIL_POOL.ACCOUNT, to, env => resetMessage(env, token));
+}
+
+export function sendSetPasswordEmail(context, { to, token }) {
+  return deliverEmail(context, EMAIL_POOL.ACCOUNT, to, env => setPasswordMessage(env, token));
 }
 
 export function sendPasswordChangedEmail(context, { to }) {

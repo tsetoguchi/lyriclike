@@ -4,7 +4,7 @@
 // Everything that differs (the token, the mail) happens after the response.
 
 import { findUserByEmail, issueResetToken } from '../../../_accounts.js';
-import { EMAIL_POOL, gateEmailPool, sendResetEmail } from '../../../_email.js';
+import { EMAIL_POOL, gateEmailPool, sendResetEmail, sendSetPasswordEmail } from '../../../_email.js';
 import {
   HOUR_MS, addressKey, checkRateLimit, clientIpKey, rateLimitedResponse,
 } from '../../../_ratelimit.js';
@@ -21,7 +21,9 @@ const CHECK_YOUR_EMAIL = 'If that address has an account, we sent a link to rese
 
 async function sendResetLink(context, user) {
   const token = await issueResetToken(context.env, user.id, user.email_normalized);
-  await sendResetEmail(context, { to: user.email, token });
+  // A Google-only account has no password to reset, so it is asked to add one.
+  const send = user.password_hash ? sendResetEmail : sendSetPasswordEmail;
+  await send(context, { to: user.email, token });
 }
 
 export async function onRequestPost(context) {

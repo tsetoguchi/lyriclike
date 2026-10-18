@@ -5,7 +5,7 @@
 // on purpose: setting a password still needs the mailbox, not just a session.
 
 import { issueResetToken } from '../../_accounts.js';
-import { EMAIL_POOL, gateEmailPool, sendResetEmail } from '../../_email.js';
+import { EMAIL_POOL, gateEmailPool, sendResetEmail, sendSetPasswordEmail } from '../../_email.js';
 import { HOUR_MS, checkRateLimit, rateLimitedResponse } from '../../_ratelimit.js';
 import { gatePasswordAuth, runInBackground } from '../../_request.js';
 import { requireUser } from '../../_shared.js';
@@ -29,11 +29,12 @@ export async function onRequestPost(context) {
 
   runInBackground(context, 'password-link', async () => {
     const row = await env.lyricalmiracle_db.prepare(
-      'SELECT email, email_normalized FROM users WHERE id = ?'
+      'SELECT email, email_normalized, password_hash FROM users WHERE id = ?'
     ).bind(user.id).first();
     if (!row) return;
     const token = await issueResetToken(env, user.id, row.email_normalized);
-    await sendResetEmail(context, { to: row.email, token });
+    const send = row.password_hash ? sendResetEmail : sendSetPasswordEmail;
+    await send(context, { to: row.email, token });
   });
   return Response.json({ message: `We sent a link to ${user.email}.` }, { status: HTTP_ACCEPTED });
 }

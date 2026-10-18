@@ -16,6 +16,7 @@ import * as confirm from '../functions/api/auth/signup/confirm.js';
 import * as me from '../functions/api/me.js';
 import {
   EMAIL_POOL, POOL_DAILY_LIMIT, emailSkippedEvent, sendConfirmSignupEmail, sendEmail, sendResetEmail,
+  sendSetPasswordEmail,
 } from '../functions/_email.js';
 import { verifyTurnstile } from '../functions/_turnstile.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
@@ -276,6 +277,15 @@ describe('email', () => {
     assert.match(html, /24 hours/);
     assert.match(html, /#e9b45f/);
     assert.match(html, new RegExp(`href="https://lyriclike.com/#signup_token=b{64}"`));
+  });
+
+  it('asks an account with no password to add one, not to reset it', async () => {
+    await sendSetPasswordEmail(context(), { to: 'a@example.com', token: 'c'.repeat(64) });
+    const [{ subject, text }] = services.mail;
+
+    assert.match(subject, /Add a password/);
+    assert.doesNotMatch(subject + text.replace(/#reset_token=\w+/, ''), /reset/i);
+    assert.match(text, /#reset_token=c{64}/);
   });
 
   it('escapes what it puts into HTML', async () => {
