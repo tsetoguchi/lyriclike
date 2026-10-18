@@ -1,21 +1,24 @@
 # LyricLike
 
-A tool for writing song lyrics — syllable counts per line, rhyme-scheme
-detection, and a rhyme finder built on the CMU Pronouncing Dictionary's
-phoneme data instead of spelling.
+LyricLike is a tool I built for writing song lyrics. It counts the syllables in
+each line, labels the rhyme scheme, and finds rhymes based on how words sound
+(phonemes from the CMU Pronouncing Dictionary) rather than how they are spelled.
 
-This repo is public mainly so I have a record of how the app actually got
+I made this repo public mainly so I have a record of how the app actually got
 built.
 
 ## What it does
 
-- Counts syllables per line as you type
-- Detects and labels rhyme scheme (A/B/C...) across the lyric
-- Marks internal rhymes: words inside lines that rhyme with each other
-- Finds rhymes by phoneme match, including near-rhymes, not just exact spelling.
-  Common words come first; names, rare words and crude words come last
-- Optional accounts (Google, or email and password) to save pages and sync them
-  across devices
+As you type, it counts the syllables in each line and labels the rhyme scheme
+(A/B/C, etc). It also marks internal rhymes, which are words inside a line that
+rhyme with each other.
+
+When you click a word, it finds rhymes by matching sounds, so near-rhymes show
+up too and not just words with the same ending. Common words come first. Names,
+rare words and crude words come last.
+
+Accounts are optional. You can sign in with Google, or with an email and
+password, to save your pages and sync them across devices.
 
 ## Stack
 
@@ -28,16 +31,17 @@ built.
 
 ## Running it locally
 
-You'll need [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
-and a Cloudflare account.
+You'll need Node, a Cloudflare account and
+[Wrangler](https://developers.cloudflare.com/workers/wrangler/). I run Wrangler
+through `npx` at the same version the deploys use, since older global installs
+have crashed on me:
 
 ```
-npm install -g wrangler
-wrangler d1 migrations apply lyricalmiracle_db --local
-wrangler pages dev .
+npx wrangler@4.131.2 d1 migrations apply lyricalmiracle_db --local
+npx wrangler@4.131.2 pages dev .
 ```
 
-Create a `.dev.vars` file in the project root first:
+Before that, create a `.dev.vars` file in the project root:
 
 ```
 GOOGLE_CLIENT_ID=your-client-id
@@ -45,10 +49,10 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 OAUTH_REDIRECT_URL=http://localhost:8788/api/auth/google/callback
 ```
 
-Get those from a Google Cloud OAuth client (type "Web") with that redirect
-URI added.
+You can get these from a Google Cloud OAuth client (type "Web") with that
+redirect URI added.
 
-Email and password accounts are off unless you also set these:
+Email and password accounts stay off unless you also set these:
 
 ```
 PASSWORD_AUTH_ENABLED=true
@@ -59,23 +63,23 @@ RESEND_API_KEY=your-resend-key
 EMAIL_FROM=LyricLike <noreply@your-domain>
 ```
 
-`PASSWORD_AUTH_ENABLED` is the kill switch: leave it unset and only Google
-sign-in shows. Every emailed link is built from `APP_BASE_URL`. The public
-Turnstile site key lives in `wrangler.toml`.
+`PASSWORD_AUTH_ENABLED` works as the kill switch. If you leave it unset, only
+Google sign-in shows up. Every link that gets emailed is built from
+`APP_BASE_URL`. The public Turnstile site key is in `wrangler.toml`.
 
-Optionally, set `ALERT_EMAIL` to an address that should hear when a day's
-signup or account email reaches 70% of its cap in `functions/_email.js`. Once
-a cap is reached, the signup, forgot-password and set-password requests answer
-503 until the next day.
+You can also set `ALERT_EMAIL` to an address that should get a heads up when a
+day's signup or account email reaches 70% of its cap in `functions/_email.js`.
+Once a cap is reached, the signup, forgot-password and set-password requests
+answer 503 until the next day.
 
-Preview deploys use their own database, `lyricalmiracle-db-preview`, so a
+Preview deploys use their own database (`lyricalmiracle-db-preview`), so a
 branch never touches real accounts.
 
 ## Rhyme pages
 
-`/rhymes/` holds static "words that rhyme with X" pages for search engines,
-generated from the same rhyme logic as the editor. They are committed, since
-the site has no build step. To regenerate:
+`/rhymes/` holds static "words that rhyme with X" pages for search engines.
+They are generated from the same rhyme logic as the editor. Since the site has
+no build step, the pages are committed. To regenerate them:
 
 ```
 node tools/rhymes/collect-popular-words.mjs   # rarely: re-rank popular searches
@@ -83,26 +87,28 @@ node tools/rhymes/build-pages.mjs             # rewrite /rhymes/ and sitemap.xml
 ```
 
 The editor and the pages share one copy of the rhyme logic, `rhyme-core.js`.
-Pages leave out names, rare words and crude words; the editor lists them last.
-They also leave out the words in `tools/rhymes/page-excluded-words.json`, which
-ad networks treat as sensitive; those get no page either, but the editor still
-lists them.
+The pages leave out names, rare words and crude words, while the editor lists
+them last. The pages also leave out the words in
+`tools/rhymes/page-excluded-words.json`, which ad networks treat as sensitive.
+Those words don't get a page either, but the editor still lists them.
 
 ## Word lists
 
-All at the repo root, all plain JSON arrays:
+These are all at the repo root, and all plain JSON arrays:
 
 - `cmudict.json`: pronunciations, from the CMU Pronouncing Dictionary
-- `english-words.json`: words rhyme results may list, commonest first. Its order
-  is the frequency ranking
+- `english-words.json`: words that rhyme results can list, commonest first (the
+  order is the frequency ranking)
 - `name-words.json`: words English only spells with a capital ("wayne"), listed
   last. Rebuild with `node tools/build-name-words.mjs`
 - `crude-words.json`: swear and sex words, listed last and never on a rhyme page
-- `blocklist.json`: slurs. Never listed, and typing one looks nothing up
+- `blocklist.json`: slurs. These are never listed, and typing one doesn't look
+  anything up
 
 ## Tests
 
-The rhyme logic and the API's access checks have tests. They need Node 22 or later and nothing installed:
+The rhyme logic and the API's access checks have tests. They need Node 22 or
+later, and nothing else installed:
 
 ```
 node --test "test/*.test.mjs"
@@ -112,5 +118,5 @@ GitHub Actions runs them on every pull request.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The bundled CMU Pronouncing Dictionary carries
-its own license; see [NOTICE](NOTICE).
+MIT, see [LICENSE](LICENSE). The bundled CMU Pronouncing Dictionary has its own
+license, see [NOTICE](NOTICE).
