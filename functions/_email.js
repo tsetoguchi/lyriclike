@@ -237,15 +237,18 @@ export function inviteSenderName(user) {
   return oneLine(user.name || '', INVITE_NAME_MAX) || user.email;
 }
 
-function inviteMessage(env, { senderName, title, lyricId, hasAccount, stopUrl }) {
+// The invited address rides in the link, so the sign-in box can start with
+// it: the page opens only for the account with that address.
+function inviteMessage(env, { to, senderName, title, lyricId, hasAccount, stopUrl }) {
   const sender = oneLine(senderName, INVITE_NAME_MAX);
   const pageTitle = oneLine(title, INVITE_TITLE_MAX) || 'Untitled';
   const stopLink = { label: STOP_LINK_LABEL, url: stopUrl };
+  const invited = `to=${encodeURIComponent(to.trim())}`;
   const content = hasAccount
     ? {
       heading: `${sender} shared a page with you`,
       paragraphs: [`${sender} shared “${pageTitle}” with you on LyricLike. You can read it and edit it.`],
-      button: { label: 'Open the page', url: linkTo(env, 'shared', lyricId) },
+      button: { label: 'Open the page', url: linkTo(env, 'shared', lyricId, invited) },
       footer: `You got this because ${sender} shared a page with this address.`,
     }
     : {
@@ -254,7 +257,7 @@ function inviteMessage(env, { senderName, title, lyricId, hasAccount, stopUrl })
         `${sender} is writing on LyricLike and wants you in on “${pageTitle}”.`,
         'Create a free account with this email to read it and write with them.',
       ],
-      button: { label: 'Sign up to see it', url: linkTo(env, 'shared', lyricId, 'signup=1') },
+      button: { label: 'Sign up to see it', url: linkTo(env, 'shared', lyricId, `signup=1&${invited}`) },
       footer: 'Not interested?',
     };
   return {
@@ -274,7 +277,7 @@ export async function sendInviteEmail(
     const token = await inviteStopToken(env, to.trim().toLowerCase());
     const oneClickUrl = `${baseUrl(env)}/api/invites/stop?token=${token}`;
     const message = inviteMessage(env, {
-      senderName, title, lyricId, hasAccount, stopUrl: linkTo(env, 'stop_token', token),
+      to, senderName, title, lyricId, hasAccount, stopUrl: linkTo(env, 'stop_token', token),
     });
     const headers = {
       'List-Unsubscribe': `<${oneClickUrl}>`,

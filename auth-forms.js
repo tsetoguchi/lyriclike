@@ -607,6 +607,7 @@
     const settings = options || {};
     returnFocusTo = document.activeElement;
     await loadMethods();
+    if (settings.email) emailInput.value = settings.email;
     showView(VIEWS[settings.view] ? settings.view : VIEW.START, settings.message);
     overlay.hidden = false;
     overlay.classList.add('open');

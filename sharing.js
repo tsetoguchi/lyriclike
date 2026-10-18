@@ -33,6 +33,10 @@
     SIGN_UP_TO_SEE: 'Create a free account with the email the page was shared with, to see it.',
     NOT_AVAILABLE: "This page isn't available to this account. If it was shared with you "
       + 'under another email, log in with that one.',
+    notSharedWith: to => `This page was shared with ${to}. Log out, then log in with that `
+      + 'email to see it.',
+    signUpWith: to => `This page was shared with ${to}. Sign up with that email to see it.`,
+    logInWith: to => `This page was shared with ${to}. Log in with that email to see it.`,
     NOT_EMAILED: "Shared, but we couldn't email them today. "
       + 'Copy the link and send it to them yourself.',
     SEND_IT_YOURSELF: 'Copy the link and send it to them yourself.',
@@ -387,7 +391,9 @@
   function readPendingShare() {
     try {
       const pending = JSON.parse(localStorage.getItem(PENDING_SHARE_KEY));
-      if (pending && PAGE_ID_PATTERN.test(pending.id) && pending.expires > Date.now()) return pending;
+      if (pending && PAGE_ID_PATTERN.test(pending.id) && pending.expires > Date.now()) {
+        return { ...pending, to: typeof pending.to === 'string' ? pending.to : '' };
+      }
       localStorage.removeItem(PENDING_SHARE_KEY);
     } catch {
       // Unreadable storage holds nothing to open.
@@ -399,10 +405,11 @@
     try { localStorage.removeItem(PENDING_SHARE_KEY); } catch {}
   }
 
-  function rememberPendingShare(id, signup) {
+  function rememberPendingShare(id, signup, to) {
     try {
-      localStorage.setItem(PENDING_SHARE_KEY,
-        JSON.stringify({ id, signup: Boolean(signup), expires: Date.now() + PENDING_SHARE_MS }));
+      localStorage.setItem(PENDING_SHARE_KEY, JSON.stringify({
+        id, signup: Boolean(signup), to: to || '', expires: Date.now() + PENDING_SHARE_MS,
+      }));
     } catch {
       // Without storage the page can't be opened after sign-in; it still
       // shows under "Shared with me".
@@ -410,11 +417,18 @@
   }
 
   // The server gives the same 404 for "no such page", "not yours" and
-  // "removed", so one message covers them all, and names no address.
-  async function openSharedPage(id) {
+  // "removed", and names no address. Only the emailed link knows which
+  // address the page went to, so only it can name one.
+  function notAvailableText(to) {
+    const isOtherAddress = to && window.currentUser
+      && to.toLowerCase() !== String(window.currentUser.email).toLowerCase();
+    return isOtherAddress ? TEXT.notSharedWith(to) : TEXT.NOT_AVAILABLE;
+  }
+
+  async function openSharedPage(id, to) {
     const status = await loadLyric(id);
     if (status === HTTP_NOT_FOUND) {
-      showNotice(TEXT.NOT_AVAILABLE, [
+      showNotice(notAvailableText(to), [
         { label: 'Log out', onClick: () => { hideNotice(); signOut(); } },
       ]);
       return;
@@ -431,8 +445,13 @@
     const pending = readPendingShare();
     if (!pending) return false;
     forgetPendingShare();
-    await openSharedPage(pending.id);
+    await openSharedPage(pending.id, pending.to);
     return true;
+  }
+
+  function pendingShareMessage({ signup, to }) {
+    if (!to) return signup ? TEXT.SIGN_UP_TO_SEE : TEXT.LOG_IN_TO_SEE;
+    return signup ? TEXT.signUpWith(to) : TEXT.logInWith(to);
   }
 
   // Signed out with a page waiting: once per load, the sign-in modal opens
@@ -444,7 +463,7 @@
     const pending = readPendingShare();
     if (!pending || promptedForShare || !window.openAuthModal) return;
     promptedForShare = true;
-    window.openAuthModal({ message: pending.signup ? TEXT.SIGN_UP_TO_SEE : TEXT.LOG_IN_TO_SEE });
+    window.openAuthModal({ message: pendingShareMessage(pending), email: pending.to });
   }
 
   // Only a POST stops the mail, and only after this button: mail scanners
@@ -477,10 +496,10 @@
     }
     if (link.kind !== 'shared' || !PAGE_ID_PATTERN.test(link.token)) return;
     if (window.currentUser) {
-      openSharedPage(link.token);
+      openSharedPage(link.token, link.to);
       return;
     }
-    rememberPendingShare(link.token, link.signup);
+    rememberPendingShare(link.token, link.signup, link.to);
     // Before the sign-in check answers, the notebook picks the page up
     // (openNotebook) or the signed-out list asks for a sign-in.
     if (window.currentUser === null) {

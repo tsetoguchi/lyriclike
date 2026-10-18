@@ -117,7 +117,7 @@ describe('sharing a page', () => {
     const [mail] = services.mail;
     assert.deepEqual(mail.to, ['Bob@Example.com']);
     assert.equal(mail.subject, `Alice shared "${TITLE}" with you`);
-    assert.match(mail.text, new RegExp(`${BASE_URL}/#shared=${PAGE}\\n`));
+    assert.match(mail.text, new RegExp(`${BASE_URL}/#shared=${PAGE}&to=Bob%40Example\\.com\\n`));
     assert.doesNotMatch(mail.text, /signup=1/);
     assert.doesNotMatch(mail.text + mail.html, new RegExp(BODY));
     assert.deepEqual(await events(env), ['share_sent']);
@@ -126,7 +126,7 @@ describe('sharing a page', () => {
   it('asks a friend with no account to sign up with that address', async () => {
     await share(alice.sid, 'new@example.com');
     const [mail] = services.mail;
-    assert.match(mail.text, new RegExp(`#shared=${PAGE}&signup=1`));
+    assert.match(mail.text, new RegExp(`#shared=${PAGE}&signup=1&to=new%40example\\.com`));
     assert.match(mail.html, /Sign up to see it/);
   });
 

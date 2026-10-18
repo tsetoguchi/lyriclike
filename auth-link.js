@@ -1,5 +1,6 @@
 // Emailed links arrive as /#signup_token=…, /#reset_token=…, /#shared=… (a
-// page someone shared, with &signup=1 for someone with no account yet) or
+// page someone shared, with &signup=1 for someone with no account yet and
+// &to= the address it was shared with) or
 // /#stop_token=… (stop invite mail). The value rides in the fragment so it
 // never reaches request logs, and this script takes it out of the address bar
 // and history before anything else runs, analytics included, since analytics
@@ -25,7 +26,10 @@
     if (!found) return null;
 
     history.replaceState(null, '', window.location.pathname + window.location.search);
-    return { kind: LINK_KINDS[found], token: params.get(found), signup: params.get('signup') === '1' };
+    return {
+      kind: LINK_KINDS[found], token: params.get(found), signup: params.get('signup') === '1',
+      to: params.get('to') || '',
+    };
   }
 
   window.takeAuthLink = takeAuthLink;

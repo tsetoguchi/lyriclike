@@ -62,6 +62,30 @@ describe('diffTextEdit', () => {
     assert.deepEqual(diffTextEdit('abc', 'abXc'), { index: 2, deleteCount: 0, insert: 'X' });
   });
 
+  it('places Enter at the end of a line after its line break', () => {
+    assert.deepEqual(diffTextEdit('one\ntwo', 'one\n\ntwo', 4), { index: 4, deleteCount: 0, insert: '\n' });
+  });
+
+  it('places Enter at the end of the last line where it was typed', () => {
+    assert.deepEqual(diffTextEdit('one', 'one\n', 4), { index: 3, deleteCount: 0, insert: '\n' });
+  });
+
+  it("keeps a co-writer's letters on their line when Enter is pressed at its end", () => {
+    // Both client orders, since Yjs breaks a tie at one spot by client id.
+    for (const [enterId, typingId] of [[1, 2], [2, 1]]) {
+      const enter = new Y.Doc();
+      enter.clientID = enterId;
+      enter.getText('body').insert(0, 'one\ntwo');
+      const typing = new Y.Doc();
+      typing.clientID = typingId;
+      Y.applyUpdate(typing, Y.encodeStateAsUpdate(enter));
+      applyEdit(typing.getText('body'), diffTextEdit('one\ntwo', 'one!\ntwo', 4), 'local');
+      applyEdit(enter.getText('body'), diffTextEdit('one\ntwo', 'one\n\ntwo', 4), 'local');
+      Y.applyUpdate(enter, Y.encodeStateAsUpdate(typing));
+      assert.equal(enter.getText('body').toString(), 'one!\n\ntwo');
+    }
+  });
+
   it('never splits an emoji when one emoji replaces another', () => {
     // 😀 is 😀 and 😁 is 😁: they share the first half.
     const edit = diffTextEdit('a😀b', 'a😁b', 3);
@@ -104,8 +128,9 @@ describe('mapSelection', () => {
     assert.deepEqual(mapSelection(caret(5), [{ insert: 'abc' }]), caret(8));
   });
 
-  it('stays put for an insert exactly at it', () => {
-    assert.deepEqual(mapSelection(caret(5), [{ retain: 5 }, { insert: 'abc' }]), caret(5));
+  it('moves past words a co-writer typed right at it', () => {
+    // Left in front, the caret would split their line on Enter.
+    assert.deepEqual(mapSelection(caret(5), [{ retain: 5 }, { insert: 'abc' }]), caret(8));
   });
 
   it('ignores an insert after it', () => {

@@ -67,6 +67,13 @@
     return Math.min(shorter, Math.max(0, caret - added));
   }
 
+  // Enter at the end of a line could go before or after its line break and
+  // make the same text. Before it, a co-writer typing at that line's end
+  // ties with it in Yjs, and their next letters can land on the new line.
+  function isEnterBeforeLineBreak(oldValue, edit) {
+    return edit.deleteCount === 0 && /^\n+$/.test(edit.insert) && oldValue[edit.index] === '\n';
+  }
+
   // The one contiguous change that turns oldValue into newValue, or null.
   // caret is selectionEnd after the edit.
   function diffTextEdit(oldValue, newValue, caret) {
@@ -77,11 +84,13 @@
     let suffix = commonSuffixLength(oldValue, newValue, suffixRoom);
     if (isMidPair(oldValue, oldValue.length - suffix)
       || isMidPair(newValue, newValue.length - suffix)) suffix -= 1;
-    return {
+    const edit = {
       index: prefix,
       deleteCount: oldValue.length - prefix - suffix,
       insert: newValue.slice(prefix, newValue.length - suffix),
     };
+    if (isEnterBeforeLineBreak(oldValue, edit)) edit.index += 1;
+    return edit;
   }
 
   function applyEdit(ytext, edit, origin) {
@@ -110,14 +119,15 @@
     return position + shift;
   }
 
-  // A caret stays put for a co-writer's words typed right at it. A selection
-  // never grows over them: its start moves past words typed at the start, or
-  // typing over the selection would delete the co-writer's words too.
+  // A caret moves past a co-writer's words typed right at it: left in front,
+  // Enter would split their line and carry their words onto the new one. A
+  // selection never grows over them: its start moves past words typed at the
+  // start, or typing over the selection would delete the co-writer's words too.
   function mapSelection(selection, delta) {
     const isRange = selection.start !== selection.end;
     return {
-      start: mapPosition(selection.start, delta, isRange),
-      end: mapPosition(selection.end, delta, false),
+      start: mapPosition(selection.start, delta, true),
+      end: mapPosition(selection.end, delta, !isRange),
     };
   }
 
