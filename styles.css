@@ -809,6 +809,19 @@ header .nav-icon circle {
   font-weight: var(--weight-regular);
 }
 
+/* What adding someone gives them, said once under the title. */
+.share-subtext {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--ink-faded);
+}
+
+.share-subtext[hidden] {
+  display: none;
+}
+
 /* Taller rows, so the list breathes like the rest of the dialog. */
 #share-panel .share-person {
   min-height: 52px;

@@ -267,6 +267,7 @@
       ? `Share “${titleForName(page.title)}”`
       : `People on “${titleForName(page.title)}”`;
     form.hidden = !data.can_share;
+    setHidden('share-subtext', !data.can_share);
     // An editor's dialog is headed "People on …" already.
     setHidden('share-people-label', !isOwner);
     setHidden('share-leave', isOwner);
