@@ -27,8 +27,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           cat > check.mjs <<'EOF'
-          // A client that hung up early is not the app's fault.
-          const FINE = new Set(['success', 'clientDisconnected']);
+          // A client that hung up early is not the app's fault. Neither is
+          // internalError: a live page's socket ending is counted as one, and
+          // a throw in our own code shows as scriptThrewException instead.
+          const FINE = new Set(['success', 'clientDisconnected', 'internalError']);
           const DAY_MS = 24 * 60 * 60 * 1000;
 
           const token = process.env.CLOUDFLARE_ANALYTICS_TOKEN;
@@ -51,6 +53,7 @@ jobs:
 
           const groups = body.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups;
           const counts = groups.map(g => [g.dimensions.status, g.sum.requests]);
+          // Still printed, so a jump in internalError shows in the run's log.
           for (const [status, requests] of counts) console.log(`${status}: ${requests}`);
           if (counts.length === 0) console.log('No function runs in the last 24 hours.');
 
