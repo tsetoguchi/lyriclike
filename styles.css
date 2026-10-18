@@ -674,9 +674,10 @@ header .nav-icon circle {
 
 /* ── Sharing ── */
 
-/* Pushed to the far end of the title row, out of the title's way. */
+/* Right after the title, so it reads as this page's button. It comes before
+   the save note and who is here, which come and go, so it never jumps. */
 .share-btn {
-  margin-left: auto;
+  margin-left: var(--space-1);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -783,15 +784,6 @@ header .nav-icon circle {
   font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   color: var(--ink-faded);
-}
-
-/* In the title row just before Share, which then gives up its auto margin. */
-.presence-header {
-  margin-left: auto;
-}
-
-.presence-header:not([hidden]) + .share-btn {
-  margin-left: var(--space-2);
 }
 
 /* Phones only (below); desktop shows the title row's copy. */
@@ -3479,6 +3471,7 @@ body.sidebar-open #sidebar-scrim {
 
   .share-btn-phone:not([hidden]) {
     display: inline-flex;
+    margin-left: auto;
   }
 
   .resize-handle {
