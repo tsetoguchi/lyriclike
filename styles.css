@@ -3300,6 +3300,7 @@ body.sidebar-open #sidebar-scrim {
 .sidebar-contact {
   margin: 0;
   padding: var(--space-3) var(--space-4);
+  border-top: var(--hairline) solid var(--margin-line);
   color: var(--ink-faded);
   font-size: var(--text-caption-1);
 }
