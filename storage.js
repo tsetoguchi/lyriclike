@@ -126,6 +126,9 @@ let isLiveDraft = false;
 // live.js did not load, or live editing is paused for a co-writer. Nothing
 // can be typed there, so leaving it loses nothing.
 let isEditorLocked = false;
+// Phones hide the title row and the save indicator in it, so being offline
+// is shown in the notice strip, which every screen size shows.
+let isOfflineNoticeShown = false;
 // The savedAt of the local copy the stored draft's words come from, so a
 // reload can tell which of the two is newer, and that copy's words. Typing
 // before the first sync moves the draft's body on but leaves these, so a
@@ -637,6 +640,7 @@ function showLyric(lyric) {
   closeLiveSession();
   // Before the input event below, so its draft is marked live.
   isLiveDraft = Boolean(lyric.live);
+  if (lyric.id !== currentLyricId) clearPageNotice();
   currentLyricId = lyric.id;
   currentTitle = lyric.title;
   currentRevision = lyric.revision;
@@ -722,6 +726,7 @@ function refreshLivePageInfo(lyric) {
 // A new page is on screen but not on the server, so its first save creates it.
 function startBlankPage(title) {
   closeLiveSession();
+  clearPageNotice();
   clearTimeout(saveTimer);
   currentLyricId = crypto.randomUUID();
   currentTitle = title;
@@ -1286,6 +1291,13 @@ function hideNotice() {
   document.getElementById('page-notice').hidden = true;
 }
 
+// A notice is about the page it was shown on, so another page drops it. The
+// offline flag goes too, or its later clear would hide the next page's notice.
+function clearPageNotice() {
+  isOfflineNoticeShown = false;
+  hideNotice();
+}
+
 function setSaveIndicator(text) {
   document.getElementById('save-indicator').textContent = text;
 }
@@ -1547,10 +1559,6 @@ loadLyricsList();
 // Expose state for autosave (step 6).
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
 window.clearLyricState = clearLyricState;
-
-// Phones hide the title row and the save indicator in it, so being offline
-// is shown in the notice strip, which every screen size shows.
-let isOfflineNoticeShown = false;
 
 function showLiveIndicator(text) {
   const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
