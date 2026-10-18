@@ -698,6 +698,16 @@ header .nav-icon circle {
   display: none;
 }
 
+/* Phones only (below): desktop has the button in the title row. */
+.share-btn-phone {
+  display: none;
+}
+
+/* Only phones lay this row out; on desktop its lines sit in the panel as before. */
+.page-meta {
+  display: contents;
+}
+
 /* "Shared by Ann" or "Shared with 3 people", in pencil under the title.
    It opens the same dialog as the button, since phones have no title row. */
 .page-sharing {
@@ -722,13 +732,6 @@ header .nav-icon circle {
 
 .page-sharing[hidden] {
   display: none;
-}
-
-/* "Share this page", on a page nobody else has yet. Phones only: desktop has
-   the Share button beside the title. */
-.page-sharing.page-sharing-invite {
-  display: none;
-  color: var(--accent);
 }
 
 /* Who is here: initials in each person's colour, overlapping a little.
@@ -3439,22 +3442,43 @@ body.sidebar-open #sidebar-scrim {
     margin-top: 0;
   }
 
-  .page-sharing.page-sharing-invite:not([hidden]) {
-    display: block;
-  }
-
-  .page-sharing:not([hidden]) + .page-notice {
-    padding-top: 0;
-  }
-
-  /* The title row is hidden, so who is here takes the sharing line's spot. */
-  .page-presence:not([hidden]) {
+  /* The title row is hidden, so who is here, the sharing line and Share
+     share one row above the words. */
+  .page-meta {
     display: flex;
+    align-items: center;
+    gap: var(--space-3);
     width: 100%;
     max-width: var(--sheet-width);
     margin: 0 auto;
     padding: var(--space-3) var(--space-5) var(--space-2)
       calc(var(--sheet-syllables) + var(--editor-pad));
+    flex-shrink: 0;
+  }
+
+  .page-meta:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+
+  .page-meta:has(> :not([hidden])) + .page-notice {
+    padding-top: 0;
+  }
+
+  .page-meta .page-sharing,
+  .page-meta .page-presence:not([hidden]) {
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .page-meta .page-presence:not([hidden]) {
+    display: flex;
+  }
+
+  .share-btn-phone:not([hidden]) {
+    display: inline-flex;
   }
 
   .resize-handle {
