@@ -84,12 +84,15 @@
       <div class="panel-header">
         <span id="lyrics-panel-title" contenteditable="true" spellcheck="false"
               data-placeholder="Untitled page" aria-label="Page title"></span>
-        <span id="save-indicator"></span>
-        <button type="button" id="presence-header" class="presence-people presence-header" hidden></button>
         <button type="button" id="share-btn" class="toggle-btn share-btn" hidden>Share</button>
+        <button type="button" id="presence-header" class="presence-people presence-header" hidden></button>
+        <span id="save-indicator"></span>
       </div>
-      <button type="button" id="page-presence" class="presence-people page-presence" hidden></button>
-      <button type="button" id="page-sharing" class="page-sharing" hidden></button>
+      <div class="page-meta">
+        <button type="button" id="page-presence" class="presence-people page-presence" hidden></button>
+        <button type="button" id="page-sharing" class="page-sharing" hidden></button>
+        <button type="button" id="share-btn-phone" class="toggle-btn share-btn share-btn-phone" hidden>Share</button>
+      </div>
       <div class="page-notice" id="page-notice" role="status" hidden>
         <span class="page-notice-text" id="page-notice-text"></span>
         <span class="page-notice-actions" id="page-notice-actions"></span>
@@ -246,6 +249,13 @@
       </div>
     </div>
   </div>
+  <div id="whats-new" class="whats-new" role="dialog" aria-labelledby="whats-new-title" hidden>
+    <p id="whats-new-title" class="whats-new-title">Write together</p>
+    <p class="whats-new-text">Share a page and write it with others at the same time. Open a page and press Share.</p>
+    <div class="whats-new-actions">
+      <button type="button" id="whats-new-done" class="toggle-btn">Got it</button>
+    </div>
+  </div>
   <div id="share-overlay" class="modal-overlay" hidden>
     <div id="share-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
       <div class="modal-header"><span id="share-title">Share page</span></div>
@@ -345,6 +355,7 @@
   <script src="sample-start.js"></script>
   <script src="storage.js"></script>
   <script src="sharing.js"></script>
+  <script src="whats-new.js"></script>
   <script src="live-core.js"></script>
   <script src="live-binding.js"></script>
   <script src="live-store.js"></script>

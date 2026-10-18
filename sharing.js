@@ -98,11 +98,15 @@
     button.hidden = !signedIn || currentRevision === null || (!isEditor && !isShared() && !canShare());
     button.innerHTML = (isEditor ? PEOPLE_BUTTON_ICON : SHARE_BUTTON_ICON)
       + `<span>${isEditor ? 'People' : 'Share'}</span>`;
+    // Phones hide the title row, so they get a copy of the button above the words.
+    const phoneButton = byId('share-btn-phone');
+    if (phoneButton) {
+      phoneButton.hidden = button.hidden;
+      phoneButton.innerHTML = button.innerHTML;
+    }
 
     const line = byId('page-sharing');
-    const canInvite = signedIn && currentRevision !== null && !isEditor && !isShared() && canShare();
-    line.textContent = signedIn ? sharingLine() || (canInvite ? 'Share this page' : '') : '';
-    line.classList.toggle('page-sharing-invite', canInvite);
+    line.textContent = signedIn ? sharingLine() : '';
     line.hidden = !line.textContent;
     schedulePoll();
   }
@@ -385,6 +389,7 @@
   const openForCurrentPage = () => openShareDialog(currentLyricId, currentTitle);
   byId('share-btn').addEventListener('click', openForCurrentPage);
   byId('page-sharing').addEventListener('click', openForCurrentPage);
+  if (byId('share-btn-phone')) byId('share-btn-phone').addEventListener('click', openForCurrentPage);
 
   // ── Links from invite mail ──
 

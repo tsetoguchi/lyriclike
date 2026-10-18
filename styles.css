@@ -674,9 +674,10 @@ header .nav-icon circle {
 
 /* ── Sharing ── */
 
-/* Pushed to the far end of the title row, out of the title's way. */
+/* Right after the title, so it reads as this page's button. It comes before
+   the save note and who is here, which come and go, so it never jumps. */
 .share-btn {
-  margin-left: auto;
+  margin-left: var(--space-1);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -696,6 +697,16 @@ header .nav-icon circle {
 
 .share-btn[hidden] {
   display: none;
+}
+
+/* Phones only (below): desktop has the button in the title row. */
+.share-btn-phone {
+  display: none;
+}
+
+/* Only phones lay this row out; on desktop its lines sit in the panel as before. */
+.page-meta {
+  display: contents;
 }
 
 /* "Shared by Ann" or "Shared with 3 people", in pencil under the title.
@@ -722,13 +733,6 @@ header .nav-icon circle {
 
 .page-sharing[hidden] {
   display: none;
-}
-
-/* "Share this page", on a page nobody else has yet. Phones only: desktop has
-   the Share button beside the title. */
-.page-sharing.page-sharing-invite {
-  display: none;
-  color: var(--accent);
 }
 
 /* Who is here: initials in each person's colour, overlapping a little.
@@ -780,15 +784,6 @@ header .nav-icon circle {
   font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   color: var(--ink-faded);
-}
-
-/* In the title row just before Share, which then gives up its auto margin. */
-.presence-header {
-  margin-left: auto;
-}
-
-.presence-header:not([hidden]) + .share-btn {
-  margin-left: var(--space-2);
 }
 
 /* Phones only (below); desktop shows the title row's copy. */
@@ -847,6 +842,64 @@ header .nav-icon circle {
 .share-copy[hidden],
 .share-actions [hidden] {
   display: none;
+}
+
+/* The one-time "Write together" card: a quiet note in the corner that leaves
+   the page usable, styled like the share dialog it points to. */
+.whats-new {
+  position: fixed;
+  right: var(--space-6);
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  z-index: var(--z-overlay);
+  width: 320px;
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+  font-family: var(--font-editor);
+  color: var(--ink);
+}
+
+.whats-new[hidden] {
+  display: none;
+}
+
+.whats-new-title {
+  margin: 0;
+  font-size: var(--text-title-3);
+  font-weight: var(--weight-regular);
+}
+
+.whats-new-text {
+  margin: 0;
+  font-size: var(--text-footnote);
+  line-height: 1.5;
+}
+
+.whats-new-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+}
+
+.whats-new-actions .toggle-btn {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .whats-new {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: calc(var(--whats-new-lift, 0px) + var(--space-4));
+    width: auto;
+    max-width: none;
+  }
 }
 
 /* An icon-only dialog button (Copy link, Sign out). Its name shows above it
@@ -3381,22 +3434,44 @@ body.sidebar-open #sidebar-scrim {
     margin-top: 0;
   }
 
-  .page-sharing.page-sharing-invite:not([hidden]) {
-    display: block;
-  }
-
-  .page-sharing:not([hidden]) + .page-notice {
-    padding-top: 0;
-  }
-
-  /* The title row is hidden, so who is here takes the sharing line's spot. */
-  .page-presence:not([hidden]) {
+  /* The title row is hidden, so who is here, the sharing line and Share
+     share one row above the words. */
+  .page-meta {
     display: flex;
+    align-items: center;
+    gap: var(--space-3);
     width: 100%;
     max-width: var(--sheet-width);
     margin: 0 auto;
     padding: var(--space-3) var(--space-5) var(--space-2)
       calc(var(--sheet-syllables) + var(--editor-pad));
+    flex-shrink: 0;
+  }
+
+  .page-meta:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+
+  .page-meta:has(> :not([hidden])) + .page-notice {
+    padding-top: 0;
+  }
+
+  .page-meta .page-sharing,
+  .page-meta .page-presence:not([hidden]) {
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .page-meta .page-presence:not([hidden]) {
+    display: flex;
+  }
+
+  .share-btn-phone:not([hidden]) {
+    display: inline-flex;
+    margin-left: auto;
   }
 
   .resize-handle {
