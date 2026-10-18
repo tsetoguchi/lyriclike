@@ -517,12 +517,16 @@
   let lastActivity = Date.now();
   let lastTyped = 0;
 
-  function pollingWanted() {
+  function checkWanted() {
     // A live page, or one waiting to reopen live, gets other people's edits
     // from its room, not the poll. storage.js's live names are read behind
     // typeof: a tab can hold an older cached storage.js without them.
-    return Boolean(window.currentUser) && currentRevision !== null && isShared() && !document.hidden
+    return Boolean(window.currentUser) && currentRevision !== null && !document.hidden
       && !(typeof isLiveDraft !== 'undefined' && isLiveDraft);
+  }
+
+  function pollingWanted() {
+    return checkWanted() && isShared();
   }
 
   function schedulePoll() {
@@ -546,19 +550,26 @@
       schedulePoll();
       return;
     }
+    await checkForNewerSave(schedulePoll);
+  }
+
+  // Asks whether the page was saved somewhere else since it was loaded, and
+  // takes those words if so. thenAgain runs while the page is still one to
+  // check: not once it's gone, signed out or live.
+  async function checkForNewerSave(thenAgain) {
     const id = currentLyricId;
     let res;
     try {
       res = await fetch(`/api/lyrics/${id}?meta=1`);
     } catch {
-      schedulePoll();
+      thenAgain();
       return;
     }
     if (id !== currentLyricId) return;
     if (res.status === HTTP_UNAUTHORIZED) return;
     if (res.status === HTTP_NOT_FOUND) {
       // Deleted, or this person was taken off it. There are no unsaved edits
-      // (the poll waits for those), so nothing needs keeping.
+      // (the check waits for those), so nothing needs keeping.
       dropUnavailablePage();
       loadLyricsList();
       return;
@@ -572,7 +583,22 @@
       if (meta.revision > currentRevision) await takeTheirWords(id);
       else if (meta.title !== currentTitle) takeTheirTitle(meta.title);
     }
-    schedulePoll();
+    thenAgain();
+  }
+
+  // A page left open in a background tab, or behind another window, may have
+  // been saved on another device since. Every page is checked on the way
+  // back, shared or not, so typing doesn't start on old words.
+  let isReturnCheckRunning = false;
+
+  async function checkOnReturn() {
+    if (isReturnCheckRunning || !checkWanted() || isBusy()) return;
+    isReturnCheckRunning = true;
+    try {
+      await checkForNewerSave(() => {});
+    } finally {
+      isReturnCheckRunning = false;
+    }
   }
 
   // showLyric sets the saved text and revision before the input event, so the
@@ -622,9 +648,14 @@
   document.addEventListener('pointerdown', noteActivity);
   document.addEventListener('keydown', noteActivity);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) schedulePoll();
-    else noteActivity();
+    if (document.hidden) {
+      schedulePoll();
+      return;
+    }
+    noteActivity();
+    checkOnReturn();
   });
+  window.addEventListener('focus', checkOnReturn);
 
   window.refreshPageSharing = refreshPageSharing;
   window.openShareDialog = openShareDialog;
