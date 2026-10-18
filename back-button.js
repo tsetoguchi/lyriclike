@@ -11,13 +11,15 @@
 
   const dialogOverlay = document.getElementById('dialog-overlay');
   const authOverlay = document.getElementById('auth-overlay');
-  const settingsOverlay = document.getElementById('account-settings-overlay');
+  const passwordOverlay = document.getElementById('password-overlay');
+  const accountMenu = document.getElementById('account-menu');
 
   // Topmost first: Back closes the first one that is open.
   const LAYERS = [
     { isOpen: () => isOverlayOpen(dialogOverlay), close: () => closeDialog(null) },
     { isOpen: () => isOverlayOpen(authOverlay), close: () => window.closeAuthModal() },
-    { isOpen: () => isOverlayOpen(settingsOverlay), close: closeAccountSettings },
+    { isOpen: () => isOverlayOpen(passwordOverlay), close: () => window.closePasswordBox() },
+    { isOpen: () => !accountMenu.hidden, close: () => window.closeAccountMenu() },
     { isOpen: isDefinitionOpen, close: closeDefinition },
     { isOpen: isRhymesMenuOpen, close: () => setRhymesMenuOpen(false) },
     { isOpen: () => isSidebarOpen() && !isSidebarDocked(), close: hideSidebar },
@@ -80,7 +82,8 @@
     observer.observe(document.body, { ...watchClass, childList: true });
     observer.observe(dialogOverlay, watchClass);
     observer.observe(authOverlay, watchClass);
-    observer.observe(settingsOverlay, watchClass);
+    observer.observe(passwordOverlay, watchClass);
+    observer.observe(accountMenu, { attributes: true, attributeFilter: ['hidden'] });
     observer.observe(mainEl, watchClass);
     observer.observe(rhymesMenuPopoverEl, { attributes: true, attributeFilter: ['hidden'] });
   }

@@ -1,5 +1,6 @@
-// The Security part of the Account panel: changing the password, emailing a
-// Google-only account a link to set one, and deleting the account.
+// The account menu's password and delete items: changing the password in its
+// own box, emailing a Google-only account a link to set one, and deleting
+// the account.
 
 (function initAccountSecurity() {
   const MIN_PASSWORD_LENGTH = 8;
@@ -13,7 +14,8 @@
     ENTER_CURRENT: 'Enter your current password.',
     TOO_SHORT: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
-    CHANGED: 'Password changed. Any other devices were signed out.',
+    CHANGED_HEADING: 'Password changed',
+    CHANGED: 'Any other devices were signed out.',
     LINK_SENT_FALLBACK: 'We sent you a link.',
     JUNK: 'Not there? Check your junk folder.',
     OFFLINE: "Couldn't reach the server. Check your connection and try again.",
@@ -25,11 +27,10 @@
     TOO_MANY: 'Too many tries. Wait a few minutes, then try again.',
   });
 
-  const panel = document.getElementById('account-settings-panel');
-  const section = document.getElementById('security-section');
+  const overlay = document.getElementById('password-overlay');
+  const accountButton = document.getElementById('account-settings-btn');
   const changeButton = document.getElementById('change-password-btn');
   const addButton = document.getElementById('add-password-btn');
-  const addHint = document.getElementById('add-password-hint');
   const form = document.getElementById('change-password-form');
   const usernameInput = document.getElementById('security-username');
   const currentInput = document.getElementById('current-password');
@@ -76,13 +77,18 @@
     return error && typeof error.message === 'string' ? error.message : TEXT.FAILED;
   }
 
-  // The session ran out while the panel was open.
+  function closeMenu() {
+    if (window.closeAccountMenu) window.closeAccountMenu();
+  }
+
+  // The session ran out while the menu or the password box was open.
   function endExpiredSession() {
-    closeAccountSettings();
+    closeMenu();
+    closePasswordBox();
     if (window.handleSessionExpired) window.handleSessionExpired();
   }
 
-  // ── Showing the panel ──
+  // ── Showing the menu items ──
 
   function showStatus(text) {
     statusEl.textContent = text || '';
@@ -111,34 +117,40 @@
     if (field === newInput && text === TEXT.TOO_SHORT) newHint.classList.add('is-error');
   }
 
-  // While the form is open the panel shows only the email and the form.
-  function setFormOpen(open) {
-    panel.classList.toggle('is-changing-password', open);
-    form.hidden = !open;
-    changeButton.hidden = open;
-    changeButton.setAttribute('aria-expanded', String(open));
-    if (!open) {
-      form.reset();
-      clearError();
-    }
+  // The menu has no room for two password fields, so the form opens in a box
+  // of its own and the menu steps aside.
+  function openPasswordBox() {
+    closeMenu();
+    form.reset();
+    clearError();
+    overlay.classList.add('open');
+    currentInput.focus();
   }
 
-  // The section only shows when passwords are switched on: with them off it
-  // would have nothing in it. An account with a password can change it; one
-  // with only Google can add one.
+  function closePasswordBox() {
+    overlay.classList.remove('open');
+    form.reset();
+    clearError();
+  }
+
+  function cancelPasswordBox() {
+    closePasswordBox();
+    accountButton.focus();
+  }
+
+  // The password items only show when passwords are switched on. An account
+  // with a password can change it; one with only Google can add one.
   async function showAccountSecurity(user) {
     if (!user) return;
     usernameInput.value = user.email || '';
-    setFormOpen(false);
     showStatus('');
-    section.hidden = true;
+    changeButton.hidden = true;
+    addButton.hidden = true;
 
     const methods = window.loadAuthMethods ? await window.loadAuthMethods() : { password: false };
     if (!methods.password || window.currentUser !== user) return;
-    section.hidden = false;
     changeButton.hidden = !user.has_password;
     addButton.hidden = user.has_password;
-    addHint.hidden = user.has_password;
   }
 
   // ── Changing the password ──
@@ -181,9 +193,11 @@
       return;
     }
     if (result.data && result.data.user) window.currentUser = result.data.user;
-    setFormOpen(false);
-    showStatus(TEXT.CHANGED);
-    changeButton.focus();
+    closePasswordBox();
+    await openDialog({
+      heading: TEXT.CHANGED_HEADING, message: TEXT.CHANGED, confirmLabel: 'OK', noCancel: true,
+    });
+    accountButton.focus();
   }
 
   // ── Adding a password ──
@@ -200,7 +214,6 @@
     if (!isOk(result)) { showStatus(failureMessage(result)); return; }
     const sent = result.data && typeof result.data.message === 'string'
       ? result.data.message : TEXT.LINK_SENT_FALLBACK;
-    addHint.hidden = true;
     showStatus(`${sent} ${TEXT.JUNK}`);
   }
 
@@ -232,6 +245,7 @@
   async function deleteAccount() {
     const user = window.currentUser;
     if (!user || !user.email) return;
+    closeMenu();
 
     let note = null;
     for (;;) {
@@ -253,19 +267,18 @@
     }
   }
 
-  changeButton.addEventListener('click', () => {
-    showStatus('');
-    setFormOpen(true);
-    currentInput.focus();
+  changeButton.addEventListener('click', openPasswordBox);
+  cancelButton.addEventListener('click', cancelPasswordBox);
+  overlay.addEventListener('click', event => {
+    if (event.target === overlay) cancelPasswordBox();
   });
-  cancelButton.addEventListener('click', () => {
-    setFormOpen(false);
-    changeButton.focus();
+  overlay.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); cancelPasswordBox(); }
   });
   form.addEventListener('submit', submitChange);
   addButton.addEventListener('click', sendPasswordLink);
   document.getElementById('settings-delete-account-btn').addEventListener('click', deleteAccount);
 
   window.showAccountSecurity = showAccountSecurity;
-  window.hideAccountSecurityForm = () => setFormOpen(false);
+  window.closePasswordBox = closePasswordBox;
 })();

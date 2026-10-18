@@ -1,7 +1,10 @@
 const GOOGLE_SIGN_IN_URL = '/api/auth/google/start';
-// How long the account panel waits for its password row before showing
+// How long the account menu waits for its password item before showing
 // anyway, so a slow connection still answers the click.
 const ACCOUNT_OPEN_WAIT_MS = 600;
+
+const accountButton = document.getElementById('account-settings-btn');
+const accountMenu = document.getElementById('account-menu');
 
 async function initAuth() {
   try {
@@ -23,6 +26,7 @@ function showUser(user) {
   document.body.classList.add('signed-in');
   document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
+  document.getElementById('account-initial').textContent = accountInitial(user);
   // The sidebar shows the notebook's pages once it knows whose they are.
   if (window.openNotebook) window.openNotebook();
 }
@@ -36,20 +40,48 @@ function showSignIn() {
   if (window.refreshNotebook) window.refreshNotebook();
 }
 
-// Shows once the password row is settled, so the panel opens at its full
+// The first letter of the address stands for the account in the header.
+function accountInitial(user) {
+  const email = (user && user.email) || '';
+  return email.charAt(0).toUpperCase();
+}
+
+function isAccountMenuOpen() {
+  return !accountMenu.hidden;
+}
+
+// Shows once the password item is settled, so the menu opens at its full
 // size instead of growing under the reader.
-async function openAccountSettings() {
+async function openAccountMenu() {
   document.getElementById('settings-user-email').textContent = window.currentUser?.email || '';
   if (window.showAccountSecurity) {
     const settled = window.showAccountSecurity(window.currentUser);
     await Promise.race([settled, new Promise(done => setTimeout(done, ACCOUNT_OPEN_WAIT_MS))]);
   }
-  document.getElementById('account-settings-overlay').classList.add('open');
+  accountMenu.hidden = false;
+  accountButton.setAttribute('aria-expanded', 'true');
 }
 
-function closeAccountSettings() {
-  document.getElementById('account-settings-overlay').classList.remove('open');
-  if (window.hideAccountSecurityForm) window.hideAccountSecurityForm();
+function closeAccountMenu() {
+  accountMenu.hidden = true;
+  accountButton.setAttribute('aria-expanded', 'false');
+}
+
+function toggleAccountMenu() {
+  if (isAccountMenuOpen()) closeAccountMenu();
+  else openAccountMenu();
+}
+
+// A click anywhere else closes the menu, as the sort menu does.
+function closeAccountMenuOnOutsideClick(event) {
+  if (!isAccountMenuOpen() || event.target.closest('.account-menu')) return;
+  closeAccountMenu();
+}
+
+function closeAccountMenuOnEscape(event) {
+  if (event.key !== 'Escape' || !isAccountMenuOpen()) return;
+  closeAccountMenu();
+  accountButton.focus();
 }
 
 // Signing in with Google is also how an account is made: the first visit
@@ -74,7 +106,8 @@ document.getElementById('sign-up-btn').addEventListener('click', openSignIn);
 // screen. An expired session does not come through here, so writing that
 // has not been saved yet survives it.
 function endSession() {
-  closeAccountSettings();
+  closeAccountMenu();
+  if (window.closePasswordBox) window.closePasswordBox();
   showSignIn();
   if (window.clearLyricState) window.clearLyricState();
 }
@@ -95,13 +128,14 @@ async function signOut() {
 
 document.getElementById('settings-sign-out-btn').addEventListener('click', signOut);
 
-document.getElementById('account-settings-btn').addEventListener('click', openAccountSettings);
-document.getElementById('close-account-settings-btn').addEventListener('click', closeAccountSettings);
-document.getElementById('account-settings-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('account-settings-overlay')) closeAccountSettings();
-});
+accountButton.addEventListener('click', toggleAccountMenu);
+// On the document: sending a password link disables its item, focus falls
+// to the body, and Escape still has to close the menu.
+document.addEventListener('keydown', closeAccountMenuOnEscape);
+document.addEventListener('click', closeAccountMenuOnOutsideClick);
 
 window.handleSessionExpired = showSignIn;
+window.closeAccountMenu = closeAccountMenu;
 window.startSignIn = startSignIn;
 
 initAuth();

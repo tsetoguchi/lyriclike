@@ -2236,9 +2236,162 @@ header .nav-icon circle {
   }
 }
 
-/* ── Account settings overlay ── */
+/* ── Account menu ──
+   The first letter of the address, in a circle, opens a short menu under
+   it, the way Google and Notion keep the account. */
 
-#account-settings-overlay {
+.account-menu {
+  position: relative;
+}
+
+.account-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  padding: 0;
+  border-radius: 50%;
+  background: var(--accent-wash-strong);
+  border: var(--hairline) solid var(--accent-border);
+  color: var(--accent);
+  font-family: var(--font-editor);
+  font-size: var(--text-subhead);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) ease;
+}
+
+/* Drawn at 32px, it still takes a full fingertip. */
+.account-avatar::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  transform: translate(-50%, -50%);
+}
+
+.account-avatar:hover,
+.account-avatar[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+
+.account-menu-popover {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  width: 16.5rem;
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-2) 0;
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  /* The header keeps its buttons on one line; the menu's text may wrap. */
+  white-space: normal;
+}
+
+.account-menu-popover[hidden] {
+  display: none;
+}
+
+.account-menu-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.account-menu-caption {
+  font-size: var(--text-caption-2);
+  color: var(--ink-faded);
+}
+
+.account-menu-email {
+  color: var(--ink);
+  overflow-wrap: anywhere; /* a long address wraps instead of widening the menu */
+}
+
+.account-menu-group {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
+  border-top: var(--hairline) solid var(--rule);
+}
+
+.account-menu-group:last-child {
+  padding-bottom: 0;
+}
+
+.account-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-editor);
+  font-size: var(--text-footnote);
+  letter-spacing: var(--tracking-tight);
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu-item[hidden],
+.account-menu-status[hidden] {
+  display: none;
+}
+
+@media (hover: hover) {
+  .account-menu-item:hover {
+    background-color: var(--ink-wash);
+  }
+}
+
+.account-menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.account-menu-icon {
+  flex-shrink: 0;
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: none;
+  stroke: var(--ink-faded);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Rare and final, so quiet: red text, and the confirm step does the warning. */
+.account-menu-item.is-danger,
+.account-menu-item.is-danger .account-menu-icon {
+  color: var(--danger);
+  stroke: currentColor;
+}
+
+/* Says the password link went out, under the item that sent it. */
+.account-menu-status {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) * 2 + var(--space-3));
+  font-size: var(--text-caption-2);
+  color: var(--ink-faded);
+}
+
+/* ── Change password box ──
+   Set like the share dialog: a large regular-weight title over the form. */
+
+#password-overlay {
   display: flex;
   position: fixed;
   inset: 0;
@@ -2251,7 +2404,7 @@ header .nav-icon circle {
   transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
 }
 
-#account-settings-overlay.open {
+#password-overlay.open {
   opacity: 1;
   visibility: visible;
   transition: opacity var(--duration-base) ease, visibility 0s;
@@ -2260,7 +2413,7 @@ header .nav-icon circle {
 /* The shadow alone is lost on the dimmed desk, which is nearly as dark as it
    is. A hairline at the edge, as the definition popup has, is what lifts the
    panel off it. */
-#account-settings-panel {
+#password-panel {
   background: var(--paper-card);
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
@@ -2271,148 +2424,24 @@ header .nav-icon circle {
   max-width: 92vw;
   max-height: 90vh;
   overflow-y: auto;
+  box-sizing: border-box;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
+  gap: var(--space-6);
 }
 
-#account-settings-overlay.open #account-settings-panel {
+#password-overlay.open #password-panel {
   transform: none;
 }
 
-/* Set like the share dialog: a large regular-weight title, with the
-   address under it so the writer sees which account they are in. */
-.account-settings-header {
-  padding: var(--space-6) var(--space-6) 0;
-}
-
-.account-settings-heading {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.account-settings-title {
+.password-title {
   margin: 0;
   font-family: var(--font-editor);
   font-size: var(--text-title-3);
   font-weight: var(--weight-regular);
   letter-spacing: var(--tracking-tight);
   color: var(--ink);
-}
-
-.account-settings-header .settings-value {
-  font-size: var(--text-footnote);
-  color: var(--ink-faded);
-}
-
-/* One list of rows, ruled like the share dialog's people. */
-.account-settings-body {
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-}
-
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.settings-item + .settings-item {
-  border-top: var(--hairline) solid var(--rule);
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 52px;
-  font-size: var(--text-footnote);
-}
-
-/* Sign out on the left, Done on the right, as Copy link and Done sit in
-   the share dialog. */
-#account-settings-panel .account-settings-actions {
-  padding: var(--space-2) var(--space-6) var(--space-6);
-}
-
-.account-sign-out {
-  margin-right: auto;
-}
-
-.settings-label {
-  color: var(--ink);
-  flex-shrink: 0;
-}
-
-.settings-value {
-  color: var(--ink);
-  min-width: 0;
-  overflow-wrap: anywhere; /* a long email address wraps instead of widening the panel */
-}
-
-/* Small actions read as text, so they do not compete with signing out. The
-   padding keeps a finger-sized target without drawing a box. */
-.settings-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap-target);
-  text-decoration: none;
-  margin: calc(var(--space-3) * -1) calc(var(--space-2) * -1);
-  padding: var(--space-3) var(--space-2);
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--accent);
-  font-family: var(--font-editor);
-  font-size: var(--text-footnote);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-}
-
-.settings-link:hover {
-  color: var(--accent-hover);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Rare and final, so quiet: red text, and the confirm step does the warning. */
-.settings-link.danger-link {
-  color: var(--danger);
-  font-weight: var(--weight-regular);
-}
-
-.settings-link.danger-link:hover {
-  color: var(--danger-hover);
-}
-
-.settings-hint {
-  font-size: var(--text-caption-1);
-  color: var(--ink-faded);
-}
-
-/* The change-password form opens in place, under its button. */
-.settings-section[hidden],
-.settings-link[hidden],
-.security-form[hidden],
-.settings-hint[hidden] {
-  display: none;
-}
-
-.security-form {
-  padding-top: var(--space-2);
-}
-
-/* Changing the password: only the email and the form stay in the panel. */
-.is-changing-password .settings-section:not(#security-section),
-.is-changing-password .account-settings-actions {
-  display: none;
-}
-
-.is-changing-password .security-form {
-  padding-top: var(--space-3);
 }
 
 .security-actions {

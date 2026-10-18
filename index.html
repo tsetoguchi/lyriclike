@@ -69,8 +69,30 @@
           <button id="sign-in-btn" class="toggle-btn">Log in</button>
           <button id="sign-up-btn" class="toggle-btn primary-btn">Sign up for free</button>
         </span>
-        <span id="user-info" style="display:none">
-          <button id="account-settings-btn" class="toggle-btn">Account</button>
+        <span id="user-info" class="account-menu" style="display:none">
+          <button id="account-settings-btn" class="account-avatar" type="button"
+                  aria-label="Account" aria-expanded="false" aria-controls="account-menu"><span
+                  id="account-initial" aria-hidden="true"></span></button>
+          <div id="account-menu" class="account-menu-popover" hidden>
+            <div class="account-menu-who">
+              <span class="account-menu-caption">Signed in as</span>
+              <span id="settings-user-email" class="account-menu-email"></span>
+            </div>
+            <div class="account-menu-group">
+              <button id="change-password-btn" class="account-menu-item" type="button" hidden
+                      aria-haspopup="dialog">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Change password</button>
+              <button id="add-password-btn" class="account-menu-item" type="button" hidden>
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Add a password</button>
+              <p id="security-status" class="account-menu-status" aria-live="polite" hidden></p>
+              <button id="settings-sign-out-btn" class="account-menu-item" type="button">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 8l4 4-4 4M19 12H9"/></svg>Sign out</button>
+            </div>
+            <div class="account-menu-group">
+              <button id="settings-delete-account-btn" class="account-menu-item is-danger" type="button">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete account</button>
+            </div>
+          </div>
         </span>
       </div>
     </div>
@@ -173,63 +195,28 @@
     </div>
   </nav>
   </div>
-  <div id="account-settings-overlay">
-    <div id="account-settings-panel" role="dialog" aria-modal="true" aria-labelledby="account-settings-title"
-         aria-describedby="settings-user-email">
-      <div class="account-settings-header">
-        <div class="account-settings-heading">
-          <h2 id="account-settings-title" class="account-settings-title">Account</h2>
-          <span id="settings-user-email" class="settings-value"></span>
+  <div id="password-overlay">
+    <div id="password-panel" role="dialog" aria-modal="true" aria-labelledby="password-title">
+      <h2 id="password-title" class="password-title">Change password</h2>
+      <form id="change-password-form" class="auth-form security-form" novalidate>
+        <input id="security-username" type="email" autocomplete="username" hidden>
+        <div class="modal-field">
+          <label class="modal-label" for="current-password">Current password</label>
+          <input id="current-password" class="modal-input" type="password" maxlength="256"
+                 autocomplete="current-password">
         </div>
-      </div>
-      <div class="account-settings-body">
-        <div id="security-section" class="settings-section settings-item" hidden>
-          <div class="settings-row">
-            <span class="settings-label">Password</span>
-            <button id="change-password-btn" class="settings-link" type="button" hidden
-                    aria-label="Change password"
-                    aria-expanded="false" aria-controls="change-password-form">Change</button>
-            <button id="add-password-btn" class="settings-link" type="button" hidden
-                    aria-label="Add a password">Add</button>
-          </div>
-          <p id="add-password-hint" class="settings-hint" hidden>We'll email you a link to set one.</p>
-          <form id="change-password-form" class="auth-form security-form" novalidate hidden>
-            <input id="security-username" type="email" autocomplete="username" hidden>
-            <div class="modal-field">
-              <label class="modal-label" for="current-password">Current password</label>
-              <input id="current-password" class="modal-input" type="password" maxlength="256"
-                     autocomplete="current-password">
-            </div>
-            <div class="modal-field">
-              <label class="modal-label" for="new-password">New password</label>
-              <input id="new-password" class="modal-input" type="password" maxlength="256"
-                     autocomplete="new-password" aria-describedby="new-password-hint">
-              <p id="new-password-hint" class="auth-hint">At least 8 characters</p>
-            </div>
-            <div id="security-error" class="auth-error" aria-live="polite"></div>
-            <div class="security-actions">
-              <button id="cancel-password-btn" class="toggle-btn" type="button">Cancel</button>
-              <button id="save-password-btn" class="toggle-btn modal-confirm" type="submit">Save password</button>
-            </div>
-          </form>
-          <p id="security-status" class="settings-hint" aria-live="polite" hidden></p>
+        <div class="modal-field">
+          <label class="modal-label" for="new-password">New password</label>
+          <input id="new-password" class="modal-input" type="password" maxlength="256"
+                 autocomplete="new-password" aria-describedby="new-password-hint">
+          <p id="new-password-hint" class="auth-hint">At least 8 characters</p>
         </div>
-        <div class="settings-section settings-item">
-          <div class="settings-row">
-            <button id="settings-delete-account-btn" class="settings-link danger-link"
-                    type="button">Delete account</button>
-          </div>
+        <div id="security-error" class="auth-error" aria-live="polite"></div>
+        <div class="security-actions">
+          <button id="cancel-password-btn" class="toggle-btn" type="button">Cancel</button>
+          <button id="save-password-btn" class="toggle-btn modal-confirm" type="submit">Save password</button>
         </div>
-      </div>
-      <div class="modal-actions account-settings-actions">
-        <button id="settings-sign-out-btn" class="toggle-btn tip-btn account-sign-out" type="button">
-          <svg class="tip-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/>
-            <path d="M15 8l4 4-4 4M19 12H9"/>
-          </svg><span class="tip-btn-label">Sign out</span>
-        </button>
-        <button id="close-account-settings-btn" class="toggle-btn" type="button">Done</button>
-      </div>
+      </form>
     </div>
   </div>
   <div id="dialog-overlay" class="modal-overlay" hidden>
