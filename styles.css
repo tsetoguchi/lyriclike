@@ -3297,7 +3297,16 @@ body.sidebar-open #sidebar-scrim {
   text-align: center;
 }
 
+.sidebar-contact {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--hairline) solid var(--margin-line);
+  color: var(--ink-faded);
+  font-size: var(--text-caption-1);
+}
+
 .app-footer a,
+.sidebar-contact a,
 .sidebar-links a {
   color: var(--ink-faded);
   text-decoration: underline;
@@ -3305,6 +3314,7 @@ body.sidebar-open #sidebar-scrim {
 }
 
 .app-footer a:hover,
+.sidebar-contact a:hover,
 .sidebar-links a:hover {
   color: var(--ink);
 }
@@ -3313,7 +3323,7 @@ body.sidebar-open #sidebar-scrim {
    to the foot of the notebook drawer instead. */
 .sidebar-links {
   display: none;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   font-size: var(--text-caption-1);
 }
 
@@ -3324,6 +3334,7 @@ body.sidebar-open #sidebar-scrim {
 
   .sidebar-links {
     display: block;
+    padding-top: 0;
   }
 }
 
