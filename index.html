@@ -258,7 +258,10 @@
   </div>
   <div id="share-overlay" class="modal-overlay" hidden>
     <div id="share-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
-      <div class="modal-header"><span id="share-title">Share page</span></div>
+      <div class="modal-header">
+        <span id="share-title">Share page</span>
+        <p id="share-subtext" class="share-subtext" hidden>People you add can read and edit this page.</p>
+      </div>
       <div class="modal-body">
         <form id="share-form" class="modal-field" novalidate>
           <input id="share-email" class="modal-input" type="email" maxlength="254"
