@@ -43,3 +43,11 @@ export async function readAccess(db, lyricId, sessionIds, now) {
   ]);
   return { validSessions, allowedEmails };
 }
+
+// One row in the same logs table the Pages site writes to, so the growth
+// numbers all come from one place. No ip: the room never sees one.
+export async function writeEvent(db, userId, event, now) {
+  await db.prepare(
+    'INSERT INTO logs (id, user_id, event, ip, created_at) VALUES (?, ?, ?, NULL, ?)'
+  ).bind(crypto.randomUUID(), userId, event, now).run();
+}

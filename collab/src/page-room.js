@@ -2,6 +2,7 @@
 // storage, alarm and requests into RoomCore's host and calls.
 import { DurableObject } from 'cloudflare:workers';
 
+import { writeEvent } from './d1-page.js';
 import { DiffMatchPatch } from './deps.js';
 import { colourFor } from './presence.js';
 import { RoomCore } from './room-core.js';
@@ -44,6 +45,7 @@ export class PageRoom extends DurableObject {
       getAlarm: () => ctx.storage.getAlarm(),
       setAlarm: at => ctx.storage.setAlarm(at),
       deleteAlarm: () => ctx.storage.deleteAlarm(),
+      recordEvent: (userId, event) => writeEvent(env.lyricalmiracle_db, userId, event, Date.now()),
       log: (event, fields) => console.log(JSON.stringify({ event, ...fields })),
     });
   }
