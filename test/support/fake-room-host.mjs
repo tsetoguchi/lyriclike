@@ -1,6 +1,7 @@
 // Stand-ins for what a Durable Object gives RoomCore: sockets with
 // attachments, storage, a clock and one alarm. TestClient syncs a Y.Doc with
 // the room the way the browser client will.
+import { writeEvent } from '../../collab/src/d1-page.js';
 import { DiffMatchPatch, Y } from '../../collab/src/deps.js';
 import {
   SYNC, encodePresence, encodeSyncStep1, encodeSyncStep2, encodeUpdate, readRoomMessage,
@@ -55,6 +56,7 @@ export function createRoomHost({ db, lyricId, startAt = 1_000_000 }) {
     deleteAlarm: async () => {
       host.alarmAt = null;
     },
+    recordEvent: (userId, event) => writeEvent(db, userId, event, host.clock),
     log: (event, fields) => host.logs.push({ event, ...fields }),
   };
   return host;

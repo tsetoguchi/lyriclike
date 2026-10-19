@@ -30,6 +30,7 @@ export const RECHECK_MS = 5 * 60_000;
 // One retry after merging a save made outside the room.
 const WRITE_ATTEMPTS = 2;
 const OUTSIDE = 'outside';
+const LIVE_SESSION_EVENT = 'live_session';
 
 function attachmentOf(socket) {
   return socket.deserializeAttachment() || {};
@@ -146,6 +147,19 @@ export class RoomCore {
     this.greet(socket, epoch);
     this.markOccupied();
     this.host.log('join', { userId: identity.userId });
+    await this.recordLiveSession(identity.userId);
+  }
+
+  // The person who joins second is the one logged, so a page opened by its
+  // owner alone, or by one person in two tabs, never counts as live editing.
+  async recordLiveSession(userId) {
+    const isSomeoneElseHere = this.openSockets().some(socket => attachmentOf(socket).userId !== userId);
+    if (!isSomeoneElseHere) return;
+    try {
+      await this.host.recordEvent(userId, LIVE_SESSION_EVENT);
+    } catch (err) {
+      this.host.log('record_failed', { message: String(err) });
+    }
   }
 
   // A failed load leaves nobody half-joined: the socket would otherwise count

@@ -63,7 +63,35 @@ beforeEach(async () => {
   room = new RoomCore(host);
 });
 
+async function readLiveSessions() {
+  const { results } = await db.prepare("SELECT user_id FROM logs WHERE event = 'live_session'").all();
+  return results.map(row => row.user_id);
+}
+
 describe('joining', () => {
+  it('logs a live session for whoever joins second, and nobody else', async () => {
+    await connect(ANN);
+    assert.deepEqual(await readLiveSessions(), []);
+    await connect(BO);
+    assert.deepEqual(await readLiveSessions(), ['bo']);
+  });
+
+  it('does not log a second tab of the same person', async () => {
+    await connect(ANN);
+    await connect(ANN);
+    assert.deepEqual(await readLiveSessions(), []);
+  });
+
+  it('still lets the person join when the log write fails', async () => {
+    host.recordEvent = async () => {
+      throw new Error('db down');
+    };
+    await connect(ANN);
+    const bo = await connect(BO);
+    assert.equal(bo.text, 'hello');
+    assert.ok(host.logs.some(entry => entry.event === 'record_failed'));
+  });
+
   it('greets with an epoch, the page and a saved snapshot', async () => {
     const ann = await connect(ANN);
     assert.match(ann.hello.epoch, /^[0-9a-f-]{36}$/);
