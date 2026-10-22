@@ -347,13 +347,23 @@ header h1 a {
   text-decoration: none;
 }
 
-/* The logo replaces the typeset title. The h1's type rules stay so the alt
-   text still looks like the wordmark if the image fails to load. Block, so no
-   baseline gap sits under it. */
-header h1 img {
+/* The wordmark, set as text: Montserrat with "Like" in amber. It undoes the
+   h1's capitals and wide tracking, and is block, so no baseline gap sits
+   under it. */
+.wordmark-text {
   display: block;
-  height: var(--wordmark-height);
-  width: auto;
+  font-family: var(--font-display);
+  font-size: var(--text-title-2);
+  font-weight: var(--weight-bold);
+  line-height: var(--wordmark-height);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.wordmark-text span {
+  color: var(--accent);
 }
 
 #status {
@@ -3038,12 +3048,6 @@ body.sidebar-open #sidebar-scrim {
   justify-content: space-between;
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5);
   flex-shrink: 0;
-}
-
-.sidebar-wordmark img {
-  display: block;
-  height: var(--wordmark-height);
-  width: auto;
 }
 
 .sidebar-toggle svg {

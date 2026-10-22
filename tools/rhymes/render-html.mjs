@@ -79,7 +79,7 @@ function renderHead({ title, description, path, structuredData }) {
 
 function renderSiteHeader() {
   return `<header class="site-header"><div class="site-header-inner">
-<a class="wordmark" href="/"><img src="/assets/wordmark.png" alt="${SITE_NAME}" width="98" height="28"></a>
+<a class="wordmark" href="/">Lyric<span>Like</span></a>
 <a class="header-link" href="${RHYMES_PATH}">Rhyming dictionary</a>
 </div></header>`;
 }
