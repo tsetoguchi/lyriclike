@@ -292,6 +292,25 @@ describe('limits in /api/me', () => {
   });
 });
 
+describe('the extension script in /api/me', () => {
+  it('EXTENSION_SCRIPT_URL unset reports null', async () => {
+    const env = await setUp();
+    assert.equal((await getMe(env)).extension_script_url, null);
+  });
+
+  it('a same-origin path is reported as is', async () => {
+    const env = await setUp({ EXTENSION_SCRIPT_URL: '/ext-test/site.js' });
+    assert.equal((await getMe(env)).extension_script_url, '/ext-test/site.js');
+  });
+
+  it('another origin is reported as null', async () => {
+    for (const url of ['https://evil.example/x.js', '//evil.example/x.js', '/\\evil.example/x.js']) {
+      const env = await setUp({ EXTENSION_SCRIPT_URL: url });
+      assert.equal((await getMe(env)).extension_script_url, null, url);
+    }
+  });
+});
+
 describe('limits and account delete', () => {
   it('deleting the account removes its user_limits row', async () => {
     const env = await setUp();

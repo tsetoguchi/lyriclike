@@ -61,7 +61,18 @@ export async function describeAccount(env, userId) {
     page_limit: limits.pageLimit,
     people_limit: limits.peopleLimit,
     limits_enforced: isLimitsEnforced(env),
+    extension_script_url: extensionScriptUrl(env),
   };
+}
+
+// The optional extension script must be a path on this site, since the CSP
+// only runs 'self'. "//host" and "/\host" (browsers read "\" as "/") are
+// other origins.
+export function extensionScriptUrl(env) {
+  const url = env.EXTENSION_SCRIPT_URL;
+  if (typeof url !== 'string' || !url.startsWith('/')) return null;
+  const second = url.charAt(1);
+  return second === '/' || second === '\\' ? null : url;
 }
 
 // Signs the person in: a fresh session, its cookie, and the account in the
