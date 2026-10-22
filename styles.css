@@ -2251,6 +2251,29 @@ header .nav-icon circle {
   position: relative;
 }
 
+/* A spot an extension script can fill, left of the account. Empty, or
+   signed out, it takes no room. Its items stand apart from the account
+   icon, since they are actions and the icon is who you are, and match its
+   height so the two line up. */
+.header-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-right: var(--space-2);
+}
+
+.header-slot > * {
+  display: inline-flex;
+  align-items: center;
+  height: var(--space-8);
+  padding-block: 0;
+}
+
+.header-slot:empty,
+body:not(.signed-in) .header-slot {
+  display: none;
+}
+
 .account-avatar {
   position: relative;
   display: flex;
@@ -3431,6 +3454,11 @@ body.sidebar-open #sidebar-scrim {
     flex-wrap: nowrap;
     gap: var(--space-1);
     width: auto;
+  }
+
+  /* A little closer on phones, where the header has less room. */
+  .header-slot {
+    margin-right: var(--space-1);
   }
 
   /* Sized so both signed-in controls clear the centred wordmark. */
