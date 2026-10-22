@@ -51,7 +51,8 @@ describe('findHits', () => {
     for (const text of [
       'Stripe', 'paddle.js', 'Lemon Squeezy', 'lemonsqueezy', 'checkout()', 'billing',
       'Subscription', 'price', 'prices', 'pricing', 'payment', 'Payments', 'Go Pro',
-      '/ext/script.js',
+      '/ext/script.js', 'PRICE_LABEL', 'HTTP_PAYMENT_REQUIRED', 'monthlyPrice',
+      'price_id', 'isPro', 'is_pro', 'PRO_LIMIT', 'stripeKey',
     ]) {
       assert.equal(hitsFor(text).length, 1, text);
     }
@@ -61,7 +62,8 @@ describe('findHits', () => {
     for (const text of [
       'process', 'promise', 'approach', 'priceless', 'striped', 'pay', 'plans',
       "'SF Pro Text'", 'uses: actions/checkout@v4', 'git checkout -- rhymes',
-      '/ext-test/site.js', 'extensions.js',
+      '/ext-test/site.js', 'extensions.js', 'toPromise', 'Process', 'PROCESS_ID',
+      'pro-choice', 'caprice', 'supercheckouts',
     ]) {
       assert.deepEqual(hitsFor(text), [], text);
     }
