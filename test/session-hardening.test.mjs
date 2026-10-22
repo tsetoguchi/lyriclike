@@ -12,7 +12,7 @@ import * as start from '../functions/api/auth/google/start.js';
 import * as logout from '../functions/api/auth/logout.js';
 import * as me from '../functions/api/me.js';
 import {
-  base64Url, createSession, sessionCookie, sha256Bytes, sha256Hex, truncateIp, writeLog,
+  base64Url, createSession, getUser, sessionCookie, sha256Bytes, sha256Hex, truncateIp, writeLog,
 } from '../functions/_shared.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 
@@ -91,6 +91,23 @@ describe('session storage', () => {
     const token = await createSession(env, userId);
     const stolenHash = await sha256Hex(token);
     assert.equal((await callMe(stolenHash)).status, 401);
+  });
+
+  // Every signed-in request starts here, and each database call is a round
+  // trip to wherever the database lives.
+  it('finds the session and its user in one database call', async () => {
+    const token = await createSession(env, userId);
+    const prepare = database().prepare.bind(database());
+    let calls = 0;
+    database().prepare = sql => { calls += 1; return prepare(sql); };
+
+    const user = await getUser(new Request(BASE_URL + '/api/me', {
+      headers: { Cookie: `sid=${token}` },
+    }), env);
+
+    assert.equal(user.id, userId);
+    assert.equal(user.email_normalized, 'writer@example.com');
+    assert.equal(calls, 1);
   });
 
   it('issues a different token every time', async () => {
