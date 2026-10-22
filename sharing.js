@@ -11,6 +11,9 @@
   // runs out after a day, and signing out clears it.
   const PENDING_SHARE_KEY = 'pending_shared';
   const PENDING_SHARE_MS = 24 * 60 * 60 * 1000;
+  // HTTP_OVER_LIMIT comes from storage.js: the scripts share one global scope.
+  const LIMIT_KIND_PEOPLE = 'people';
+  const PEOPLE_LIMIT_ERROR = 'people_limit';
   const PAGE_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
   const STOP_TOKEN_PATTERN = /^[0-9a-f]{64}\.[A-Za-z0-9_-]{43}$/;
 
@@ -305,6 +308,11 @@
     return window.SiteLimits.askAtLimit('people', people.length);
   }
 
+  function isPeopleLimitAnswer(res, data) {
+    return res.status === HTTP_OVER_LIMIT && Boolean(window.SiteLimits)
+      && Boolean(data) && data.error === PEOPLE_LIMIT_ERROR;
+  }
+
   async function sharePage(event) {
     event.preventDefault();
     const page = dialogPage;
@@ -326,6 +334,10 @@
       }
       const data = await res.json().catch(() => null);
       if (page !== dialogPage) return;
+      if (isPeopleLimitAnswer(res, data)) {
+        await window.SiteLimits.showLimitDialog({ kind: LIMIT_KIND_PEOPLE, limit: data.limit });
+        return;
+      }
       if (!res.ok) {
         showResult(errorMessage(data), { error: true });
         return;
