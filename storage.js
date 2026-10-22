@@ -8,6 +8,8 @@ const SAMPLE_SEEN_KEY = 'sample_seen';
 const SAMPLE_HINT_SEEN_KEY = 'sample_hint_seen';
 // Set once this device has reported its first typed word to analytics.
 const FIRST_WRITE_KEY = 'first_write_tracked';
+// Set once this device has reported its first save to an account.
+const FIRST_SAVE_KEY = 'first_save_tracked';
 // SAMPLE_VERSE and SAMPLE_PICKED_WORD, shown to a first-time visitor so the
 // counts and rhyme letters are on screen before they have written anything,
 // come from sample-verse.js.
@@ -1074,6 +1076,7 @@ async function isPausedAnswer(res) {
 }
 
 function savedAs(body, revision) {
+  trackEventOnce(FIRST_SAVE_KEY, 'first_save');
   lastSavedBody = body;
   currentRevision = revision;
   unansweredBody = null;
@@ -1784,13 +1787,7 @@ function endSample() {
 // The moment a visitor becomes a writer. Loading a page or the sample fires
 // input too, but only a person's typing is trusted, so those never count.
 function trackFirstWrite() {
-  try {
-    if (localStorage.getItem(FIRST_WRITE_KEY) !== null) return;
-    localStorage.setItem(FIRST_WRITE_KEY, '1');
-  } catch {
-    return;
-  }
-  trackEvent('first_write');
+  trackEventOnce(FIRST_WRITE_KEY, 'first_write');
 }
 
 function clearSample() {

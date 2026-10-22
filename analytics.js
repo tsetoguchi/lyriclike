@@ -18,6 +18,18 @@
   // Callers never have to check whether analytics is on.
   window.trackEvent = function ignoreEvent() {};
 
+  // Reports a milestone the first time this device reaches it. The flag is
+  // written first, so a storage failure stays quiet instead of repeating it.
+  window.trackEventOnce = function trackEventOnce(storageKey, name) {
+    try {
+      if (localStorage.getItem(storageKey) !== null) return;
+      localStorage.setItem(storageKey, '1');
+    } catch {
+      return;
+    }
+    window.trackEvent(name);
+  };
+
   // Fail loudly in the console rather than silently reporting to nowhere.
   if (MEASUREMENT_ID === PLACEHOLDER_ID) {
     console.warn('analytics.js: no measurement id set; analytics is off');
