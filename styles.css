@@ -2247,6 +2247,19 @@ header .nav-icon circle {
   position: relative;
 }
 
+/* A spot an extension script can fill, left of the account. Empty, or
+   signed out, it takes no room. */
+.header-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.header-slot:empty,
+body:not(.signed-in) .header-slot {
+  display: none;
+}
+
 .account-avatar {
   position: relative;
   display: flex;

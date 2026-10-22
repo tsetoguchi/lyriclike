@@ -1,14 +1,16 @@
 // An optional extension hook. A site can name one same-origin script in
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
-// That script may swap the limit dialog for its own and listen for the
-// 'limit-reached' event. With no script set, nothing is fetched and the
-// neutral dialog in limits.js is all anyone sees.
+// That script may swap the limit dialog for its own, listen for the
+// 'limit-reached' event, and add its own items to the header slot. With no
+// script set, nothing is fetched and the neutral dialog in limits.js is all
+// anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
   const HOOK_VERSION = 1;
   const ANSWER_DELETE = 'delete';
   const ANSWER_OK = 'ok';
+  const HEADER_SLOT_ID = 'header-slot';
 
   let limitDialog = null;
   const loadedUrls = new Set();
@@ -39,6 +41,12 @@
     }
   }
 
+  // The header's spot left of the account, for the script's own buttons.
+  // It shows only while signed in and once something is in it.
+  function headerSlot() {
+    return document.getElementById(HEADER_SLOT_ID);
+  }
+
   // /api/me can answer before this file runs, so the account already known
   // is checked now and every later sign-in through 'auth-checked'.
   function loadAccountScript() {
@@ -46,7 +54,9 @@
     if (user) loadScript(user.extension_script_url);
   }
 
-  root.siteExtensions = { version: HOOK_VERSION, setLimitDialog, loadScript, runLimitDialog };
+  root.siteExtensions = {
+    version: HOOK_VERSION, setLimitDialog, loadScript, runLimitDialog, headerSlot,
+  };
   document.addEventListener('auth-checked', loadAccountScript);
   loadAccountScript();
 })(this);
