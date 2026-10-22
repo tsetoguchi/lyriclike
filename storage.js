@@ -67,6 +67,10 @@ const UNSAVED_SIGN_OUT_MESSAGE =
 // The room saves at most every 5 seconds, so signing out waits for one save
 // and a little more.
 const SIGN_OUT_WAIT_MS = 8000;
+// A fetch started by pressing a row is only used by a click that follows
+// soon after; older than this, its page may have changed since.
+const PREFETCH_MAX_AGE_MS = 3000;
+const TOUCH_POINTER = 'touch';
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -90,6 +94,8 @@ let pendingConflict = null;
 // Whose the open page is and how many people have it. Sharing (sharing.js)
 // reads it for the Share button, the "Shared by" line and the poll.
 let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
+// The page fetch a press on a list row started, waiting for its click.
+let prefetchedLyric = null;
 
 function setPageInfo(lyric) {
   currentPageInfo = {
@@ -550,7 +556,12 @@ function buildListItem(lyric) {
     </div>
   `;
 
-  item.querySelector('.lyrics-list-open').addEventListener('click', () => {
+  const openButton = item.querySelector('.lyrics-list-open');
+  // A touch may be the start of scrolling the list, not a tap on this row.
+  openButton.addEventListener('pointerdown', event => {
+    if (event.pointerType !== TOUCH_POINTER) prefetchLyric(lyric.id);
+  });
+  openButton.addEventListener('click', () => {
     trackEvent('page_opened');
     loadLyric(lyric.id);
   });
@@ -581,8 +592,12 @@ function showLocalPage(container) {
 }
 
 function markActiveListItem() {
+  markListItem(currentLyricId);
+}
+
+function markListItem(id) {
   for (const item of document.querySelectorAll('#lyrics-list-items .lyrics-list-item[data-id]')) {
-    item.classList.toggle('active', item.dataset.id === currentLyricId);
+    item.classList.toggle('active', item.dataset.id === id);
   }
 }
 
@@ -609,13 +624,26 @@ function showListMessage(container, message) {
 }
 
 // Fetches a page and puts it on screen. Returns the fetch's status, or 0 when
-// the request itself failed. The save waiting on the page being left goes out
-// first, so its last words are not lost.
+// the request itself failed. The new page is only shown once the save waiting
+// on the page being left is done, so its last words are not lost; the fetch
+// runs alongside that save rather than after it. The row lights up at once,
+// and goes back to the open page if this one does not open.
 async function loadLyric(id) {
+  markListItem(id);
+  const status = await openLyric(id);
+  markActiveListItem();
+  return status;
+}
+
+// The open page itself is fetched only after its save lands: fetched during
+// it, the older words would come back and replace the newer ones.
+async function openLyric(id) {
+  const isOpenPage = id === currentLyricId;
+  const early = isOpenPage ? null : takePrefetchedLyric(id) || fetchLyric(id);
   if (!await flushSave()) return 0;
   let res;
   try {
-    res = await fetch(`/api/lyrics/${id}`);
+    res = await (early || fetchLyric(id));
   } catch {
     return 0;
   }
@@ -623,9 +651,30 @@ async function loadLyric(id) {
   const lyric = await res.json();
 
   showLyric(lyric);
-  markActiveListItem();
   closeLyricsList();
   return res.status;
+}
+
+function fetchLyric(id) {
+  const fetching = fetch(`/api/lyrics/${id}`);
+  // A fetch nobody ends up waiting for must not fail as an unhandled rejection.
+  fetching.catch(() => {});
+  return fetching;
+}
+
+// Pressing a row starts its fetch, so the time until the click lands is not
+// spent waiting.
+function prefetchLyric(id) {
+  if (id === currentLyricId) return;
+  prefetchedLyric = { id, startedAt: Date.now(), fetching: fetchLyric(id) };
+}
+
+function takePrefetchedLyric(id) {
+  const prefetched = prefetchedLyric;
+  prefetchedLyric = null;
+  if (!prefetched || prefetched.id !== id) return null;
+  if (Date.now() - prefetched.startedAt > PREFETCH_MAX_AGE_MS) return null;
+  return prefetched.fetching;
 }
 
 // The revision and the saved text are set before the input event, which

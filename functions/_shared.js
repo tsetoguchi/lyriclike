@@ -188,18 +188,19 @@ export async function getSession(request, env, { refresh = false } = {}) {
 
   const sessionId = await sha256Hex(cookies[SESSION_COOKIE]);
   const now = Date.now();
-  const session = await env.lyricalmiracle_db.prepare(
-    'SELECT user_id, expires_at, created_at FROM sessions WHERE id = ? AND expires_at > ?'
-  ).bind(sessionId, now).first();
-  if (!session) return null;
+  // One query, not two: every signed-in request waits on it, and each query is
+  // a round trip to the database. email_normalized is what shared pages are
+  // matched on, so every access check has it without another query.
+  const row = await env.lyricalmiracle_db.prepare(`
+    SELECT users.id, users.email, users.email_normalized, users.name,
+      sessions.expires_at, sessions.created_at AS session_created_at
+    FROM sessions JOIN users ON users.id = sessions.user_id
+    WHERE sessions.id = ? AND sessions.expires_at > ?
+  `).bind(sessionId, now).first();
+  if (!row) return null;
 
-  // email_normalized is what shared pages are matched on, so every access
-  // check has it without another query.
-  const user = await env.lyricalmiracle_db.prepare(
-    'SELECT id, email, email_normalized, name FROM users WHERE id = ?'
-  ).bind(session.user_id).first();
-  if (!user) return null;
-
+  const { expires_at: expiresAt, session_created_at: createdAt, ...user } = row;
+  const session = { expires_at: expiresAt, created_at: createdAt };
   const cookieMaxAge = refresh ? await extendSession(env, sessionId, session, now) : null;
   return { user, cookieMaxAge };
 }
