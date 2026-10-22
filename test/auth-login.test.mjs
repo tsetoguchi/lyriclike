@@ -49,6 +49,7 @@ describe('login', () => {
     assert.equal(response.status, 200);
     assert.deepEqual(body.user, {
       id, email: 'ann@example.com', name: 'Ann', has_password: true, providers: [], can_share: false,
+      page_count: 0, page_limit: null, people_limit: null, limits_enforced: false,
     });
     const cookie = response.headers.get('Set-Cookie');
     const [, sid] = /sid=([0-9a-f]{64});/.exec(cookie);

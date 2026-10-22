@@ -65,6 +65,7 @@ export async function onRequestDelete(context) {
       'DELETE FROM pending_signups WHERE email_normalized = ' +
       '(SELECT email_normalized FROM users WHERE id = ?)'
     ).bind(user.id),
+    env.lyricalmiracle_db.prepare('DELETE FROM user_limits WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
   for (const id of rooms.owned) closeRoom(context, id);
