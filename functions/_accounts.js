@@ -1,6 +1,7 @@
 // Account lookups and the session hand-off shared by the password routes, the
 // Google callback and /api/me.
 
+import { findLimits, isLimitsEnforced } from './_limits.js';
 import { isLiveFor } from './_live.js';
 import {
   PASSWORD_PROBLEM, PASSWORD_PROBLEM_MESSAGE, checkPasswordPolicy, isBreachedPassword,
@@ -41,10 +42,12 @@ export function findUserByEmail(env, emailNormalized) {
 export async function describeAccount(env, userId) {
   const row = await env.lyricalmiracle_db.prepare(`
     SELECT id, email, name, password_hash IS NOT NULL AS has_password,
-      (SELECT group_concat(provider) FROM identities WHERE user_id = users.id) AS providers
+      (SELECT group_concat(provider) FROM identities WHERE user_id = users.id) AS providers,
+      (SELECT count(*) FROM lyrics WHERE user_id = users.id) AS page_count
     FROM users WHERE id = ?
   `).bind(userId).first();
   if (!row) return null;
+  const limits = await findLimits(env, row.id);
   return {
     id: row.id,
     email: row.email,
@@ -53,6 +56,11 @@ export async function describeAccount(env, userId) {
     providers: row.providers ? row.providers.split(',').sort() : [],
     // The Share button follows live editing's switch (spec §8).
     can_share: isLiveFor(env, row.id),
+    // Only pages this account owns count; pages shared with it never do.
+    page_count: row.page_count,
+    page_limit: limits.pageLimit,
+    people_limit: limits.peopleLimit,
+    limits_enforced: isLimitsEnforced(env),
   };
 }
 
