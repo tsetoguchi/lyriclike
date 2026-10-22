@@ -233,10 +233,13 @@
   --google-text: #e3e3e3;
 
   /* Type */
-  /* Montserrat is the wordmark's face alone: every button, label and heading
-     sets in iA Writer with the lyrics, so the chrome reads as one app. */
+  /* Montserrat is the wordmark's face alone. The lyrics, and the syllable
+     and rhyme letter columns lined up with them, set in iA Writer, so the
+     page reads like a notebook. Every button, label and panel around them
+     uses the system's sans, which reads cleaner at small sizes. */
   --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -256,7 +259,7 @@ html {
 }
 
 body {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   background: var(--desk);
   color: var(--ink);
   height: 100vh;
@@ -333,8 +336,8 @@ header .header-tools .toggle-btn:has(> .nav-icon) {
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
-  background: var(--accent-wash-strong);
-  box-shadow: inset 0 0 0 var(--hairline) var(--accent-border);
+  background: var(--ink-wash-strong);
+  box-shadow: inset 0 0 0 var(--hairline) var(--ink);
 }
 
 /* The wordmark is the way home: a full page load back to the index. It keeps
@@ -354,7 +357,7 @@ header h1 img {
 }
 
 #status {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
@@ -363,7 +366,7 @@ header h1 img {
    sets smaller and looser than capitals at the same size, so they sit a
    size up with the tracking closed to match. */
 .toggle-btn {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -397,7 +400,7 @@ header .toggle-btn:has(> .nav-icon) {
   background: transparent;
   border: none;
   color: var(--ink-faded);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   letter-spacing: normal;
@@ -408,10 +411,11 @@ header .toggle-btn:has(> .nav-icon):hover {
   color: var(--ink);
 }
 
-/* Active is a colour change on icon and name together, as in the bar. */
+/* Active is a colour change on icon and name together, as in the bar:
+   white, so amber stays for the wordmark and the one main action. */
 header .toggle-btn:has(> .nav-icon).active {
   background: transparent;
-  color: var(--accent);
+  color: var(--ink);
 }
 
 header .nav-icon {
@@ -580,7 +584,7 @@ header .nav-icon circle {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
   white-space: nowrap;
@@ -619,7 +623,7 @@ header .nav-icon circle {
   background: var(--accent-wash);
   border: var(--hairline) solid var(--accent-border);
   border-radius: var(--radius-md);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-callout);
   font-weight: var(--weight-bold);
   color: var(--accent);
@@ -659,7 +663,7 @@ header .nav-icon circle {
 }
 
 .page-notice-text {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   color: var(--ink);
 }
@@ -723,7 +727,7 @@ header .nav-icon circle {
   background: none;
   border: none;
   text-align: left;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
   cursor: pointer;
@@ -783,7 +787,7 @@ header .nav-icon circle {
 
 .presence-note {
   margin-left: var(--space-2);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   color: var(--ink-faded);
@@ -877,7 +881,7 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   color: var(--ink);
 }
 
@@ -971,7 +975,7 @@ header .nav-icon circle {
 }
 
 .share-result-text {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-2);
   font-weight: var(--weight-regular);
   line-height: 1.5;
@@ -1014,7 +1018,7 @@ header .nav-icon circle {
   align-items: center;
   gap: var(--space-3);
   min-height: 44px;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
 }
 
@@ -1032,7 +1036,7 @@ header .nav-icon circle {
   flex-shrink: 0;
   border: var(--hairline) solid var(--ink-border);
   border-radius: 50%;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   color: var(--ink);
@@ -1207,7 +1211,7 @@ header .nav-icon circle {
   position: absolute;
   padding: var(--space-1) var(--space-2);
   background: var(--paper-card);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--accent);
   white-space: nowrap;
@@ -1340,7 +1344,7 @@ header .nav-icon circle {
   padding: 1px var(--space-1);
   outline: none;
   min-width: var(--title-min-width);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
 }
 
 /* A dotted rule under the title on hover says it can be written on, the way
@@ -1555,7 +1559,7 @@ header .nav-icon circle {
   border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) 0;
   background: var(--who);
   color: var(--on-accent);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-bold);
   line-height: 1.4;
@@ -1629,7 +1633,7 @@ header .nav-icon circle {
   right: 0;
   padding: var(--editor-pad);
   pointer-events: none;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   color: var(--ink-faded);
 }
 
@@ -1718,7 +1722,7 @@ header .nav-icon circle {
   height: var(--space-8);
   margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) calc(var(--space-1) * -1) 0;
   padding: 0 var(--space-2);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   background: transparent;
@@ -1778,7 +1782,7 @@ header .nav-icon circle {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -1835,7 +1839,7 @@ header .nav-icon circle {
 
 /* The same amber as the picked word in the lyrics, so the two read as one. */
 .selected-word-bar .word {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-body);
   font-weight: var(--weight-bold);
   color: var(--accent);
@@ -1865,7 +1869,7 @@ header .nav-icon circle {
   top: calc(-1 * var(--space-2));
   z-index: 1;
   padding: var(--space-3) var(--space-5);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   cursor: pointer;
@@ -1951,7 +1955,7 @@ header .nav-icon circle {
 }
 
 .rhyme-word {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   padding: var(--space-1) var(--space-3);
   background: var(--ink-wash);
@@ -2002,7 +2006,7 @@ header .nav-icon circle {
 }
 
 .def-word {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-body);
   font-weight: var(--weight-bold);
   color: var(--ink);
@@ -2010,14 +2014,14 @@ header .nav-icon circle {
 }
 
 .def-phonetic {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
   margin-bottom: var(--space-3);
 }
 
 .def-pos {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-bold);
   color: var(--ink);
@@ -2117,7 +2121,7 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-sm);
   color: var(--ink-faded);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   cursor: pointer;
   transition: background var(--duration-fast);
@@ -2150,7 +2154,7 @@ header .nav-icon circle {
   padding: var(--space-10) var(--space-5);
   text-align: center;
   color: var(--ink-faded);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   line-height: 1.6;
 }
@@ -2256,10 +2260,10 @@ header .nav-icon circle {
   height: var(--space-8);
   padding: 0;
   border-radius: 50%;
-  background: var(--accent-wash-strong);
-  border: var(--hairline) solid var(--accent-border);
-  color: var(--accent);
-  font-family: var(--font-editor);
+  background: var(--ink-wash-strong);
+  border: var(--hairline) solid var(--ink-border);
+  color: var(--ink);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   cursor: pointer;
   transition: border-color var(--duration-fast) ease;
@@ -2278,7 +2282,7 @@ header .nav-icon circle {
 
 .account-avatar:hover,
 .account-avatar[aria-expanded="true"] {
-  border-color: var(--accent);
+  border-color: var(--ink);
 }
 
 .account-menu-popover {
@@ -2295,7 +2299,7 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   /* The header keeps its buttons on one line; the menu's text may wrap. */
   white-space: normal;
@@ -2342,7 +2346,7 @@ header .nav-icon circle {
   background: transparent;
   border: none;
   color: var(--ink);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   letter-spacing: var(--tracking-tight);
   text-align: left;
@@ -2440,7 +2444,7 @@ header .nav-icon circle {
 
 .password-title {
   margin: 0;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-title-3);
   font-weight: var(--weight-regular);
   letter-spacing: var(--tracking-tight);
@@ -2512,7 +2516,7 @@ header .nav-icon circle {
 .modal-header {
   padding: var(--space-4);
   border-bottom: var(--hairline) solid var(--rule);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -2520,7 +2524,7 @@ header .nav-icon circle {
 }
 
 .modal-label {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
 }
@@ -2533,7 +2537,7 @@ header .nav-icon circle {
 }
 
 .modal-message {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   line-height: 1.5;
   color: var(--ink);
@@ -2558,7 +2562,7 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--ink-border);
   border-radius: var(--radius-sm);
   color: var(--ink);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-callout);
   outline: none;
   transition: border-color var(--duration-base);
@@ -2650,14 +2654,14 @@ header .nav-icon circle {
 
 .auth-title {
   margin: 0;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-title-2);
   font-weight: var(--weight-bold);
   color: var(--ink);
 }
 
 .auth-message {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   line-height: 1.5;
   color: var(--ink-faded);
@@ -2668,7 +2672,7 @@ header .nav-icon circle {
   align-items: center;
   gap: var(--space-1);
   max-width: 100%;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   color: var(--ink);
 }
@@ -2685,7 +2689,7 @@ header .nav-icon circle {
   padding: 0 var(--space-2);
   background: none;
   border: none;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   color: var(--accent);
   cursor: pointer;
@@ -2745,7 +2749,7 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--google-border);
   border-radius: var(--radius-sm);
   color: var(--google-text);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   cursor: pointer;
 }
@@ -2758,7 +2762,7 @@ header .nav-icon circle {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
@@ -2817,7 +2821,7 @@ header .nav-icon circle {
 /* The policy hint stays quiet while typing and only turns red after a
    submit it failed. */
 .auth-hint {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
 }
@@ -2836,7 +2840,7 @@ header .nav-icon circle {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   line-height: 1.5;
   color: var(--danger);
@@ -2882,7 +2886,7 @@ header .nav-icon circle {
   padding: 0 var(--space-2);
   background: none;
   border: none;
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
   color: var(--ink-faded);
   cursor: pointer;
@@ -3044,7 +3048,7 @@ body.sidebar-open #sidebar-scrim {
   border: none;
   border-radius: var(--radius-md);
   color: var(--ink);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   text-align: left;
   text-decoration: none;
@@ -3078,7 +3082,7 @@ body.sidebar-open #sidebar-scrim {
 
 .sidebar-label {
   padding: var(--space-6) var(--space-5) var(--space-2);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   font-weight: var(--weight-regular);
   color: var(--ink-faded);
@@ -3095,7 +3099,7 @@ body.sidebar-open #sidebar-scrim {
 .sidebar-page-count {
   margin: 0;
   padding: var(--space-2) var(--space-5) var(--space-4);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
   flex-shrink: 0;
@@ -3182,7 +3186,7 @@ body.sidebar-open #sidebar-scrim {
   background: none;
   border: none;
   color: var(--ink);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-subhead);
   text-align: left;
   white-space: nowrap;
@@ -3251,7 +3255,7 @@ body.sidebar-open #sidebar-scrim {
 .lyrics-list-empty {
   padding: var(--space-4) var(--space-3);
   color: var(--ink-faded);
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-footnote);
 }
 
@@ -3277,7 +3281,7 @@ body.sidebar-open #sidebar-scrim {
 }
 
 #save-indicator {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--ink-faded);
   margin-left: var(--space-2);
@@ -3287,7 +3291,7 @@ body.sidebar-open #sidebar-scrim {
 /* The word the rhymes tab is currently holding, written beside its name the
    way a note is written in the margin. */
 .tab-word {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-weight: var(--weight-regular);
   text-transform: none;
   letter-spacing: 0;
@@ -3460,7 +3464,7 @@ body.sidebar-open #sidebar-scrim {
     text-overflow: ellipsis;
     white-space: nowrap;
     padding: var(--space-3);
-    font-family: var(--font-editor);
+    font-family: var(--font-ui);
     /* Written case, sized and tracked like the header's buttons. */
     font-size: var(--text-footnote);
     font-weight: var(--weight-bold);
@@ -3731,7 +3735,7 @@ body.sidebar-open #sidebar-scrim {
     border: none;
     border-radius: 0;
     color: var(--ink-faded);
-    font-family: var(--font-editor);
+    font-family: var(--font-ui);
     font-size: var(--text-caption-1);
     font-weight: var(--weight-regular);
     letter-spacing: normal;
@@ -3766,7 +3770,7 @@ body.sidebar-open #sidebar-scrim {
   .bottom-nav .toggle-btn.active {
     background: transparent;
     border: none;
-    color: var(--accent);
+    color: var(--ink);
   }
 
   .bottom-nav .toggle-btn:hover {
@@ -3806,7 +3810,7 @@ body.sidebar-open #sidebar-scrim {
   }
 
   .bottom-nav .rhymes-menu-popover .toggle-btn.active {
-    color: var(--accent);
+    color: var(--ink);
   }
 
   /* Drawn, not typed: iA Writer Quattro's ✓ reads as a square-root sign. */
