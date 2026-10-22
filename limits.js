@@ -49,7 +49,17 @@
     return hasLimit(limit) ? limit : null;
   }
 
-  async function showLimitDialog({ kind }) {
+  // Announces the limit to any extension first, then shows its dialog if it
+  // set one. The neutral dialog is the fallback whenever that comes back empty.
+  async function showLimitDialog({ kind, limit }) {
+    const user = root.currentUser;
+    const detail = { kind, limit, enforced: Boolean(user && user.limits_enforced === true) };
+    root.document.dispatchEvent(new CustomEvent('limit-reached', { detail }));
+    const extensions = root.siteExtensions;
+    const swapped = extensions && typeof extensions.runLimitDialog === 'function'
+      ? await extensions.runLimitDialog(detail) : null;
+    if (swapped) return swapped;
+
     const answer = await root.openDialog(DIALOGS[kind]);
     return kind === KIND_PAGES && answer === true ? ANSWER_DELETE : ANSWER_OK;
   }

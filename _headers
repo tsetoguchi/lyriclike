@@ -75,6 +75,9 @@
 /limits.js
   Cache-Control: no-cache
 
+/extensions.js
+  Cache-Control: no-cache
+
 /live-core.js
   Cache-Control: no-cache
 
