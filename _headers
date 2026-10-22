@@ -72,6 +72,9 @@
 /sharing.js
   Cache-Control: no-cache
 
+/limits.js
+  Cache-Control: no-cache
+
 /live-core.js
   Cache-Control: no-cache
 

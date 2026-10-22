@@ -87,6 +87,9 @@
   --z-bar: 5;
   --z-overlay: 100;
   --z-overlay-raised: 101;
+  /* The small question dialog can open over another panel (the people
+     limit over Share), so it sits above them. */
+  --z-dialog: 102;
 
   /* Tracking, tightest to widest; the last is the wordmark's alone. */
   --tracking-tight: 0.02em;
@@ -2464,6 +2467,10 @@ header .nav-icon circle {
   display: none;
 }
 
+#dialog-overlay {
+  z-index: var(--z-dialog);
+}
+
 .modal-overlay {
   display: flex;
   position: fixed;
@@ -3082,6 +3089,20 @@ body.sidebar-open #sidebar-scrim {
   flex: 1;
   overflow-y: auto;
   padding: 0 var(--space-2) var(--space-2);
+}
+
+/* "3 of 5 pages": a footnote under the list, as quiet as the labels. */
+.sidebar-page-count {
+  margin: 0;
+  padding: var(--space-2) var(--space-5) var(--space-4);
+  font-family: var(--font-editor);
+  font-size: var(--text-caption-1);
+  color: var(--ink-faded);
+  flex-shrink: 0;
+}
+
+.sidebar-page-count[hidden] {
+  display: none;
 }
 
 /* A thin rail that stays faint until the list is under the pointer, then
