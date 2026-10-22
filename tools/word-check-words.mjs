@@ -38,7 +38,7 @@ export const WORD_PATTERNS = [
   // font list names "SF Pro".
   /(?<!SF )(?<![A-Za-z])Pro(?![a-z])/,
   /(?<![A-Za-z])PRO(?![A-Za-z])/,
-  /[a-z0-9]Pro(?![a-z])/,
+  /(?<=[a-z0-9])Pro(?![a-z])/,
   /(?<![A-Za-z])pro_|_pro(?![a-z])/,
   /\/ext\//i,
 ];
