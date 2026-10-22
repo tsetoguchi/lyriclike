@@ -46,7 +46,7 @@ node tools/rhymes/build-pages.mjs
 git diff --stat rhymes sitemap.xml
 ```
 
-The rebuild writes LF line endings and the checkout has CRLF, so `git
+The rebuild writes LF line endings and the working copy has CRLF, so `git
 status` marks all 5,000 pages modified even when nothing changed. Trust
 `git diff --stat`: empty means identical. To clear the noise, run
 `git checkout -- rhymes sitemap.xml`, which also restores everything if a
