@@ -204,7 +204,9 @@ let sampleShowing = false;
 let resolveDialog = null;
 let requiredAnswer = null;
 
-function openDialog({ heading, message, confirmLabel, danger, field, noCancel = false }) {
+function openDialog({
+  heading, message, confirmLabel, danger, field, noCancel = false, cancelLabel = 'Cancel',
+}) {
   const overlay = document.getElementById('dialog-overlay');
   const input = document.getElementById('dialog-input');
   const confirm = document.getElementById('dialog-confirm');
@@ -213,7 +215,9 @@ function openDialog({ heading, message, confirmLabel, danger, field, noCancel = 
 
   document.getElementById('dialog-title').textContent = heading;
   // A dialog that only tells something has nothing to cancel.
-  document.getElementById('dialog-cancel').hidden = noCancel;
+  const cancel = document.getElementById('dialog-cancel');
+  cancel.hidden = noCancel;
+  cancel.textContent = cancelLabel;
   confirm.textContent = confirmLabel;
   confirm.classList.toggle('danger-btn', Boolean(danger));
 
@@ -377,6 +381,26 @@ async function handleCreateClick() {
 // sidebar has fallen behind the title on screen.
 let listedTitles = new Map();
 
+// How many pages of their own the list last showed, for the limit check at
+// New page. Null until the list loads; /api/me's count stands in until then.
+let ownPageCount = null;
+
+function currentOwnPageCount() {
+  if (ownPageCount !== null) return ownPageCount;
+  const user = window.currentUser;
+  return user && typeof user.page_count === 'number' ? user.page_count : 0;
+}
+
+// The quiet "3 of 5 pages" under the notebook. Only shows when the site sets
+// a page limit; a stale limits.js leaves it hidden rather than breaking.
+function showPageCount(count) {
+  const countEl = document.getElementById('page-count');
+  const user = window.currentUser;
+  const text = user && window.SiteLimits ? window.SiteLimits.pageCountText(count, user.page_limit) : '';
+  countEl.textContent = text;
+  countEl.hidden = !text;
+}
+
 // Create page either makes a page or, signed out, asks for an account, so it
 // stays off only until the sign-in check answers. Runs whenever the list does,
 // which is whenever sign-in changes.
@@ -392,6 +416,7 @@ async function loadLyricsList() {
 
   // Signed out, the only page is the one in this browser. Before the sign-in
   // check answers there is nothing to say yet.
+  if (!window.currentUser) showPageCount(0);
   if (window.currentUser === null) {
     showLocalPage(container);
     if (typeof promptForPendingShare === 'function') promptForPendingShare();
@@ -424,6 +449,8 @@ async function loadLyricsList() {
     listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
     const own = lyrics.filter(lyric => !lyric.shared);
     const shared = lyrics.filter(lyric => lyric.shared);
+    ownPageCount = own.length;
+    showPageCount(own.length);
     if (own.length === 0) {
       showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
     } else {
@@ -796,6 +823,7 @@ function startBlankPage(title) {
 }
 
 async function createLyric() {
+  if (window.SiteLimits && !await window.SiteLimits.askAtLimit('pages', currentOwnPageCount())) return;
   const name = await askForLyricName({ heading: NEW_LYRIC_HEADING, confirmLabel: 'Create', value: '' });
   if (name === null) return;
   trackEvent('page_created');
@@ -1695,6 +1723,8 @@ function clearLyricState() {
   updatePanelHeader();
   closeLyricsList();
   listedTitles = new Map();
+  ownPageCount = null;
+  document.getElementById('page-count').hidden = true;
   document.getElementById('lyrics-list-items').innerHTML = '';
   if (window.resetRhymesPanel) window.resetRhymesPanel();
 }

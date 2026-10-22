@@ -263,6 +263,7 @@
     const isOwner = data.role === 'owner';
     page.role = data.role;
     page.ownerName = data.owner.name || data.owner.email;
+    page.people = data.people.map(person => person.email.toLowerCase());
     byId('share-title').textContent = isOwner
       ? `Share “${titleForName(page.title)}”`
       : `People on “${titleForName(page.title)}”`;
@@ -295,11 +296,21 @@
     return data && data.error && typeof data.error.message === 'string' ? data.error.message : TEXT.FAILED;
   }
 
+  // Someone already on the page isn't a new person, so only a new address
+  // can meet the people limit. Before the list loads, nobody is assumed.
+  function mayAddPerson(page, email) {
+    const people = page.people || [];
+    if (page.role !== 'owner' || !window.SiteLimits) return Promise.resolve(true);
+    if (people.includes(email.toLowerCase())) return Promise.resolve(true);
+    return window.SiteLimits.askAtLimit('people', people.length);
+  }
+
   async function sharePage(event) {
     event.preventDefault();
     const page = dialogPage;
     const email = emailInput.value.trim();
     if (!page || !email) return;
+    if (!await mayAddPerson(page, email)) return;
 
     submitButton.disabled = true;
     try {
