@@ -8,6 +8,7 @@ import {
   EMAIL_POOL, INVITE_ADDRESS_DAILY_LIMIT, INVITE_SENDER_DAILY_LIMIT, POOL_DAILY_LIMIT,
   emailSkippedEvent, inviteSenderName, sendInviteEmail,
 } from '../../../_email.js';
+import { findLimits, isAtLimit, isLimitsEnforced } from '../../../_limits.js';
 import { evictFromRoom, isLiveFor } from '../../../_live.js';
 import { DAY_MS, hitRateLimit, peekRateLimit } from '../../../_ratelimit.js';
 import { readJsonBody } from '../../../_request.js';
@@ -22,6 +23,7 @@ const INVITE_POOL_KEY = `email:pool:${EMAIL_POOL.INVITE}`;
 const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_OVER_LIMIT = 402;
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
@@ -105,6 +107,13 @@ async function spendInviteMail(env, keys) {
   return poolCount;
 }
 
+// Only the owner shares, so the owner's limit is this user's. Like the 25
+// check, it isn't atomic with the insert; a race adds one person at most.
+async function enforcedPeopleLimit(env, user) {
+  if (!isLimitsEnforced(env)) return null;
+  return (await findLimits(env, user.id)).peopleLimit;
+}
+
 function isSuppressed(env, addressHash) {
   return db(env).prepare('SELECT 1 FROM email_suppressions WHERE address_hash = ?')
     .bind(addressHash).first();
@@ -139,6 +148,10 @@ export async function onRequestPost(context) {
   if (existing) return Response.json({ status: 'already_shared', email: target.email });
   if (count.n >= MAX_PEOPLE_PER_PAGE) {
     return jsonError(HTTP_CONFLICT, 'page_full', `A page can be shared with ${MAX_PEOPLE_PER_PAGE} people at most.`);
+  }
+  const peopleLimit = await enforcedPeopleLimit(env, user);
+  if (isAtLimit(count.n, peopleLimit)) {
+    return Response.json({ error: 'people_limit', limit: peopleLimit }, { status: HTTP_OVER_LIMIT });
   }
 
   const rowsKey = `share:rows:${user.id}`;

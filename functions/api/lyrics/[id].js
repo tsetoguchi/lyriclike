@@ -1,9 +1,11 @@
 import { requireUser, writeLog } from '../../_shared.js';
+import { UNLIMITED, findLimits, isLimitsEnforced } from '../../_limits.js';
 import { closeRoom, coWritersClause, evictFromRoom, isLivePage } from '../../_live.js';
 import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
 const MAX_TITLE_LENGTH = 300;
 const MAX_BODY_LENGTH = 500_000;
+const HTTP_OVER_LIMIT = 402;
 
 // What the app needs to know about a page besides its words: whose it is,
 // and how many people it is shared with, which turns on the poll and the
@@ -149,14 +151,35 @@ async function updateLyric(env, id, user, { body, baseRevision }, now) {
   return isPausedFor(env, user, current) ? paused() : conflict(env, current);
 }
 
+// The most new pages this user may have, or UNLIMITED when nothing is refused.
+async function pageCap(env, user) {
+  if (!isLimitsEnforced(env)) return UNLIMITED;
+  const { pageLimit } = await findLimits(env, user.id);
+  return pageLimit === null ? UNLIMITED : pageLimit;
+}
+
+function isTakenId(env, id) {
+  return env.lyricalmiracle_db.prepare('SELECT 1 FROM lyrics WHERE id = ?').bind(id).first()
+    .then(Boolean);
+}
+
+// The count sits inside the insert, so two tabs at 4 of 5 can't both pass.
+// Only the user's own pages count, never pages shared with them.
 async function createLyric(request, env, id, user, { title = '', body }, now) {
+  const cap = await pageCap(env, user);
   const created = await env.lyricalmiracle_db.prepare(`
     INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at)
-    VALUES (?, ?, ?, ?, 0, ?, ?)
+    SELECT ?, ?, ?, ?, 0, ?, ?
+    WHERE ? = ${UNLIMITED} OR (SELECT count(*) FROM lyrics WHERE user_id = ?) < ?
     ON CONFLICT(id) DO NOTHING
-  `).bind(id, user.id, title, body, now, now).run();
+  `).bind(id, user.id, title, body, now, now, cap, user.id, cap).run();
   if (created.meta.changes > 0) return Response.json({ id, title, updated_at: now, revision: 0 });
 
+  // A retried create whose first answer was lost finds its own page here,
+  // and takes the old-tab path rather than a refusal.
+  if (!(await isTakenId(env, id))) {
+    return Response.json({ error: 'page_limit', limit: cap }, { status: HTTP_OVER_LIMIT });
+  }
   return saveFromOldTab(request, env, id, user, { title, body }, now);
 }
 
