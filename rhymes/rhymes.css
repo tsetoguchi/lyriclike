@@ -22,6 +22,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #141922;
   --paper-card: #1c222d;
@@ -51,6 +59,8 @@
   --scheme-2: #cfc06b;
   --accent-wash-strong: rgba(233, 180, 95, 0.16);
 
+  /* The app's sans for everything but the lyrics, which these pages have none of. */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
 
   --space-1: 4px;
@@ -67,6 +77,7 @@
   --text-callout: 16px;
   --text-body: 17px;
   --text-title-3: 20px;
+  --text-title-2: 22px;
   --text-title-1: 28px;
   --text-pledge: clamp(18px, 3.4vw, 26px);
 
@@ -78,6 +89,7 @@
   --page-width: 760px;
   --gutter: var(--space-4);
   --wordmark-height: 28px;
+  --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --pledge-gutter: 40px;
   --icon-size: 20px;
 }
@@ -91,7 +103,7 @@ html {
 
 /* The rhymes panel's surface, so a page reads as the panel laid flat. */
 body {
-  font-family: var(--font-editor);
+  font-family: var(--font-ui);
   font-size: var(--text-body);
   line-height: 1.55;
   background: var(--paper-panel);
@@ -135,10 +147,19 @@ a { color: var(--ink); }
   padding-inline: var(--gutter);
 }
 
-.wordmark img {
+/* The wordmark, set as text the same way as in the app. */
+.wordmark {
   display: block;
-  height: var(--wordmark-height);
-  width: auto;
+  font-family: var(--font-display);
+  font-size: var(--text-title-2);
+  font-weight: 700;
+  line-height: var(--wordmark-height);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--accent);
 }
 
 .header-link {
@@ -522,7 +543,9 @@ a.rhyme-word:focus-visible {
   margin-bottom: var(--space-8);
 }
 
+/* Lyrics keep the writing font, as in the editor. */
 .specimen-verse {
+  font-family: var(--font-editor);
   padding-block: var(--space-4);
   background: var(--paper-card);
   border: var(--hairline) solid var(--margin-line);
