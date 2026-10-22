@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import * as reset from '../functions/api/auth/password/reset.js';
-import * as me from '../functions/api/me.js';
+import * as account from '../functions/api/account.js';
 import * as changePassword from '../functions/api/me/password.js';
 import * as passwordLink from '../functions/api/me/password-link.js';
 import { verifyPassword } from '../functions/_password.js';
@@ -50,7 +50,7 @@ function deleteAccount(body, { cookie = 'sid=tok' } = {}) {
     headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(body);
   }
-  return me.onRequestDelete({ request: new Request(BASE_URL + '/api/me', init), env });
+  return account.onRequestDelete({ request: new Request(BASE_URL + '/api/account', init), env });
 }
 
 async function errorCode(response) {

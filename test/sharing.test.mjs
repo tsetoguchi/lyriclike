@@ -12,6 +12,7 @@ import * as stop from '../functions/api/invites/stop.js';
 import * as lyricById from '../functions/api/lyrics/[id].js';
 import * as shares from '../functions/api/lyrics/[id]/shares.js';
 import * as lyricList from '../functions/api/lyrics/index.js';
+import * as account from '../functions/api/account.js';
 import * as me from '../functions/api/me.js';
 import { inviteStopToken, sendResetEmail } from '../functions/_email.js';
 import { sha256Hex } from '../functions/_shared.js';
@@ -67,7 +68,7 @@ const savePage = (sid, json, id = PAGE) => call(lyricById, 'PUT', `/api/lyrics/$
 const renamePage = (sid, title) => call(lyricById, 'PATCH', `/api/lyrics/${PAGE}`, { sid, json: { title } });
 const deletePage = sid => call(lyricById, 'DELETE', `/api/lyrics/${PAGE}`, { sid });
 const listPages = sid => call(lyricList, 'GET', '/api/lyrics', { sid });
-const deleteAccount = sid => call(me, 'DELETE', '/api/me', { sid });
+const deleteAccount = sid => call(account, 'DELETE', '/api/account', { sid });
 
 async function storedPage() {
   return (await query(env, 'SELECT * FROM lyrics WHERE id = ?', PAGE))[0] || null;

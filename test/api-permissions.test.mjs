@@ -10,6 +10,7 @@ import { onRequest as apiMiddleware } from '../functions/api/_middleware.js';
 import * as logout from '../functions/api/auth/logout.js';
 import * as lyricById from '../functions/api/lyrics/[id].js';
 import * as lyricList from '../functions/api/lyrics/index.js';
+import * as account from '../functions/api/account.js';
 import * as me from '../functions/api/me.js';
 import { sha256Hex } from '../functions/_shared.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
@@ -126,7 +127,7 @@ async function getMe(sid) {
 }
 
 function deleteAccount(sid) {
-  return me.onRequestDelete({ request: makeRequest('/api/me', { method: 'DELETE', sid }), env });
+  return account.onRequestDelete({ request: makeRequest('/api/account', { method: 'DELETE', sid }), env });
 }
 
 function logOut(sid) {
@@ -141,7 +142,7 @@ const SIGNED_IN_ROUTES = [
   ['PATCH /api/lyrics/:id', (sid) => patchLyric(sid, ALICE_LYRIC_ID, { title: 'x' })],
   ['DELETE /api/lyrics/:id', (sid) => deleteLyric(sid, ALICE_LYRIC_ID)],
   ['GET /api/me', (sid) => getMe(sid)],
-  ['DELETE /api/me', (sid) => deleteAccount(sid)]
+  ['DELETE /api/account', (sid) => deleteAccount(sid)]
 ];
 
 let alice;
@@ -176,6 +177,12 @@ describe('signed-out requests', () => {
     assert.equal(lyric.body, ALICE_BODY);
     assert.ok(await database().prepare('SELECT id FROM users WHERE id = ?')
       .bind(alice.id).first());
+  });
+});
+
+describe('account delete', () => {
+  it('GET /api/me no longer deletes: the module has no DELETE handler', () => {
+    assert.equal(me.onRequestDelete, undefined);
   });
 });
 

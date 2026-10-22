@@ -253,8 +253,8 @@
       if (answer === null) return;
 
       const result = user.has_password
-        ? await sendJson('/api/me', 'DELETE', { password: answer })
-        : await sendJson('/api/me', 'DELETE');
+        ? await sendJson('/api/account', 'DELETE', { password: answer })
+        : await sendJson('/api/account', 'DELETE');
       if (isOk(result)) { endSession(); return; }
       if (result.status === HTTP_UNAUTHORIZED) { endExpiredSession(); return; }
       if (result.status === HTTP_FORBIDDEN && errorCode(result) === 'wrong_password') {

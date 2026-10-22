@@ -8,7 +8,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import * as lyricById from '../functions/api/lyrics/[id].js';
 import * as shares from '../functions/api/lyrics/[id]/shares.js';
-import * as me from '../functions/api/me.js';
+import * as account from '../functions/api/account.js';
 import { BASE_URL, addSession, makeEnv } from './support/auth-harness.mjs';
 import { fakeRoomBinding } from './support/fake-room-binding.mjs';
 
@@ -116,7 +116,7 @@ describe('room calls', () => {
     await exec("INSERT INTO lyrics (id, user_id, title, body, updated_at, created_at) VALUES ('bo-page', 'bo', 'S', 'b', 1, 1)");
     await exec('INSERT INTO lyric_shares (lyric_id, email_normalized, email, user_id, had_account, emailed, created_at) ' +
       "VALUES ('bo-page', 'ann@example.com', 'ann@example.com', 'ann', 1, 0, 1)");
-    await call(me.onRequestDelete, 'DELETE', '/api/me', { sid: 'sid-ann' });
+    await call(account.onRequestDelete, 'DELETE', '/api/account', { sid: 'sid-ann' });
     assert.deepEqual(calls().sort(), [`${SHARED} /close`, 'bo-page /evict'].sort());
     assert.deepEqual(evicted(), ['bo-page ann@example.com']);
   });
