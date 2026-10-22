@@ -1,4 +1,6 @@
 const GOOGLE_SIGN_IN_URL = '/api/auth/google/start';
+// Set once this device has reported a signed-in visit to analytics.
+const FIRST_SIGN_IN_KEY = 'first_sign_in_tracked';
 // How long the account menu waits for its password item before showing
 // anyway, so a slow connection still answers the click.
 const ACCOUNT_OPEN_WAIT_MS = 600;
@@ -22,6 +24,7 @@ async function initAuth() {
 
 function showUser(user) {
   window.currentUser = user;
+  trackEventOnce(FIRST_SIGN_IN_KEY, 'first_sign_in');
   document.dispatchEvent(new Event('auth-checked'));
   document.body.classList.add('signed-in');
   document.getElementById('signed-out-actions').style.display = 'none';
