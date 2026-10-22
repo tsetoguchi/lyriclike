@@ -1,0 +1,16 @@
+#!/bin/sh
+# Runs the word check on everything a push adds. Turn it on once per clone:
+#   git config core.hooksPath .githooks
+
+no_commit=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # A deleted branch adds nothing.
+  [ "$local_sha" = "$no_commit" ] && continue
+  # A remote commit this clone hasn't fetched can't be diffed against, so
+  # compare with main instead.
+  if ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+    remote_sha=$no_commit
+  fi
+  node tools/word-check.mjs "$remote_sha" "$local_sha" "${remote_ref#refs/heads/}" || exit 1
+done

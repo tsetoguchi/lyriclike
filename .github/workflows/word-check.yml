@@ -1,0 +1,29 @@
+name: Word check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  word-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Values reach the script through env, never inline in the command, so
+      # PR text can't run as shell.
+      - name: Check new lines, commit messages, branch name and PR text
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          BRANCH: ${{ github.head_ref }}
+          WORD_CHECK_TEXT: |
+            ${{ github.event.pull_request.title }}
+            ${{ github.event.pull_request.body }}
+        run: node tools/word-check.mjs "$BASE" "$HEAD" "$BRANCH"
