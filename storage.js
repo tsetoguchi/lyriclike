@@ -54,6 +54,13 @@ const MAX_TITLE_LENGTH = 300;
 // HTTP_NOT_FOUND comes from app.js: the scripts share one global scope.
 const HTTP_CONFLICT = 409;
 const HTTP_FORBIDDEN = 403;
+const HTTP_OVER_LIMIT = 402;
+const LIMIT_KIND_PAGES = 'pages';
+const LIMIT_ANSWER_DELETE = 'delete';
+const PAGE_LIMIT_STATUS = 'Not saved: page limit';
+const LEAVE_BLOCKED_HEADING = 'Leave this page?';
+const LEAVE_BLOCKED_MESSAGE =
+  "This page isn't saved because you're at the page limit. Leave it anyway?";
 // A 4001 from a live room reloads the page; a stale cache must not loop it.
 const RELOAD_GUARD_KEY = 'live_reloaded_at';
 const RELOAD_GUARD_MS = 60 * 1000;
@@ -93,6 +100,9 @@ let unansweredBody = null;
 // What the server holds when a save was refused, until the writer picks
 // whose version to keep. Saving waits while it is set.
 let pendingConflict = null;
+// A new page the server refused at the page limit. Its words stay in the
+// draft, and saving waits until a page is deleted.
+let blockedPageId = null;
 // Whose the open page is and how many people have it. Sharing (sharing.js)
 // reads it for the Share button, the "Shared by" line and the poll.
 let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
@@ -867,11 +877,49 @@ async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
     clearTimeout(saveTimer);
     await waitForSaves();
   }
-  await fetch(`/api/lyrics/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/lyrics/${id}`, { method: 'DELETE' });
 
   if (id === currentLyricId) startBlankPage(DEFAULT_TITLE);
+  else if (res.ok && !shared && isPageBlocked()) saveBlockedPage();
 
   loadLyricsList();
+}
+
+function isPageBlocked() {
+  return blockedPageId !== null && blockedPageId === currentLyricId;
+}
+
+// Deleting a page makes room, so the page held back goes out now.
+function saveBlockedPage() {
+  blockedPageId = null;
+  performSave({ force: true });
+}
+
+// Only the first refusal of a page shows the dialog, so typing on does not
+// bring it back on every pause. Not awaited: the save ends now, so nothing
+// waiting on it sits behind the dialog. Leaving the page asks over it.
+function holdAtPageLimit(pageId, limit) {
+  const isFirstRefusal = blockedPageId !== pageId;
+  blockedPageId = pageId;
+  clearTimeout(saveTimer);
+  setSaveIndicator(PAGE_LIMIT_STATUS);
+  if (isFirstRefusal) showPageLimitDialog(limit).catch(() => {});
+}
+
+async function showPageLimitDialog(limit) {
+  if (!window.SiteLimits) return;
+  const answer = await window.SiteLimits.showLimitDialog({ kind: LIMIT_KIND_PAGES, limit });
+  if (answer === LIMIT_ANSWER_DELETE) openLyricsList();
+}
+
+async function askToLeaveBlockedPage() {
+  const answer = await openDialog({
+    heading: LEAVE_BLOCKED_HEADING,
+    message: LEAVE_BLOCKED_MESSAGE,
+    confirmLabel: 'Leave anyway',
+    danger: true,
+  });
+  return answer === true;
 }
 
 function sendRename(id, title) {
@@ -944,6 +992,7 @@ function scheduleSave() {
   if (!window.currentUser) return;
   // The room saves a live page; the draft still records it.
   if (isRoomSaved()) return;
+  if (isPageBlocked()) return;
   clearTimeout(saveTimer);
   setSaveIndicator('Unsaved');
   saveTimer = setTimeout(performSave, 1000);
@@ -955,6 +1004,7 @@ function scheduleSave() {
 // the server yet, and "Keep mine" all need that.
 function performSave({ force = false } = {}) {
   if (!window.currentUser) return Promise.resolve();
+  if (isPageBlocked()) return Promise.resolve();
   if (saveInFlight) {
     saveQueued = true;
     queuedForce = queuedForce || force;
@@ -992,6 +1042,8 @@ async function flushSave() {
   saveTimer = null;
   if (hasUnsavedEdits()) await performSave();
   await waitForSaves();
+  // Checked after the save: a page reopened from its draft learns only now.
+  if (isPageBlocked()) return askToLeaveBlockedPage();
   return true;
 }
 
@@ -1010,7 +1062,8 @@ async function confirmSignOut() {
   // Words behind the conflict bar would go with the draft at sign-out, so
   // they are kept as a page of their own first.
   if (pendingConflict && !await keepMineAsCopy()) return askToLogOutAnyway();
-  if (!isLiveDraft) return true;
+  // Its last save goes out first, so a page over the limit can ask.
+  if (!isLiveDraft) return flushSave();
   if (isLive() && await currentLiveSession().flush(SIGN_OUT_WAIT_MS)) return true;
   return askToLogOutAnyway();
 }
@@ -1092,6 +1145,11 @@ async function sendSave(force) {
     saveAsNewPage({ message: isCreate ? null : LOST_ACCESS_MESSAGE });
     return;
   }
+  if (res.status === HTTP_OVER_LIMIT) {
+    const refusal = await res.json().catch(() => null);
+    if (pageId === currentLyricId) holdAtPageLimit(pageId, refusal && refusal.limit);
+    return;
+  }
   setSaveIndicator('Save failed');
 }
 
@@ -1159,6 +1217,7 @@ async function createCopy(title, body) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: copyTitle(title), body }),
     });
+    if (res.status === HTTP_OVER_LIMIT) await showPageLimitDialog(null);
     return res.ok;
   } catch {
     return false;
