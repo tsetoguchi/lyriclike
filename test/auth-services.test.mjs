@@ -13,6 +13,7 @@ import * as forgot from '../functions/api/auth/password/forgot.js';
 import * as reset from '../functions/api/auth/password/reset.js';
 import * as signup from '../functions/api/auth/signup.js';
 import * as confirm from '../functions/api/auth/signup/confirm.js';
+import * as account from '../functions/api/account.js';
 import * as me from '../functions/api/me.js';
 import {
   EMAIL_POOL, POOL_DAILY_LIMIT, emailSkippedEvent, sendConfirmSignupEmail, sendEmail, sendResetEmail,
@@ -168,12 +169,12 @@ describe('deleting an account', () => {
       'INSERT INTO logs (id, user_id, event, ip, created_at) VALUES (?, ?, ?, ?, ?)'
     ).bind('g1', 'user-1', 'login_password', null, 1).run();
 
-    const request = new Request(BASE_URL + '/api/me', {
+    const request = new Request(BASE_URL + '/api/account', {
       method: 'DELETE',
       headers: { Cookie: 'sid=tok', 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: GOOD_PASSWORD }),
     });
-    const response = await me.onRequestDelete({ request, env });
+    const response = await account.onRequestDelete({ request, env });
     assert.equal(response.status, 200);
 
     for (const table of ['sessions', 'lyrics', 'logs', 'identities', 'reset_tokens']) {

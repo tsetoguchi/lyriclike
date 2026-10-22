@@ -10,6 +10,7 @@ import { onRequest as apiMiddleware } from '../functions/api/_middleware.js';
 import * as callback from '../functions/api/auth/google/callback.js';
 import * as start from '../functions/api/auth/google/start.js';
 import * as logout from '../functions/api/auth/logout.js';
+import * as account from '../functions/api/account.js';
 import * as me from '../functions/api/me.js';
 import {
   base64Url, createSession, getUser, sessionCookie, sha256Bytes, sha256Hex, truncateIp, writeLog,
@@ -180,8 +181,8 @@ describe('session cookies', () => {
       'sid=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/');
 
     const second = await createSession(env, userId);
-    const deleted = await me.onRequestDelete({
-      request: new Request(LOCAL_URL + '/api/me', {
+    const deleted = await account.onRequestDelete({
+      request: new Request(LOCAL_URL + '/api/account', {
         method: 'DELETE', headers: { Cookie: `sid=${second}` },
       }), env,
     });
