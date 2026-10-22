@@ -24,6 +24,7 @@ async function initAuth() {
 
 function showUser(user) {
   window.currentUser = user;
+  window.setSignedInProperty(true);
   trackEventOnce(FIRST_SIGN_IN_KEY, 'first_sign_in');
   document.dispatchEvent(new Event('auth-checked'));
   document.body.classList.add('signed-in');
@@ -36,6 +37,7 @@ function showUser(user) {
 
 function showSignIn() {
   window.currentUser = null;
+  window.setSignedInProperty(false);
   document.dispatchEvent(new Event('auth-checked'));
   document.body.classList.remove('signed-in');
   document.getElementById('signed-out-actions').style.display = '';
@@ -90,6 +92,7 @@ function closeAccountMenuOnEscape(event) {
 // Signing in with Google is also how an account is made: the first visit
 // creates it.
 function startSignIn() {
+  trackEvent('google_sign_in_started');
   window.location.href = GOOGLE_SIGN_IN_URL;
 }
 
@@ -97,13 +100,14 @@ function startSignIn() {
 // and password. It asks for the email first and works out from it whether this
 // is a log in or a sign up, so every button opens the same step. Without the
 // modal, they go straight to Google, which is also how an account is made.
-function openSignIn() {
+function openSignIn(entry) {
+  trackEvent('auth_opened', { entry });
   if (window.openAuthModal) window.openAuthModal();
   else startSignIn();
 }
 
-document.getElementById('sign-in-btn').addEventListener('click', openSignIn);
-document.getElementById('sign-up-btn').addEventListener('click', openSignIn);
+document.getElementById('sign-in-btn').addEventListener('click', () => openSignIn('log_in'));
+document.getElementById('sign-up-btn').addEventListener('click', () => openSignIn('sign_up'));
 
 // An explicit sign-out or a deleted account leaves nothing of the account on
 // screen. An expired session does not come through here, so writing that

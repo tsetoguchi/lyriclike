@@ -14,6 +14,9 @@
   const TAG_URL = 'https://www.googletagmanager.com/gtag/js?id=' + MEASUREMENT_ID;
   const PLACEHOLDER_ID = 'G-XXXXXXXXXX';
   const MAX_ERROR_DESCRIPTION = 150;
+  // Set on the owner's own browsers, so a GA data filter can leave them out.
+  const INTERNAL_KEY = 'internal_traffic';
+  const INTERNAL_PARAM = 'internal';
 
   // Callers never have to check whether analytics is on.
   window.trackEvent = function ignoreEvent() {};
@@ -30,6 +33,22 @@
     window.trackEvent(name);
   };
 
+  // Callers never have to check whether analytics is on.
+  window.setSignedInProperty = function ignoreSignedIn() {};
+
+  // Visiting any page with ?internal=1 marks this browser as the owner's;
+  // ?internal=0 clears it. The mark stays on the device, never in the URL.
+  function isInternalBrowser() {
+    try {
+      const requested = new URLSearchParams(window.location.search).get(INTERNAL_PARAM);
+      if (requested === '1') localStorage.setItem(INTERNAL_KEY, '1');
+      if (requested === '0') localStorage.removeItem(INTERNAL_KEY);
+      return localStorage.getItem(INTERNAL_KEY) !== null;
+    } catch {
+      return false;
+    }
+  }
+
   // Fail loudly in the console rather than silently reporting to nowhere.
   if (MEASUREMENT_ID === PLACEHOLDER_ID) {
     console.warn('analytics.js: no measurement id set; analytics is off');
@@ -44,7 +63,13 @@
   window.gtag = gtag;
 
   gtag('js', new Date());
-  gtag('config', MEASUREMENT_ID);
+  gtag('config', MEASUREMENT_ID, isInternalBrowser() ? { traffic_type: 'internal' } : {});
+
+  // A yes/no flag only, so reports can split signed-in visitors from the rest
+  // without GA ever holding an account id or an address.
+  window.setSignedInProperty = function setSignedInProperty(isSignedIn) {
+    gtag('set', 'user_properties', { signed_in: isSignedIn ? 'yes' : 'no' });
+  };
 
   window.trackEvent = function trackEvent(name, params) {
     gtag('event', name, params || {});

@@ -478,6 +478,7 @@
       return showError(failureMessage(result), fieldForCode(errorCode(result)));
     }
     pendingSignup = { email, password };
+    trackEvent('signup_email_sent');
     showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME} ${TEXT.CHECK_JUNK}`);
     return null;
   }
