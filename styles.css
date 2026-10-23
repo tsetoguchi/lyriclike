@@ -503,6 +503,26 @@ header .nav-icon circle {
   padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
 }
 
+/* Sits where Share does, so an extension's buttons read as part of the same
+   row; the tip shows above each one. */
+.page-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-1);
+}
+
+.page-actions[hidden] {
+  display: none;
+}
+
+.page-action-btn {
+  position: relative;
+  justify-content: center;
+  min-width: var(--tap-target);
+  padding: var(--space-2);
+}
+
 .share-btn-icon {
   width: 16px;
   height: 16px;

@@ -96,6 +96,81 @@
     }
   }
 
+  const PAGE_ACTIONS_ID = 'page-actions';
+  const NOTEBOOK_ACTIONS_EVENT = 'notebook-actions-changed';
+  const ICON_CLASS = 'tip-btn-icon';
+  const rowActions = [];
+
+  function readAction(action) {
+    const read = root.SlotInputs ? root.SlotInputs.readAction(action) : null;
+    if (!read) console.warn('Extension hook: an action was given values it cannot use.');
+    return read;
+  }
+
+  // The span shows only while signed in and holding a button, so a page with
+  // no extension script never shows an empty gap.
+  function showPageActions() {
+    const span = document.getElementById(PAGE_ACTIONS_ID);
+    if (!span) return;
+    span.hidden = !(root.currentUser && span.childElementCount > 0);
+  }
+
+  function buildPageActionButton({ label, icon, onClick }) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'toggle-btn tip-btn page-action-btn';
+    button.setAttribute('aria-label', label);
+    button.innerHTML = icon;
+    const svg = button.querySelector('svg');
+    if (svg) svg.classList.add(ICON_CLASS);
+    const text = document.createElement('span');
+    text.className = 'tip-btn-label';
+    text.textContent = label;
+    button.appendChild(text);
+    button.addEventListener('click', () => {
+      try {
+        onClick(currentPage());
+      } catch (error) {
+        console.warn('Extension hook: a page action failed:', error);
+      }
+    });
+    return button;
+  }
+
+  function addPageAction(action) {
+    const read = readAction(action);
+    const span = document.getElementById(PAGE_ACTIONS_ID);
+    if (!read || !span) return null;
+    const button = buildPageActionButton(read);
+    span.appendChild(button);
+    showPageActions();
+    return function remove() {
+      button.remove();
+      showPageActions();
+    };
+  }
+
+  function announceNotebookActions() {
+    document.dispatchEvent(new Event(NOTEBOOK_ACTIONS_EVENT));
+  }
+
+  function addNotebookRowAction(action) {
+    const read = readAction(action);
+    if (!read) return null;
+    rowActions.push(read);
+    announceNotebookActions();
+    return function remove() {
+      const at = rowActions.indexOf(read);
+      if (at === -1) return;
+      rowActions.splice(at, 1);
+      announceNotebookActions();
+    };
+  }
+
+  function notebookRowActions() {
+    return rowActions.slice();
+  }
+
   // /api/me can answer before this file runs, so the account already known
   // is checked now and every later sign-in through 'auth-checked'.
   function loadAccountScript() {
@@ -112,7 +187,12 @@
     currentPage,
     openPage,
     replacePage,
+    addPageAction,
+    addNotebookRowAction,
+    notebookRowActions,
   };
   document.addEventListener('auth-checked', loadAccountScript);
+  document.addEventListener('auth-checked', showPageActions);
+  document.addEventListener('page-changed', showPageActions);
   loadAccountScript();
 })(this);

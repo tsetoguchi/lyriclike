@@ -403,6 +403,7 @@ async function handleCreateClick() {
 // What the list last showed for each page, so a save can tell whether the
 // sidebar has fallen behind the title on screen.
 let listedTitles = new Map();
+let lastListedLyrics = null;
 
 // How many pages of their own the list last showed, for the limit check at
 // New page. Null until the list loads; /api/me's count stands in until then.
@@ -441,6 +442,7 @@ async function loadLyricsList() {
   // check answers there is nothing to say yet.
   if (!window.currentUser) showPageCount(0);
   if (window.currentUser === null) {
+    lastListedLyrics = null;
     showLocalPage(container);
     if (typeof promptForPendingShare === 'function') promptForPendingShare();
     return;
@@ -469,33 +471,45 @@ async function loadLyricsList() {
     }
 
     const lyrics = await res.json();
-    listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
-    const own = lyrics.filter(lyric => !lyric.shared);
-    const shared = lyrics.filter(lyric => lyric.shared);
-    ownPageCount = own.length;
-    showPageCount(own.length);
-    if (own.length === 0) {
-      showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
-    } else {
-      container.innerHTML = '';
-      for (const lyric of own) container.appendChild(buildListItem(lyric));
-    }
-    if (shared.length > 0) {
-      const label = document.createElement('h2');
-      label.className = 'sidebar-label lyrics-list-group';
-      label.innerHTML = `<button type="button" class="list-group-toggle" data-group="shared" aria-expanded="true">`
-        + `${escapeHtml(SHARED_GROUP_LABEL)}${CHEVRON_ICON}</button>`;
-      container.appendChild(label);
-      for (const lyric of shared) container.appendChild(buildListItem(lyric));
-    }
-    applyListFolds();
-    // The database may not have the live page's newest title yet.
-    if (isLive()) showListedTitle(currentLyricId, currentTitle);
+    lastListedLyrics = lyrics;
+    renderLyricsList(container, lyrics);
     return lyrics;
   } catch {
     showListMessage(container, LOAD_FAILED_MESSAGE);
   }
 }
+
+// Draws the rows from a list already fetched, so a change to the row
+// buttons needs no request.
+function renderLyricsList(container, lyrics) {
+  listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
+  const own = lyrics.filter(lyric => !lyric.shared);
+  const shared = lyrics.filter(lyric => lyric.shared);
+  ownPageCount = own.length;
+  showPageCount(own.length);
+  if (own.length === 0) {
+    showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
+  } else {
+    container.innerHTML = '';
+    for (const lyric of own) container.appendChild(buildListItem(lyric));
+  }
+  if (shared.length > 0) {
+    const label = document.createElement('h2');
+    label.className = 'sidebar-label lyrics-list-group';
+    label.innerHTML = `<button type="button" class="list-group-toggle" data-group="shared" aria-expanded="true">`
+      + `${escapeHtml(SHARED_GROUP_LABEL)}${CHEVRON_ICON}</button>`;
+    container.appendChild(label);
+    for (const lyric of shared) container.appendChild(buildListItem(lyric));
+  }
+  applyListFolds();
+  // The database may not have the live page's newest title yet.
+  if (isLive()) showListedTitle(currentLyricId, currentTitle);
+}
+
+document.addEventListener('notebook-actions-changed', () => {
+  if (!window.currentUser || !lastListedLyrics) return;
+  renderLyricsList(document.getElementById('lyrics-list-items'), lastListedLyrics);
+});
 
 // live-presence.js loads after this file and holds the one rule for short
 // names; a tab without it shows the name whole.
@@ -582,6 +596,36 @@ function rollListGroup(group, isFolding) {
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
 const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
+const EXTRA_ACTION_PREFIX = 'extra-';
+
+// The buttons an extension added to every row, in the order they were added.
+function rowExtensions() {
+  const hook = window.siteExtensions;
+  return hook && hook.notebookRowActions ? hook.notebookRowActions() : [];
+}
+
+function extraRowButtons(escapedTitle) {
+  return rowExtensions().map(({ label, icon }, index) => {
+    const name = escapeHtml(label);
+    return `<button class="lyrics-action-btn" data-action="${EXTRA_ACTION_PREFIX}${index}" aria-label="${name} ${escapedTitle}" title="${name}">${icon}</button>`;
+  }).join('');
+}
+
+// Each runs with the row's page, and a throw there is only warned about.
+function extraRowRuns(lyric) {
+  const row = { id: lyric.id, title: lyric.title, shared: Boolean(lyric.shared) };
+  return rowExtensions().map(({ label, icon, onClick }) => ({
+    label,
+    icon,
+    run: () => {
+      try {
+        onClick({ ...row });
+      } catch (error) {
+        console.warn('Extension hook: a row action failed:', error);
+      }
+    },
+  }));
+}
 
 // A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
 // wait at the end of the row until it is hovered or focused. A page shared
@@ -601,7 +645,7 @@ function buildListItem(lyric) {
   item.innerHTML = `
     <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}"><span class="lyrics-list-title">${title}</span>${owner ? `<span class="lyrics-list-owner">${owner}</span>` : ''}</button>
     <div class="lyrics-list-actions">
-      <button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
+      ${extraRowButtons(title)}<button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
       ${lastAction}
     </div>
   `;
@@ -620,6 +664,9 @@ function buildListItem(lyric) {
     delete: () => deleteLyric(lyric),
     leave: () => deleteLyric(lyric),
   };
+  extraRowRuns(lyric).forEach((extra, index) => {
+    actions[EXTRA_ACTION_PREFIX + index] = extra.run;
+  });
   for (const button of item.querySelectorAll('.lyrics-action-btn')) {
     button.addEventListener('click', actions[button.dataset.action]);
   }
@@ -636,6 +683,7 @@ function watchListItemHold(item, lyric, actions) {
     rename: actions.rename,
     remove: actions.delete,
     removeLabel: lyric.shared ? 'Leave' : 'Delete',
+    extra: extraRowRuns(lyric),
   }));
 }
 
