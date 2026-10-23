@@ -109,6 +109,9 @@
 /analytics.js
   Cache-Control: no-cache
 
+/tokens.css
+  Cache-Control: no-cache
+
 /styles.css
   Cache-Control: no-cache
 

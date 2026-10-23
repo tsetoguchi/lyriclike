@@ -749,7 +749,7 @@ function wordsToHtml(text, marks) {
 }
 
 // A class, not an inline style="--mark: …" — colour values live in
-// styles.css :root, so the theme owns them (app.js:596 already states this
+// tokens.css :root, so the theme owns them (app.js:596 already states this
 // rule for the gutter's SCHEME_COLORS).
 // A slant mark keeps its family's colour and is drawn dashed, so a near rhyme
 // (night / like) is not read as an exact one (night / light).
@@ -1105,7 +1105,7 @@ function revealCaretLine() {
 
 // ── Rhyme scheme detection ──
 
-// Values live in styles.css :root so the theme owns all color decisions.
+// Values live in tokens.css :root so the theme owns all color decisions.
 const SCHEME_COLORS = [
   'var(--scheme-0)', 'var(--scheme-1)', 'var(--scheme-2)', 'var(--scheme-3)',
   'var(--scheme-4)', 'var(--scheme-5)', 'var(--scheme-6)', 'var(--scheme-7)',
