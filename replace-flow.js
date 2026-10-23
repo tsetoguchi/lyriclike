@@ -1,17 +1,22 @@
 // The order of a whole-page replace, kept apart from the editor so Node can
-// test it. Words typed in the last second must not be lost: saves still out
-// land first, the editor is locked from the moment the page is noted until
-// the answer is in, and an answer for a page no longer open is dropped. The
-// browser loads this as a plain script and reads window.ReplaceFlow; Node
-// loads it with require.
+// test it. Words typed in the last second must not be lost: the editor is
+// locked before the last save, so nothing typed can slip past it, and stays
+// locked until the answer is in; an answer for a page no longer open is
+// dropped, and one replace runs at a time. The browser loads this as a plain
+// script and reads window.ReplaceFlow; Node loads it with require.
 (function exposeReplaceFlow(root) {
   'use strict';
 
   const STATUS_OK = 200;
   const BUSY_STATUSES = [409, 503];
   const REASON_BUSY = 'busy';
+  const REASON_NOT_READY = 'not-ready';
   const REASON_OFFLINE = 'offline';
   const REASON_PAGE_CHANGED = 'page-changed';
+
+  // A second replace would lock over the first's lock, and the first one's
+  // unlock would then free the editor while the second is still out.
+  let isReplacing = false;
 
   function refuse(reason) {
     return { ok: false, reason };
@@ -21,42 +26,54 @@
     return BUSY_STATUSES.includes(status) ? REASON_BUSY : String(status);
   }
 
-  // Locked before the request so nothing typed while it is out can be
-  // overwritten by the answer; unlocked whatever the request does.
-  async function sendLocked(steps, id, words) {
+  // A save in the flush can open the conflict bar, or fail and leave words
+  // the server does not have; the replace must go over neither.
+  async function flushThenCheck(steps) {
+    await steps.flush();
+    const notReady = steps.readiness();
+    if (notReady) return notReady;
+    return steps.hasUnsaved() ? REASON_NOT_READY : null;
+  }
+
+  // Answers the reply, or a reason nothing was sent. Locked before the
+  // flush, so nothing typed can land after the last save, and unlocked
+  // whatever happens.
+  async function sendLocked(steps, words) {
     const wasEditable = steps.lock();
     try {
-      return await steps.send(id, words);
+      const notReady = await flushThenCheck(steps);
+      if (notReady) return { notReady };
+      const id = steps.pageId();
+      return { id, reply: await steps.send(id, words) };
     } finally {
       steps.unlock(wasEditable);
     }
   }
 
-  // A save that ran in the flush can open the conflict bar, so readiness is
-  // asked again before anything is sent.
-  async function flushThenCheck(steps) {
-    try {
-      await steps.flush();
-    } catch (error) {
-      return REASON_OFFLINE;
-    }
-    return steps.readiness();
-  }
-
-  async function runReplace(steps, words) {
-    const notReady = steps.readiness() || await flushThenCheck(steps);
+  async function replaceOnce(steps, words) {
+    const notReady = steps.readiness();
     if (notReady) return refuse(notReady);
-    const id = steps.pageId();
-    let reply;
+    let sent;
     try {
-      reply = await sendLocked(steps, id, words);
+      sent = await sendLocked(steps, words);
     } catch (error) {
       return refuse(REASON_OFFLINE);
     }
-    if (steps.pageId() !== id) return refuse(REASON_PAGE_CHANGED);
-    if (reply.status !== STATUS_OK) return refuse(reasonFor(reply.status));
-    steps.apply(reply.answer, words);
+    if (sent.notReady) return refuse(sent.notReady);
+    if (steps.pageId() !== sent.id) return refuse(REASON_PAGE_CHANGED);
+    if (sent.reply.status !== STATUS_OK) return refuse(reasonFor(sent.reply.status));
+    steps.apply(sent.reply.answer, words);
     return { ok: true };
+  }
+
+  async function runReplace(steps, words) {
+    if (isReplacing) return refuse(REASON_BUSY);
+    isReplacing = true;
+    try {
+      return await replaceOnce(steps, words);
+    } finally {
+      isReplacing = false;
+    }
   }
 
   const ReplaceFlow = { runReplace };

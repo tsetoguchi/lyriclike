@@ -57,9 +57,6 @@ const HTTP_FORBIDDEN = 403;
 const HTTP_OVER_LIMIT = 402;
 const HTTP_OK = 200;
 const REPLACE_NOT_READY = 'not-ready';
-// Typing while a save is out leaves newer words; the flush before a replace
-// saves again for those, this many times at most.
-const REPLACE_FLUSH_ROUNDS = 3;
 const LIMIT_KIND_PAGES = 'pages';
 const LIMIT_ANSWER_DELETE = 'delete';
 const PAGE_LIMIT_STATUS = 'Not saved: page limit';
@@ -1770,19 +1767,21 @@ function replaceReadiness() {
   return null;
 }
 
-// Not flushSave: that turns a conflict into a copy. Words typed while a save
-// was out get a save of their own, so the replace never goes over them.
+// Not flushSave: that turns a conflict into a copy. The editor is already
+// locked, so one save covers every word typed.
 async function flushBeforeReplace() {
   if (isLive()) return;
-  const textarea = document.getElementById('lyrics');
-  for (let round = 0; round < REPLACE_FLUSH_ROUNDS; round += 1) {
-    const typed = textarea.value;
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    if (hasUnsavedEdits()) await performSave();
-    await waitForSaves();
-    if (textarea.value === typed) return;
-  }
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  if (hasUnsavedEdits()) await performSave();
+  await waitForSaves();
+}
+
+// Words a failed save left behind are not on the server, so a replace would
+// lose them. An empty page or the sample is never saved, and holds none.
+function hasWordsToKeep() {
+  if (isLive() || !hasUnsavedEdits()) return false;
+  return document.getElementById('lyrics').value.trim() !== '' && !isSampleShowing();
 }
 
 // Answers whether the editor was editable, so a page locked for its own
@@ -1833,6 +1832,7 @@ function replaceWholePage(words) {
     readiness: replaceReadiness,
     flush: flushBeforeReplace,
     pageId: () => currentLyricId,
+    hasUnsaved: hasWordsToKeep,
     lock: lockForReplace,
     unlock: unlockAfterReplace,
     send: sendReplace,
