@@ -1,10 +1,10 @@
 /* Stylesheet for the static rhyme pages, copied to /rhymes/rhymes.css by
    build-pages.mjs. styles.css is built around the full-screen editor (a
    locked, non-scrolling body), so these reading pages carry their own layout.
-   The colors, faces and shapes repeat the app's so both read as one product:
-   the page is a printed copy of the editor's rhymes panel, under the same
-   header bar. If the palette or the panel's chips change in styles.css,
-   change them here too. */
+   The colors, faces and shapes come from the app's /tokens.css, linked before
+   this file, so both read as one product: the page is a printed copy of the
+   editor's rhymes panel, under the same header bar. If the panel's chips
+   change in styles.css, change them here too. */
 
 @font-face {
   font-family: 'iA Writer Quattro';
@@ -30,66 +30,12 @@
   font-display: swap;
 }
 
+/* These pages' own sizes. Every other value comes from /tokens.css. */
 :root {
-  --paper: #141922;
-  --paper-card: #1c222d;
-  --paper-panel: #181e28;
-  --rule: #2c3441;
-  --margin-line: #3b4553;
-  --accent: #e9b45f;
-  --accent-hover: #f2c47a;
-  --on-accent: #141922;
-  --ink: #e2e7ef;
-  --ink-faded: #8b96a6;
-  --ink-wash: rgba(226, 231, 239, 0.07);
-  --ink-wash-strong: rgba(226, 231, 239, 0.14);
-  --ink-border: rgba(226, 231, 239, 0.22);
-
-  --rhyme-perfect: #5ad19a;
-  --rhyme-family: #7cb8ff;
-  --rhyme-additive: #cfc06b;
-  --rhyme-subtractive: #ff9a6b;
-  --rhyme-assonance: #f58fc0;
-  --rhyme-consonance: #a99bf7;
-
-  /* The editor's first three scheme colours (--scheme-0 to --scheme-2 in
-     styles.css), used by the guide's sample verse. Change both. */
-  --scheme-0: #5ad19a;
-  --scheme-1: #7cb8ff;
-  --scheme-2: #cfc06b;
-  --accent-wash-strong: rgba(233, 180, 95, 0.16);
-
-  /* The app's sans for everything but the lyrics, which these pages have none of. */
-  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-editor: 'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-
-  --text-caption-1: 12px;
-  --text-footnote: 13px;
-  --text-subhead: 15px;
-  --text-callout: 16px;
-  --text-body: 17px;
-  --text-title-3: 20px;
-  --text-title-2: 22px;
   --text-title-1: 28px;
   --text-pledge: clamp(18px, 3.4vw, 26px);
-
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-pill: 999px;
-  --dot-size: 8px;
-  --hairline: 1px;
   --page-width: 760px;
   --gutter: var(--space-4);
-  --wordmark-height: 28px;
-  --font-display: 'Montserrat', 'Futura', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
   --pledge-gutter: 40px;
   --icon-size: 20px;
 }
