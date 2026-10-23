@@ -1294,12 +1294,17 @@ function handleResizeStart(event) {
   bodyStyle.userSelect = 'none';
 }
 
+// A hidden panel has no box, so the drag measures whichever one is showing.
+function getShowingPanel() {
+  return window.SidePanel && window.SidePanel.isOpen() ? sidePanelEl : rhymesPanelEl;
+}
+
 function handleResizeMove(event) {
   if (!isResizing) return;
   if (!event) return;
   // The panel's right edge (inside its desk margin) stays fixed during
   // the drag, so it anchors the width math to the pointer exactly.
-  const panelRight = rhymesPanelEl.getBoundingClientRect().right;
+  const panelRight = getShowingPanel().getBoundingClientRect().right;
   const newWidth = panelRight - event.clientX;
   const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
   rhymesPanelEl.style.width = clampedWidth + 'px';
