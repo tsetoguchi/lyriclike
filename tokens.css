@@ -179,9 +179,9 @@
      read as selected text. */
   --selection: rgba(226, 231, 239, 0.24);
   /* How much of a family's colour goes into a rhyme wash behind a word. */
-  --mark-wash-rest: 28%;
-  --mark-wash-slant: 20%;
-  --mark-wash-focus: 40%;
+  --mark-wash-rest: 36%;
+  --mark-wash-slant: 26%;
+  --mark-wash-focus: 44%;
   --mark-wash-faded: 8%;
   --flash: rgba(124, 184, 255, 0.20);
   --scrim: rgba(0, 0, 0, 0.66);                /* dimmed desk */
