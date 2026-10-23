@@ -93,6 +93,16 @@ describe('the live flag', () => {
   });
 });
 
+describe('the meta answer', () => {
+  it('says the owner is the owner', async () => {
+    assert.equal((await (await getAs('sid-ann', SHARED, '?meta=1')).json()).role, 'owner');
+  });
+
+  it('says a co-writer is an editor', async () => {
+    assert.equal((await (await getAs('sid-bo', SHARED, '?meta=1')).json()).role, 'editor');
+  });
+});
+
 describe('room calls', () => {
   it('closes the room when the owner deletes the page', async () => {
     await deleteAs('sid-ann', SHARED);

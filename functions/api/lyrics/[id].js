@@ -1,10 +1,11 @@
 import { requireUser, writeLog } from '../../_shared.js';
 import { UNLIMITED, findLimits, isLimitsEnforced } from '../../_limits.js';
-import { closeRoom, coWritersClause, evictFromRoom, isLivePage } from '../../_live.js';
+import { closeRoom, coWritersClause, evictFromRoom, isLivePage, isPausedFor } from '../../_live.js';
+import {
+  LIVE_COLUMNS, MAX_BODY_LENGTH, MAX_TITLE_LENGTH, findOpenable, notFound, paused, readJsonObject,
+} from '../../_pages.js';
 import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
-const MAX_TITLE_LENGTH = 300;
-const MAX_BODY_LENGTH = 500_000;
 const HTTP_OVER_LIMIT = 402;
 
 // What the app needs to know about a page besides its words: whose it is,
@@ -14,33 +15,6 @@ const PAGE_COLUMNS = `id, title, body, revision, updated_at, created_at, user_id
   (SELECT count(*) FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id) AS share_count,
   (SELECT COALESCE(NULLIF(users.name, ''), users.email) FROM users
     WHERE users.id = lyrics.user_id) AS owner_name`;
-
-// Whose the page is and whether it is shared: together with the switch,
-// whether the page is live.
-const LIVE_COLUMNS = `user_id AS owner_id,
-  (SELECT count(*) FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id) AS share_count`;
-
-function notFound() {
-  return new Response(null, { status: 404 });
-}
-
-// A co-writer on a shared page while live editing is off: they may read,
-// and only the owner writes (spec §8), so there is no conflict between people.
-function paused() {
-  return Response.json({ error: 'paused' }, { status: 403 });
-}
-
-function isPausedFor(env, user, page) {
-  return page.owner_id !== user.id && !isLivePage(env, page);
-}
-
-// The page as this user may see it, or null. Missing and not theirs look the
-// same, so an id tells a stranger nothing.
-function findOpenable(env, id, user, columns) {
-  return env.lyricalmiracle_db.prepare(
-    `SELECT ${columns} FROM lyrics WHERE id = ? AND ${CAN_OPEN}`
-  ).bind(id, ...canOpenParams(user)).first();
-}
 
 // The answer to a save that lost the race: what is on the server now, so the
 // app can show the conflict bar, and "Keep mine" can retry on this revision.
@@ -62,15 +36,21 @@ export async function onRequestGet({ request, env, params }) {
     const meta = await findOpenable(env, params.id, user, `revision, title, updated_at, ${LIVE_COLUMNS}`);
     if (!meta) return notFound();
     const { revision, title, updated_at: updatedAt } = meta;
-    return Response.json({ revision, title, updated_at: updatedAt, live: isLivePage(env, meta) });
+    return Response.json({
+      revision, title, updated_at: updatedAt, live: isLivePage(env, meta), role: roleOf(meta.owner_id, user),
+    });
   }
 
   const found = await findOpenable(env, params.id, user, PAGE_COLUMNS);
   if (!found) return notFound();
   const { owner_id: ownerId, ...lyric } = found;
-  const role = ownerId === user.id ? 'owner' : 'editor';
+  const role = roleOf(ownerId, user);
   if (role === 'editor') await recordFirstOpen(request, env, params.id, user);
   return Response.json({ ...lyric, role, live: isLivePage(env, found) });
+}
+
+function roleOf(ownerId, user) {
+  return ownerId === user.id ? 'owner' : 'editor';
 }
 
 // Once per person, ever, for the growth numbers: did the invite get opened.
@@ -80,17 +60,6 @@ async function recordFirstOpen(request, env, id, user) {
     WHERE lyric_id = ? AND email_normalized = ? AND first_opened_at IS NULL
   `).bind(Date.now(), user.id, id, user.email_normalized).run();
   if (opened.meta.changes > 0) await writeLog(env, request, { userId: user.id, event: 'share_opened' });
-}
-
-// A body that is not a JSON object is the caller's mistake, so it gets a 400
-// rather than an uncaught exception that Cloudflare reports as a server error.
-async function readJsonObject(request) {
-  try {
-    const payload = await request.json();
-    return payload !== null && typeof payload === 'object' ? payload : null;
-  } catch {
-    return null;
-  }
 }
 
 function isRevision(value) {

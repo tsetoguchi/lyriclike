@@ -21,6 +21,11 @@ export function isLivePage(env, { owner_id: ownerId, share_count: shareCount }) 
   return Number(shareCount) > 0 && isLiveFor(env, ownerId);
 }
 
+// A co-writer on a shared page while the switch is off may only read.
+export function isPausedFor(env, user, page) {
+  return page.owner_id !== user.id && !isLivePage(env, page);
+}
+
 // Whether a shared page's co-writers may write, as SQL on lyrics.user_id,
 // so a save checks the switch in the same statement that writes. The owner
 // always may; with the switch off, co-writers only read (spec §8).

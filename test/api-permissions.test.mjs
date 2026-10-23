@@ -427,9 +427,9 @@ describe('renaming', () => {
 });
 
 describe('the poll', () => {
-  it('gets only the revision, title, time and whether the page is live', async () => {
+  it('gets only the revision, title, time, whether the page is live, and the role', async () => {
     const response = await getLyricMeta(alice.sid, ALICE_LYRIC_ID);
-    assert.deepEqual(Object.keys(await response.json()).sort(), ['live', 'revision', 'title', 'updated_at']);
+    assert.deepEqual(Object.keys(await response.json()).sort(), ['live', 'revision', 'role', 'title', 'updated_at']);
   });
 
   it('gets 404 for a stranger', async () => {
