@@ -4,6 +4,8 @@
 
 export const SITE_ORIGIN = 'https://lyriclike.com';
 export const RHYMES_PATH = '/rhymes/';
+// The app's shared values come first; the page's own rules use them.
+const TOKENS_PATH = '/tokens.css';
 const STYLESHEET_PATH = '/rhymes/rhymes.css';
 const ANALYTICS_PATH = '/analytics.js';
 const SITE_NAME = 'LyricLike';
@@ -72,6 +74,7 @@ function renderHead({ title, description, path, structuredData }) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#141922">
 <link rel="apple-touch-icon" href="/assets/icons/icon-v2-180.png">
+<link rel="stylesheet" href="${TOKENS_PATH}">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">
 <script src="${ANALYTICS_PATH}"></script>${structuredData ? renderStructuredData(structuredData) : ''}
 </head>`;
