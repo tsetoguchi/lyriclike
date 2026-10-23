@@ -16,6 +16,7 @@ on:
     paths:
       - 'collab/**'
       - 'live-core.js'
+      - 'functions/_event-hook.js'
       - '.github/workflows/collab-deploy.yml'
   workflow_dispatch:
 
