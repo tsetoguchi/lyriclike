@@ -1580,10 +1580,13 @@ header .nav-icon circle {
 }
 
 /* Count, text and letter share a row, so a wrapped line keeps its marks
-   beside it without anything being measured. */
+   beside it without anything being measured. The text column is only as
+   wide as its words and a filler takes the rest, so the letter sits just
+   after the line's last word, as the scheme gutter puts it. */
 .preview-line {
   display: grid;
-  grid-template-columns: var(--sheet-syllables) minmax(0, 1fr) var(--sheet-scheme);
+  grid-template-columns: var(--sheet-syllables) minmax(0, max-content)
+    var(--sheet-scheme) 1fr;
   font-family: var(--font-editor);
   font-size: var(--editor-font-size);
   line-height: var(--line-pitch);
@@ -1613,20 +1616,25 @@ header .nav-icon circle {
 .preview-letter {
   align-self: end;
   overflow: hidden;
-  padding-left: var(--space-2);
   font-size: var(--text-callout);
   font-weight: var(--weight-bold);
+  color: var(--ink-faded);
   user-select: none;
 }
 
-.preview-line.is-added .preview-text {
+/* The spacer dot on a blank line, hidden as the gutters hide theirs. */
+.preview-count.empty-line,
+.preview-letter.empty-line {
+  color: transparent;
+}
+
+/* The bar marks the line itself, so it stays with the Rhyme Scheme margin
+   closed. */
+.preview-line.is-added {
   background: var(--accent-wash-strong);
 }
 
-.preview-line.is-added .preview-letter {
-  align-self: stretch;
-  display: flex;
-  align-items: flex-end;
+.preview-line.is-added .preview-text {
   box-shadow: inset var(--space-1) 0 0 var(--accent);
 }
 

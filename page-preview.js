@@ -14,6 +14,9 @@
   const PREVIEWING_CLASS = 'is-previewing';
   const CLOSED_EVENT = 'preview-closed';
   const MARK_CLASSES = { added: 'is-added', removed: 'is-removed' };
+  const EMPTY_CLASS = 'empty-line';
+  const BLANK_MARK = '·';
+  const NO_RHYME_MARK = '–';
 
   // What the last show() was given, or null while the preview is closed.
   let shown = null;
@@ -50,14 +53,35 @@
     return cell;
   }
 
+  // A blank line keeps the editor's spacer dot, which its styles hide.
+  function buildBlankMark(className) {
+    const cell = buildCell(className, BLANK_MARK);
+    cell.classList.add(EMPTY_CLASS);
+    return cell;
+  }
+
+  function buildCount(line, mark) {
+    if (!mark) return buildCell('preview-count', '');
+    if (line.text.trim() === '') return buildBlankMark('preview-count');
+    return buildCell('preview-count', mark.syllables > 0 ? String(mark.syllables) : '');
+  }
+
+  // As the scheme gutter draws them: the letter in its colour, or a dash in
+  // pencil for a line that rhymes with nothing.
+  function buildLetter(line, mark) {
+    if (!mark || mark.letter === null) return buildCell('preview-letter', '');
+    if (line.text.trim() === '') return buildBlankMark('preview-letter');
+    const letter = buildCell('preview-letter', mark.letter || NO_RHYME_MARK);
+    if (mark.color) letter.style.color = mark.color;
+    return letter;
+  }
+
   function buildRow(line, mark) {
     const row = document.createElement('div');
     row.className = 'preview-line';
     if (MARK_CLASSES[line.mark]) row.classList.add(MARK_CLASSES[line.mark]);
-    const syllables = mark && mark.syllables > 0 ? String(mark.syllables) : '';
-    const letter = buildCell('preview-letter', mark ? mark.letter : '');
-    if (mark && mark.color) letter.style.color = mark.color;
-    row.append(buildCell('preview-count', syllables), buildCell('preview-text', line.text), letter);
+    row.append(buildCount(line, mark), buildCell('preview-text', line.text),
+      buildLetter(line, mark), buildCell('preview-rest', ''));
     return row;
   }
 

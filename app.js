@@ -1198,18 +1198,19 @@ function updateRhymeSchemeGutter() {
 }
 
 // The marks the editor would give these lines, for the read-only preview
-// (page-preview.js). A hidden margin gives nothing, as it does in the editor.
+// (page-preview.js). A null letter means the margin draws nothing: it is
+// hidden, or the dictionary has not landed, as updateRhymeSchemeGutter() does.
+// An empty letter is a line that rhymes with nothing.
 function previewMarks(lines) {
-  const { labels, labelColors } = rhymeSchemeVisible
-    ? schemeLabelsFor(lines, lines.length)
-    : { labels: [], labelColors: [] };
+  const hasLetters = rhymeSchemeVisible && rhymeIndex !== null;
+  const { labels, labelColors } = schemeLabelsFor(lines, hasLetters ? lines.length : 0);
   return lines.map((line, index) => {
     const trimmed = line.trim();
     const isCounted = syllablesVisible && trimmed !== '';
     return {
       syllables: isCounted ? RhymeCore.countSyllablesForLine(rhymeIndex, trimmed) : null,
-      letter: labels[index] || '',
-      color: labelColors[index] || '',
+      letter: hasLetters ? labels[index] || '' : null,
+      color: hasLetters ? labelColors[index] || '' : '',
     };
   });
 }
