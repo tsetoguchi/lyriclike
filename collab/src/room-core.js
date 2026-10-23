@@ -11,6 +11,7 @@ import {
   CLOSE, encodeHello, encodePersisted, encodePresence, encodeSyncStep1, encodeSyncStep2,
   encodeUpdate, isProtocolAccepted, readIncoming,
 } from './protocol.js';
+import { isSameWords, pageSavedEvent, roomEmptiedEvent, writtenSnapshot } from './room-events.js';
 
 export const TEXT_FIELD = 'body';
 export const META_FIELD = 'meta';
@@ -32,6 +33,8 @@ const WRITE_ATTEMPTS = 2;
 const OUTSIDE = 'outside';
 const REPLACE = 'replace';
 const LIVE_SESSION_EVENT = 'live_session';
+const EDIT_REASON = 'edit';
+const REPLACE_REASON = 'replace';
 
 function attachmentOf(socket) {
   return socket.deserializeAttachment() || {};
@@ -88,6 +91,13 @@ export class RoomCore {
     this.nextWriteBackAt = 0;
     this.writing = null;
     this.rechecking = null;
+    // Who sent updates since the last write landed, and who sent any since
+    // the write under way took its copy of that list.
+    this.writers = new Set();
+    this.typedSinceCapture = new Set();
+    this.applyingFrom = null;
+    // Event hook messages wait here until the write lock is free.
+    this.outbox = [];
     // A fresh instance, new or just woken, checks access on its first message.
     this.lastRecheckAt = 0;
   }
@@ -208,9 +218,11 @@ export class RoomCore {
   async load() {
     const page = await readPage(this.host.db, await this.host.lyricId());
     if (!page) return this.shutDown('page_gone');
+    this.ownerId = page.user_id;
     const { snapshot, meta } = this.host.storage.loadState();
     if (snapshot) this.restore(snapshot, meta);
     else this.seed(page);
+    this.fillWrittenTime(page);
     this.lastSnapshotAt = this.host.now();
     this.doc.on('update', (update, origin) => this.onDocUpdate(update, origin));
     // Saved before anyone is greeted: a room that hibernated unsaved would
@@ -226,14 +238,25 @@ export class RoomCore {
     this.epoch = meta.epoch;
     this.written = meta.written;
     this.emptySince = meta.emptySince ?? null;
+    this.writers = new Set(meta.writers ?? []);
     this.savedSnapshot = Y.encodeSnapshot(Y.snapshot(this.doc));
   }
 
   seed(page) {
     this.doc = seededDoc(page);
     this.epoch = crypto.randomUUID();
-    this.written = { revision: page.revision, text: page.body, title: page.title };
+    this.written = { revision: page.revision, text: page.body, title: page.title, updatedAt: page.updated_at };
     this.emptySince = null;
+    this.writers = new Set();
+  }
+
+  // Meta saved before the room kept the time of its last write lacks it; D1
+  // still on the room's revision holds that time. Otherwise the outside
+  // merge that follows sets it.
+  fillWrittenTime(page) {
+    if (this.written.updatedAt === undefined && page.revision === this.written.revision) {
+      this.written.updatedAt = page.updated_at;
+    }
   }
 
   async closeAll(code) {
@@ -242,7 +265,7 @@ export class RoomCore {
   }
 
   meta() {
-    return { epoch: this.epoch, written: this.written, emptySince: this.emptySince };
+    return { epoch: this.epoch, written: this.written, emptySince: this.emptySince, writers: [...this.writers] };
   }
 
   saveMeta() {
@@ -266,6 +289,7 @@ export class RoomCore {
   }
 
   onDocUpdate(update, origin) {
+    if (this.applyingFrom) this.noteWriter(this.applyingFrom);
     this.snapshotDirty = true;
     this.broadcast(encodeUpdate(update), origin);
   }
@@ -316,6 +340,7 @@ export class RoomCore {
       // Clears only its own lock: a replace may have queued and taken it.
       const held = this.writeBackOnce().finally(() => {
         if (this.writing === held) this.writing = null;
+        this.releaseEvents();
       });
       this.writing = held;
     }
@@ -330,7 +355,7 @@ export class RoomCore {
         if (sent.revision !== null) return;
         const page = await readPage(this.host.db, lyricId);
         if (!page) return this.shutDown('page_gone');
-        if (this.isOwnWrite(page, sent)) return this.adoptWrite(page.revision, sent);
+        if (this.isOwnWrite(page, sent)) return this.takeOwnWrite(lyricId, page, sent);
         this.applyOutside(page);
       }
       this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
@@ -345,13 +370,44 @@ export class RoomCore {
   // leave the room dirty for the next write.
   async tryWrite(lyricId) {
     if (this.snapshotDirty) this.saveSnapshot();
-    const body = this.text();
-    const title = this.title();
+    const sent = this.captureWrite();
     const revision = await writePage(this.host.db, lyricId, {
-      body, title, now: this.host.now(), baseRevision: this.written.revision, baseTitle: this.written.title,
+      body: sent.body, title: sent.title, now: sent.now,
+      baseRevision: this.written.revision, baseTitle: this.written.title,
     });
-    if (revision !== null) this.adoptWrite(revision, { body, title });
-    return { revision, body, title };
+    if (revision !== null) {
+      this.queueWritten(lyricId, sent, revision, sent.now);
+      this.adoptWrite(revision, sent, sent.now);
+    }
+    return { ...sent, revision };
+  }
+
+  // What a write sends, and what the page was before it, taken together.
+  captureWrite() {
+    this.typedSinceCapture = new Set();
+    return {
+      body: this.text(), title: this.title(), now: this.host.now(),
+      before: writtenSnapshot(this.written), writerIds: [...this.writers],
+    };
+  }
+
+  takeOwnWrite(lyricId, page, sent) {
+    this.queueWritten(lyricId, sent, page.revision, page.updated_at);
+    this.adoptWrite(page.revision, sent, page.updated_at);
+  }
+
+  // Before adoptWrite saves the meta, so the names just sent are not kept.
+  queueWritten(lyricId, sent, revision, updatedAt) {
+    const after = { title: sent.title, body: sent.body, revision, updated_at: updatedAt };
+    if (!isSameWords(sent.before, after)) {
+      this.queueEvent(pageSavedEvent({
+        pageId: lyricId, ownerId: this.ownerId, writerIds: sent.writerIds, reason: EDIT_REASON,
+        before: sent.before, after,
+      }));
+    }
+    for (const userId of sent.writerIds) {
+      if (!this.typedSinceCapture.has(userId)) this.writers.delete(userId);
+    }
   }
 
   // D1 holding exactly what the room sent means the write landed and only its
@@ -360,8 +416,8 @@ export class RoomCore {
     return page.body === sent.body && page.title === sent.title;
   }
 
-  adoptWrite(revision, { body, title }) {
-    this.written = { revision, text: body, title };
+  adoptWrite(revision, { body, title }, updatedAt) {
+    this.written = { revision, text: body, title, updatedAt };
     this.writeFailures = 0;
     this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
     this.saveMeta();
@@ -374,6 +430,7 @@ export class RoomCore {
   replace(words) {
     const held = Promise.resolve(this.writing).then(() => this.replaceOnce(words)).finally(() => {
       if (this.writing === held) this.writing = null;
+      this.releaseEvents();
     });
     this.writing = held;
     return held;
@@ -390,7 +447,7 @@ export class RoomCore {
   }
 
   // Typed words are written back first, so the page D1 replaces holds them.
-  async replaceInD1({ title, body }) {
+  async replaceInD1({ title, body, tag = null, userId = null }) {
     await this.ensureLoaded();
     if (this.isGone) return { error: 'not_found' };
     if (this.isD1Dirty()) await this.writeBackOnce();
@@ -399,10 +456,14 @@ export class RoomCore {
     const lyricId = await this.host.lyricId();
     for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt += 1) {
       const now = this.host.now();
+      const before = writtenSnapshot(this.written);
       const revision = await writePage(this.host.db, lyricId, {
         body, title, now, baseRevision: this.written.revision, baseTitle: this.written.title,
       });
-      if (revision !== null) return this.takeReplaced(revision, { body, title }, now);
+      if (revision !== null) {
+        this.queueReplaced(lyricId, { userId, tag, before }, { title, body, revision, updated_at: now });
+        return this.takeReplaced(revision, { body, title }, now);
+      }
       const page = await readPage(this.host.db, lyricId);
       if (!page) {
         await this.shutDown('page_gone');
@@ -413,6 +474,14 @@ export class RoomCore {
     return { error: 'busy' };
   }
 
+  queueReplaced(lyricId, { userId, tag, before }, after) {
+    if (isSameWords(before, after)) return;
+    this.queueEvent(pageSavedEvent({
+      pageId: lyricId, ownerId: this.ownerId, writerIds: userId ? [userId] : [],
+      reason: REPLACE_REASON, tag, before, after,
+    }));
+  }
+
   // D1 already holds the words; now every screen gets them at once.
   async takeReplaced(revision, { body, title }, now) {
     const { dmp } = this.host;
@@ -420,10 +489,33 @@ export class RoomCore {
     if (title !== this.title()) {
       this.doc.transact(() => this.doc.getMap(META_FIELD).set(TITLE_KEY, title), REPLACE);
     }
-    this.adoptWrite(revision, { body, title });
+    this.adoptWrite(revision, { body, title }, now);
     this.saveSnapshot();
     await this.scheduleAlarm();
     return { revision, updatedAt: now };
+  }
+
+  // ── Event hook messages ──
+
+  queueEvent(event) {
+    this.outbox.push(event);
+  }
+
+  // Sent only once the write lock is free, so a slow hook never holds up
+  // the next write.
+  releaseEvents() {
+    for (const event of this.outbox.splice(0)) {
+      try {
+        this.host.sendEvent(event);
+      } catch (err) {
+        this.host.log('send_failed', { message: String(err) });
+      }
+    }
+  }
+
+  noteWriter(userId) {
+    this.writers.add(userId);
+    this.typedSinceCapture.add(userId);
   }
 
   writeFailed(err) {
@@ -445,7 +537,7 @@ export class RoomCore {
     if (title !== this.title()) {
       this.doc.transact(() => this.doc.getMap(META_FIELD).set(TITLE_KEY, title), OUTSIDE);
     }
-    this.written = { revision: page.revision, text: page.body, title: page.title };
+    this.written = { revision: page.revision, text: page.body, title: page.title, updatedAt: page.updated_at };
     this.saveMeta();
     this.host.log('outside_merge', {});
   }
@@ -489,12 +581,14 @@ export class RoomCore {
       && now - this.emptySince >= EMPTY_AFTER_MS && !this.snapshotDirty && !this.isD1Dirty();
   }
 
-  emptyWorkingCopy() {
+  async emptyWorkingCopy() {
     this.host.storage.clearWorkingCopy(this.epoch, this.savedSnapshot, this.host.now());
     this.doc.destroy();
     this.doc = null;
     this.loading = null;
     this.host.log('emptied', {});
+    this.queueEvent(roomEmptiedEvent(await this.host.lyricId()));
+    this.releaseEvents();
   }
 
   // A doc rebuilt after hibernation may lack the last few seconds before
@@ -578,11 +672,19 @@ export class RoomCore {
     if (length + update.byteLength > MAX_BODY_LENGTH) {
       return this.closeSocket(socket, CLOSE.TOO_LARGE, 'The page would be too long');
     }
+    const { socketId, userId } = attachmentOf(socket);
+    // Named only if the update changed the page: every join and wake-up
+    // sends a sync reply that may hold nothing new.
+    let isUnreadable = false;
+    this.applyingFrom = userId;
     try {
-      Y.applyUpdate(this.doc, update, attachmentOf(socket).socketId);
+      Y.applyUpdate(this.doc, update, socketId);
     } catch {
-      await this.closeSocket(socket, CLOSE.BAD_MESSAGE, 'Unreadable update');
+      isUnreadable = true;
+    } finally {
+      this.applyingFrom = null;
     }
+    if (isUnreadable) await this.closeSocket(socket, CLOSE.BAD_MESSAGE, 'Unreadable update');
   }
 
   receivePresence(socket, update) {

@@ -3,7 +3,7 @@
 // who may still be on the page.
 
 export function readPage(db, lyricId) {
-  return db.prepare('SELECT body, title, revision FROM lyrics WHERE id = ?').bind(lyricId).first();
+  return db.prepare('SELECT body, title, revision, updated_at, user_id FROM lyrics WHERE id = ?').bind(lyricId).first();
 }
 
 // Lands only if nobody saved (revision) or renamed (title: PATCH does not

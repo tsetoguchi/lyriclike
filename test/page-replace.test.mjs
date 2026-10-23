@@ -102,8 +102,14 @@ describe('replacing a live page', () => {
     assert.deepEqual(await response.json(),
       { id: SHARED, title: 'New', revision: 9, updated_at: 5, live: true });
     assert.equal(new URL(env.PAGE_ROOM.calls[0].url).pathname, '/replace');
-    assert.deepEqual(JSON.parse(env.PAGE_ROOM.calls[0].body), NEW);
+    assert.deepEqual(JSON.parse(env.PAGE_ROOM.calls[0].body), { ...NEW, tag: null, userId: 'bo' });
     assert.deepEqual(await readStored(SHARED), { title: 'Old', body: 'old words', revision: 3 });
+  });
+
+  it('the site passes tag and the person to the room', async () => {
+    roomAnswers(Response.json({ revision: 9, updated_at: 5 }));
+    await replaceAs('sid-bo', SHARED, { ...NEW, tag: 'v-1' });
+    assert.deepEqual(JSON.parse(env.PAGE_ROOM.calls[0].body), { ...NEW, tag: 'v-1', userId: 'bo' });
   });
 
   it('gives busy when the room is busy', async () => {

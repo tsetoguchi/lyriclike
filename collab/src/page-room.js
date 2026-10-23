@@ -6,6 +6,7 @@ import { writeEvent } from './d1-page.js';
 import { DiffMatchPatch } from './deps.js';
 import { colourFor } from './presence.js';
 import { RoomCore } from './room-core.js';
+import { createEventSender } from './room-hook.js';
 import { readEvictEmail, readReplaceRequest, replaceAnswer } from './room-requests.js';
 import { RoomStorage } from './room-storage.js';
 
@@ -47,6 +48,7 @@ export class PageRoom extends DurableObject {
       deleteAlarm: () => ctx.storage.deleteAlarm(),
       recordEvent: (userId, event) => writeEvent(env.lyricalmiracle_db, userId, event, Date.now()),
       log: (event, fields) => console.log(JSON.stringify({ event, ...fields })),
+      sendEvent: createEventSender({ env, waitUntil: promise => ctx.waitUntil(promise), now: () => Date.now() }),
     });
   }
 

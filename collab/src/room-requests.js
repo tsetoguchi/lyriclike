@@ -4,6 +4,7 @@
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const ERROR_STATUS = { not_found: HTTP_NOT_FOUND, busy: HTTP_CONFLICT };
+const MAX_TAG_LENGTH = 64;
 
 // The address rides in the body, so it stays out of request logs. A site
 // deployed before this room change still sends it in the query.
@@ -18,12 +19,19 @@ export async function readEvictEmail(request) {
   return url.searchParams.get('email');
 }
 
-// The words that go over the whole page: both strings, or null.
+function readTag(tag) {
+  return typeof tag === 'string' && tag.length <= MAX_TAG_LENGTH ? tag : null;
+}
+
+// The words that go over the whole page (both strings, or null), with the
+// tag and the person the event hook names. A site deployed before those
+// sends neither, and they read as null.
 export async function readReplaceRequest(request) {
   try {
     const body = await request.json();
     if (body && typeof body.title === 'string' && typeof body.body === 'string') {
-      return { title: body.title, body: body.body };
+      const userId = typeof body.userId === 'string' ? body.userId : null;
+      return { title: body.title, body: body.body, tag: readTag(body.tag), userId };
     }
   } catch {
     // Not JSON: refused below.
