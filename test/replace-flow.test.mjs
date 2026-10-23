@@ -1,6 +1,7 @@
 // The order of a whole-page replace: the editor is locked before the last
 // save, so nothing typed can slip past it, and stays locked until the answer
-// is in; nothing is applied to a page that was swapped meanwhile. Fake steps log their names, so Node can run it.
+// is in; nothing is sent to or applied on a page that was swapped meanwhile.
+// Fake steps log their names, so Node can run it.
 //
 //   node --test test/replace-flow.test.mjs
 
@@ -53,7 +54,8 @@ describe('runReplace', () => {
 
   it('not ready sends nothing', async () => {
     const log = [];
-    const result = await runReplace(makeSteps(log, { readiness: () => 'not-ready' }), WORDS);
+    const readiness = () => 'not-ready';
+    const result = await runReplace(makeSteps(log, { readiness }), WORDS);
     assert.deepEqual(log, []);
     assert.deepEqual(result, { ok: false, reason: 'not-ready' });
   });
@@ -101,12 +103,29 @@ describe('runReplace', () => {
     assert.deepEqual(third, { ok: true });
   });
 
-  it('another page opened meanwhile: nothing applied', async () => {
+  it('another page opened during the flush: nothing sent', async () => {
     const log = [];
-    const ids = ['a', 'b'];
-    const pageId = () => ids.shift();
-    const result = await runReplace(makeSteps(log, { pageId }), WORDS);
+    let openId = 'a';
+    const flush = async () => { log.push('flush'); openId = 'b'; };
+    const steps = makeSteps(log, { flush, pageId: () => openId });
+    const result = await runReplace(steps, WORDS);
     assert.deepEqual(result, { ok: false, reason: 'page-changed' });
+    assert.ok(!log.includes('send'));
+    assert.ok(log.includes('unlock'));
+  });
+
+  it('another page opened while sending: nothing applied', async () => {
+    const log = [];
+    let openId = 'a';
+    const send = async () => {
+      log.push('send');
+      openId = 'b';
+      return { status: 200, answer: ANSWER };
+    };
+    const steps = makeSteps(log, { send, pageId: () => openId });
+    const result = await runReplace(steps, WORDS);
+    assert.deepEqual(result, { ok: false, reason: 'page-changed' });
+    assert.ok(log.includes('send'));
     assert.ok(!log.includes('apply'));
     assert.ok(log.includes('unlock'));
   });
@@ -120,7 +139,8 @@ describe('runReplace', () => {
     ];
     for (const [status, reason] of cases) {
       const log = [];
-      const result = await runReplace(makeSteps(log, { send: answerWith(log, status) }), WORDS);
+      const send = answerWith(log, status);
+      const result = await runReplace(makeSteps(log, { send }), WORDS);
       assert.deepEqual(result, { ok: false, reason });
       assert.ok(log.includes('unlock'));
       assert.ok(!log.includes('apply'));

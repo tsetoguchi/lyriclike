@@ -28,22 +28,24 @@
 
   // A save in the flush can open the conflict bar, or fail and leave words
   // the server does not have; the replace must go over neither.
-  async function flushThenCheck(steps) {
-    await steps.flush();
+  function checkAfterFlush(steps) {
     const notReady = steps.readiness();
     if (notReady) return notReady;
     return steps.hasUnsaved() ? REASON_NOT_READY : null;
   }
 
-  // Answers the reply, or a reason nothing was sent. Locked before the
+  // Answers the reply, or why nothing was sent. Locked before the
   // flush, so nothing typed can land after the last save, and unlocked
-  // whatever happens.
+  // whatever happens. The page is noted before the flush: one opened during
+  // it must not get the words meant for this one.
   async function sendLocked(steps, words) {
     const wasEditable = steps.lock();
     try {
-      const notReady = await flushThenCheck(steps);
-      if (notReady) return { notReady };
       const id = steps.pageId();
+      await steps.flush();
+      if (steps.pageId() !== id) return { refused: REASON_PAGE_CHANGED };
+      const notReady = checkAfterFlush(steps);
+      if (notReady) return { refused: notReady };
       return { id, reply: await steps.send(id, words) };
     } finally {
       steps.unlock(wasEditable);
@@ -59,7 +61,7 @@
     } catch (error) {
       return refuse(REASON_OFFLINE);
     }
-    if (sent.notReady) return refuse(sent.notReady);
+    if (sent.refused) return refuse(sent.refused);
     if (steps.pageId() !== sent.id) return refuse(REASON_PAGE_CHANGED);
     if (sent.reply.status !== STATUS_OK) return refuse(reasonFor(sent.reply.status));
     steps.apply(sent.reply.answer, words);
