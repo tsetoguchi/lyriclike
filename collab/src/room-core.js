@@ -11,7 +11,7 @@ import {
   CLOSE, encodeHello, encodePersisted, encodePresence, encodeSyncStep1, encodeSyncStep2,
   encodeUpdate, isProtocolAccepted, readIncoming,
 } from './protocol.js';
-import { pageSavedEvent, roomEmptiedEvent, writtenSnapshot } from './room-events.js';
+import { isSameWords, pageSavedEvent, roomEmptiedEvent, writtenSnapshot } from './room-events.js';
 
 export const TEXT_FIELD = 'body';
 export const META_FIELD = 'meta';
@@ -398,10 +398,13 @@ export class RoomCore {
 
   // Before adoptWrite saves the meta, so the names just sent are not kept.
   queueWritten(lyricId, sent, revision, updatedAt) {
-    this.queueEvent(pageSavedEvent({
-      pageId: lyricId, ownerId: this.ownerId, writerIds: sent.writerIds, reason: EDIT_REASON,
-      before: sent.before, after: { title: sent.title, body: sent.body, revision, updated_at: updatedAt },
-    }));
+    const after = { title: sent.title, body: sent.body, revision, updated_at: updatedAt };
+    if (!isSameWords(sent.before, after)) {
+      this.queueEvent(pageSavedEvent({
+        pageId: lyricId, ownerId: this.ownerId, writerIds: sent.writerIds, reason: EDIT_REASON,
+        before: sent.before, after,
+      }));
+    }
     for (const userId of sent.writerIds) {
       if (!this.typedSinceCapture.has(userId)) this.writers.delete(userId);
     }
@@ -458,10 +461,7 @@ export class RoomCore {
         body, title, now, baseRevision: this.written.revision, baseTitle: this.written.title,
       });
       if (revision !== null) {
-        this.queueEvent(pageSavedEvent({
-          pageId: lyricId, ownerId: this.ownerId, writerIds: userId ? [userId] : [],
-          reason: REPLACE_REASON, tag, before, after: { title, body, revision, updated_at: now },
-        }));
+        this.queueReplaced(lyricId, { userId, tag, before }, { title, body, revision, updated_at: now });
         return this.takeReplaced(revision, { body, title }, now);
       }
       const page = await readPage(this.host.db, lyricId);
@@ -472,6 +472,14 @@ export class RoomCore {
       this.applyOutside(page);
     }
     return { error: 'busy' };
+  }
+
+  queueReplaced(lyricId, { userId, tag, before }, after) {
+    if (isSameWords(before, after)) return;
+    this.queueEvent(pageSavedEvent({
+      pageId: lyricId, ownerId: this.ownerId, writerIds: userId ? [userId] : [],
+      reason: REPLACE_REASON, tag, before, after,
+    }));
   }
 
   // D1 already holds the words; now every screen gets them at once.

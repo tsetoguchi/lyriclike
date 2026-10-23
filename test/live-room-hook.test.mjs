@@ -66,6 +66,15 @@ describe('the room event sender', () => {
     assert.deepEqual(JSON.parse(calls[0].init.body), EVENT);
   });
 
+  it("one room's messages go out in order, even when the first is retried", async () => {
+    fetchAnswers(500, 200, 200);
+    const send = senderFor(setEnv(createFakeD1()));
+    send({ type: 'page.saved', data: { n: 1 } });
+    send({ type: 'page.saved', data: { n: 2 } });
+    await Promise.all(waited);
+    assert.deepEqual(calls.map(call => JSON.parse(call.init.body).data.n), [1, 1, 2]);
+  });
+
   it('two failures write one log row with no user', async () => {
     fetchAnswers(500, 500);
     const db = createFakeD1();

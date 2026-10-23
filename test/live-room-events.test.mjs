@@ -244,11 +244,11 @@ describe('page saved from a write-back', () => {
   it('a failing write sends nothing and keeps the writers', async () => {
     const ann = await connect(ANN);
     await typed(ann, 5, '!');
-    const restore = failD1Writes();
+    const heal = failD1Writes();
     await runAlarm(host.clock + WRITE_BACK_MS);
     assert.deepEqual(host.events, []);
     assert.deepEqual([...room.writers], ['ann']);
-    restore();
+    heal();
     await runAlarm(host.clock + MAX_BACKOFF_MS);
     assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [['ann']]);
   });
@@ -318,9 +318,17 @@ describe('page saved from a live replace', () => {
 
   it('a replace that fails sends nothing', async () => {
     await connect(ANN);
-    const restore = failD1Writes();
+    const heal = failD1Writes();
     assert.deepEqual(await room.replace({ title: 'New', body: 'fresh', tag: null, userId: 'ann' }), { error: 'busy' });
-    restore();
+    heal();
+    assert.deepEqual(host.events, []);
+  });
+});
+
+describe('same words', () => {
+  it('a live replace with the words already there sends nothing', async () => {
+    await connect(ANN);
+    await room.replace({ title: 'Song', body: 'hello', tag: 'v-1', userId: 'ann' });
     assert.deepEqual(host.events, []);
   });
 });

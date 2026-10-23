@@ -9,5 +9,11 @@ const HOOK_FAILED_EVENT = 'event_hook_failed';
 export function createEventSender({ env, waitUntil, now }) {
   if (!isEventHookSet(env)) return () => {};
   const onFailed = () => writeEvent(env.lyricalmiracle_db, null, HOOK_FAILED_EVENT, now());
-  return event => waitUntil(sendEvent(env, event, { onFailed }));
+  // One message at a time, in order: a replace's flush must not arrive
+  // after the replace when its first try fails. sendEvent never throws.
+  let tail = Promise.resolve();
+  return event => {
+    tail = tail.then(() => sendEvent(env, event, { onFailed }));
+    waitUntil(tail);
+  };
 }

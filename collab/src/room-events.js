@@ -9,6 +9,12 @@ export function writtenSnapshot({ title, text, revision, updatedAt }) {
   return { title, body: text, revision, updated_at: updatedAt };
 }
 
+// As on the site, a write that changed neither the words nor the title is
+// not a page saved.
+export function isSameWords(before, after) {
+  return before.title === after.title && before.body === after.body;
+}
+
 export function pageSavedEvent({ pageId, ownerId, writerIds, reason, tag = null, before, after }) {
   return {
     type: PAGE_SAVED,
