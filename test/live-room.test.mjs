@@ -542,3 +542,103 @@ describe('review fixes', () => {
     assert.equal(late.socket.closed.code, CLOSE.PAGE_DELETED);
   });
 });
+
+describe('replacing the whole page', () => {
+  const NEW = { title: 'New', body: 'new words' };
+
+  // Records the body of every UPDATE that writes the page, in order.
+  function recordPageWrites() {
+    const bodies = [];
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => {
+      const statement = prepare(sql);
+      if (!sql.includes('UPDATE lyrics')) return statement;
+      return { bind: (...params) => { bodies.push(params[0]); return statement.bind(...params); } };
+    };
+    return bodies;
+  }
+
+  it('puts the new words and title on every screen and in D1', async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    const answer = await room.replace(NEW);
+    await ann.sync();
+    await bo.sync();
+    assert.equal(ann.text, 'new words');
+    assert.equal(bo.text, 'new words');
+    assert.equal(bo.doc.getMap('meta').get('title'), 'New');
+    assert.deepEqual(await readStored(), { body: 'new words', title: 'New', revision: answer.revision });
+    assert.equal(answer.updatedAt, host.clock);
+  });
+
+  it('writes typed words to D1 before replacing them', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, ' there');
+    await ann.sync();
+    const bodies = recordPageWrites();
+    await room.replace(NEW);
+    assert.deepEqual(bodies, ['hello there', 'new words']);
+  });
+
+  it('lands on a room nobody is in', async () => {
+    await room.replace(NEW);
+    assert.equal((await readStored()).body, 'new words');
+  });
+
+  it('lands on a room that was emptied', async () => {
+    const ann = await connect(ANN);
+    await room.leave(ann.socket);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    assert.equal(host.storage.loadState().snapshot, null);
+    await room.replace(NEW);
+    assert.equal((await readStored()).body, 'new words');
+  });
+
+  it('waits for a write-back in flight, so it lands last', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => {
+      const statement = prepare(sql);
+      if (!sql.includes('UPDATE lyrics')) return statement;
+      return { bind: (...params) => ({ first: async () => { await held; return statement.bind(...params).first(); } }) };
+    };
+    const writing = room.writeBack();
+    const replacing = room.replace(NEW);
+    release();
+    await Promise.all([writing, replacing]);
+    db.prepare = prepare;
+    await ann.sync();
+    assert.equal((await readStored()).body, 'new words');
+    assert.equal(ann.text, 'new words');
+  });
+
+  it('merges a save made outside the room, then replaces it', async () => {
+    const ann = await connect(ANN);
+    await exec("UPDATE lyrics SET body = 'hello there', revision = revision + 1 WHERE id = ?", PAGE);
+    const answer = await room.replace(NEW);
+    await ann.sync();
+    assert.ok(answer.revision);
+    assert.equal(ann.text, 'new words');
+    assert.equal((await readStored()).body, 'new words');
+  });
+
+  it('answers busy when D1 fails, and leaves everyone their words', async () => {
+    const ann = await connect(ANN);
+    const restore = failD1Writes();
+    assert.deepEqual(await room.replace(NEW), { error: 'busy' });
+    restore();
+    await ann.sync();
+    assert.equal(ann.text, 'hello');
+  });
+
+  it('says not found for a deleted page', async () => {
+    await connect(ANN);
+    await exec('DELETE FROM lyric_shares WHERE lyric_id = ?', PAGE);
+    await exec('DELETE FROM lyrics WHERE id = ?', PAGE);
+    assert.deepEqual(await room.replace(NEW), { error: 'not_found' });
+  });
+});

@@ -30,6 +30,7 @@ export const RECHECK_MS = 5 * 60_000;
 // One retry after merging a save made outside the room.
 const WRITE_ATTEMPTS = 2;
 const OUTSIDE = 'outside';
+const REPLACE = 'replace';
 const LIVE_SESSION_EVENT = 'live_session';
 
 function attachmentOf(socket) {
@@ -362,6 +363,65 @@ export class RoomCore {
     this.writeFailures = 0;
     this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
     this.saveMeta();
+  }
+
+  // ── Replacing the whole page ──
+
+  // Holds the write lock like a write-back, after any one in flight, so no
+  // write-back lands between its D1 write and the change to everyone's text.
+  replace(words) {
+    const held = Promise.resolve(this.writing).then(() => this.replaceOnce(words)).finally(() => {
+      if (this.writing === held) this.writing = null;
+    });
+    this.writing = held;
+    return held;
+  }
+
+  // A D1 failure leaves the page and everyone's text as they were.
+  async replaceOnce(words) {
+    try {
+      return await this.replaceInD1(words);
+    } catch (err) {
+      this.host.log('replace_failed', { message: String(err) });
+      return { error: 'busy' };
+    }
+  }
+
+  // Typed words are written back first, so the page D1 replaces holds them.
+  async replaceInD1({ title, body }) {
+    await this.ensureLoaded();
+    if (this.isGone) return { error: 'not_found' };
+    if (this.isD1Dirty()) await this.writeBackOnce();
+    if (this.isGone) return { error: 'not_found' };
+    if (this.isD1Dirty()) return { error: 'busy' };
+    const lyricId = await this.host.lyricId();
+    for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt += 1) {
+      const now = this.host.now();
+      const revision = await writePage(this.host.db, lyricId, {
+        body, title, now, baseRevision: this.written.revision, baseTitle: this.written.title,
+      });
+      if (revision !== null) return this.takeReplaced(revision, { body, title }, now);
+      const page = await readPage(this.host.db, lyricId);
+      if (!page) {
+        await this.shutDown('page_gone');
+        return { error: 'not_found' };
+      }
+      this.applyOutside(page);
+    }
+    return { error: 'busy' };
+  }
+
+  // D1 already holds the words; now every screen gets them at once.
+  async takeReplaced(revision, { body, title }, now) {
+    const { dmp } = this.host;
+    liveCore.applyEdits(this.doc.getText(TEXT_FIELD), liveCore.minimalEdits(dmp, this.text(), body), REPLACE);
+    if (title !== this.title()) {
+      this.doc.transact(() => this.doc.getMap(META_FIELD).set(TITLE_KEY, title), REPLACE);
+    }
+    this.adoptWrite(revision, { body, title });
+    this.saveSnapshot();
+    await this.scheduleAlarm();
+    return { revision, updatedAt: now };
   }
 
   writeFailed(err) {
