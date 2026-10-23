@@ -1856,6 +1856,9 @@ async function sendReplace(id, { title, body, tag }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(words),
   });
+  if (res.status === HTTP_UNAUTHORIZED && window.handleSessionExpired) {
+    window.handleSessionExpired();
+  }
   const answer = res.status === HTTP_OK ? await res.json() : null;
   return { status: res.status, answer };
 }
@@ -1975,6 +1978,8 @@ function clearLyricState() {
   pendingConflict = null;
   hideNotice();
   setPageInfo({});
+  // Nothing an extension put in the panel may stay for the next person.
+  if (window.SidePanel) window.SidePanel.close();
   if (typeof forgetPendingShare === 'function') forgetPendingShare();
   const textarea = document.getElementById('lyrics');
   textarea.value = '';

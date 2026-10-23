@@ -23,6 +23,8 @@
     { isOpen: isDefinitionOpen, close: closeDefinition },
     { isOpen: isRhymesMenuOpen, close: () => setRhymesMenuOpen(false) },
     { isOpen: () => isSidebarOpen() && !isSidebarDocked(), close: hideSidebar },
+    { isOpen: isPreviewOnPhone, close: () => window.PagePreview.close() },
+    { isOpen: isSidePanelOnPhone, close: () => window.SidePanel.close() },
     { isOpen: isRhymesTabShowing, close: () => switchMobileTab(LYRICS_TAB) },
   ];
 
@@ -36,6 +38,14 @@
   // Only a tapped definition has an overlay; a hover peek is not a layer.
   function isDefinitionOpen() {
     return document.querySelector('.def-overlay') !== null;
+  }
+
+  function isPreviewOnPhone() {
+    return isMobileView() && Boolean(window.PagePreview) && window.PagePreview.isOpen();
+  }
+
+  function isSidePanelOnPhone() {
+    return isMobileView() && Boolean(window.SidePanel) && window.SidePanel.isOpen();
   }
 
   function isRhymesTabShowing() {

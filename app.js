@@ -1328,7 +1328,8 @@ function handleResizeStart(event) {
 
 // A hidden panel has no box, so the drag measures whichever one is showing.
 function getShowingPanel() {
-  return window.SidePanel && window.SidePanel.isOpen() ? sidePanelEl : rhymesPanelEl;
+  const isSidePanelShowing = window.SidePanel && window.SidePanel.isOpen();
+  return isSidePanelShowing && sidePanelEl ? sidePanelEl : rhymesPanelEl;
 }
 
 function handleResizeMove(event) {
@@ -1341,7 +1342,7 @@ function handleResizeMove(event) {
   const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
   rhymesPanelEl.style.width = clampedWidth + 'px';
   // Both panels take the same width, so the side panel keeps in step.
-  sidePanelEl.style.width = clampedWidth + 'px';
+  if (sidePanelEl) sidePanelEl.style.width = clampedWidth + 'px';
 }
 
 function handleResizeEnd() {
@@ -1497,6 +1498,8 @@ function matchWordCase(original, replacement) {
 function replacePickedWord(word) {
   console.assert(typeof word === 'string', 'replacePickedWord: word must be a string');
   if (!pickedBounds || typeof word !== 'string' || word === '') return false;
+  // The editor is hidden behind a preview; a swap there would be unseen.
+  if (window.PagePreview && window.PagePreview.isOpen()) return false;
   // setRangeText ignores readOnly, so a page that is read-only (live editing
   // paused, or waiting for a reload) would change and lose the swap.
   if (textareaEl.readOnly) return false;

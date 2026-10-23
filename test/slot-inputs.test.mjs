@@ -49,6 +49,11 @@ describe('readAction', () => {
     assert.equal(readAction({ label: 5, icon: ICON, onClick }), null);
   });
 
+  it('refuses a label that is only spaces', () => {
+    assert.equal(readAction({ label: '   ', icon: ICON, onClick }), null);
+    assert.equal(readAction({ label: '\t\n', icon: ICON, onClick }), null);
+  });
+
   it('accepts a label of exactly 40 characters', () => {
     assert.notEqual(readAction({ label: 'x'.repeat(40), icon: ICON, onClick }), null);
   });

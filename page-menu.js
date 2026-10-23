@@ -110,6 +110,8 @@
 
   function fillExtraItems(extras) {
     const slot = byId('page-menu-extra');
+    // A cached page from before extras has no slot: the menu works without.
+    if (!slot) return;
     slot.replaceChildren(...extras.map(buildExtraItem));
   }
 
@@ -147,10 +149,13 @@
   for (const button of overlay.querySelectorAll('[data-action]')) {
     button.addEventListener('click', () => runMenuAction(button.dataset.action));
   }
-  byId('page-menu-extra').addEventListener('click', event => {
-    const item = event.target.closest('[data-extra]');
-    if (item) runExtraAction(Number(item.dataset.extra));
-  });
+  const extraSlot = byId('page-menu-extra');
+  if (extraSlot) {
+    extraSlot.addEventListener('click', event => {
+      const item = event.target.closest('[data-extra]');
+      if (item) runExtraAction(Number(item.dataset.extra));
+    });
+  }
   overlay.addEventListener('click', event => {
     if (event.target === overlay) closePageMenu();
   });

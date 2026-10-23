@@ -127,6 +127,8 @@
 
   // The note speaks to the invite field, so it shows only while that does.
   function showShareNote() {
+    // A cached page from before the note has no element: show nothing.
+    if (!noteElement) return;
     noteElement.textContent = shareNote;
     noteElement.hidden = !shareNote || form.hidden;
   }

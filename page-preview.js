@@ -34,7 +34,8 @@
     const title = document.getElementById(TITLE_ID);
     if (area) area.hidden = isHidden;
     if (title) title.hidden = isHidden;
-    document.querySelector(MAIN_SELECTOR).classList.toggle(PREVIEWING_CLASS, isHidden);
+    const main = document.querySelector(MAIN_SELECTOR);
+    if (main) main.classList.toggle(PREVIEWING_CLASS, isHidden);
   }
 
   // Removed lines stay out of the scheme, so only counted lines are marked,
@@ -99,7 +100,8 @@
     sheet.className = 'preview-sheet';
     sheet.append(...lines.map((line, index) => buildRow(line, marks[index])));
     const parts = bar ? [bar, buildTitle(title), sheet] : [buildTitle(title), sheet];
-    previewElement().replaceChildren(...parts);
+    const preview = previewElement();
+    if (preview) preview.replaceChildren(...parts);
   }
 
   function show(input) {
@@ -125,8 +127,10 @@
     if (!isOpen()) return;
     shown = null;
     const preview = previewElement();
-    preview.replaceChildren();
-    preview.hidden = true;
+    if (preview) {
+      preview.replaceChildren();
+      preview.hidden = true;
+    }
     setEditorHidden(false);
     refreshEditor();
     document.dispatchEvent(new Event(CLOSED_EVENT));

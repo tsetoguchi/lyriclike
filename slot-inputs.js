@@ -23,7 +23,7 @@
   }
 
   function isLabel(value) {
-    return isTextWithin(value, MAX_LABEL_LENGTH) && value.length > 0;
+    return isTextWithin(value, MAX_LABEL_LENGTH) && value.trim().length > 0;
   }
 
   function isIcon(value) {

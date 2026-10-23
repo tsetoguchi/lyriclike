@@ -5,6 +5,7 @@
   'use strict';
 
   const PANEL_ID = 'side-panel';
+  const MAIN_SELECTOR = '.main';
   const OPEN_CLASS = 'has-side-panel';
   const CLOSED_EVENT = 'side-panel-closed';
 
@@ -17,12 +18,23 @@
     return Boolean(panel) && !panel.hidden;
   }
 
+  function mainElement() {
+    return document.querySelector(MAIN_SELECTOR);
+  }
+
+  // On a phone the notebook drawer would cover the full-screen panel.
+  function closeNotebookDrawer() {
+    if (typeof root.closeLyricsList === 'function') root.closeLyricsList();
+  }
+
   function open(element) {
     const panel = panelElement();
-    if (!panel || !(element instanceof Element)) return false;
+    const main = mainElement();
+    if (!panel || !main || !(element instanceof Element)) return false;
     panel.replaceChildren(element);
     panel.hidden = false;
-    document.querySelector('.main').classList.add(OPEN_CLASS);
+    main.classList.add(OPEN_CLASS);
+    closeNotebookDrawer();
     return true;
   }
 
@@ -31,7 +43,8 @@
     const panel = panelElement();
     panel.replaceChildren();
     panel.hidden = true;
-    document.querySelector('.main').classList.remove(OPEN_CLASS);
+    const main = mainElement();
+    if (main) main.classList.remove(OPEN_CLASS);
     document.dispatchEvent(new Event(CLOSED_EVENT));
   }
 
