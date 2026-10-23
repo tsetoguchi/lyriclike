@@ -285,3 +285,42 @@ describe('room emptied', () => {
     assert.deepEqual(host.events.at(-1), { type: 'page.room_emptied', data: { page_id: PAGE } });
   });
 });
+
+describe('page saved from a live replace', () => {
+  it('a live replace sends the flush, then the replace', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, ' there');
+    await room.replace({ title: 'New', body: 'fresh', tag: 'v-1', userId: 'bo' });
+    const saved = savedEvents();
+    assert.deepEqual(saved.map(event => event.data.reason), ['edit', 'replace']);
+    assert.equal(saved[0].data.after.body, 'hello there');
+    assert.deepEqual(saved[1].data, {
+      page_id: PAGE, owner_id: 'ann', writer_ids: ['bo'], reason: 'replace', tag: 'v-1',
+      before: { title: 'Song', body: 'hello there', revision: 1, updated_at: host.clock },
+      after: { title: 'New', body: 'fresh', revision: 2, updated_at: host.clock },
+    });
+  });
+
+  it('a replace with no person or tag names nobody', async () => {
+    await connect(ANN);
+    await room.replace({ title: 'New', body: 'fresh', tag: null, userId: null });
+    assert.deepEqual(savedEvents()[0].data.writer_ids, []);
+    assert.equal(savedEvents()[0].data.tag, null);
+  });
+
+  it('nothing from a replace is sent while the write lock is held', async () => {
+    const locks = [];
+    host.sendEvent = () => locks.push(room.writing);
+    await connect(ANN);
+    await room.replace({ title: 'New', body: 'fresh', tag: null, userId: 'ann' });
+    assert.deepEqual(locks, [null]);
+  });
+
+  it('a replace that fails sends nothing', async () => {
+    await connect(ANN);
+    const restore = failD1Writes();
+    assert.deepEqual(await room.replace({ title: 'New', body: 'fresh', tag: null, userId: 'ann' }), { error: 'busy' });
+    restore();
+    assert.deepEqual(host.events, []);
+  });
+});

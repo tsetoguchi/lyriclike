@@ -34,6 +34,7 @@ const OUTSIDE = 'outside';
 const REPLACE = 'replace';
 const LIVE_SESSION_EVENT = 'live_session';
 const EDIT_REASON = 'edit';
+const REPLACE_REASON = 'replace';
 
 function attachmentOf(socket) {
   return socket.deserializeAttachment() || {};
@@ -426,6 +427,7 @@ export class RoomCore {
   replace(words) {
     const held = Promise.resolve(this.writing).then(() => this.replaceOnce(words)).finally(() => {
       if (this.writing === held) this.writing = null;
+      this.releaseEvents();
     });
     this.writing = held;
     return held;
@@ -442,7 +444,7 @@ export class RoomCore {
   }
 
   // Typed words are written back first, so the page D1 replaces holds them.
-  async replaceInD1({ title, body }) {
+  async replaceInD1({ title, body, tag = null, userId = null }) {
     await this.ensureLoaded();
     if (this.isGone) return { error: 'not_found' };
     if (this.isD1Dirty()) await this.writeBackOnce();
@@ -451,10 +453,17 @@ export class RoomCore {
     const lyricId = await this.host.lyricId();
     for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt += 1) {
       const now = this.host.now();
+      const before = writtenSnapshot(this.written);
       const revision = await writePage(this.host.db, lyricId, {
         body, title, now, baseRevision: this.written.revision, baseTitle: this.written.title,
       });
-      if (revision !== null) return this.takeReplaced(revision, { body, title }, now);
+      if (revision !== null) {
+        this.queueEvent(pageSavedEvent({
+          pageId: lyricId, ownerId: this.ownerId, writerIds: userId ? [userId] : [],
+          reason: REPLACE_REASON, tag, before, after: { title, body, revision, updated_at: now },
+        }));
+        return this.takeReplaced(revision, { body, title }, now);
+      }
       const page = await readPage(this.host.db, lyricId);
       if (!page) {
         await this.shutDown('page_gone');

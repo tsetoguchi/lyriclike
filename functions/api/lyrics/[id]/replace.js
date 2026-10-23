@@ -52,7 +52,7 @@ export async function onRequestPost(context) {
     const page = await findOpenable(env, params.id, user, `revision, ${LIVE_COLUMNS}`);
     if (!page) return notFound();
     if (isPausedFor(env, user, page)) return paused();
-    if (isLivePage(env, page)) return replaceInRoom(env, params.id, words);
+    if (isLivePage(env, page)) return replaceInRoom(env, params.id, user, words);
     const { row: saved, before } = await replaceInD1(env, params.id, user, words, page.revision);
     if (saved) {
       queueReplaced(context, params.id, user, words, { saved, before, revision: page.revision });
@@ -88,9 +88,10 @@ function queueReplaced(context, id, user, { title, body, tag }, { saved, before,
 }
 
 // The room holds the page while it's live. An answer it doesn't give
-// (none, or an older room's 426) means it can't take this yet.
-async function replaceInRoom(env, id, { title, body }) {
-  const reply = await askRoom(env, id, '/replace', { title, body });
+// (none, or an older room's 426) means it can't take this yet. The tag and
+// the person ride along for the room's page saved message.
+async function replaceInRoom(env, id, user, { title, body, tag }) {
+  const reply = await askRoom(env, id, '/replace', { title, body, tag, userId: user.id });
   if (!reply) return busy(HTTP_UNAVAILABLE);
   if (reply.status === HTTP_NOT_FOUND) return notFound();
   if (reply.status === HTTP_CONFLICT) return busy(HTTP_CONFLICT);

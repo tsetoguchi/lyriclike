@@ -30,7 +30,21 @@ describe('readReplaceRequest', () => {
   }
 
   it('reads the title and body', async () => {
-    assert.deepEqual(await readReplaceRequest(post(JSON.stringify({ title: 'T', body: 'b' }))), { title: 'T', body: 'b' });
+    assert.deepEqual(await readReplaceRequest(post(JSON.stringify({ title: 'T', body: 'b' }))),
+      { title: 'T', body: 'b', tag: null, userId: null });
+  });
+
+  it('the room reads tag and userId', async () => {
+    const request = post(JSON.stringify({ title: 'T', body: 'b', tag: 'v-1', userId: 'bo' }));
+    assert.deepEqual(await readReplaceRequest(request), { title: 'T', body: 'b', tag: 'v-1', userId: 'bo' });
+  });
+
+  it('a long tag or a tag that is not a string is dropped', async () => {
+    const long = await readReplaceRequest(post(JSON.stringify({ title: 'T', body: 'b', tag: 'x'.repeat(65) })));
+    assert.equal(long.tag, null);
+    const number = await readReplaceRequest(post(JSON.stringify({ title: 'T', body: 'b', tag: 4, userId: 5 })));
+    assert.equal(number.tag, null);
+    assert.equal(number.userId, null);
   });
 
   it('gives null for a body that is not a string, a missing title, or not JSON', async () => {
