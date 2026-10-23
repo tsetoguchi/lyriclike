@@ -734,6 +734,9 @@ function refreshListIfBehind() {
 function showListedTitle(id, title) {
   if (!listedTitles.has(id)) return;
   listedTitles.set(id, title);
+  // A later re-render without a fetch draws from this list.
+  const listed = lastListedLyrics && lastListedLyrics.find(lyric => lyric.id === id);
+  if (listed) listed.title = title;
   const row = document.querySelector(`.lyrics-list-item[data-id="${CSS.escape(id)}"] .lyrics-list-title`);
   if (row) row.textContent = titleForName(title);
 }
@@ -1981,6 +1984,7 @@ function clearLyricState() {
   updatePanelHeader();
   closeLyricsList();
   listedTitles = new Map();
+  lastListedLyrics = null;
   ownPageCount = null;
   document.getElementById('page-count').hidden = true;
   document.getElementById('lyrics-list-items').innerHTML = '';
