@@ -4,6 +4,7 @@ import { closeRoom, coWritersClause, evictFromRoom, isLivePage, isPausedFor } fr
 import {
   LIVE_COLUMNS, MAX_BODY_LENGTH, MAX_TITLE_LENGTH, findOpenable, notFound, paused, readJsonObject,
 } from '../../_pages.js';
+import { queuePageDeleted, queuePageSaved, snapshot, writeWithBefore } from '../../_page-events.js';
 import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
 const HTTP_OVER_LIMIT = 402;
@@ -69,9 +70,10 @@ function isRevision(value) {
 // Returns the checked fields, or a Response when the payload is refused.
 function readSave(payload) {
   if (!payload) return new Response('Invalid payload', { status: 400 });
-  const { title, body, base_revision: baseRevision } = payload;
+  const { title, body, base_revision: baseRevision, overwrite = false } = payload;
 
   if (typeof body !== 'string') return new Response('Invalid payload', { status: 400 });
+  if (typeof overwrite !== 'boolean') return new Response('Invalid payload', { status: 400 });
   if (title !== undefined && typeof title !== 'string')
     return new Response('Invalid payload', { status: 400 });
   if (baseRevision !== undefined && !isRevision(baseRevision))
@@ -81,14 +83,15 @@ function readSave(payload) {
   if (body.length > MAX_BODY_LENGTH)
     return new Response('Body too large', { status: 413 });
 
-  return { title, body, baseRevision };
+  return { title, body, baseRevision, overwrite };
 }
 
 // Saves the body. With base_revision it is an update, and only lands if
 // nobody else saved since that revision. Without one it is a create, which
 // never touches a page that already exists; the one exception is the bridge
 // for tabs still running the old app, below.
-export async function onRequestPut({ request, env, params }) {
+export async function onRequestPut(context) {
+  const { request, env, params } = context;
   const { user, response } = await requireUser(request, env);
   if (response) return response;
 
@@ -97,21 +100,33 @@ export async function onRequestPut({ request, env, params }) {
 
   const now = Date.now();
   return save.baseRevision === undefined
-    ? createLyric(request, env, params.id, user, save, now)
-    : updateLyric(env, params.id, user, save, now);
+    ? createLyric(context, params.id, user, save, now)
+    : updateLyric(context, params.id, user, save, now);
 }
 
 // One statement, so two saves on the same revision cannot both pass. The
 // title is left alone: a stale tab must not undo someone's rename. The
 // switch is checked in it too, so a paused co-writer's save never lands.
-async function updateLyric(env, id, user, { body, baseRevision }, now) {
+// "Keep mine" says so with overwrite; it still needs the right revision.
+async function updateLyric(context, id, user, { body, baseRevision, overwrite }, now) {
+  const { env } = context;
+  const db = env.lyricalmiracle_db;
   const writers = coWritersClause(env);
-  const saved = await env.lyricalmiracle_db.prepare(`
-    UPDATE lyrics SET body = ?, updated_at = ?, revision = revision + 1
-    WHERE id = ? AND revision = ? AND ${CAN_OPEN} AND (lyrics.user_id = ? OR ${writers.sql})
-    RETURNING revision, ${LIVE_COLUMNS}
-  `).bind(body, now, id, baseRevision, ...canOpenParams(user), user.id, ...writers.params).first();
+  const { row: saved, before } = await writeWithBefore(env,
+    () => db.prepare('SELECT title, body, updated_at FROM lyrics WHERE id = ? AND revision = ?')
+      .bind(id, baseRevision),
+    db.prepare(`
+      UPDATE lyrics SET body = ?, updated_at = ?, revision = revision + 1
+      WHERE id = ? AND revision = ? AND ${CAN_OPEN} AND (lyrics.user_id = ? OR ${writers.sql})
+      RETURNING revision, title, ${LIVE_COLUMNS}
+    `).bind(body, now, id, baseRevision, ...canOpenParams(user), user.id, ...writers.params));
   if (saved) {
+    queuePageSaved(context, {
+      pageId: id, ownerId: saved.owner_id, writerIds: [user.id],
+      reason: overwrite ? 'overwrite' : 'edit',
+      before: before && snapshot({ ...before, revision: baseRevision }),
+      after: snapshot({ title: saved.title, body, revision: saved.revision, updated_at: now }),
+    });
     return Response.json({ id, updated_at: now, revision: saved.revision, live: isLivePage(env, saved) });
   }
 
@@ -134,7 +149,8 @@ function isTakenId(env, id) {
 
 // The count sits inside the insert, so two tabs at 4 of 5 can't both pass.
 // Only the user's own pages count, never pages shared with them.
-async function createLyric(request, env, id, user, { title = '', body }, now) {
+async function createLyric(context, id, user, { title = '', body }, now) {
+  const { env } = context;
   const cap = await pageCap(env, user);
   const created = await env.lyricalmiracle_db.prepare(`
     INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at)
@@ -142,14 +158,20 @@ async function createLyric(request, env, id, user, { title = '', body }, now) {
     WHERE ? = ${UNLIMITED} OR (SELECT count(*) FROM lyrics WHERE user_id = ?) < ?
     ON CONFLICT(id) DO NOTHING
   `).bind(id, user.id, title, body, now, now, cap, user.id, cap).run();
-  if (created.meta.changes > 0) return Response.json({ id, title, updated_at: now, revision: 0 });
+  if (created.meta.changes > 0) {
+    queuePageSaved(context, {
+      pageId: id, ownerId: user.id, writerIds: [user.id], reason: 'edit',
+      before: null, after: snapshot({ title, body, revision: 0, updated_at: now }),
+    });
+    return Response.json({ id, title, updated_at: now, revision: 0 });
+  }
 
   // A retried create whose first answer was lost finds its own page here,
   // and takes the old-tab path rather than a refusal.
   if (!(await isTakenId(env, id))) {
     return Response.json({ error: 'page_limit', limit: cap }, { status: HTTP_OVER_LIMIT });
   }
-  return saveFromOldTab(request, env, id, user, { title, body }, now);
+  return saveFromOldTab(context, id, user, { title, body }, now);
 }
 
 // Tabs open during the deploy run the old app, which sends no revision and
@@ -158,15 +180,26 @@ async function createLyric(request, env, id, user, { title = '', body }, now) {
 // It still bumps the revision, so a new tab holding the old one gets a 409
 // instead of silently saving over it. Remove once save_no_revision stops
 // showing up in the logs.
-async function saveFromOldTab(request, env, id, user, { title, body }, now) {
-  const saved = await env.lyricalmiracle_db.prepare(`
-    UPDATE lyrics SET title = ?, body = ?, updated_at = ?, revision = revision + 1
-    WHERE id = ? AND user_id = ?
-      AND NOT EXISTS (SELECT 1 FROM lyric_shares WHERE lyric_id = ?)
-    RETURNING revision
-  `).bind(title, body, now, id, user.id, id).first();
+async function saveFromOldTab(context, id, user, { title, body }, now) {
+  const { request, env } = context;
+  const db = env.lyricalmiracle_db;
+  const { row: saved, before } = await writeWithBefore(env,
+    () => db.prepare('SELECT title, body, revision, updated_at FROM lyrics WHERE id = ?').bind(id),
+    db.prepare(`
+      UPDATE lyrics SET title = ?, body = ?, updated_at = ?, revision = revision + 1
+      WHERE id = ? AND user_id = ?
+        AND NOT EXISTS (SELECT 1 FROM lyric_shares WHERE lyric_id = ?)
+      RETURNING revision
+    `).bind(title, body, now, id, user.id, id));
 
   if (saved) {
+    // A page gone by the time of the read has nothing to say before.
+    if (before) {
+      queuePageSaved(context, {
+        pageId: id, ownerId: user.id, writerIds: [user.id], reason: 'edit',
+        before: snapshot(before), after: snapshot({ title, body, revision: saved.revision, updated_at: now }),
+      });
+    }
     await writeLog(env, request, { userId: user.id, event: 'save_no_revision' });
     return Response.json({ id, title, updated_at: now, revision: saved.revision });
   }
