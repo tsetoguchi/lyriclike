@@ -11,6 +11,14 @@ function toPlainRow(row) {
   return row ? { ...row } : null;
 }
 
+function isSelect(sql) {
+  return /^\s*SELECT\b/i.test(sql);
+}
+
+function returnsRows(sql) {
+  return isSelect(sql) || /\bRETURNING\b/i.test(sql);
+}
+
 class FakeStatement {
   constructor(db, sql, params = []) {
     this.db = db;
@@ -22,9 +30,16 @@ class FakeStatement {
     return new FakeStatement(this.db, this.sql, params);
   }
 
+  // D1 hands back each statement's rows in a batch too, so a SELECT or a
+  // RETURNING there reads as it does in a single call.
   runNow() {
-    const info = this.db.prepare(this.sql).run(...this.params);
-    return { success: true, meta: { changes: info.changes } };
+    if (!returnsRows(this.sql)) {
+      const info = this.db.prepare(this.sql).run(...this.params);
+      return { success: true, results: [], meta: { changes: info.changes } };
+    }
+    const results = this.db.prepare(this.sql).all(...this.params).map(toPlainRow);
+    const changes = isSelect(this.sql) ? 0 : results.length;
+    return { success: true, results, meta: { changes } };
   }
 
   async run() {
