@@ -1540,6 +1540,101 @@ header .nav-icon circle {
   display: none;
 }
 
+/* The preview: an extension's text, read-only, in the editor's place. Its
+   rows are the editor's lines, with the open gutters' widths beside them. */
+.lyrics-area[hidden],
+.page-preview[hidden] {
+  display: none;
+}
+
+.page-preview {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.page-preview::-webkit-scrollbar {
+  display: none;
+}
+
+/* Written where the page's own title is, starting where the text does. */
+.preview-title {
+  display: block;
+  max-width: var(--sheet-width);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-5) var(--space-3)
+    calc(var(--sheet-syllables) + var(--editor-pad));
+  font-family: var(--font-ui);
+  font-size: var(--text-title-3);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.preview-sheet {
+  max-width: var(--sheet-width);
+  margin-inline: auto;
+  padding-bottom: var(--editor-pad);
+}
+
+/* Count, text and letter share a row, so a wrapped line keeps its marks
+   beside it without anything being measured. */
+.preview-line {
+  display: grid;
+  grid-template-columns: var(--sheet-syllables) minmax(0, 1fr) var(--sheet-scheme);
+  font-family: var(--font-editor);
+  font-size: var(--editor-font-size);
+  line-height: var(--line-pitch);
+}
+
+.preview-count {
+  overflow: hidden;
+  font-size: var(--text-subhead);
+  text-align: center;
+  color: var(--ink-faded);
+  user-select: none;
+}
+
+.lyrics-panel:has(.syllable-gutter.visible) .preview-count {
+  border-right: var(--hairline) solid var(--rule);
+}
+
+.preview-text {
+  min-height: var(--line-pitch);
+  padding-inline: var(--editor-pad);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: var(--ink);
+}
+
+/* A wrapped line ends on its last row, so its letter sits there. */
+.preview-letter {
+  align-self: end;
+  overflow: hidden;
+  padding-left: var(--space-2);
+  font-size: var(--text-callout);
+  font-weight: var(--weight-bold);
+  user-select: none;
+}
+
+.preview-line.is-added .preview-text {
+  background: var(--accent-wash-strong);
+}
+
+.preview-line.is-added .preview-letter {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  box-shadow: inset var(--space-1) 0 0 var(--accent);
+}
+
+.preview-line.is-removed .preview-text {
+  color: var(--ink-faded);
+  text-decoration: line-through;
+}
+
 .selected-word-bar {
   padding: var(--space-3) var(--space-5);
   display: flex;
@@ -3571,6 +3666,17 @@ body.sidebar-open #sidebar-scrim {
     display: none;
   }
 
+  /* A preview opened from the side panel is what the writer asked to see;
+     the panel waits behind it and comes back when the preview closes. */
+  .main.is-previewing.has-side-panel .lyrics-panel {
+    display: flex;
+    flex: 1;
+  }
+
+  .main.is-previewing.has-side-panel .side-panel {
+    display: none;
+  }
+
   /* Editor metrics shrink together: one token change keeps the text,
      overlay, and gutters in lockstep.
 
@@ -3597,11 +3703,13 @@ body.sidebar-open #sidebar-scrim {
     --gutter-syllables: 40px;
   }
 
-  .syllable-gutter .syl-line {
+  .syllable-gutter .syl-line,
+  .preview-count {
     font-size: var(--text-caption-1);
   }
 
-  .rhyme-scheme-gutter .scheme-line {
+  .rhyme-scheme-gutter .scheme-line,
+  .preview-letter {
     font-size: var(--text-footnote);
   }
 

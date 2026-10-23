@@ -166,6 +166,7 @@ function onRhymeDataReady() {
   // has not changed, so renderHighlight() needs telling it is dirty anyway.
   invalidateInternalRhymeMarks();
   renderHighlight();
+  redrawPreview();
 }
 
 // Clearing the promise lets the next interaction retry, which matters now that
@@ -1139,20 +1140,14 @@ function splitIntoStanzas(allLines, lineCount) {
   return { stanzas, stanzaStartIndices };
 }
 
-function updateRhymeSchemeGutter() {
-  if (!rhymeSchemeVisible) return;
-  // Dictionary may still be loading; onLoaded() re-renders when it lands.
-  if (!rhymeIndex) return;
-  console.assert(rhymeSchemeGutterEl !== null, 'updateRhymeSchemeGutter: gutter element must exist');
-  const text = textareaEl.value;
-  const allLines = text.split('\n');
-  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
-
-  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
-
+// Each line's rhyme letter and its colour, worked out stanza by stanza.
+// Without the dictionary every label is empty; onRhymeDataReady() redraws.
+function schemeLabelsFor(allLines, lineCount) {
   const labels = new Array(lineCount).fill('');
   const labelColors = new Array(lineCount).fill('');
+  if (!rhymeIndex) return { labels, labelColors };
 
+  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
   for (let stanzaIdx = 0; stanzaIdx < stanzas.length; stanzaIdx++) {
     const stanza = stanzas[stanzaIdx];
     const scheme = RhymeCore.computeRhymeScheme(rhymeIndex, stanza);
@@ -1170,6 +1165,18 @@ function updateRhymeSchemeGutter() {
       }
     }
   }
+  return { labels, labelColors };
+}
+
+function updateRhymeSchemeGutter() {
+  if (!rhymeSchemeVisible) return;
+  // Dictionary may still be loading; onLoaded() re-renders when it lands.
+  if (!rhymeIndex) return;
+  console.assert(rhymeSchemeGutterEl !== null, 'updateRhymeSchemeGutter: gutter element must exist');
+  const text = textareaEl.value;
+  const allLines = text.split('\n');
+  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
+  const { labels, labelColors } = schemeLabelsFor(allLines, lineCount);
 
   const heights = measureLineHeights(allLines.slice(0, lineCount));
   const textStyle = getComputedStyle(textareaEl);
@@ -1188,6 +1195,28 @@ function updateRhymeSchemeGutter() {
     }
   }
   rhymeSchemeGutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';
+}
+
+// The marks the editor would give these lines, for the read-only preview
+// (page-preview.js). A hidden margin gives nothing, as it does in the editor.
+function previewMarks(lines) {
+  const { labels, labelColors } = rhymeSchemeVisible
+    ? schemeLabelsFor(lines, lines.length)
+    : { labels: [], labelColors: [] };
+  return lines.map((line, index) => {
+    const trimmed = line.trim();
+    const isCounted = syllablesVisible && trimmed !== '';
+    return {
+      syllables: isCounted ? RhymeCore.countSyllablesForLine(rhymeIndex, trimmed) : null,
+      letter: labels[index] || '',
+      color: labelColors[index] || '',
+    };
+  });
+}
+
+// The preview draws from the same toggles and dictionary as the editor.
+function redrawPreview() {
+  if (window.PagePreview) window.PagePreview.redraw();
 }
 
 // The character offset each line starts at within the whole text, so a mark
@@ -1245,6 +1274,7 @@ function toggleRhymeScheme() {
   // Showing or hiding either margin changes the editor's width, so the text
   // re-wraps for both of them; openGutter() re-measures both.
   openGutter(rhymeSchemeGutterEl, rhymeSchemeVisible);
+  redrawPreview();
 }
 
 // A margin opens and closes at once, so the editor's new width is settled by
@@ -1265,6 +1295,7 @@ function toggleSyllables() {
   setToggleState(toggleBtn, syllablesVisible);
   trackEvent('overlay_toggled', { overlay: 'syllables', is_on: syllablesVisible });
   openGutter(gutterEl, syllablesVisible);
+  redrawPreview();
 }
 
 // Marks draw inside #lyrics-highlight itself rather than a margin, so there is

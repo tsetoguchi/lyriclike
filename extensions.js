@@ -3,8 +3,9 @@
 // That script may swap the limit dialog for its own, listen for the
 // 'limit-reached' event, and add its own items to the header slot. It may
 // also read, open and replace the open page, and hear 'page-changed' on
-// document when another page is on screen. With no script set, nothing is
-// fetched and the neutral dialog in limits.js is all anyone sees.
+// document when another page is on screen, and show any text read-only in
+// the editor's place. With no script set, nothing is fetched and the neutral
+// dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
@@ -112,6 +113,23 @@
     if (root.SidePanel) root.SidePanel.close();
   }
 
+  function showPreview(input) {
+    const read = root.SlotInputs ? root.SlotInputs.readPreview(input) : null;
+    if (!read) {
+      console.warn('Extension hook: showPreview was given values it cannot use.');
+      return false;
+    }
+    if (!root.PagePreview) {
+      console.warn('Extension hook: the preview is not available here.');
+      return false;
+    }
+    return root.PagePreview.show(read);
+  }
+
+  function closePreview() {
+    if (root.PagePreview) root.PagePreview.close();
+  }
+
   const PAGE_ACTIONS_ID = 'page-actions';
   const NOTEBOOK_ACTIONS_EVENT = 'notebook-actions-changed';
   const ICON_CLASS = 'tip-btn-icon';
@@ -205,6 +223,8 @@
     replacePage,
     openSidePanel,
     closeSidePanel,
+    showPreview,
+    closePreview,
     addPageAction,
     addNotebookRowAction,
     notebookRowActions,
