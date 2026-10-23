@@ -100,6 +100,9 @@ let unansweredBody = null;
 // What the server holds when a save was refused, until the writer picks
 // whose version to keep. Saving waits while it is set.
 let pendingConflict = null;
+// The next save is a "Keep mine", saving over their words on purpose. The
+// save says so, so the server can tell it from an ordinary one.
+let isKeepMineSave = false;
 // A new page the server refused at the page limit. Its words stay in the
 // draft, and saving waits until a page is deleted.
 let blockedPageId = null;
@@ -1096,6 +1099,8 @@ async function sendSave(force) {
   const pageId = currentLyricId;
   const isCreate = currentRevision === null;
   const payload = isCreate ? { title: currentTitle, body } : { body, base_revision: currentRevision };
+  if (isKeepMineSave && !isCreate) payload.overwrite = true;
+  isKeepMineSave = false;
 
   setSaveIndicator('Saving...');
   let res;
@@ -1255,6 +1260,7 @@ function keepMine() {
   if (!theirs) return;
   currentRevision = theirs.revision;
   clearConflict();
+  isKeepMineSave = true;
   performSave({ force: true });
 }
 
