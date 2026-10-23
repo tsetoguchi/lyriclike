@@ -54,6 +54,20 @@ async function callRoom(env, lyricId, path, body) {
   }
 }
 
+// Waits for the room's answer, for a request that depends on it. Null when
+// there is no room binding or the call fails, so the caller can say busy.
+export async function askRoom(env, lyricId, path, body) {
+  if (!env.PAGE_ROOM) return null;
+  try {
+    return await roomStub(env, lyricId).fetch(`${ROOM_ORIGIN}${path}`, {
+      method: 'POST', headers: { 'X-Room-Page': lyricId }, body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error('room call failed', path, err);
+    return null;
+  }
+}
+
 function runLater(context, promise) {
   if (typeof context.waitUntil === 'function') context.waitUntil(promise);
 }
