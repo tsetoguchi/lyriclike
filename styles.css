@@ -3064,10 +3064,61 @@ body.sidebar-open #sidebar-scrim {
   opacity: 1;
 }
 
+/* Touch has no hover, so the buttons give way to the menu a long press
+   opens. The callout and text selection would cover it on iOS. */
 @media (hover: none) {
   .lyrics-list-actions {
-    opacity: 1;
+    display: none;
   }
+
+  .lyrics-list-item {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+.lyrics-list-item.is-held {
+  background: var(--ink-wash);
+}
+
+#page-menu-overlay {
+  z-index: var(--z-dialog);
+}
+
+#page-menu-title {
+  overflow-wrap: anywhere;
+}
+
+.page-menu-items {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+}
+
+.page-menu-item {
+  padding: var(--space-3);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  text-align: left;
+  cursor: pointer;
+}
+
+.page-menu-item[hidden] {
+  display: none;
+}
+
+.page-menu-item:active,
+.page-menu-item:focus-visible {
+  background: var(--ink-wash);
+}
+
+.page-menu-danger {
+  color: var(--danger);
 }
 
 .lyrics-action-btn {

@@ -240,6 +240,16 @@
       </div>
     </div>
   </div>
+  <div id="page-menu-overlay" class="modal-overlay" hidden>
+    <div id="page-menu" class="modal-panel page-menu" role="dialog" aria-modal="true" aria-labelledby="page-menu-title">
+      <div class="modal-header"><span id="page-menu-title"></span></div>
+      <div class="page-menu-items">
+        <button type="button" id="page-menu-share" class="page-menu-item" data-action="share">Share</button>
+        <button type="button" class="page-menu-item" data-action="rename">Rename</button>
+        <button type="button" id="page-menu-remove" class="page-menu-item page-menu-danger" data-action="remove">Delete</button>
+      </div>
+    </div>
+  </div>
   <div id="whats-new" class="whats-new" role="dialog" aria-labelledby="whats-new-title" hidden>
     <p id="whats-new-title" class="whats-new-title">Write together</p>
     <p class="whats-new-text">Share a page and write it with others at the same time. Open a page and press Share.</p>
@@ -347,6 +357,7 @@
   <script src="sample-verse.js"></script>
   <script src="sample-pointer.js"></script>
   <script src="sample-start.js"></script>
+  <script src="page-menu.js"></script>
   <script src="storage.js"></script>
   <script src="sharing.js"></script>
   <script src="limits.js"></script>
