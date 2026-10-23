@@ -240,6 +240,13 @@
       </div>
     </div>
   </div>
+  <div id="page-menu-overlay" class="page-menu-overlay" hidden>
+    <div id="page-menu" class="page-menu" role="menu">
+      <button type="button" id="page-menu-share" class="page-menu-item" role="menuitem" data-action="share"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M18 8v6M15 11h6"/></svg>Share</button>
+      <button type="button" class="page-menu-item" role="menuitem" data-action="rename"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Rename</button>
+      <button type="button" id="page-menu-remove" class="page-menu-item page-menu-danger" role="menuitem" data-action="remove"></button>
+    </div>
+  </div>
   <div id="whats-new" class="whats-new" role="dialog" aria-labelledby="whats-new-title" hidden>
     <p id="whats-new-title" class="whats-new-title">Write together</p>
     <p class="whats-new-text">Share a page and write it with others at the same time. Open a page and press Share.</p>
@@ -347,6 +354,7 @@
   <script src="sample-verse.js"></script>
   <script src="sample-pointer.js"></script>
   <script src="sample-start.js"></script>
+  <script src="page-menu.js"></script>
   <script src="storage.js"></script>
   <script src="sharing.js"></script>
   <script src="limits.js"></script>

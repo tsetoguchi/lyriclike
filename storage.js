@@ -615,7 +615,28 @@ function buildListItem(lyric) {
   for (const button of item.querySelectorAll('.lyrics-action-btn')) {
     button.addEventListener('click', actions[button.dataset.action]);
   }
+  watchListItemHold(item, lyric, actions);
   return item;
+}
+
+// On touch the row's buttons are hidden, and a long press brings them up
+// as a menu. A tab holding an older index.html has no page-menu.js.
+function watchListItemHold(item, lyric, actions) {
+  if (!window.PageMenu) return;
+  PageMenu.watchForHold(item, () => PageMenu.open(item, titleForName(lyric.title), {
+    share: canShareFromList(lyric) ? () => openShareDialog(lyric.id, lyric.title) : null,
+    rename: actions.rename,
+    remove: actions.delete,
+    removeLabel: lyric.shared ? 'Leave' : 'Delete',
+  }));
+}
+
+// The Share button's rule: an editor can always see who is on a page, and an
+// owner can still reach people already added while sharing is paused.
+function canShareFromList(lyric) {
+  if (!window.openShareDialog) return false;
+  if (lyric.shared || lyric.share_count > 0) return true;
+  return Boolean(window.currentUser && window.currentUser.can_share);
 }
 
 // The page a signed-out writer has, shown the way a saved one would be so
