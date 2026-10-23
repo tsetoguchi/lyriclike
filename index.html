@@ -240,14 +240,11 @@
       </div>
     </div>
   </div>
-  <div id="page-menu-overlay" class="modal-overlay" hidden>
-    <div id="page-menu" class="modal-panel page-menu" role="dialog" aria-modal="true" aria-labelledby="page-menu-title">
-      <div class="modal-header"><span id="page-menu-title"></span></div>
-      <div class="page-menu-items">
-        <button type="button" id="page-menu-share" class="page-menu-item" data-action="share">Share</button>
-        <button type="button" class="page-menu-item" data-action="rename">Rename</button>
-        <button type="button" id="page-menu-remove" class="page-menu-item page-menu-danger" data-action="remove">Delete</button>
-      </div>
+  <div id="page-menu-overlay" class="page-menu-overlay" hidden>
+    <div id="page-menu" class="page-menu" role="menu">
+      <button type="button" id="page-menu-share" class="page-menu-item" role="menuitem" data-action="share"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M18 8v6M15 11h6"/></svg>Share</button>
+      <button type="button" class="page-menu-item" role="menuitem" data-action="rename"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Rename</button>
+      <button type="button" id="page-menu-remove" class="page-menu-item page-menu-danger" role="menuitem" data-action="remove"></button>
     </div>
   </div>
   <div id="whats-new" class="whats-new" role="dialog" aria-labelledby="whats-new-title" hidden>

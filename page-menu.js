@@ -9,6 +9,12 @@
   const MOVE_TOLERANCE_PX = 10;
   const TOUCH = 'touch';
   const CLOSE_DELAY_MS = 200;
+  const ROW_GAP_PX = 4;
+  const ROW_INSET_PX = 12;
+  const EDGE_GAP_PX = 16;
+  const LEAVE_LABEL = 'Leave';
+  const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
+  const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 
   const byId = id => document.getElementById(id);
 
@@ -77,16 +83,35 @@
     menuActions = null;
   }
 
+  // Under the row when it fits, above it near the bottom of the screen, and
+  // growing out of whichever edge touches the row.
+  function placeMenu(menu, row) {
+    const rowBox = row.getBoundingClientRect();
+    const height = menu.offsetHeight;
+    const fitsBelow = rowBox.bottom + ROW_GAP_PX + height <= innerHeight - EDGE_GAP_PX;
+    const top = fitsBelow
+      ? rowBox.bottom + ROW_GAP_PX
+      : Math.max(EDGE_GAP_PX, rowBox.top - ROW_GAP_PX - height);
+    menu.style.top = `${top}px`;
+    menu.style.left = `${rowBox.left + ROW_INSET_PX}px`;
+    menu.style.transformOrigin = fitsBelow ? 'top left' : 'bottom left';
+  }
+
   // actions holds share (or null, when this page can't be shared), rename,
   // and remove, with removeLabel saying whether removing deletes or leaves.
   function openPageMenu(row, title, actions) {
     menuActions = actions;
     heldRow = row;
     row.classList.add('is-held');
-    byId('page-menu-title').textContent = title;
+    const menu = byId('page-menu');
+    menu.setAttribute('aria-label', title);
     byId('page-menu-share').hidden = !actions.share;
-    byId('page-menu-remove').textContent = actions.removeLabel;
+    const isLeave = actions.removeLabel === LEAVE_LABEL;
+    byId('page-menu-remove').innerHTML = (isLeave ? LEAVE_ICON : TRASH_ICON) + actions.removeLabel;
     overlay.hidden = false;
+    placeMenu(menu, row);
+    // The menu takes its place before it grows, so it doesn't fly in.
+    void menu.offsetHeight;
     overlay.classList.add('open');
   }
 
