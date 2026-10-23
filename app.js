@@ -751,7 +751,7 @@ function wordsToHtml(text, marks) {
 // A class, not an inline style="--mark: …" — colour values live in
 // tokens.css :root, so the theme owns them (app.js:596 already states this
 // rule for the gutter's SCHEME_COLORS).
-// A slant mark keeps its family's colour and is drawn dashed, so a near rhyme
+// A slant mark keeps its family's colour and is drawn paler, so a near rhyme
 // (night / like) is not read as an exact one (night / light).
 function markClassFor(family, isSlant) {
   const slant = isSlant ? ' mark-slant' : '';

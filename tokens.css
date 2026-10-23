@@ -175,7 +175,14 @@
      top of it, and every amber dark enough to do that composites to khaki
      over the slate card. The picked word takes amber as its ink, so the
      amber wash behind it only has to hold amber letters, which it does. */
-  --selection: rgba(124, 184, 255, 0.30);
+  /* Neutral, not blue: --scheme-1 is that same blue, and a rhyme wash in it
+     read as selected text. */
+  --selection: rgba(226, 231, 239, 0.24);
+  /* How much of a family's colour goes into a rhyme wash behind a word. */
+  --mark-wash-rest: 28%;
+  --mark-wash-slant: 20%;
+  --mark-wash-focus: 40%;
+  --mark-wash-faded: 8%;
   --flash: rgba(124, 184, 255, 0.20);
   --scrim: rgba(0, 0, 0, 0.66);                /* dimmed desk */
   --scrim-light: rgba(0, 0, 0, 0.55);
