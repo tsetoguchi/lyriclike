@@ -212,6 +212,18 @@
     if (user) loadScript(user.extension_script_url);
   }
 
+  // The note sits above the invite field, so the share dialog owns when it
+  // shows; this only checks the text and passes it on.
+  function addShareNote(text) {
+    const note = root.SlotInputs ? root.SlotInputs.readNote(text) : null;
+    if (note === null) {
+      console.warn('Extension hook: addShareNote needs a string of 200 characters or fewer.');
+      return;
+    }
+    const setNote = pageFunction('setShareNote');
+    if (setNote) setNote(note);
+  }
+
   root.siteExtensions = {
     version: HOOK_VERSION,
     setLimitDialog,
@@ -228,6 +240,7 @@
     addPageAction,
     addNotebookRowAction,
     notebookRowActions,
+    addShareNote,
   };
   document.addEventListener('auth-checked', loadAccountScript);
   document.addEventListener('auth-checked', showPageActions);

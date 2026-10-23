@@ -12,11 +12,13 @@ const {
   readAction,
   readWords,
   readPreview,
+  readNote,
   previewLines,
   MAX_LABEL_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_BODY_LENGTH,
   MAX_TAG_LENGTH,
+  MAX_NOTE_LENGTH,
   LINE_MARKS,
 } = slotInputs;
 
@@ -28,6 +30,7 @@ describe('constants', () => {
     assert.equal(MAX_TITLE_LENGTH, 300);
     assert.equal(MAX_BODY_LENGTH, 500000);
     assert.equal(MAX_TAG_LENGTH, 64);
+    assert.equal(MAX_NOTE_LENGTH, 200);
     assert.deepEqual(LINE_MARKS, ['added', 'removed']);
   });
 });
@@ -130,5 +133,31 @@ describe('readPreview', () => {
 
   it('refuses null', () => {
     assert.equal(readPreview(null), null);
+  });
+});
+
+describe('readNote', () => {
+  it('returns a good note', () => {
+    assert.equal(readNote('A note.'), 'A note.');
+  });
+
+  it('returns an empty string, which removes the note', () => {
+    assert.equal(readNote(''), '');
+  });
+
+  it('accepts a note of the longest length', () => {
+    assert.equal(readNote('a'.repeat(MAX_NOTE_LENGTH)).length, MAX_NOTE_LENGTH);
+  });
+
+  it('refuses a note one character too long', () => {
+    assert.equal(readNote('a'.repeat(MAX_NOTE_LENGTH + 1)), null);
+  });
+
+  it('refuses a number', () => {
+    assert.equal(readNote(5), null);
+  });
+
+  it('refuses null', () => {
+    assert.equal(readNote(null), null);
   });
 });

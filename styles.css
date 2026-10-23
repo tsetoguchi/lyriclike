@@ -661,6 +661,18 @@ header .nav-icon circle {
   display: none;
 }
 
+/* A line an extension adds above the invite field: plain body text. */
+.share-note {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--ink-faded);
+}
+
+.share-note[hidden] {
+  display: none;
+}
+
 /* Taller rows, so the list breathes like the rest of the dialog. */
 #share-panel .share-person {
   min-height: 52px;

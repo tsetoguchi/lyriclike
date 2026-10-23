@@ -9,6 +9,7 @@
   const MAX_TITLE_LENGTH = 300;
   const MAX_BODY_LENGTH = 500000;
   const MAX_TAG_LENGTH = 64;
+  const MAX_NOTE_LENGTH = 200;
   const LINE_MARKS = ['added', 'removed'];
   const MARK_REMOVED = 'removed';
   const ICON_PREFIX = '<svg';
@@ -80,8 +81,14 @@
     };
   }
 
+  // An empty note is valid: it takes the note away.
+  function readNote(text) {
+    return isTextWithin(text, MAX_NOTE_LENGTH) ? text : null;
+  }
+
   const SlotInputs = {
     readAction,
+    readNote,
     readWords,
     readPreview,
     previewLines,
@@ -89,6 +96,7 @@
     MAX_TITLE_LENGTH,
     MAX_BODY_LENGTH,
     MAX_TAG_LENGTH,
+    MAX_NOTE_LENGTH,
     LINE_MARKS,
   };
 
