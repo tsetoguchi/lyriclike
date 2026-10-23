@@ -122,6 +122,27 @@
   const submitButton = byId('share-submit');
   const copyButton = byId('share-copy');
 
+  const noteElement = byId('share-note');
+  let shareNote = '';
+
+  // The note speaks to the invite field, so it shows only while that does.
+  function showShareNote() {
+    // A cached page from before the note has no element: show nothing.
+    if (!noteElement) return;
+    noteElement.textContent = shareNote;
+    noteElement.hidden = !shareNote || form.hidden;
+  }
+
+  function setShareNote(text) {
+    shareNote = text;
+    showShareNote();
+  }
+
+  function setInviteFormHidden(isHidden) {
+    form.hidden = isHidden;
+    showShareNote();
+  }
+
   let dialogPage = null;
   let copyLink = '';
   let returnFocusTo = null;
@@ -177,7 +198,7 @@
     updateActions();
     showCopyLink(dialogPage, false);
     showResult('');
-    form.hidden = true;
+    setInviteFormHidden(true);
     setHidden('share-leave', true);
     setHidden('share-people-block', true);
     byId('share-people').innerHTML = '';
@@ -270,7 +291,7 @@
     byId('share-title').textContent = isOwner
       ? `Share “${titleForName(page.title)}”`
       : `People on “${titleForName(page.title)}”`;
-    form.hidden = !data.can_share;
+    setInviteFormHidden(!data.can_share);
     setHidden('share-subtext', !data.can_share);
     // An editor's dialog is headed "People on …" already.
     setHidden('share-people-label', !isOwner);
@@ -688,6 +709,7 @@
 
   window.refreshPageSharing = refreshPageSharing;
   window.openShareDialog = openShareDialog;
+  window.setShareNote = setShareNote;
   window.openPendingShare = openPendingShare;
   window.promptForPendingShare = promptForPendingShare;
   window.forgetPendingShare = forgetPendingShare;

@@ -110,6 +110,7 @@
       <div class="panel-header">
         <span id="lyrics-panel-title" contenteditable="true" spellcheck="false"
               data-placeholder="Untitled page" aria-label="Page title"></span>
+        <span id="page-actions" class="page-actions" hidden></span>
         <button type="button" id="share-btn" class="toggle-btn share-btn" hidden>Share</button>
         <button type="button" id="presence-header" class="presence-people presence-header" hidden></button>
         <span id="save-indicator"></span>
@@ -123,6 +124,7 @@
         <span class="page-notice-text" id="page-notice-text"></span>
         <span class="page-notice-actions" id="page-notice-actions"></span>
       </div>
+      <div id="page-preview" class="page-preview" hidden></div>
       <div class="lyrics-area">
         <div class="sample-bar" id="sample-bar" hidden>
           <div class="sample-bar-row">
@@ -179,6 +181,7 @@
         </div>
       </div>
     </div>
+    <div id="side-panel" class="side-panel" hidden></div>
   </div>
   <div id="sample-pointer" aria-hidden="true">
     <svg class="sample-pointer-line">
@@ -242,6 +245,7 @@
   </div>
   <div id="page-menu-overlay" class="page-menu-overlay" hidden>
     <div id="page-menu" class="page-menu" role="menu">
+      <div id="page-menu-extra"></div>
       <button type="button" id="page-menu-share" class="page-menu-item" role="menuitem" data-action="share"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M18 8v6M15 11h6"/></svg>Share</button>
       <button type="button" class="page-menu-item" role="menuitem" data-action="rename"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Rename</button>
       <button type="button" id="page-menu-remove" class="page-menu-item page-menu-danger" role="menuitem" data-action="remove"></button>
@@ -261,6 +265,7 @@
         <p id="share-subtext" class="share-subtext" hidden>People you add can read and edit this page.</p>
       </div>
       <div class="modal-body">
+        <p id="share-note" class="share-note" hidden></p>
         <form id="share-form" class="modal-field" novalidate>
           <input id="share-email" class="modal-input" type="email" maxlength="254"
                  placeholder="Add people by email" aria-label="Add people by email"
@@ -348,6 +353,8 @@
   </div>
   <script src="rhyme-core.js"></script>
   <script src="app.js"></script>
+  <script src="side-panel.js"></script>
+  <script src="page-preview.js"></script>
   <script src="auth.js"></script>
   <script src="auth-forms.js"></script>
   <script src="account-security.js"></script>
@@ -355,9 +362,11 @@
   <script src="sample-pointer.js"></script>
   <script src="sample-start.js"></script>
   <script src="page-menu.js"></script>
+  <script src="replace-flow.js"></script>
   <script src="storage.js"></script>
   <script src="sharing.js"></script>
   <script src="limits.js"></script>
+  <script src="slot-inputs.js"></script>
   <script src="extensions.js"></script>
   <script src="whats-new.js"></script>
   <script src="live-core.js"></script>

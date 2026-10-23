@@ -97,6 +97,24 @@
     menu.style.transformOrigin = fitsBelow ? 'top left' : 'bottom left';
   }
 
+  function buildExtraItem(extra, index) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'page-menu-item';
+    button.setAttribute('role', 'menuitem');
+    button.dataset.extra = String(index);
+    button.innerHTML = extra.icon;
+    button.appendChild(document.createTextNode(extra.label));
+    return button;
+  }
+
+  function fillExtraItems(extras) {
+    const slot = byId('page-menu-extra');
+    // A cached page from before extras has no slot: the menu works without.
+    if (!slot) return;
+    slot.replaceChildren(...extras.map(buildExtraItem));
+  }
+
   // actions holds share (or null, when this page can't be shared), rename,
   // and remove, with removeLabel saying whether removing deletes or leaves.
   function openPageMenu(row, title, actions) {
@@ -105,6 +123,7 @@
     row.classList.add('is-held');
     const menu = byId('page-menu');
     menu.setAttribute('aria-label', title);
+    fillExtraItems(actions.extra || []);
     byId('page-menu-share').hidden = !actions.share;
     const isLeave = actions.removeLabel === LEAVE_LABEL;
     byId('page-menu-remove').innerHTML = (isLeave ? LEAVE_ICON : TRASH_ICON) + actions.removeLabel;
@@ -121,8 +140,21 @@
     if (action) action();
   }
 
+  function runExtraAction(index) {
+    const extra = menuActions && menuActions.extra && menuActions.extra[index];
+    closePageMenu();
+    if (extra) extra.run();
+  }
+
   for (const button of overlay.querySelectorAll('[data-action]')) {
     button.addEventListener('click', () => runMenuAction(button.dataset.action));
+  }
+  const extraSlot = byId('page-menu-extra');
+  if (extraSlot) {
+    extraSlot.addEventListener('click', event => {
+      const item = event.target.closest('[data-extra]');
+      if (item) runExtraAction(Number(item.dataset.extra));
+    });
   }
   overlay.addEventListener('click', event => {
     if (event.target === overlay) closePageMenu();

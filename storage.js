@@ -55,6 +55,8 @@ const MAX_TITLE_LENGTH = 300;
 const HTTP_CONFLICT = 409;
 const HTTP_FORBIDDEN = 403;
 const HTTP_OVER_LIMIT = 402;
+const HTTP_OK = 200;
+const REPLACE_NOT_READY = 'not-ready';
 const LIMIT_KIND_PAGES = 'pages';
 const LIMIT_ANSWER_DELETE = 'delete';
 const PAGE_LIMIT_STATUS = 'Not saved: page limit';
@@ -109,6 +111,9 @@ let blockedPageId = null;
 // Whose the open page is and how many people have it. Sharing (sharing.js)
 // reads it for the Share button, the "Shared by" line and the poll.
 let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
+// The page the extension hook last heard about, so 'page-changed' fires once
+// per page and not on every header refresh.
+let lastAnnouncedPageId = null;
 // The page fetch a press on a list row started, waiting for its click.
 let prefetchedLyric = null;
 
@@ -147,6 +152,9 @@ let isLiveDraft = false;
 // live.js did not load, or live editing is paused for a co-writer. Nothing
 // can be typed there, so leaving it loses nothing.
 let isEditorLocked = false;
+// Set while the live room holds the page read-only (a full room, too many
+// tabs), so the end of a replace does not unlock it.
+let isRoomReadOnly = false;
 // Phones hide the title row and the save indicator in it, so being offline
 // is shown in the notice strip, which every screen size shows.
 let isOfflineNoticeShown = false;
@@ -395,6 +403,7 @@ async function handleCreateClick() {
 // What the list last showed for each page, so a save can tell whether the
 // sidebar has fallen behind the title on screen.
 let listedTitles = new Map();
+let lastListedLyrics = null;
 
 // How many pages of their own the list last showed, for the limit check at
 // New page. Null until the list loads; /api/me's count stands in until then.
@@ -433,6 +442,7 @@ async function loadLyricsList() {
   // check answers there is nothing to say yet.
   if (!window.currentUser) showPageCount(0);
   if (window.currentUser === null) {
+    lastListedLyrics = null;
     showLocalPage(container);
     if (typeof promptForPendingShare === 'function') promptForPendingShare();
     return;
@@ -461,33 +471,45 @@ async function loadLyricsList() {
     }
 
     const lyrics = await res.json();
-    listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
-    const own = lyrics.filter(lyric => !lyric.shared);
-    const shared = lyrics.filter(lyric => lyric.shared);
-    ownPageCount = own.length;
-    showPageCount(own.length);
-    if (own.length === 0) {
-      showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
-    } else {
-      container.innerHTML = '';
-      for (const lyric of own) container.appendChild(buildListItem(lyric));
-    }
-    if (shared.length > 0) {
-      const label = document.createElement('h2');
-      label.className = 'sidebar-label lyrics-list-group';
-      label.innerHTML = `<button type="button" class="list-group-toggle" data-group="shared" aria-expanded="true">`
-        + `${escapeHtml(SHARED_GROUP_LABEL)}${CHEVRON_ICON}</button>`;
-      container.appendChild(label);
-      for (const lyric of shared) container.appendChild(buildListItem(lyric));
-    }
-    applyListFolds();
-    // The database may not have the live page's newest title yet.
-    if (isLive()) showListedTitle(currentLyricId, currentTitle);
+    lastListedLyrics = lyrics;
+    renderLyricsList(container, lyrics);
     return lyrics;
   } catch {
     showListMessage(container, LOAD_FAILED_MESSAGE);
   }
 }
+
+// Draws the rows from a list already fetched, so a change to the row
+// buttons needs no request.
+function renderLyricsList(container, lyrics) {
+  listedTitles = new Map(lyrics.map(lyric => [lyric.id, lyric.title]));
+  const own = lyrics.filter(lyric => !lyric.shared);
+  const shared = lyrics.filter(lyric => lyric.shared);
+  ownPageCount = own.length;
+  showPageCount(own.length);
+  if (own.length === 0) {
+    showListMessage(container, EMPTY_NOTEBOOK_MESSAGE);
+  } else {
+    container.innerHTML = '';
+    for (const lyric of own) container.appendChild(buildListItem(lyric));
+  }
+  if (shared.length > 0) {
+    const label = document.createElement('h2');
+    label.className = 'sidebar-label lyrics-list-group';
+    label.innerHTML = `<button type="button" class="list-group-toggle" data-group="shared" aria-expanded="true">`
+      + `${escapeHtml(SHARED_GROUP_LABEL)}${CHEVRON_ICON}</button>`;
+    container.appendChild(label);
+    for (const lyric of shared) container.appendChild(buildListItem(lyric));
+  }
+  applyListFolds();
+  // The database may not have the live page's newest title yet.
+  if (isLive()) showListedTitle(currentLyricId, currentTitle);
+}
+
+document.addEventListener('notebook-actions-changed', () => {
+  if (!window.currentUser || !lastListedLyrics) return;
+  renderLyricsList(document.getElementById('lyrics-list-items'), lastListedLyrics);
+});
 
 // live-presence.js loads after this file and holds the one rule for short
 // names; a tab without it shows the name whole.
@@ -574,6 +596,36 @@ function rollListGroup(group, isFolding) {
 const PENCIL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
 const LEAVE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
+const EXTRA_ACTION_PREFIX = 'extra-';
+
+// The buttons an extension added to every row, in the order they were added.
+function rowExtensions() {
+  const hook = window.siteExtensions;
+  return hook && hook.notebookRowActions ? hook.notebookRowActions() : [];
+}
+
+function extraRowButtons(escapedTitle) {
+  return rowExtensions().map(({ label, icon }, index) => {
+    const name = escapeHtml(label);
+    return `<button class="lyrics-action-btn" data-action="${EXTRA_ACTION_PREFIX}${index}" aria-label="${name} ${escapedTitle}" title="${name}">${icon}</button>`;
+  }).join('');
+}
+
+// Each runs with the row's page, and a throw there is only warned about.
+function extraRowRuns(lyric) {
+  const row = { id: lyric.id, title: lyric.title, shared: Boolean(lyric.shared) };
+  return rowExtensions().map(({ label, icon, onClick }) => ({
+    label,
+    icon,
+    run: () => {
+      try {
+        onClick({ ...row });
+      } catch (error) {
+        console.warn('Extension hook: a row action failed:', error);
+      }
+    },
+  }));
+}
 
 // A page is its title, like a chat in Gemini or ChatGPT. Rename and delete
 // wait at the end of the row until it is hovered or focused. A page shared
@@ -593,7 +645,7 @@ function buildListItem(lyric) {
   item.innerHTML = `
     <button class="lyrics-list-open" title="${title} · ${formatDate(lyric.created_at)}"><span class="lyrics-list-title">${title}</span>${owner ? `<span class="lyrics-list-owner">${owner}</span>` : ''}</button>
     <div class="lyrics-list-actions">
-      <button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
+      ${extraRowButtons(title)}<button class="lyrics-action-btn" data-action="rename" aria-label="Rename ${title}" title="Rename">${PENCIL_ICON}</button>
       ${lastAction}
     </div>
   `;
@@ -612,6 +664,9 @@ function buildListItem(lyric) {
     delete: () => deleteLyric(lyric),
     leave: () => deleteLyric(lyric),
   };
+  extraRowRuns(lyric).forEach((extra, index) => {
+    actions[EXTRA_ACTION_PREFIX + index] = extra.run;
+  });
   for (const button of item.querySelectorAll('.lyrics-action-btn')) {
     button.addEventListener('click', actions[button.dataset.action]);
   }
@@ -628,6 +683,7 @@ function watchListItemHold(item, lyric, actions) {
     rename: actions.rename,
     remove: actions.delete,
     removeLabel: lyric.shared ? 'Leave' : 'Delete',
+    extra: extraRowRuns(lyric),
   }));
 }
 
@@ -678,6 +734,9 @@ function refreshListIfBehind() {
 function showListedTitle(id, title) {
   if (!listedTitles.has(id)) return;
   listedTitles.set(id, title);
+  // A later re-render without a fetch draws from this list.
+  const listed = lastListedLyrics && lastListedLyrics.find(lyric => lyric.id === id);
+  if (listed) listed.title = title;
   const row = document.querySelector(`.lyrics-list-item[data-id="${CSS.escape(id)}"] .lyrics-list-title`);
   if (row) row.textContent = titleForName(title);
 }
@@ -1493,6 +1552,7 @@ function titleForName(title) {
 function updatePanelHeader() {
   const el = document.getElementById('lyrics-panel-title');
   if (document.activeElement !== el) el.textContent = titleForDisplay(currentTitle);
+  announcePageIfChanged();
 }
 
 // escapeHtml lives in app.js. These three scripts share one global scope, so a
@@ -1726,6 +1786,118 @@ loadLyricsList();
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
 window.clearLyricState = clearLyricState;
 
+// ── The open page, for the extension hook (extensions.js) ──
+
+function currentPageSummary() {
+  return {
+    id: currentLyricId,
+    role: currentPageInfo.role,
+    live: isLiveDraft || isLive(),
+    signedIn: Boolean(window.currentUser),
+  };
+}
+
+// Every path that puts another page on screen ends in updatePanelHeader, so
+// that is where an extension hears of it.
+function announcePageIfChanged() {
+  if (currentLyricId === lastAnnouncedPageId) return;
+  lastAnnouncedPageId = currentLyricId;
+  document.dispatchEvent(new CustomEvent('page-changed', { detail: currentPageSummary() }));
+}
+
+async function openPageById(id) {
+  return await loadLyric(id) === HTTP_OK;
+}
+
+// A live page is replaced by its room, which saves its own words first. A
+// page waiting to reopen live may hold words only this device has.
+function replaceReadiness() {
+  if (isLive()) return null;
+  if (isLiveDraft || currentRevision === null) return REPLACE_NOT_READY;
+  if (pendingConflict || isPageBlocked()) return REPLACE_NOT_READY;
+  return null;
+}
+
+// Not flushSave: that turns a conflict into a copy. The editor is already
+// locked, so one save covers every word typed.
+async function flushBeforeReplace() {
+  if (isLive()) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  if (hasUnsavedEdits()) await performSave();
+  await waitForSaves();
+}
+
+// Words a failed save left behind are not on the server, so a replace would
+// lose them. An empty page or the sample is never saved, and holds none.
+function hasWordsToKeep() {
+  if (isLive() || !hasUnsavedEdits()) return false;
+  return document.getElementById('lyrics').value.trim() !== '' && !isSampleShowing();
+}
+
+// Answers whether the editor was editable, so a page locked for its own
+// reason (a paused co-writer) stays locked after.
+function lockForReplace() {
+  const wasEditable = !document.getElementById('lyrics').readOnly;
+  setEditorReadOnly(true);
+  return wasEditable;
+}
+
+// A lock taken meanwhile, by showLyric for a page opened or by the room,
+// stays.
+function unlockAfterReplace(wasEditable) {
+  if (wasEditable && !isEditorLocked && !isRoomReadOnly) setEditorReadOnly(false);
+}
+
+async function sendReplace(id, { title, body, tag }) {
+  const words = tag === null ? { title, body } : { title, body, tag };
+  const res = await fetch(`/api/lyrics/${id}/replace`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(words),
+  });
+  if (res.status === HTTP_UNAUTHORIZED && window.handleSessionExpired) {
+    window.handleSessionExpired();
+  }
+  const answer = res.status === HTTP_OK ? await res.json() : null;
+  return { status: res.status, answer };
+}
+
+// The answer's revision and the words sent become the saved state, so the
+// next save builds on the replace instead of meeting it as a conflict. A live
+// page already has the words from its room.
+function applyReplace(answer, words) {
+  if (isLive()) return;
+  showLyric({
+    id: answer.id,
+    title: answer.title,
+    body: words.body,
+    revision: answer.revision,
+    live: answer.live,
+    role: currentPageInfo.role,
+    share_count: currentPageInfo.shareCount,
+    owner_name: currentPageInfo.ownerName,
+  });
+  refreshListIfBehind();
+}
+
+function replaceWholePage(words) {
+  return window.ReplaceFlow.runReplace({
+    readiness: replaceReadiness,
+    flush: flushBeforeReplace,
+    pageId: () => currentLyricId,
+    hasUnsaved: hasWordsToKeep,
+    lock: lockForReplace,
+    unlock: unlockAfterReplace,
+    send: sendReplace,
+    apply: applyReplace,
+  }, words);
+}
+
+window.currentPageSummary = currentPageSummary;
+window.openPageById = openPageById;
+window.replaceWholePage = replaceWholePage;
+
 function showLiveIndicator(text) {
   const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
   setSaveIndicator(isOffline ? '' : text);
@@ -1782,7 +1954,10 @@ window.livePage = {
   },
   notice: text => showNotice(text),
   checkStillLive,
-  setReadOnly: isReadOnly => { document.getElementById('lyrics').readOnly = isReadOnly; },
+  setReadOnly: isReadOnly => {
+    isRoomReadOnly = isReadOnly;
+    document.getElementById('lyrics').readOnly = isReadOnly;
+  },
 };
 
 // Signing out must not leave the last account's lyric on screen, in the
@@ -1803,6 +1978,8 @@ function clearLyricState() {
   pendingConflict = null;
   hideNotice();
   setPageInfo({});
+  // Nothing an extension put in the panel may stay for the next person.
+  if (window.SidePanel) window.SidePanel.close();
   if (typeof forgetPendingShare === 'function') forgetPendingShare();
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
@@ -1812,6 +1989,7 @@ function clearLyricState() {
   updatePanelHeader();
   closeLyricsList();
   listedTitles = new Map();
+  lastListedLyrics = null;
   ownPageCount = null;
   document.getElementById('page-count').hidden = true;
   document.getElementById('lyrics-list-items').innerHTML = '';
@@ -1974,6 +2152,7 @@ function restoreDraft() {
 
 if (isFirstVisit()) showSample();
 else restoreDraft();
+announcePageIfChanged();
 
 // Every app script is revalidated on load, so the sign-in check can answer
 // while this file is still on its way; auth.js then finds no openNotebook to

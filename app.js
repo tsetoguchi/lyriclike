@@ -80,6 +80,7 @@ const selectedWordEl = document.getElementById('selected-word');
 const resultsEl = document.getElementById('rhyme-results');
 const resizeHandleEl = document.getElementById('resize-handle');
 const rhymesPanelEl = document.getElementById('rhymes-panel');
+const sidePanelEl = document.getElementById('side-panel');
 const highlightEl = document.getElementById('lyrics-highlight');
 const mobileTabsEl = document.getElementById('mobile-tabs');
 const mainEl = document.querySelector('.main');
@@ -165,6 +166,7 @@ function onRhymeDataReady() {
   // has not changed, so renderHighlight() needs telling it is dirty anyway.
   invalidateInternalRhymeMarks();
   renderHighlight();
+  redrawPreview();
 }
 
 // Clearing the promise lets the next interaction retry, which matters now that
@@ -1138,20 +1140,14 @@ function splitIntoStanzas(allLines, lineCount) {
   return { stanzas, stanzaStartIndices };
 }
 
-function updateRhymeSchemeGutter() {
-  if (!rhymeSchemeVisible) return;
-  // Dictionary may still be loading; onLoaded() re-renders when it lands.
-  if (!rhymeIndex) return;
-  console.assert(rhymeSchemeGutterEl !== null, 'updateRhymeSchemeGutter: gutter element must exist');
-  const text = textareaEl.value;
-  const allLines = text.split('\n');
-  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
-
-  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
-
+// Each line's rhyme letter and its colour, worked out stanza by stanza.
+// Without the dictionary every label is empty; onRhymeDataReady() redraws.
+function schemeLabelsFor(allLines, lineCount) {
   const labels = new Array(lineCount).fill('');
   const labelColors = new Array(lineCount).fill('');
+  if (!rhymeIndex) return { labels, labelColors };
 
+  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
   for (let stanzaIdx = 0; stanzaIdx < stanzas.length; stanzaIdx++) {
     const stanza = stanzas[stanzaIdx];
     const scheme = RhymeCore.computeRhymeScheme(rhymeIndex, stanza);
@@ -1169,6 +1165,18 @@ function updateRhymeSchemeGutter() {
       }
     }
   }
+  return { labels, labelColors };
+}
+
+function updateRhymeSchemeGutter() {
+  if (!rhymeSchemeVisible) return;
+  // Dictionary may still be loading; onLoaded() re-renders when it lands.
+  if (!rhymeIndex) return;
+  console.assert(rhymeSchemeGutterEl !== null, 'updateRhymeSchemeGutter: gutter element must exist');
+  const text = textareaEl.value;
+  const allLines = text.split('\n');
+  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
+  const { labels, labelColors } = schemeLabelsFor(allLines, lineCount);
 
   const heights = measureLineHeights(allLines.slice(0, lineCount));
   const textStyle = getComputedStyle(textareaEl);
@@ -1187,6 +1195,29 @@ function updateRhymeSchemeGutter() {
     }
   }
   rhymeSchemeGutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';
+}
+
+// The marks the editor would give these lines, for the read-only preview
+// (page-preview.js). A null letter means the margin draws nothing: it is
+// hidden, or the dictionary has not landed, as updateRhymeSchemeGutter() does.
+// An empty letter is a line that rhymes with nothing.
+function previewMarks(lines) {
+  const hasLetters = rhymeSchemeVisible && rhymeIndex !== null;
+  const { labels, labelColors } = schemeLabelsFor(lines, hasLetters ? lines.length : 0);
+  return lines.map((line, index) => {
+    const trimmed = line.trim();
+    const isCounted = syllablesVisible && trimmed !== '';
+    return {
+      syllables: isCounted ? RhymeCore.countSyllablesForLine(rhymeIndex, trimmed) : null,
+      letter: hasLetters ? labels[index] || '' : null,
+      color: hasLetters ? labelColors[index] || '' : '',
+    };
+  });
+}
+
+// The preview draws from the same toggles and dictionary as the editor.
+function redrawPreview() {
+  if (window.PagePreview) window.PagePreview.redraw();
 }
 
 // The character offset each line starts at within the whole text, so a mark
@@ -1244,6 +1275,7 @@ function toggleRhymeScheme() {
   // Showing or hiding either margin changes the editor's width, so the text
   // re-wraps for both of them; openGutter() re-measures both.
   openGutter(rhymeSchemeGutterEl, rhymeSchemeVisible);
+  redrawPreview();
 }
 
 // A margin opens and closes at once, so the editor's new width is settled by
@@ -1264,6 +1296,7 @@ function toggleSyllables() {
   setToggleState(toggleBtn, syllablesVisible);
   trackEvent('overlay_toggled', { overlay: 'syllables', is_on: syllablesVisible });
   openGutter(gutterEl, syllablesVisible);
+  redrawPreview();
 }
 
 // Marks draw inside #lyrics-highlight itself rather than a margin, so there is
@@ -1293,15 +1326,23 @@ function handleResizeStart(event) {
   bodyStyle.userSelect = 'none';
 }
 
+// A hidden panel has no box, so the drag measures whichever one is showing.
+function getShowingPanel() {
+  const isSidePanelShowing = window.SidePanel && window.SidePanel.isOpen();
+  return isSidePanelShowing && sidePanelEl ? sidePanelEl : rhymesPanelEl;
+}
+
 function handleResizeMove(event) {
   if (!isResizing) return;
   if (!event) return;
   // The panel's right edge (inside its desk margin) stays fixed during
   // the drag, so it anchors the width math to the pointer exactly.
-  const panelRight = rhymesPanelEl.getBoundingClientRect().right;
+  const panelRight = getShowingPanel().getBoundingClientRect().right;
   const newWidth = panelRight - event.clientX;
   const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
   rhymesPanelEl.style.width = clampedWidth + 'px';
+  // Both panels take the same width, so the side panel keeps in step.
+  if (sidePanelEl) sidePanelEl.style.width = clampedWidth + 'px';
 }
 
 function handleResizeEnd() {
@@ -1457,6 +1498,8 @@ function matchWordCase(original, replacement) {
 function replacePickedWord(word) {
   console.assert(typeof word === 'string', 'replacePickedWord: word must be a string');
   if (!pickedBounds || typeof word !== 'string' || word === '') return false;
+  // The editor is hidden behind a preview; a swap there would be unseen.
+  if (window.PagePreview && window.PagePreview.isOpen()) return false;
   // setRangeText ignores readOnly, so a page that is read-only (live editing
   // paused, or waiting for a reload) would change and lose the swap.
   if (textareaEl.readOnly) return false;
@@ -1688,6 +1731,8 @@ function endEditorSelection() {
 function switchMobileTab(tab) {
   console.assert(typeof tab === 'string', 'switchMobileTab: tab must be a string');
   if (typeof tab !== 'string') return;
+  // The tabs stay on a phone; tapping one leaves the side panel.
+  if (window.SidePanel) window.SidePanel.close();
   const tabButtons = mobileTabsEl.querySelectorAll('.mobile-tab');
   for (let i = 0; i < tabButtons.length; i++) {
     const button = tabButtons[i];

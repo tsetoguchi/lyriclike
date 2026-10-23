@@ -503,6 +503,26 @@ header .nav-icon circle {
   padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
 }
 
+/* Sits where Share does, so an extension's buttons read as part of the same
+   row; the tip shows above each one. */
+.page-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-1);
+}
+
+.page-actions[hidden] {
+  display: none;
+}
+
+.page-action-btn {
+  position: relative;
+  justify-content: center;
+  min-width: var(--tap-target);
+  padding: var(--space-2);
+}
+
 .share-btn-icon {
   width: 16px;
   height: 16px;
@@ -638,6 +658,18 @@ header .nav-icon circle {
 }
 
 .share-subtext[hidden] {
+  display: none;
+}
+
+/* A line an extension adds above the invite field: plain body text. */
+.share-note {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--ink-faded);
+}
+
+.share-note[hidden] {
   display: none;
 }
 
@@ -1500,6 +1532,127 @@ header .nav-icon circle {
   flex-direction: column;
   overflow: hidden;
   background: var(--paper-panel);
+}
+
+/* An extension's panel takes the rhymes panel's place and width. */
+.side-panel {
+  width: var(--rhymes-panel-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper-panel);
+}
+
+.side-panel[hidden] {
+  display: none;
+}
+
+.main.has-side-panel .rhymes-panel {
+  display: none;
+}
+
+/* The preview: an extension's text, read-only, in the editor's place. Its
+   rows are the editor's lines, with the open gutters' widths beside them. */
+.lyrics-area[hidden],
+.page-preview[hidden] {
+  display: none;
+}
+
+.page-preview {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.page-preview::-webkit-scrollbar {
+  display: none;
+}
+
+/* Written where the page's own title is, starting where the text does. */
+.preview-title {
+  display: block;
+  max-width: var(--sheet-width);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-5) var(--space-3)
+    calc(var(--sheet-syllables) + var(--editor-pad));
+  font-family: var(--font-ui);
+  font-size: var(--text-title-3);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.preview-sheet {
+  max-width: var(--sheet-width);
+  margin-inline: auto;
+  padding-bottom: var(--editor-pad);
+}
+
+/* Count, text and letter share a row, so a wrapped line keeps its marks
+   beside it without anything being measured. The text column is only as
+   wide as its words and a filler takes the rest, so the letter sits just
+   after the line's last word, as the scheme gutter puts it. */
+.preview-line {
+  display: grid;
+  grid-template-columns: var(--sheet-syllables) minmax(0, max-content)
+    var(--sheet-scheme) 1fr;
+  font-family: var(--font-editor);
+  font-size: var(--editor-font-size);
+  line-height: var(--line-pitch);
+}
+
+.preview-count {
+  overflow: hidden;
+  font-size: var(--text-subhead);
+  text-align: center;
+  color: var(--ink-faded);
+  user-select: none;
+}
+
+.lyrics-panel:has(.syllable-gutter.visible) .preview-count {
+  border-right: var(--hairline) solid var(--rule);
+}
+
+.preview-text {
+  min-height: var(--line-pitch);
+  padding-inline: var(--editor-pad);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: var(--ink);
+}
+
+/* A wrapped line ends on its last row, so its letter sits there. */
+.preview-letter {
+  align-self: end;
+  overflow: hidden;
+  font-size: var(--text-callout);
+  font-weight: var(--weight-bold);
+  color: var(--ink-faded);
+  user-select: none;
+}
+
+/* The spacer dot on a blank line, hidden as the gutters hide theirs. */
+.preview-count.empty-line,
+.preview-letter.empty-line {
+  color: transparent;
+}
+
+/* The bar marks the line itself, so it stays with the Rhyme Scheme margin
+   closed. */
+.preview-line.is-added {
+  background: var(--accent-wash-strong);
+}
+
+.preview-line.is-added .preview-text {
+  box-shadow: inset var(--space-1) 0 0 var(--accent);
+}
+
+.preview-line.is-removed .preview-text {
+  color: var(--ink-faded);
+  text-decoration: line-through;
 }
 
 .selected-word-bar {
@@ -3521,6 +3674,29 @@ body.sidebar-open #sidebar-scrim {
     flex: 1;
   }
 
+  /* An open side panel fills the screen as the Rhymes tab does. */
+  .side-panel {
+    width: 100% !important;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .main.has-side-panel .lyrics-panel,
+  .main.has-side-panel .rhymes-panel {
+    display: none;
+  }
+
+  /* A preview opened from the side panel is what the writer asked to see;
+     the panel waits behind it and comes back when the preview closes. */
+  .main.is-previewing.has-side-panel .lyrics-panel {
+    display: flex;
+    flex: 1;
+  }
+
+  .main.is-previewing.has-side-panel .side-panel {
+    display: none;
+  }
+
   /* Editor metrics shrink together: one token change keeps the text,
      overlay, and gutters in lockstep.
 
@@ -3547,11 +3723,13 @@ body.sidebar-open #sidebar-scrim {
     --gutter-syllables: 40px;
   }
 
-  .syllable-gutter .syl-line {
+  .syllable-gutter .syl-line,
+  .preview-count {
     font-size: var(--text-caption-1);
   }
 
-  .rhyme-scheme-gutter .scheme-line {
+  .rhyme-scheme-gutter .scheme-line,
+  .preview-letter {
     font-size: var(--text-footnote);
   }
 

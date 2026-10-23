@@ -81,6 +81,18 @@
 /extensions.js
   Cache-Control: no-cache
 
+/side-panel.js
+  Cache-Control: no-cache
+
+/page-preview.js
+  Cache-Control: no-cache
+
+/replace-flow.js
+  Cache-Control: no-cache
+
+/slot-inputs.js
+  Cache-Control: no-cache
+
 /live-core.js
   Cache-Control: no-cache
 
