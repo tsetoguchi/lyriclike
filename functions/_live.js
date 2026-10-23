@@ -21,6 +21,11 @@ export function isLivePage(env, { owner_id: ownerId, share_count: shareCount }) 
   return Number(shareCount) > 0 && isLiveFor(env, ownerId);
 }
 
+// A co-writer on a shared page while the switch is off may only read.
+export function isPausedFor(env, user, page) {
+  return page.owner_id !== user.id && !isLivePage(env, page);
+}
+
 // Whether a shared page's co-writers may write, as SQL on lyrics.user_id,
 // so a save checks the switch in the same statement that writes. The owner
 // always may; with the switch off, co-writers only read (spec §8).
@@ -46,6 +51,20 @@ async function callRoom(env, lyricId, path, body) {
     });
   } catch (err) {
     console.error('room call failed', path, err);
+  }
+}
+
+// Waits for the room's answer, for a request that depends on it. Null when
+// there is no room binding or the call fails, so the caller can say busy.
+export async function askRoom(env, lyricId, path, body) {
+  if (!env.PAGE_ROOM) return null;
+  try {
+    return await roomStub(env, lyricId).fetch(`${ROOM_ORIGIN}${path}`, {
+      method: 'POST', headers: { 'X-Room-Page': lyricId }, body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error('room call failed', path, err);
+    return null;
   }
 }
 

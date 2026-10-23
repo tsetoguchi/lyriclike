@@ -6,7 +6,7 @@ import { writeEvent } from './d1-page.js';
 import { DiffMatchPatch } from './deps.js';
 import { colourFor } from './presence.js';
 import { RoomCore } from './room-core.js';
-import { readEvictEmail } from './room-requests.js';
+import { readEvictEmail, readReplaceRequest, replaceAnswer } from './room-requests.js';
 import { RoomStorage } from './room-storage.js';
 
 const HTTP_NO_CONTENT = 204;
@@ -62,8 +62,15 @@ export class PageRoom extends DurableObject {
       await this.core.closeRoom();
       return new Response(null, { status: HTTP_NO_CONTENT });
     }
+    if (url.pathname === '/replace') return this.replace(request);
     if (request.headers.get('Upgrade') !== 'websocket') return new Response(null, { status: HTTP_UPGRADE_REQUIRED });
     return this.accept(request, url);
+  }
+
+  async replace(request) {
+    const words = await readReplaceRequest(request);
+    if (!words) return new Response(null, { status: HTTP_BAD_REQUEST });
+    return replaceAnswer(await this.core.replace(words));
   }
 
   async accept(request, url) {

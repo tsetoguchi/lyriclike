@@ -9,6 +9,7 @@ import { beforeEach, describe, it } from 'node:test';
 import * as lyricById from '../functions/api/lyrics/[id].js';
 import * as shares from '../functions/api/lyrics/[id]/shares.js';
 import * as account from '../functions/api/account.js';
+import { askRoom } from '../functions/_live.js';
 import { BASE_URL, addSession, makeEnv } from './support/auth-harness.mjs';
 import { fakeRoomBinding } from './support/fake-room-binding.mjs';
 
@@ -93,6 +94,16 @@ describe('the live flag', () => {
   });
 });
 
+describe('the meta answer', () => {
+  it('says the owner is the owner', async () => {
+    assert.equal((await (await getAs('sid-ann', SHARED, '?meta=1')).json()).role, 'owner');
+  });
+
+  it('says a co-writer is an editor', async () => {
+    assert.equal((await (await getAs('sid-bo', SHARED, '?meta=1')).json()).role, 'editor');
+  });
+});
+
 describe('room calls', () => {
   it('closes the room when the owner deletes the page', async () => {
     await deleteAs('sid-ann', SHARED);
@@ -143,5 +154,25 @@ describe('sharing a page', () => {
     const res = await shareAs('sid-ann', SOLO, 'cy@example.com');
     assert.equal(res.status, 403);
     assert.equal((await res.json()).error.code, 'sharing_paused');
+  });
+});
+
+describe('askRoom', () => {
+  it('returns what the room answered', async () => {
+    env.PAGE_ROOM = fakeRoomBinding({ answer: () => Response.json({ revision: 4 }) });
+    const answer = await askRoom(env, SHARED, '/replace', { title: 'T', body: 'b' });
+    assert.deepEqual(await answer.json(), { revision: 4 });
+    assert.deepEqual(calls(), [`${SHARED} /replace`]);
+    assert.deepEqual(JSON.parse(env.PAGE_ROOM.calls[0].body), { title: 'T', body: 'b' });
+  });
+
+  it('is null with no binding', async () => {
+    delete env.PAGE_ROOM;
+    assert.equal(await askRoom(env, SHARED, '/replace', {}), null);
+  });
+
+  it('is null when the call throws', async () => {
+    env.PAGE_ROOM = fakeRoomBinding({ answer: () => { throw new Error('room down'); } });
+    assert.equal(await askRoom(env, SHARED, '/replace', {}), null);
   });
 });
