@@ -313,9 +313,11 @@ export class RoomCore {
   // save from outside and merge the same words in twice.
   writeBack() {
     if (!this.writing) {
-      this.writing = this.writeBackOnce().finally(() => {
-        this.writing = null;
+      // Clears only its own lock: a replace may have queued and taken it.
+      const held = this.writeBackOnce().finally(() => {
+        if (this.writing === held) this.writing = null;
       });
+      this.writing = held;
     }
     return this.writing;
   }
@@ -480,9 +482,10 @@ export class RoomCore {
     await this.scheduleAlarm();
   }
 
-  // Never while D1 lacks the text: the snapshot is then the only copy.
+  // Never while D1 lacks the text: the snapshot is then the only copy. Nor
+  // while a write is under way: a replace still needs the doc.
   isReadyToEmpty(now) {
-    return this.emptySince !== null && !this.openSockets().length
+    return this.emptySince !== null && !this.openSockets().length && !this.writing
       && now - this.emptySince >= EMPTY_AFTER_MS && !this.snapshotDirty && !this.isD1Dirty();
   }
 

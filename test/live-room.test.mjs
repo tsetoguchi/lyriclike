@@ -594,6 +594,60 @@ describe('replacing the whole page', () => {
     assert.equal((await readStored()).body, 'new words');
   });
 
+  // Holds each page write until its gate is opened, in the order they come.
+  function holdPageWrites() {
+    const gates = [];
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => {
+      const statement = prepare(sql);
+      if (!sql.includes('UPDATE lyrics')) return statement;
+      let open;
+      const gate = new Promise(resolve => { open = resolve; });
+      gates.push(open);
+      return { bind: (...params) => ({ first: async () => { await gate; return statement.bind(...params).first(); } }) };
+    };
+    return { gates, stop: () => { db.prepare = prepare; } };
+  }
+
+  async function untilWrites(held, count) {
+    for (let tries = 0; held.gates.length < count; tries += 1) {
+      if (tries > 50) throw new Error(`only ${held.gates.length} writes started`);
+      await new Promise(resolve => setImmediate(resolve));
+    }
+  }
+
+  it('keeps the lock after the write-back it waited for ends', async () => {
+    const ann = await connect(ANN);
+    ann.type(5, '!');
+    await ann.sync();
+    const held = holdPageWrites();
+    const writing = room.writeBack();
+    await untilWrites(held, 1);
+    const replacing = room.replace(NEW);
+    held.gates[0]();
+    await writing;
+    await untilWrites(held, 2);
+    room.writeBack();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(held.gates.length, 2);
+    held.gates[1]();
+    assert.ok((await replacing).revision);
+    held.stop();
+  });
+
+  it('does not empty the room while a replace is writing', async () => {
+    const ann = await connect(ANN);
+    await room.leave(ann.socket);
+    const held = holdPageWrites();
+    const replacing = room.replace(NEW);
+    await untilWrites(held, 1);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    held.gates[0]();
+    assert.ok((await replacing).revision);
+    held.stop();
+    assert.equal((await readStored()).body, 'new words');
+  });
+
   it('waits for a write-back in flight, so it lands last', async () => {
     const ann = await connect(ANN);
     ann.type(5, '!');
