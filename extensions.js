@@ -96,6 +96,22 @@
     }
   }
 
+  function openSidePanel(element) {
+    if (!(element instanceof Element)) {
+      console.warn('Extension hook: openSidePanel needs an element.');
+      return false;
+    }
+    if (!root.SidePanel) {
+      console.warn('Extension hook: the side panel is not available here.');
+      return false;
+    }
+    return root.SidePanel.open(element);
+  }
+
+  function closeSidePanel() {
+    if (root.SidePanel) root.SidePanel.close();
+  }
+
   const PAGE_ACTIONS_ID = 'page-actions';
   const NOTEBOOK_ACTIONS_EVENT = 'notebook-actions-changed';
   const ICON_CLASS = 'tip-btn-icon';
@@ -187,6 +203,8 @@
     currentPage,
     openPage,
     replacePage,
+    openSidePanel,
+    closeSidePanel,
     addPageAction,
     addNotebookRowAction,
     notebookRowActions,

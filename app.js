@@ -80,6 +80,7 @@ const selectedWordEl = document.getElementById('selected-word');
 const resultsEl = document.getElementById('rhyme-results');
 const resizeHandleEl = document.getElementById('resize-handle');
 const rhymesPanelEl = document.getElementById('rhymes-panel');
+const sidePanelEl = document.getElementById('side-panel');
 const highlightEl = document.getElementById('lyrics-highlight');
 const mobileTabsEl = document.getElementById('mobile-tabs');
 const mainEl = document.querySelector('.main');
@@ -1302,6 +1303,8 @@ function handleResizeMove(event) {
   const newWidth = panelRight - event.clientX;
   const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
   rhymesPanelEl.style.width = clampedWidth + 'px';
+  // Both panels take the same width, so the side panel keeps in step.
+  sidePanelEl.style.width = clampedWidth + 'px';
 }
 
 function handleResizeEnd() {
@@ -1688,6 +1691,8 @@ function endEditorSelection() {
 function switchMobileTab(tab) {
   console.assert(typeof tab === 'string', 'switchMobileTab: tab must be a string');
   if (typeof tab !== 'string') return;
+  // The tabs stay on a phone; tapping one leaves the side panel.
+  if (window.SidePanel) window.SidePanel.close();
   const tabButtons = mobileTabsEl.querySelectorAll('.mobile-tab');
   for (let i = 0; i < tabButtons.length; i++) {
     const button = tabButtons[i];

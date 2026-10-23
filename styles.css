@@ -1522,6 +1522,24 @@ header .nav-icon circle {
   background: var(--paper-panel);
 }
 
+/* An extension's panel takes the rhymes panel's place and width. */
+.side-panel {
+  width: var(--rhymes-panel-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper-panel);
+}
+
+.side-panel[hidden] {
+  display: none;
+}
+
+.main.has-side-panel .rhymes-panel {
+  display: none;
+}
+
 .selected-word-bar {
   padding: var(--space-3) var(--space-5);
   display: flex;
@@ -3539,6 +3557,18 @@ body.sidebar-open #sidebar-scrim {
   .main.show-rhymes .rhymes-panel {
     display: flex;
     flex: 1;
+  }
+
+  /* An open side panel fills the screen as the Rhymes tab does. */
+  .side-panel {
+    width: 100% !important;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .main.has-side-panel .lyrics-panel,
+  .main.has-side-panel .rhymes-panel {
+    display: none;
   }
 
   /* Editor metrics shrink together: one token change keeps the text,
