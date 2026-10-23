@@ -44,7 +44,7 @@ export function createRoomHost({ db, lyricId, startAt = 1_000_000 }) {
   storage.savePageId(lyricId);
   const host = {
     db, storage, durable, dmp: new DiffMatchPatch(), clock: startAt, alarmAt: null, alarmSets: 0,
-    logs: [], open: [],
+    logs: [], open: [], events: [],
     lyricId: async () => storage.loadPageId(),
     sockets: () => host.open.filter(socket => !socket.closed),
     now: () => host.clock,
@@ -58,6 +58,7 @@ export function createRoomHost({ db, lyricId, startAt = 1_000_000 }) {
     },
     recordEvent: (userId, event) => writeEvent(db, userId, event, host.clock),
     log: (event, fields) => host.logs.push({ event, ...fields }),
+    sendEvent: event => host.events.push(structuredClone(event)),
   };
   return host;
 }

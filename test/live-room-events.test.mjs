@@ -8,7 +8,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { pageSavedEvent, roomEmptiedEvent, writtenSnapshot } from '../collab/src/room-events.js';
 import { PROTOCOL_VERSION } from '../collab/src/protocol.js';
-import { RoomCore, WRITE_BACK_MS } from '../collab/src/room-core.js';
+import { EMPTY_AFTER_MS, MAX_BACKOFF_MS, RoomCore, WRITE_BACK_MS } from '../collab/src/room-core.js';
 import { createFakeD1 } from './support/fake-d1.mjs';
 import { FakeSocket, TestClient, createRoomHost } from './support/fake-room-host.mjs';
 
@@ -39,6 +39,42 @@ async function runAlarm(at) {
   host.clock = at;
   host.alarmAt = null;
   await room.alarm();
+}
+
+async function typed(client, index, text) {
+  client.type(index, text);
+  await client.sync();
+}
+
+function savedEvents() {
+  return host.events.filter(event => event.type === 'page.saved');
+}
+
+// Holds every UPDATE until released; `waiting` resolves once one waits.
+function holdD1Writes() {
+  const prepare = db.prepare.bind(db);
+  let release;
+  let reached;
+  const gate = new Promise(resolve => { release = resolve; });
+  const waiting = new Promise(resolve => { reached = resolve; });
+  db.prepare = sql => {
+    const statement = prepare(sql);
+    if (!sql.includes('UPDATE lyrics')) return statement;
+    return { bind: (...args) => ({ first: async () => {
+      reached();
+      await gate;
+      return statement.bind(...args).first();
+    } }) };
+  };
+  return { waiting, release: () => { db.prepare = prepare; release(); } };
+}
+
+function failD1Writes() {
+  const prepare = db.prepare.bind(db);
+  db.prepare = sql => (sql.includes('UPDATE lyrics')
+    ? { bind: () => ({ first: async () => { throw new Error('D1 down'); } }) }
+    : prepare(sql));
+  return () => { db.prepare = prepare; };
 }
 
 async function readUpdatedAt() {
@@ -102,5 +138,150 @@ describe('the messages', () => {
 
   it('roomEmptiedEvent names the page', () => {
     assert.deepEqual(roomEmptiedEvent(PAGE), { type: 'page.room_emptied', data: { page_id: PAGE } });
+  });
+});
+
+describe('page saved from a write-back', () => {
+  it('a write-back sends before and after', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, ' there');
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(host.events, [{
+      type: 'page.saved',
+      data: {
+        page_id: PAGE, owner_id: 'ann', writer_ids: ['ann'], reason: 'edit', tag: null,
+        before: { title: 'Song', body: 'hello', revision: 0, updated_at: 1 },
+        after: { title: 'Song', body: 'hello there', revision: 1, updated_at: host.clock },
+      },
+    }]);
+  });
+
+  it('two people typing are both named', async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    await typed(ann, 5, '!');
+    await typed(bo, 0, 'oh ');
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(savedEvents()[0].data.writer_ids.sort(), ['ann', 'bo']);
+  });
+
+  it('the next write names only who typed since', async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    await typed(ann, 5, '!');
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    await bo.sync();
+    await typed(bo, 0, 'oh ');
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [['ann'], ['bo']]);
+  });
+
+  it('someone typing during a write stays named for the next one', async () => {
+    const ann = await connect(ANN);
+    const bo = await connect(BO);
+    await typed(ann, 5, '!');
+    const held = holdD1Writes();
+    const alarm = runAlarm(host.clock + WRITE_BACK_MS);
+    await held.waiting;
+    await typed(bo, 0, 'oh ');
+    held.release();
+    await alarm;
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [['ann'], ['bo']]);
+  });
+
+  it('ann typing again during her own write stays named', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, '!');
+    const held = holdD1Writes();
+    const alarm = runAlarm(host.clock + WRITE_BACK_MS);
+    await held.waiting;
+    await typed(ann, 0, 'oh ');
+    held.release();
+    await alarm;
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [['ann'], ['ann']]);
+  });
+
+  it('nothing is sent while the write lock is held', async () => {
+    const locks = [];
+    host.sendEvent = () => locks.push(room.writing);
+    const ann = await connect(ANN);
+    await typed(ann, 5, '!');
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(locks, [null]);
+  });
+
+  it('a write whose answer was lost sends one message', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, '!');
+    const prepare = db.prepare.bind(db);
+    db.prepare = sql => {
+      const statement = prepare(sql);
+      if (!sql.includes('UPDATE lyrics')) return statement;
+      db.prepare = prepare;
+      return { bind: (...args) => ({ first: async () => { await statement.bind(...args).first(); return null; } }) };
+    };
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    const saved = savedEvents();
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0].data.after.revision, 1);
+    assert.equal(saved[0].data.after.body, 'hello!');
+    assert.equal(saved[0].data.before.revision, 0);
+  });
+
+  it('a merged outside save sends nothing of its own', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 0, 'oh ');
+    await exec("UPDATE lyrics SET body = 'hello there', revision = 1, updated_at = 7 WHERE id = ?", PAGE);
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    const saved = savedEvents();
+    assert.equal(saved.length, 1);
+    assert.deepEqual(saved[0].data.before, { title: 'Song', body: 'hello there', revision: 1, updated_at: 7 });
+    assert.equal(saved[0].data.after.body, 'oh hello there');
+  });
+
+  it('a failing write sends nothing and keeps the writers', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, '!');
+    const restore = failD1Writes();
+    await runAlarm(host.clock + WRITE_BACK_MS);
+    assert.deepEqual(host.events, []);
+    assert.deepEqual([...room.writers], ['ann']);
+    restore();
+    await runAlarm(host.clock + MAX_BACKOFF_MS);
+    assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [['ann']]);
+  });
+
+  it('writers survive a wake-up', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, '!');
+    room.saveSnapshot();
+    room = new RoomCore(host);
+    ann.room = room;
+    await runAlarm(host.clock + 1);
+    assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [['ann']]);
+  });
+
+  it('a woken room from older meta names nobody rather than failing', async () => {
+    const ann = await connect(ANN);
+    await typed(ann, 5, '!');
+    room.saveSnapshot();
+    const meta = host.storage.readMeta('room');
+    delete meta.writers;
+    host.storage.saveMeta(meta);
+    room = new RoomCore(host);
+    ann.room = room;
+    await runAlarm(host.clock + 1);
+    assert.deepEqual(savedEvents().map(event => event.data.writer_ids), [[]]);
+  });
+});
+
+describe('room emptied', () => {
+  it('an emptied room says so', async () => {
+    const ann = await connect(ANN);
+    await room.leave(ann.socket);
+    await runAlarm(host.clock + EMPTY_AFTER_MS);
+    assert.deepEqual(host.events.at(-1), { type: 'page.room_emptied', data: { page_id: PAGE } });
   });
 });
