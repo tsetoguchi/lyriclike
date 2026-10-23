@@ -30,8 +30,9 @@ beforeEach(async () => {
 });
 
 describe('readPage', () => {
-  it('reads the text, title and revision, or null', async () => {
-    assert.deepEqual(await readPage(db, PAGE), { body: 'hello', title: 'Song', revision: 3 });
+  it('reads the text, title, revision, time and owner, or null', async () => {
+    assert.deepEqual(await readPage(db, PAGE),
+      { body: 'hello', title: 'Song', revision: 3, updated_at: 1, user_id: 'ann' });
     assert.equal(await readPage(db, 'missing'), null);
   });
 });
@@ -41,7 +42,8 @@ describe('writePage', () => {
 
   it('writes and returns the next revision when nothing changed outside', async () => {
     assert.equal(await writePage(db, PAGE, save), 4);
-    assert.deepEqual(await readPage(db, PAGE), { body: 'hello world', title: 'Song', revision: 4 });
+    assert.deepEqual(await readPage(db, PAGE),
+      { body: 'hello world', title: 'Song', revision: 4, updated_at: NOW, user_id: 'ann' });
   });
 
   it('does not land after a save outside the room', async () => {

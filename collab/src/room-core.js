@@ -208,9 +208,11 @@ export class RoomCore {
   async load() {
     const page = await readPage(this.host.db, await this.host.lyricId());
     if (!page) return this.shutDown('page_gone');
+    this.ownerId = page.user_id;
     const { snapshot, meta } = this.host.storage.loadState();
     if (snapshot) this.restore(snapshot, meta);
     else this.seed(page);
+    this.fillWrittenTime(page);
     this.lastSnapshotAt = this.host.now();
     this.doc.on('update', (update, origin) => this.onDocUpdate(update, origin));
     // Saved before anyone is greeted: a room that hibernated unsaved would
@@ -232,8 +234,17 @@ export class RoomCore {
   seed(page) {
     this.doc = seededDoc(page);
     this.epoch = crypto.randomUUID();
-    this.written = { revision: page.revision, text: page.body, title: page.title };
+    this.written = { revision: page.revision, text: page.body, title: page.title, updatedAt: page.updated_at };
     this.emptySince = null;
+  }
+
+  // Meta saved before the room kept the time of its last write lacks it; D1
+  // still on the room's revision holds that time. Otherwise the outside
+  // merge that follows sets it.
+  fillWrittenTime(page) {
+    if (this.written.updatedAt === undefined && page.revision === this.written.revision) {
+      this.written.updatedAt = page.updated_at;
+    }
   }
 
   async closeAll(code) {
@@ -330,7 +341,7 @@ export class RoomCore {
         if (sent.revision !== null) return;
         const page = await readPage(this.host.db, lyricId);
         if (!page) return this.shutDown('page_gone');
-        if (this.isOwnWrite(page, sent)) return this.adoptWrite(page.revision, sent);
+        if (this.isOwnWrite(page, sent)) return this.adoptWrite(page.revision, sent, page.updated_at);
         this.applyOutside(page);
       }
       this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
@@ -347,10 +358,11 @@ export class RoomCore {
     if (this.snapshotDirty) this.saveSnapshot();
     const body = this.text();
     const title = this.title();
+    const now = this.host.now();
     const revision = await writePage(this.host.db, lyricId, {
-      body, title, now: this.host.now(), baseRevision: this.written.revision, baseTitle: this.written.title,
+      body, title, now, baseRevision: this.written.revision, baseTitle: this.written.title,
     });
-    if (revision !== null) this.adoptWrite(revision, { body, title });
+    if (revision !== null) this.adoptWrite(revision, { body, title }, now);
     return { revision, body, title };
   }
 
@@ -360,8 +372,8 @@ export class RoomCore {
     return page.body === sent.body && page.title === sent.title;
   }
 
-  adoptWrite(revision, { body, title }) {
-    this.written = { revision, text: body, title };
+  adoptWrite(revision, { body, title }, updatedAt) {
+    this.written = { revision, text: body, title, updatedAt };
     this.writeFailures = 0;
     this.nextWriteBackAt = this.host.now() + WRITE_BACK_MS;
     this.saveMeta();
@@ -420,7 +432,7 @@ export class RoomCore {
     if (title !== this.title()) {
       this.doc.transact(() => this.doc.getMap(META_FIELD).set(TITLE_KEY, title), REPLACE);
     }
-    this.adoptWrite(revision, { body, title });
+    this.adoptWrite(revision, { body, title }, now);
     this.saveSnapshot();
     await this.scheduleAlarm();
     return { revision, updatedAt: now };
@@ -445,7 +457,7 @@ export class RoomCore {
     if (title !== this.title()) {
       this.doc.transact(() => this.doc.getMap(META_FIELD).set(TITLE_KEY, title), OUTSIDE);
     }
-    this.written = { revision: page.revision, text: page.body, title: page.title };
+    this.written = { revision: page.revision, text: page.body, title: page.title, updatedAt: page.updated_at };
     this.saveMeta();
     this.host.log('outside_merge', {});
   }
