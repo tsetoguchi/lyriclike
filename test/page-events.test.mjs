@@ -6,8 +6,11 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
+import * as account from '../functions/api/account.js';
 import * as page from '../functions/api/lyrics/[id].js';
+import * as replace from '../functions/api/lyrics/[id]/replace.js';
 import { BASE_URL, addSession, makeEnv } from './support/auth-harness.mjs';
+import { fakeRoomBinding } from './support/fake-room-binding.mjs';
 
 const HOOK = { EVENT_HOOK_URL: 'https://hooks.example.com/events', EVENT_HOOK_SECRET: 'hook-secret' };
 const SOLO = 'solo-page';
@@ -204,5 +207,78 @@ describe('page.saved from a save', () => {
       "SELECT count(*) AS n FROM logs WHERE event = 'event_hook_failed'"
     ).first();
     assert.equal(logged.n, 1);
+  });
+});
+
+const replaceAs = (sid, id, json) => call(replace.onRequestPost, 'POST', sid, id, json);
+
+describe('page.saved from a replace', () => {
+  it('sends replace with its tag on a solo page', async () => {
+    const response = await replaceAs('sid-ann', SOLO, { title: 'New', body: 'new words', tag: 't1' });
+    assert.equal(response.status, 200);
+    const { updated_at: updatedAt } = await response.json();
+    assert.deepEqual(events(), [{
+      type: 'page.saved',
+      data: {
+        page_id: SOLO, owner_id: 'ann', writer_ids: ['ann'], reason: 'replace', tag: 't1',
+        before: { title: 'Old', body: 'one', revision: 0, updated_at: 1 },
+        after: { title: 'New', body: 'new words', revision: 1, updated_at: updatedAt },
+      },
+    }]);
+  });
+
+  it('sends tag null when there is none', async () => {
+    await replaceAs('sid-ann', SOLO, { title: 'New', body: 'new words' });
+    assert.equal(events()[0].data.tag, null);
+  });
+
+  it('sends nothing from the site for a live page', async () => {
+    env.PAGE_ROOM = fakeRoomBinding({ answer: () => Response.json({ revision: 9, updated_at: 5 }) });
+    const response = await replaceAs('sid-bo', SHARED, { title: 'New', body: 'new words' });
+    assert.equal(response.status, 200);
+    assert.equal(sent.length, 0);
+  });
+});
+
+describe('page.deleted', () => {
+  it('is sent when the owner deletes a page', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    const response = await call(page.onRequestDelete, 'DELETE', 'sid-ann', SOLO);
+    assert.equal(response.status, 204);
+    assert.deepEqual(events(), [{ type: 'page.deleted', data: { page_id: SOLO } }]);
+  });
+
+  it('is not sent when a co-writer leaves', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await call(page.onRequestDelete, 'DELETE', 'sid-bo', SHARED);
+    assert.equal(sent.length, 0);
+  });
+});
+
+describe('account.deleted', () => {
+  async function deleteAccount(sid) {
+    env.PAGE_ROOM = fakeRoomBinding();
+    const request = new Request(`${BASE_URL}/api/account`, { method: 'DELETE', headers: { Cookie: `sid=${sid}` } });
+    const response = await account.onRequestDelete({ request, env, waitUntil: p => pending.push(p) });
+    await Promise.all(pending);
+    return response;
+  }
+
+  it('sends every page the account owned', async () => {
+    await exec("INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at) VALUES ('bo-page', 'bo', '', 'x', 0, 1, 1)");
+    const response = await deleteAccount('sid-ann');
+    assert.equal(response.status, 200);
+    const [event] = events();
+    assert.equal(event.type, 'account.deleted');
+    assert.equal(event.data.user_id, 'ann');
+    assert.deepEqual([...event.data.page_ids].sort(), [SHARED, SOLO]);
+  });
+
+  it('reads no page ids with the hook unset', async () => {
+    delete env.EVENT_HOOK_SECRET;
+    const log = recordSql();
+    await deleteAccount('sid-ann');
+    assert.equal(log.sql.filter(sql => sql === 'SELECT id FROM lyrics WHERE user_id = ?').length, 0);
+    assert.equal(sent.length, 0);
   });
 });

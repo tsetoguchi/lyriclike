@@ -6,6 +6,7 @@ import { askRoom, coWritersClause, isLivePage, isPausedFor } from '../../../_liv
 import {
   LIVE_COLUMNS, MAX_BODY_LENGTH, MAX_TITLE_LENGTH, findOpenable, notFound, paused, readJsonObject,
 } from '../../../_pages.js';
+import { queuePageSaved, snapshot, writeWithBefore } from '../../../_page-events.js';
 import { requireUser } from '../../../_shared.js';
 import { CAN_OPEN, canOpenParams } from '../../../_shares.js';
 
@@ -33,10 +34,11 @@ function readWords(payload) {
   }
   if (title.length > MAX_TITLE_LENGTH) return new Response('Title too long', { status: 413 });
   if (body.length > MAX_BODY_LENGTH) return new Response('Body too large', { status: 413 });
-  return { title, body };
+  return { title, body, tag: tag === undefined ? null : tag };
 }
 
-export async function onRequestPost({ request, env, params }) {
+export async function onRequestPost(context) {
+  const { request, env, params } = context;
   const { user, response } = await requireUser(request, env);
   if (response) return response;
 
@@ -51,8 +53,11 @@ export async function onRequestPost({ request, env, params }) {
     if (!page) return notFound();
     if (isPausedFor(env, user, page)) return paused();
     if (isLivePage(env, page)) return replaceInRoom(env, params.id, words);
-    const saved = await replaceInD1(env, params.id, user, words, page.revision);
-    if (saved) return answer(params.id, words, saved, isLivePage(env, saved));
+    const { row: saved, before } = await replaceInD1(env, params.id, user, words, page.revision);
+    if (saved) {
+      queueReplaced(context, params.id, user, words, { saved, before, revision: page.revision });
+      return answer(params.id, words, saved, isLivePage(env, saved));
+    }
   }
   return busy(HTTP_CONFLICT);
 }
@@ -60,24 +65,37 @@ export async function onRequestPost({ request, env, params }) {
 // Lands only on the revision just read, so a save in between is never
 // written over blindly. The switch is checked in the same statement.
 function replaceInD1(env, id, user, { title, body }, revision) {
+  const db = env.lyricalmiracle_db;
   const writers = coWritersClause(env);
   const now = Date.now();
-  return env.lyricalmiracle_db.prepare(`
-    UPDATE lyrics SET title = ?, body = ?, updated_at = ?, revision = revision + 1
-    WHERE id = ? AND revision = ? AND ${CAN_OPEN} AND (lyrics.user_id = ? OR ${writers.sql})
-    RETURNING revision, updated_at, ${LIVE_COLUMNS}
-  `).bind(title, body, now, id, revision, ...canOpenParams(user), user.id, ...writers.params).first();
+  return writeWithBefore(env,
+    () => db.prepare('SELECT title, body, updated_at FROM lyrics WHERE id = ? AND revision = ?')
+      .bind(id, revision),
+    db.prepare(`
+      UPDATE lyrics SET title = ?, body = ?, updated_at = ?, revision = revision + 1
+      WHERE id = ? AND revision = ? AND ${CAN_OPEN} AND (lyrics.user_id = ? OR ${writers.sql})
+      RETURNING revision, updated_at, ${LIVE_COLUMNS}
+    `).bind(title, body, now, id, revision, ...canOpenParams(user), user.id, ...writers.params));
+}
+
+// A live page's room says so itself, with the words it held before.
+function queueReplaced(context, id, user, { title, body, tag }, { saved, before, revision }) {
+  queuePageSaved(context, {
+    pageId: id, ownerId: saved.owner_id, writerIds: [user.id], reason: 'replace', tag,
+    before: before && snapshot({ ...before, revision }),
+    after: snapshot({ title, body, revision: saved.revision, updated_at: saved.updated_at }),
+  });
 }
 
 // The room holds the page while it's live. An answer it doesn't give
 // (none, or an older room's 426) means it can't take this yet.
-async function replaceInRoom(env, id, words) {
-  const reply = await askRoom(env, id, '/replace', words);
+async function replaceInRoom(env, id, { title, body }) {
+  const reply = await askRoom(env, id, '/replace', { title, body });
   if (!reply) return busy(HTTP_UNAVAILABLE);
   if (reply.status === HTTP_NOT_FOUND) return notFound();
   if (reply.status === HTTP_CONFLICT) return busy(HTTP_CONFLICT);
   if (reply.status !== HTTP_OK) return busy(HTTP_UNAVAILABLE);
-  return answer(id, words, await reply.json(), true);
+  return answer(id, { title }, await reply.json(), true);
 }
 
 function answer(id, { title }, { revision, updated_at: updatedAt }, live) {

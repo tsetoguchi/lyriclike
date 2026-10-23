@@ -260,6 +260,7 @@ export async function onRequestDelete(context) {
     ).bind(params.id, user.email_normalized),
   ]);
 
+  if (pageDeleted.meta.changes > 0) queuePageDeleted(context, params.id);
   if (shared && pageDeleted.meta.changes > 0) closeRoom(context, params.id);
   else if (editorLeft.meta.changes > 0) evictFromRoom(context, params.id, user.email_normalized);
   return new Response(null, { status: 204 });

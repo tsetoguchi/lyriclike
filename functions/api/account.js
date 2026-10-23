@@ -2,7 +2,9 @@
 // load makes (GET /api/me) stays simple.
 
 import { checkCurrentPassword } from '../_accounts.js';
+import { isEventHookSet } from '../_event-hook.js';
 import { closeRoom, evictFromRoom } from '../_live.js';
+import { queueAccountDeleted } from '../_page-events.js';
 import { readJsonBody } from '../_request.js';
 import { clearedSessionCookie, requireUser, writeLog } from '../_shared.js';
 
@@ -35,6 +37,14 @@ async function roomsToLeave(env, user) {
   return { owned: owned.results.map(row => row.id), joined: joined.results.map(row => row.id) };
 }
 
+// Every page the account owns, for the event hook. Read only when it's set.
+async function ownedPageIds(env, user) {
+  if (!isEventHookSet(env)) return [];
+  const owned = await env.lyricalmiracle_db.prepare('SELECT id FROM lyrics WHERE user_id = ?')
+    .bind(user.id).all();
+  return owned.results.map(row => row.id);
+}
+
 export async function onRequestDelete(context) {
   const { request, env } = context;
   const { user, response } = await requireUser(request, env);
@@ -46,6 +56,7 @@ export async function onRequestDelete(context) {
   await writeLog(env, request, { userId: user.id, event: 'delete_account' });
 
   const rooms = await roomsToLeave(env, user);
+  const pageIds = await ownedPageIds(env, user);
   await env.lyricalmiracle_db.batch([
     env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
     // Shares on this user's pages, then this user's access to other pages.
@@ -70,6 +81,7 @@ export async function onRequestDelete(context) {
   ]);
   for (const id of rooms.owned) closeRoom(context, id);
   for (const id of rooms.joined) evictFromRoom(context, id, user.email_normalized);
+  queueAccountDeleted(context, user.id, pageIds);
 
   const headers = new Headers();
   headers.append('Set-Cookie', clearedSessionCookie(new URL(request.url)));
