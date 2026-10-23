@@ -55,6 +55,11 @@ const MAX_TITLE_LENGTH = 300;
 const HTTP_CONFLICT = 409;
 const HTTP_FORBIDDEN = 403;
 const HTTP_OVER_LIMIT = 402;
+const HTTP_OK = 200;
+const REPLACE_NOT_READY = 'not-ready';
+// Typing while a save is out leaves newer words; the flush before a replace
+// saves again for those, this many times at most.
+const REPLACE_FLUSH_ROUNDS = 3;
 const LIMIT_KIND_PAGES = 'pages';
 const LIMIT_ANSWER_DELETE = 'delete';
 const PAGE_LIMIT_STATUS = 'Not saved: page limit';
@@ -109,6 +114,9 @@ let blockedPageId = null;
 // Whose the open page is and how many people have it. Sharing (sharing.js)
 // reads it for the Share button, the "Shared by" line and the poll.
 let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
+// The page the extension hook last heard about, so 'page-changed' fires once
+// per page and not on every header refresh.
+let lastAnnouncedPageId = null;
 // The page fetch a press on a list row started, waiting for its click.
 let prefetchedLyric = null;
 
@@ -147,6 +155,9 @@ let isLiveDraft = false;
 // live.js did not load, or live editing is paused for a co-writer. Nothing
 // can be typed there, so leaving it loses nothing.
 let isEditorLocked = false;
+// Set while the live room holds the page read-only (a full room, too many
+// tabs), so the end of a replace does not unlock it.
+let isRoomReadOnly = false;
 // Phones hide the title row and the save indicator in it, so being offline
 // is shown in the notice strip, which every screen size shows.
 let isOfflineNoticeShown = false;
@@ -1493,6 +1504,7 @@ function titleForName(title) {
 function updatePanelHeader() {
   const el = document.getElementById('lyrics-panel-title');
   if (document.activeElement !== el) el.textContent = titleForDisplay(currentTitle);
+  announcePageIfChanged();
 }
 
 // escapeHtml lives in app.js. These three scripts share one global scope, so a
@@ -1726,6 +1738,112 @@ loadLyricsList();
 window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
 window.clearLyricState = clearLyricState;
 
+// ── The open page, for the extension hook (extensions.js) ──
+
+function currentPageSummary() {
+  return {
+    id: currentLyricId,
+    role: currentPageInfo.role,
+    live: isLiveDraft || isLive(),
+    signedIn: Boolean(window.currentUser),
+  };
+}
+
+// Every path that puts another page on screen ends in updatePanelHeader, so
+// that is where an extension hears of it.
+function announcePageIfChanged() {
+  if (currentLyricId === lastAnnouncedPageId) return;
+  lastAnnouncedPageId = currentLyricId;
+  document.dispatchEvent(new CustomEvent('page-changed', { detail: currentPageSummary() }));
+}
+
+async function openPageById(id) {
+  return await loadLyric(id) === HTTP_OK;
+}
+
+// A live page is replaced by its room, which saves its own words first. A
+// page waiting to reopen live may hold words only this device has.
+function replaceReadiness() {
+  if (isLive()) return null;
+  if (isLiveDraft || currentRevision === null) return REPLACE_NOT_READY;
+  if (pendingConflict || isPageBlocked()) return REPLACE_NOT_READY;
+  return null;
+}
+
+// Not flushSave: that turns a conflict into a copy. Words typed while a save
+// was out get a save of their own, so the replace never goes over them.
+async function flushBeforeReplace() {
+  if (isLive()) return;
+  const textarea = document.getElementById('lyrics');
+  for (let round = 0; round < REPLACE_FLUSH_ROUNDS; round += 1) {
+    const typed = textarea.value;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (hasUnsavedEdits()) await performSave();
+    await waitForSaves();
+    if (textarea.value === typed) return;
+  }
+}
+
+// Answers whether the editor was editable, so a page locked for its own
+// reason (a paused co-writer) stays locked after.
+function lockForReplace() {
+  const wasEditable = !document.getElementById('lyrics').readOnly;
+  setEditorReadOnly(true);
+  return wasEditable;
+}
+
+// A lock taken meanwhile, by showLyric for a page opened or by the room,
+// stays.
+function unlockAfterReplace(wasEditable) {
+  if (wasEditable && !isEditorLocked && !isRoomReadOnly) setEditorReadOnly(false);
+}
+
+async function sendReplace(id, { title, body, tag }) {
+  const words = tag === null ? { title, body } : { title, body, tag };
+  const res = await fetch(`/api/lyrics/${id}/replace`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(words),
+  });
+  const answer = res.status === HTTP_OK ? await res.json() : null;
+  return { status: res.status, answer };
+}
+
+// The answer's revision and the words sent become the saved state, so the
+// next save builds on the replace instead of meeting it as a conflict. A live
+// page already has the words from its room.
+function applyReplace(answer, words) {
+  if (isLive()) return;
+  showLyric({
+    id: answer.id,
+    title: answer.title,
+    body: words.body,
+    revision: answer.revision,
+    live: answer.live,
+    role: currentPageInfo.role,
+    share_count: currentPageInfo.shareCount,
+    owner_name: currentPageInfo.ownerName,
+  });
+  refreshListIfBehind();
+}
+
+function replaceWholePage(words) {
+  return window.ReplaceFlow.runReplace({
+    readiness: replaceReadiness,
+    flush: flushBeforeReplace,
+    pageId: () => currentLyricId,
+    lock: lockForReplace,
+    unlock: unlockAfterReplace,
+    send: sendReplace,
+    apply: applyReplace,
+  }, words);
+}
+
+window.currentPageSummary = currentPageSummary;
+window.openPageById = openPageById;
+window.replaceWholePage = replaceWholePage;
+
 function showLiveIndicator(text) {
   const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
   setSaveIndicator(isOffline ? '' : text);
@@ -1782,7 +1900,10 @@ window.livePage = {
   },
   notice: text => showNotice(text),
   checkStillLive,
-  setReadOnly: isReadOnly => { document.getElementById('lyrics').readOnly = isReadOnly; },
+  setReadOnly: isReadOnly => {
+    isRoomReadOnly = isReadOnly;
+    document.getElementById('lyrics').readOnly = isReadOnly;
+  },
 };
 
 // Signing out must not leave the last account's lyric on screen, in the
@@ -1974,6 +2095,7 @@ function restoreDraft() {
 
 if (isFirstVisit()) showSample();
 else restoreDraft();
+announcePageIfChanged();
 
 // Every app script is revalidated on load, so the sign-in check can answer
 // while this file is still on its way; auth.js then finds no openNotebook to
