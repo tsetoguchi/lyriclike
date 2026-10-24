@@ -3495,6 +3495,30 @@ body.sidebar-open #sidebar-scrim {
   font-size: var(--text-footnote);
 }
 
+/* On a phone the sidebar is the whole notebook, as in Gemini: wider, with
+   bigger type and taller rows a thumb can hit. */
+@media (max-width: 768px) {
+  #sidebar {
+    width: var(--sidebar-width-phone);
+  }
+
+  .sidebar-item,
+  .lyrics-list-open {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    font-size: var(--text-body);
+  }
+
+  .sidebar-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar-label {
+    font-size: var(--text-subhead);
+  }
+}
+
 /* A glyph is smaller than a fingertip. The mark keeps its size; the button
    around it meets the 44pt minimum a touch target is expected to have. */
 .icon-btn {
