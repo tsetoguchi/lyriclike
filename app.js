@@ -1280,8 +1280,8 @@ function toggleRhymeScheme() {
   redrawPreview();
 }
 
-// A margin eases open, so the lines are measured now and again once it has
-// finished (see the transitionend listener) in case the text column narrowed.
+// A margin eases open, so the lines are measured now and then followed through
+// the ease (see followGutterEase) in case the text column narrows.
 function openGutter(gutterElement, isVisible) {
   // The rhyme scheme margin cannot be drawn without the dictionary, and the
   // syllable margin only approximates its counts until it arrives.
@@ -1972,14 +1972,40 @@ if (window.ResizeObserver) {
 }
 
 // The scroller keeps its size while a margin eases open, so its observer never
-// hears that the text column beside the margin may have narrowed.
-document.querySelector('.lyrics-panel').addEventListener(
-  'transitionend',
-  function remeasureAfterGutterEase(event) {
-    const isSheetWidth = event.propertyName.startsWith(SHEET_WIDTH_PROPERTY_PREFIX);
-    if (isSheetWidth) remeasureIfWidthChanged();
-  }
-);
+// hears the text column beside it narrowing. Placed once, the rhyme letters
+// would drift over the text until the ease ended; following it frame by frame
+// keeps them at their lines. Where the column keeps its width this does nothing.
+const easingSheetWidths = new Set();
+let gutterEaseRAF = null;
+
+function isSheetWidthTransition(event) {
+  return event.propertyName.startsWith(SHEET_WIDTH_PROPERTY_PREFIX);
+}
+
+function followGutterEase() {
+  remeasureIfWidthChanged();
+  gutterEaseRAF = requestAnimationFrame(followGutterEase);
+}
+
+function startFollowingGutterEase(event) {
+  if (!isSheetWidthTransition(event)) return;
+  easingSheetWidths.add(event.propertyName);
+  if (gutterEaseRAF === null) gutterEaseRAF = requestAnimationFrame(followGutterEase);
+}
+
+function stopFollowingGutterEase(event) {
+  if (!isSheetWidthTransition(event)) return;
+  easingSheetWidths.delete(event.propertyName);
+  if (easingSheetWidths.size > 0) return;
+  cancelAnimationFrame(gutterEaseRAF);
+  gutterEaseRAF = null;
+  remeasureIfWidthChanged();
+}
+
+const lyricsPanelEl = document.querySelector('.lyrics-panel');
+lyricsPanelEl.addEventListener('transitionrun', startFollowingGutterEase);
+lyricsPanelEl.addEventListener('transitionend', stopFollowingGutterEase);
+lyricsPanelEl.addEventListener('transitioncancel', stopFollowingGutterEase);
 
 // Signing in changes the header's height and the keyboard changes the visible
 // viewport; neither fires a window resize, and both change the floor the
