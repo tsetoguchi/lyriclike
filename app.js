@@ -713,6 +713,23 @@ function invalidateInternalRhymeMarks() {
   internalRhymeMarksDirty = true;
 }
 
+// Whether the last render drew any marks, so the wash fades in only when marks
+// first appear, not on every keystroke that rebuilds the layer.
+let hadInternalRhymeMarks = false;
+const MARK_ARRIVE_CLASS = 'is-marks-arriving';
+const MARK_ARRIVE_ANIMATION = 'mark-arrive';
+
+function fadeInArrivingMarks(marks) {
+  const hasMarks = marks !== null && marks.size > 0;
+  if (hasMarks && !hadInternalRhymeMarks) highlightEl.classList.add(MARK_ARRIVE_CLASS);
+  hadInternalRhymeMarks = hasMarks;
+}
+
+function endMarkArrival(event) {
+  if (event.animationName !== MARK_ARRIVE_ANIMATION) return;
+  highlightEl.classList.remove(MARK_ARRIVE_CLASS);
+}
+
 // The textarea's own letters are transparent, so this layer draws every one of
 // them. It is rebuilt only when the text changes (or the marks need it);
 // hovering and picking toggle classes on the word elements it holds.
@@ -721,7 +738,9 @@ function renderHighlight() {
   if (text === highlightedText && highlightEl.firstChild && !internalRhymeMarksDirty) return;
   internalRhymeMarksDirty = false;
   followTextEdit(text);
-  highlightEl.innerHTML = wordsToHtml(text, buildInternalRhymeMarkMap(text)) + '\n';
+  const marks = buildInternalRhymeMarkMap(text);
+  fadeInArrivingMarks(marks);
+  highlightEl.innerHTML = wordsToHtml(text, marks) + '\n';
   hoveredWordEl = null;
   markPickedWord();
   applyRhymeFocus();
@@ -1381,6 +1400,7 @@ function setEnglishOnly(isEnabled) {
 toggleBtn.addEventListener('click', toggleSyllables);
 rhymeSchemeToggleEl.addEventListener('click', toggleRhymeScheme);
 internalRhymeToggleEl.addEventListener('click', toggleInternalRhymes);
+highlightEl.addEventListener('animationend', endMarkArrival);
 textareaEl.addEventListener('mouseup', handleSelection);
 textareaEl.addEventListener('touchend', handleSelection);
 textareaEl.addEventListener('keyup', handleSelection);
