@@ -137,6 +137,7 @@ header .header-tools .toggle-btn:has(> .nav-icon) {
   position: relative;
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);
+  color: var(--ink);
   transition: background var(--duration-fast), color var(--duration-fast);
 }
 
@@ -181,7 +182,7 @@ header .header-tools .nav-label {
   color: var(--ink);
   opacity: 0;
   transform: translate(-50%, calc(-1 * var(--space-1)));
-  transition: opacity var(--duration-base), transform var(--duration-base);
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
   pointer-events: none;
 }
 
@@ -189,7 +190,6 @@ header .header-tools .toggle-btn:hover .nav-label,
 header .header-tools .toggle-btn:focus-visible .nav-label {
   opacity: 1;
   transform: translate(-50%, 0);
-  transition-delay: var(--duration-base);
 }
 
 /* The wordmark is the way home: a full page load back to the index. It keeps
@@ -501,7 +501,7 @@ header .nav-icon circle {
   padding: var(--space-2) var(--space-6);
   background: var(--accent-wash);
   border: var(--hairline) solid var(--accent-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-family: var(--font-ui);
   font-size: var(--text-callout);
   font-weight: var(--weight-bold);
@@ -2251,6 +2251,12 @@ header .nav-icon circle {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Rounded like the switches in the middle, so the header has one shape. */
+#signed-out-actions .toggle-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
 }
 
 /* The one solid button on a screen: the thing we most want pressed.
