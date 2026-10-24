@@ -2365,6 +2365,9 @@ body:not(.signed-in) .header-slot {
   padding: 0;
   border-radius: 50%;
   background: var(--ink-wash-strong);
+  /* The fill stops inside the ring, so the two see-through tints don't
+     stack along the edge and leave it uneven. */
+  background-clip: padding-box;
   border: var(--hairline) solid var(--ink-border);
   color: var(--ink);
   font-family: var(--font-ui);
@@ -2384,9 +2387,11 @@ body:not(.signed-in) .header-slot {
   transform: translate(-50%, -50%);
 }
 
+/* Pencil grey, not full ink: a bright hairline shows its steps around so
+   small a circle. */
 .account-avatar:hover,
 .account-avatar[aria-expanded="true"] {
-  border-color: var(--ink);
+  border-color: var(--ink-faded);
 }
 
 .account-menu-popover {
@@ -2407,21 +2412,23 @@ body:not(.signed-in) .header-slot {
   font-size: var(--text-footnote);
   /* The header keeps its buttons on one line; the menu's text may wrap. */
   white-space: normal;
+  /* Blows up like the dialogs, from the corner under the account button:
+     the same start size and curve, quick out, then a long settle. */
   transform-origin: top right;
   transition:
     opacity var(--duration-base) ease-out,
-    transform var(--duration-base) ease-out,
+    transform var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
     visibility 0s;
 }
 
-/* The menu stays laid out while hidden so it can fade and settle instead of
+/* The menu stays laid out while hidden so it can grow and shrink instead of
    popping. Visibility waits for the fade so the menu is gone to clicks and
    screen readers only once it's out of sight. */
 .account-menu-popover[hidden] {
   display: flex;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(calc(-1 * var(--space-1))) scale(0.97);
+  transform: scale(0.88);
   transition:
     opacity var(--duration-base) ease-in,
     transform var(--duration-base) ease-in,
