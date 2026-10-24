@@ -1155,6 +1155,14 @@ header .nav-icon circle {
 .rhyme-scheme-gutter.visible {
   /* Each letter is pulled left to its own line's end, over the text column. */
   overflow: visible;
+  animation: margin-arrive var(--duration-base) ease-out;
+}
+
+/* Opacity only: any movement would take the letters off their lines. */
+@keyframes margin-arrive {
+  from {
+    opacity: 0;
+  }
 }
 
 .rhyme-scheme-gutter .scheme-line {
@@ -3702,15 +3710,15 @@ body.sidebar-open #sidebar-scrim {
     transition: opacity var(--duration-fast) ease;
   }
 
-  /* Keeps the desk's margin ease: a bare opacity transition here replaced it,
-     and the text jumped on a phone. */
+  /* Keeps the desk's syllable ease: a bare opacity transition here replaced
+     it, and the text jumped. The rhyme margin opens at once instead: here it
+     moves nothing sideways, so easing it only re-wrapped a line mid-way. */
   .lyrics-panel {
     flex: 1;
     min-height: 0;
     transition:
       opacity var(--duration-fast) ease,
-      --sheet-syllables var(--duration-base) ease-out,
-      --sheet-scheme var(--duration-base) ease-out;
+      --sheet-syllables var(--duration-base) ease-out;
   }
 
   .panel-header {
@@ -4070,6 +4078,10 @@ body.sidebar-open #sidebar-scrim {
 @media (prefers-reduced-motion: reduce) {
   .lyrics-panel {
     transition: none;
+  }
+
+  .rhyme-scheme-gutter.visible {
+    animation: none;
   }
 }
 
