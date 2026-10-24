@@ -3421,6 +3421,23 @@ body.sidebar-open #sidebar-scrim {
   display: none;
 }
 
+/* Down here the items are fine print, not actions: a step smaller and
+   fainter than Create page, so the top of the sidebar still leads. */
+.sidebar-slot .sidebar-item {
+  gap: var(--space-2);
+  color: var(--ink-faded);
+  font-size: var(--text-footnote);
+}
+
+.sidebar-slot .sidebar-item:hover {
+  color: var(--ink);
+}
+
+.sidebar-slot .sidebar-item svg {
+  width: 16px;
+  height: 16px;
+}
+
 .sidebar-contact {
   margin: 0;
   padding: var(--space-3) var(--space-5);
