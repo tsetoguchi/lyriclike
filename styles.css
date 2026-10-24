@@ -3018,6 +3018,17 @@ body.sidebar-open #sidebar-scrim {
   }
 }
 
+/* The rail's icons brighten slowly under the pointer, like the lyrics do. */
+#sidebar-rail .icon-btn {
+  transition: color var(--duration-hover) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sidebar-rail .icon-btn {
+    transition: none;
+  }
+}
+
 /* Sits level with the header's contents across the top. */
 .sidebar-top {
   display: flex;
@@ -3436,6 +3447,30 @@ body.sidebar-open #sidebar-scrim {
 .sidebar-slot .sidebar-item svg {
   width: 16px;
   height: 16px;
+}
+
+/* The folded sidebar's twin of the slot above: icon buttons pinned to its
+   foot, drawn like the rail's own. Empty, it takes no room. */
+.rail-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+  padding-bottom: var(--space-3);
+}
+
+.rail-slot:empty {
+  display: none;
+}
+
+.rail-slot svg {
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .sidebar-contact {

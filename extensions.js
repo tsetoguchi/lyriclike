@@ -1,12 +1,12 @@
 // An optional extension hook. A site can name one same-origin script in
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
 // That script may swap the limit dialog for its own, listen for the
-// 'limit-reached' event, add its own items to the header and sidebar slots,
-// and replace the links in the footer slots. It may also read, open and
-// replace the open page, and hear 'page-changed' on document when another
-// page is on screen, and show any text read-only in the editor's place. With
-// no script set, nothing is fetched and the neutral dialog in limits.js is
-// all anyone sees.
+// 'limit-reached' event, add its own items to the header, sidebar and rail
+// slots, and replace the links in the footer slots. It may also read, open
+// and replace the open page, and hear 'page-changed' on document when
+// another page is on screen, and show any text read-only in the editor's
+// place. With no script set, nothing is fetched and the neutral dialog in
+// limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
@@ -15,6 +15,7 @@
   const ANSWER_OK = 'ok';
   const FOOTER_SLOT_ID = 'footer-slot';
   const HEADER_SLOT_ID = 'header-slot';
+  const RAIL_SLOT_ID = 'rail-slot';
   const SIDEBAR_FOOT_SLOT_ID = 'sidebar-foot-slot';
   const SIDEBAR_SLOT_ID = 'sidebar-slot';
   const REASON_INVALID = 'invalid';
@@ -76,10 +77,15 @@
     return document.getElementById(SIDEBAR_FOOT_SLOT_ID);
   }
 
-  // A spot under the notebook's pages for the script's own sidebar items.
-  // It shows signed in or out; the script decides what fits each.
+  // A spot under the notebook's pages for the script's own sidebar items,
+  // and its twin at the foot of the folded sidebar, for icon buttons. Both
+  // show signed in or out; the script decides what fits each.
   function sidebarSlot() {
     return document.getElementById(SIDEBAR_SLOT_ID);
+  }
+
+  function railSlot() {
+    return document.getElementById(RAIL_SLOT_ID);
   }
 
   function currentPage() {
@@ -255,6 +261,7 @@
     footerSlot,
     sidebarFootSlot,
     sidebarSlot,
+    railSlot,
     currentPage,
     openPage,
     replacePage,
