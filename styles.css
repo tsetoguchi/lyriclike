@@ -3326,9 +3326,9 @@ body.sidebar-open #sidebar-scrim {
   background: var(--ink-wash);
 }
 
-/* The open page takes the amber wash, as picked things do everywhere. */
+/* The open page takes the stronger ink wash, as a switch that is on does. */
 .lyrics-list-item.active {
-  background: var(--accent-wash);
+  background: var(--ink-wash-strong);
 }
 
 .lyrics-list-open {
