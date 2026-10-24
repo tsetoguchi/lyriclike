@@ -3438,6 +3438,30 @@ body.sidebar-open #sidebar-scrim {
   height: 16px;
 }
 
+/* The folded sidebar's twin of the slot above: icon buttons pinned to its
+   foot, drawn like the rail's own. Empty, it takes no room. */
+.rail-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+  padding-bottom: var(--space-3);
+}
+
+.rail-slot:empty {
+  display: none;
+}
+
+.rail-slot svg {
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .sidebar-contact {
   margin: 0;
   padding: var(--space-3) var(--space-5);
