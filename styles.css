@@ -3410,9 +3410,14 @@ body.sidebar-open #sidebar-scrim {
   text-align: center;
 }
 
-/* An extension script's links at the end of the line above. Empty, it
-   takes no room. */
-.footer-slot:empty {
+/* An extension script's sidebar items, under the notebook's pages, lined up
+   with the items at the top. Empty, it takes no room. */
+.sidebar-slot {
+  padding: var(--space-2) var(--space-2);
+  flex-shrink: 0;
+}
+
+.sidebar-slot:empty {
   display: none;
 }
 
