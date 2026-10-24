@@ -1417,6 +1417,22 @@ header .nav-icon circle {
   --mark-wash: var(--mark-wash-rest);
 }
 
+/* Turning the marks on, or the dictionary landing while they are on, fades
+   the washes in rather than snapping them; app.js drops the class once done. */
+#lyrics-highlight.is-marks-arriving .rhyme-mark::after {
+  animation: mark-arrive var(--duration-hover) ease-out;
+}
+
+@keyframes mark-arrive {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #lyrics-highlight.is-marks-arriving .rhyme-mark::after {
+    animation: none;
+  }
+}
+
 /* A near rhyme (night / like) rather than an exact one (night / light): same
    family colour, so the group still reads as one, but paler. */
 #lyrics-highlight .rhyme-mark.mark-slant {
