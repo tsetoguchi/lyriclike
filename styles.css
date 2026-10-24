@@ -3682,6 +3682,7 @@ body.sidebar-open #sidebar-scrim {
   color: var(--ink-faded);
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color var(--duration-fast);
 }
 
 .app-footer a:hover,
