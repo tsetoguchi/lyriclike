@@ -3410,6 +3410,12 @@ body.sidebar-open #sidebar-scrim {
   text-align: center;
 }
 
+/* An extension script's links at the end of the line above. Empty, it
+   takes no room. */
+.footer-slot:empty {
+  display: none;
+}
+
 .sidebar-contact {
   margin: 0;
   padding: var(--space-3) var(--space-5);

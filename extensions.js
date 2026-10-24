@@ -1,17 +1,18 @@
 // An optional extension hook. A site can name one same-origin script in
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
 // That script may swap the limit dialog for its own, listen for the
-// 'limit-reached' event, and add its own items to the header slot. It may
-// also read, open and replace the open page, and hear 'page-changed' on
-// document when another page is on screen, and show any text read-only in
-// the editor's place. With no script set, nothing is fetched and the neutral
-// dialog in limits.js is all anyone sees.
+// 'limit-reached' event, and add its own items to the header and footer
+// slots. It may also read, open and replace the open page, and hear
+// 'page-changed' on document when another page is on screen, and show any
+// text read-only in the editor's place. With no script set, nothing is
+// fetched and the neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
   const HOOK_VERSION = 2;
   const ANSWER_DELETE = 'delete';
   const ANSWER_OK = 'ok';
+  const FOOTER_SLOT_ID = 'footer-slot';
   const HEADER_SLOT_ID = 'header-slot';
   const REASON_INVALID = 'invalid';
   const REASON_NOT_READY = 'not-ready';
@@ -59,6 +60,12 @@
     if (typeof found === 'function') return found;
     console.warn('Extension hook: the open page is not available here:', name);
     return null;
+  }
+
+  // The end of the fine-print line under the pad, for the script's own links.
+  // Unlike the header slot it shows signed out too, once something is in it.
+  function footerSlot() {
+    return document.getElementById(FOOTER_SLOT_ID);
   }
 
   function currentPage() {
@@ -230,6 +237,7 @@
     loadScript,
     runLimitDialog,
     headerSlot,
+    footerSlot,
     currentPage,
     openPage,
     replacePage,
