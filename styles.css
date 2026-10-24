@@ -4256,7 +4256,8 @@ body.sidebar-open #sidebar-scrim {
     position: absolute;
     bottom: calc(100% + var(--space-3));
     left: 50%;
-    transform: translateX(-50%);
+    /* translate centres it, so transform is free to scale it. */
+    translate: -50% 0;
     display: flex;
     flex-direction: column;
     min-width: 12rem;
@@ -4265,10 +4266,26 @@ body.sidebar-open #sidebar-scrim {
     border: var(--hairline) solid var(--margin-line);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-popup);
+    /* Grows up out of the Highlights button on the account menu's curve. */
+    transform-origin: bottom center;
+    transition:
+      opacity var(--duration-base) ease-out,
+      transform var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s;
   }
 
+  /* Stays laid out while hidden so it can shrink away instead of vanishing.
+     Visibility waits for the fade, so taps and screen readers skip it only
+     once it's out of sight. */
   .rhymes-menu-popover[hidden] {
-    display: none;
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.88);
+    transition:
+      opacity var(--duration-base) ease-in,
+      transform var(--duration-base) ease-in,
+      visibility 0s linear var(--duration-base);
   }
 
   .bottom-nav .rhymes-menu-popover .toggle-btn {
@@ -4295,6 +4312,13 @@ body.sidebar-open #sidebar-scrim {
     background: currentColor;
     -webkit-mask: var(--check-mask) center / contain no-repeat;
     mask: var(--check-mask) center / contain no-repeat;
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .rhymes-menu-popover,
+  .rhymes-menu-popover[hidden] {
+    transform: none;
   }
 }
 
