@@ -328,11 +328,22 @@ function rememberOpenGroups() {
 // height while its lines arrive top first, and folds away bottom first.
 // Opening a word does not roll, since only the click asked for it. The
 // names differ from storage.js's, which shares this global scope.
-const GROUP_ROLL_MS = 200;
-const GROUP_ROLL_STEP_MS = 30;
-const GROUP_ROLL_SPREAD_MS = 240;
+// The roll's timings come from tokens.css, so they keep pace with the rest
+// of the site. The step has no token; none is that short.
+const GROUP_ROLL_TOKEN = '--duration-fast';
+const GROUP_ROLL_SPREAD_TOKEN = '--duration-fast';
+const GROUP_ROLL_STEP_MS = 18;
+const MS_PER_SECOND = 1000;
 const GROUP_ROLL_SLIDE = 'translateY(-8px)';
 const GROUP_FOLDING_CLASS = 'is-folding';
+
+// Reads a tokens.css duration such as "0.15s" or "150ms" as milliseconds.
+function readDurationMs(token) {
+  const rootStyle = getComputedStyle(document.documentElement);
+  const value = rootStyle.getPropertyValue(token).trim();
+  const amount = parseFloat(value) || 0;
+  return value.endsWith('ms') ? amount : amount * MS_PER_SECOND;
+}
 
 function isMotionReduced() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -362,10 +373,12 @@ function measureFoldLines(fold) {
 function planGroupRoll(fold, isOpening) {
   const lines = measureFoldLines(fold);
   if (!isOpening) lines.reverse();
-  const spreadStep = GROUP_ROLL_SPREAD_MS / Math.max(lines.length, 1);
+  const lineMs = readDurationMs(GROUP_ROLL_TOKEN);
+  const spreadMs = readDurationMs(GROUP_ROLL_SPREAD_TOKEN);
+  const spreadStep = spreadMs / Math.max(lines.length, 1);
   const step = Math.min(GROUP_ROLL_STEP_MS, spreadStep);
-  const total = GROUP_ROLL_MS + step * Math.max(lines.length - 1, 0);
-  return { height: fold.offsetHeight, lines, step, total };
+  const total = lineMs + step * Math.max(lines.length - 1, 0);
+  return { height: fold.offsetHeight, lines, lineMs, step, total };
 }
 
 // A folding group stays shown until its roll ends; the fill holds each line
@@ -375,14 +388,14 @@ function stopGroupRoll(group, fold) {
   group.classList.remove(GROUP_FOLDING_CLASS);
 }
 
-function rollLine(item, isOpening, delay) {
+function rollLine(item, isOpening, delay, duration) {
   const frames = [
     { opacity: 0, transform: GROUP_ROLL_SLIDE },
     { opacity: 1, transform: 'none' },
   ];
   if (!isOpening) frames.reverse();
   const fill = isOpening ? 'backwards' : 'forwards';
-  item.animate(frames, { duration: GROUP_ROLL_MS, delay, easing: 'ease-out', fill });
+  item.animate(frames, { duration, delay, easing: 'ease-out', fill });
 }
 
 function playGroupRoll(group, fold, plan, isOpening) {
@@ -395,7 +408,7 @@ function playGroupRoll(group, fold, plan, isOpening) {
     { duration: plan.total, easing: 'ease-in-out', fill },
   );
   plan.lines.forEach((line, order) => {
-    for (const item of line) rollLine(item, isOpening, order * plan.step);
+    for (const item of line) rollLine(item, isOpening, order * plan.step, plan.lineMs);
   });
   // A new click cancels the roll, which rejects this; that click cleans up.
   unroll.finished.then(() => stopGroupRoll(group, fold), () => {});
