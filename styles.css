@@ -2447,6 +2447,10 @@ body:not(.signed-in) .header-slot {
   padding-bottom: 0;
 }
 
+#account-menu-slot:empty {
+  display: none;
+}
+
 .account-menu-item {
   display: flex;
   align-items: center;
