@@ -2274,17 +2274,30 @@ header .nav-icon circle {
   padding: var(--space-2) var(--space-4);
 }
 
-/* The one solid button on a screen: the thing we most want pressed.
-   Sign up in the header, the confirm in a dialog. */
+/* Beside each other on a wide screen, both are as tall as the site's other
+   small controls. Narrower, Log in stands alone at its own size. */
+@media (min-width: 901px) {
+  #signed-out-actions .toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    height: var(--space-8);
+    padding: 0 var(--space-4);
+  }
+}
+
+/* The thing we most want pressed, tinted like a page that is open rather
+   than filled, so it stays warm without outshining the lyrics. It fills
+   amber when the pointer reaches it. */
 .toggle-btn.primary-btn {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-wash);
+  border-color: var(--accent-border);
+  color: var(--accent);
 }
 
 .toggle-btn.primary-btn:hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 
 /* Beside Sign up, Log in steps back to a plain link. */
@@ -2294,7 +2307,7 @@ header .nav-icon circle {
 
 /* A narrow desktop window has no room for Sign up beside the five tools; it
    runs off the edge below about 900px. Log in's modal links to sign up, so
-   Log in takes the solid amber there. Phones fall under this too. */
+   Log in takes Sign up's amber tint there. Phones fall under this too. */
 @media (max-width: 900px) {
   #sign-up-btn {
     display: none;
@@ -2302,9 +2315,9 @@ header .nav-icon circle {
 
   #sign-in-btn {
     position: relative;
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent-wash);
+    border-color: var(--accent-border);
+    color: var(--accent);
   }
 
   /* Drawn at 25px, it gets a full tap target without growing the header. */
@@ -2319,8 +2332,9 @@ header .nav-icon circle {
   }
 
   #sign-in-btn:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
   }
 }
 
