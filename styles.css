@@ -2684,22 +2684,34 @@ body:not(.signed-in) .header-slot {
   gap: var(--space-2);
 }
 
-/* Callout size, because a field below it makes iOS zoom the page. */
+/* Every text box, as tall as the site's small controls. */
 .modal-input {
   width: 100%;
-  padding: var(--space-3);
+  height: var(--space-8);
+  padding: 0 var(--space-4);
   background: transparent;
   border: var(--hairline) solid var(--ink-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--ink);
   font-family: var(--font-ui);
-  font-size: var(--text-callout);
+  font-size: var(--text-footnote);
   outline: none;
   transition: border-color var(--duration-base);
 }
 
+/* Callout size on phones, because a smaller field makes iOS zoom the page,
+   and a full tap target for a finger. */
+@media (max-width: 768px) {
+  .modal-input {
+    height: var(--tap-target);
+    font-size: var(--text-callout);
+  }
+}
+
+/* A full-strength amber hairline shows its steps around a pill's tight
+   ends; a softer one reads as a smooth curve. */
 .modal-input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-border);
 }
 
 .modal-input::placeholder {
@@ -2831,15 +2843,6 @@ body:not(.signed-in) .header-slot {
 
 .auth-body {
   padding: var(--space-6) 0 0;
-}
-
-#auth-panel .modal-input {
-  border-radius: var(--radius-md);
-}
-
-#auth-panel .modal-input {
-  min-height: calc(var(--tap-target) + var(--space-1));
-  padding: var(--space-3) var(--space-5);
 }
 
 #auth-panel .password-wrap .modal-input {
