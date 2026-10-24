@@ -2336,10 +2336,32 @@ body:not(.signed-in) .header-slot {
   font-size: var(--text-footnote);
   /* The header keeps its buttons on one line; the menu's text may wrap. */
   white-space: normal;
+  transform-origin: top right;
+  transition:
+    opacity var(--duration-base) ease-out,
+    transform var(--duration-base) ease-out,
+    visibility 0s;
 }
 
+/* The menu stays laid out while hidden so it can fade and settle instead of
+   popping. Visibility waits for the fade so the menu is gone to clicks and
+   screen readers only once it's out of sight. */
 .account-menu-popover[hidden] {
-  display: none;
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(calc(-1 * var(--space-1))) scale(0.97);
+  transition:
+    opacity var(--duration-base) ease-in,
+    transform var(--duration-base) ease-in,
+    visibility 0s linear var(--duration-base);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-menu-popover,
+  .account-menu-popover[hidden] {
+    transform: none;
+  }
 }
 
 .account-menu-who {
