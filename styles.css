@@ -122,24 +122,74 @@ header h1 {
   display: none;
 }
 
-/* What the lyrics show: three switches side by side. One that is on is lit
-   like a lamp, amber with an amber rim; one that is off keeps a faint rim,
-   so it still reads as something to press rather than a caption. */
+/* What the lyrics show: three switches held in one pill. A switch that is on
+   gets a lighter fill inside it; a hairline divides two that are off. */
 .header-tools {
   display: flex;
   align-items: center;
-  /* Two lit switches side by side keep their rims apart. */
   gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--ink-wash);
+  border-radius: var(--radius-pill);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon) {
-  border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 0 var(--hairline) var(--ink-border);
+  position: relative;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+header .header-tools .toggle-btn:has(> .nav-icon):hover {
+  background: var(--ink-wash);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
   background: var(--ink-wash-strong);
-  box-shadow: inset 0 0 0 var(--hairline) var(--ink);
+}
+
+header .header-tools .toggle-btn + .toggle-btn::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-1) / 2 - var(--hairline) / 2);
+  top: 25%;
+  height: 50%;
+  border-left: var(--hairline) solid var(--ink-border);
+  pointer-events: none;
+}
+
+/* A fill already marks the edge, so the divider beside it goes. */
+header .header-tools .toggle-btn.active + .toggle-btn::before,
+header .header-tools .toggle-btn:hover + .toggle-btn::before,
+header .header-tools .toggle-btn + .toggle-btn.active::before,
+header .header-tools .toggle-btn + .toggle-btn:hover::before {
+  opacity: 0;
+}
+
+/* The name hides until the cursor rests on the switch, then eases in below
+   it. Kept in the page rather than removed, so it still names the button. */
+header .header-tools .nav-label {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  z-index: 20;
+  padding: var(--space-1) var(--space-2);
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-popup);
+  color: var(--ink);
+  opacity: 0;
+  transform: translate(-50%, calc(-1 * var(--space-1)));
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+  pointer-events: none;
+}
+
+header .header-tools .toggle-btn:hover .nav-label,
+header .header-tools .toggle-btn:focus-visible .nav-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* The wordmark is the way home: a full page load back to the index. It keeps
@@ -451,7 +501,7 @@ header .nav-icon circle {
   padding: var(--space-2) var(--space-6);
   background: var(--accent-wash);
   border: var(--hairline) solid var(--accent-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-family: var(--font-ui);
   font-size: var(--text-callout);
   font-weight: var(--weight-bold);
@@ -2201,6 +2251,12 @@ header .nav-icon circle {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Rounded like the switches in the middle, so the header has one shape. */
+#signed-out-actions .toggle-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
 }
 
 /* The one solid button on a screen: the thing we most want pressed.
