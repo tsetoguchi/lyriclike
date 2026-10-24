@@ -3030,7 +3030,8 @@ body.sidebar-open #sidebar-scrim {
 }
 
 /* The name of a rail icon, in a pill beside the rail (see rail-tips.js).
-   Inked in reverse so it reads apart from the page behind it. */
+   Inked in reverse so it reads apart from the page behind it. It fades in
+   while sliding out from the rail, so it seems to come from the icon. */
 .rail-tip {
   display: none;
 }
@@ -3039,7 +3040,8 @@ body.sidebar-open #sidebar-scrim {
   .rail-tip {
     display: block;
     position: fixed;
-    transform: translateY(-50%);
+    translate: 0 -50%;
+    transform: translateX(calc(-1 * var(--space-2)));
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-lg);
     background: var(--ink);
@@ -3048,12 +3050,15 @@ body.sidebar-open #sidebar-scrim {
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transition: opacity var(--duration-fast) ease-out;
+    transition:
+      opacity var(--duration-slow) ease-out,
+      transform var(--duration-slow) ease-out;
     z-index: var(--z-overlay);
   }
 
   .rail-tip.visible {
     opacity: 1;
+    transform: none;
   }
 }
 
