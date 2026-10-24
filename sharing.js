@@ -427,6 +427,7 @@
   copyButton.addEventListener('click', copyShareLink);
   byId('share-leave').addEventListener('click', leavePage);
   byId('share-done').addEventListener('click', closeShareDialog);
+  byId('share-close').addEventListener('click', closeShareDialog);
   overlay.addEventListener('click', event => { if (event.target === overlay) closeShareDialog(); });
   overlay.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); closeShareDialog(); }

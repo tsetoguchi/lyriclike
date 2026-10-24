@@ -64,6 +64,7 @@
   }
 
   document.getElementById('whats-new-done').addEventListener('click', dismiss);
+  document.getElementById('whats-new-close').addEventListener('click', dismiss);
   // Opening Share is the thing the card asks for, so it has done its job.
   // Phones have their own copy of the button, and the sharing line opens it too.
   for (const id of ['share-btn', 'share-btn-phone', 'page-sharing']) {
