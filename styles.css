@@ -1546,15 +1546,15 @@ header .nav-icon circle {
   background: var(--selection);
 }
 
-/* The memo card on the desk: reference material beside the pad, a step
-   darker than the sheet it sits beside. */
+/* The memo card on the desk: reference material beside the pad, on the same
+   slate as the sheet so the page reads as one surface. */
 .rhymes-panel {
   width: var(--rhymes-panel-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--paper-panel);
+  background: var(--paper);
 }
 
 /* An extension's panel takes the rhymes panel's place and width. */
@@ -1564,7 +1564,7 @@ header .nav-icon circle {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--paper-panel);
+  background: var(--paper);
 }
 
 .side-panel[hidden] {
@@ -1887,7 +1887,7 @@ header .nav-icon circle {
   align-items: center;
   justify-content: space-between;
   user-select: none;
-  background-color: var(--paper-panel);
+  background-color: var(--paper);
   transition: background var(--duration-fast);
 }
 
@@ -3866,7 +3866,7 @@ body.sidebar-open #sidebar-scrim {
   /* Rhyme results adjustments */
   .selected-word-bar {
     padding: var(--space-4) var(--space-4);
-    background: var(--paper-panel);
+    background: var(--paper);
   }
 
   .selected-word-bar .word {
