@@ -322,12 +322,6 @@ header .nav-icon circle {
   background: var(--paper-card);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lyrics-panel {
-    transition: none;
-  }
-}
-
 .lyrics-panel:has(.syllable-gutter.visible) {
   --sheet-syllables: var(--gutter-syllables);
 }
@@ -3704,14 +3698,19 @@ body.sidebar-open #sidebar-scrim {
     flex-direction: column;
   }
 
-  .lyrics-panel,
   .rhymes-panel {
     transition: opacity var(--duration-fast) ease;
   }
 
+  /* Keeps the desk's margin ease: a bare opacity transition here replaced it,
+     and the text jumped on a phone. */
   .lyrics-panel {
     flex: 1;
     min-height: 0;
+    transition:
+      opacity var(--duration-fast) ease,
+      --sheet-syllables var(--duration-base) ease-out,
+      --sheet-scheme var(--duration-base) ease-out;
   }
 
   .panel-header {
@@ -4063,6 +4062,20 @@ body.sidebar-open #sidebar-scrim {
     background: currentColor;
     -webkit-mask: var(--check-mask) center / contain no-repeat;
     mask: var(--check-mask) center / contain no-repeat;
+  }
+}
+
+/* After the phone rules, or their transition would bring the margin ease back.
+   The margins then open at once; a phone keeps its tab fade. */
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-panel {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 768px) {
+  .lyrics-panel {
+    transition: opacity var(--duration-fast) ease;
   }
 }
 
