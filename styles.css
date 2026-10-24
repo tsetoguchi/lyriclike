@@ -747,7 +747,7 @@ header .nav-icon circle {
 
 /* Roomier than the other dialogs: a wider margin, and more air between parts. */
 #share-panel .modal-header {
-  padding: var(--space-6) var(--space-6) 0;
+  padding: var(--space-6) calc(var(--tap-target) + var(--space-3)) 0 var(--space-6);
 }
 
 #share-panel .modal-body {
@@ -2555,8 +2555,8 @@ body:not(.signed-in) .header-slot {
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
-  transform: translateY(var(--space-2)) scale(0.98);
-  transition: transform var(--duration-base) ease;
+  transform: scale(0.88);
+  transition: transform var(--duration-flash) ease-out;
   width: var(--dialog-width);
   max-width: 92vw;
   max-height: 90vh;
@@ -2633,14 +2633,99 @@ body:not(.signed-in) .header-slot {
   border: var(--hairline) solid var(--rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popup);
-  transform: translateY(var(--space-2)) scale(0.98);
-  transition: transform var(--duration-base) ease;
+  transform: scale(0.88);
+  transition: transform var(--duration-flash) ease-out;
   display: flex;
   flex-direction: column;
 }
 
 .modal-overlay.open .modal-panel {
   transform: none;
+}
+
+/* Every pop-up closes from an X in its top right corner. */
+.modal-panel,
+#password-panel {
+  position: relative;
+}
+
+/* A ringed X, as tall as the text boxes. */
+.icon-btn.modal-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: var(--space-8);
+  height: var(--space-8);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-footnote);
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+.icon-btn.modal-close:hover {
+  background: var(--ink-wash);
+}
+
+/* Centered in the small dialog's short title row. */
+#dialog-panel .modal-close {
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+/* A full tap target for a finger, as the text boxes get. */
+@media (max-width: 768px) {
+  .icon-btn.modal-close {
+    width: var(--tap-target);
+    height: var(--tap-target);
+  }
+
+  #dialog-panel .modal-close {
+    top: var(--space-1);
+    right: var(--space-1);
+  }
+}
+
+/* Titles stop short of the X. */
+.modal-panel .modal-header,
+.password-title,
+.whats-new-title {
+  padding-right: calc(var(--tap-target) + var(--space-3));
+}
+
+/* Opening plays as an animation, not a transition: the overlay was hidden a
+   moment ago, so a transition would have no start to grow from and the
+   panel would just appear. The curve races out and then settles. */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes modal-blow-up {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: none; }
+}
+
+.modal-overlay.open {
+  animation: modal-fade-in var(--duration-base) ease-out;
+}
+
+.modal-overlay.open .modal-panel,
+#password-overlay.open #password-panel {
+  animation: modal-blow-up var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #password-panel,
+  .modal-panel {
+    transform: none;
+  }
+
+  .modal-overlay.open .modal-panel,
+  #password-overlay.open #password-panel {
+    animation: none;
+  }
 }
 
 .modal-header {
@@ -2778,11 +2863,6 @@ body:not(.signed-in) .header-slot {
   padding: var(--space-8) var(--space-6) var(--space-6);
 }
 
-.auth-close {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-}
 
 /* Clear of the close button on both sides, so the title stays centered. */
 .auth-heading {
@@ -3490,6 +3570,7 @@ body.sidebar-open #sidebar-scrim {
   border-radius: var(--radius-pill);
   color: var(--ink-faded);
   cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
 }
 
 .lyrics-action-btn svg {

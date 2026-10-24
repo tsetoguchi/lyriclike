@@ -209,6 +209,7 @@
   </div>
   <div id="password-overlay">
     <div id="password-panel" role="dialog" aria-modal="true" aria-labelledby="password-title">
+      <button type="button" id="password-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
       <h2 id="password-title" class="password-title">Change password</h2>
       <form id="change-password-form" class="auth-form security-form" novalidate>
         <input id="security-username" type="email" autocomplete="username" hidden>
@@ -233,6 +234,7 @@
   </div>
   <div id="dialog-overlay" class="modal-overlay" hidden>
     <div id="dialog-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <button type="button" id="dialog-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
       <div id="dialog-header" class="modal-header"><span id="dialog-title">Create page</span></div>
       <div id="dialog-body" class="modal-body">
         <p id="dialog-message" class="modal-message" hidden></p>
@@ -257,6 +259,7 @@
     </div>
   </div>
   <div id="whats-new" class="whats-new" role="dialog" aria-labelledby="whats-new-title" hidden>
+    <button type="button" id="whats-new-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
     <p id="whats-new-title" class="whats-new-title">Write together</p>
     <p class="whats-new-text">Share a page and write it with others at the same time. Open a page and press Share.</p>
     <div class="whats-new-actions">
@@ -265,6 +268,7 @@
   </div>
   <div id="share-overlay" class="modal-overlay" hidden>
     <div id="share-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <button type="button" id="share-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
       <div class="modal-header">
         <span id="share-title">Share page</span>
         <p id="share-subtext" class="share-subtext" hidden>People you add can read and edit this page.</p>
@@ -306,7 +310,7 @@
   </div>
   <div id="auth-overlay" class="modal-overlay" hidden>
     <div id="auth-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-      <button id="auth-close" class="icon-btn auth-close" aria-label="Close">&#x2715;</button>
+      <button type="button" id="auth-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
       <div class="auth-heading">
         <h2 id="auth-title" class="auth-title">Log in or sign up</h2>
         <p id="auth-email-shown" class="auth-email-shown" hidden>

@@ -295,6 +295,7 @@ function submitDialog() {
 
 document.getElementById('dialog-confirm').addEventListener('click', submitDialog);
 document.getElementById('dialog-cancel').addEventListener('click', () => closeDialog(null));
+document.getElementById('dialog-close').addEventListener('click', () => closeDialog(null));
 document.getElementById('dialog-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('dialog-overlay')) closeDialog(null);
 });
