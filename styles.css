@@ -289,6 +289,20 @@ header .nav-icon circle {
   animation: page-settle var(--duration-base) ease-out;
 }
 
+/* Registered so the open margins' widths can be eased: an unregistered custom
+   property only swaps, and the text would jump sideways. */
+@property --sheet-syllables {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --sheet-scheme {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
 .lyrics-panel {
   /* The sheet is the title, text and whichever gutters are open, centred as
      one block. These track what is open so the title can match it. */
@@ -296,6 +310,9 @@ header .nav-icon circle {
   --sheet-scheme: 0px;
   --sheet-width: calc(var(--sheet-syllables) + var(--sheet-text)
     + var(--editor-pad) * 2 + var(--sheet-scheme));
+  transition:
+    --sheet-syllables var(--duration-base) ease-out,
+    --sheet-scheme var(--duration-base) ease-out;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1079,7 +1096,7 @@ header .nav-icon circle {
   display: flex;
   flex-direction: column;
   padding: var(--editor-pad) 0;
-  width: 0;
+  width: var(--sheet-syllables);
   min-width: 0;
   flex-shrink: 0;
   border-right: 0 solid var(--rule);
@@ -1088,7 +1105,6 @@ header .nav-icon circle {
 }
 
 .syllable-gutter.visible {
-  width: var(--gutter-syllables);
   border-right-width: var(--hairline);
 }
 
@@ -1128,7 +1144,7 @@ header .nav-icon circle {
   display: flex;
   flex-direction: column;
   padding: var(--editor-pad) 0;
-  width: 0;
+  width: var(--sheet-scheme);
   min-width: 0;
   flex-shrink: 0;
   min-height: 100%;
@@ -1137,9 +1153,16 @@ header .nav-icon circle {
 }
 
 .rhyme-scheme-gutter.visible {
-  width: var(--gutter-scheme);
   /* Each letter is pulled left to its own line's end, over the text column. */
   overflow: visible;
+  animation: margin-arrive var(--duration-base) ease-out;
+}
+
+/* Opacity only: any movement would take the letters off their lines. */
+@keyframes margin-arrive {
+  from {
+    opacity: 0;
+  }
 }
 
 .rhyme-scheme-gutter .scheme-line {
@@ -3683,14 +3706,19 @@ body.sidebar-open #sidebar-scrim {
     flex-direction: column;
   }
 
-  .lyrics-panel,
   .rhymes-panel {
     transition: opacity var(--duration-fast) ease;
   }
 
+  /* Keeps the desk's syllable ease: a bare opacity transition here replaced
+     it, and the text jumped. The rhyme margin opens at once instead: here it
+     moves nothing sideways, so easing it only re-wrapped a line mid-way. */
   .lyrics-panel {
     flex: 1;
     min-height: 0;
+    transition:
+      opacity var(--duration-fast) ease,
+      --sheet-syllables var(--duration-base) ease-out;
   }
 
   .panel-header {
@@ -4042,6 +4070,24 @@ body.sidebar-open #sidebar-scrim {
     background: currentColor;
     -webkit-mask: var(--check-mask) center / contain no-repeat;
     mask: var(--check-mask) center / contain no-repeat;
+  }
+}
+
+/* After the phone rules, or their transition would bring the margin ease back.
+   The margins then open at once; a phone keeps its tab fade. */
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-panel {
+    transition: none;
+  }
+
+  .rhyme-scheme-gutter.visible {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 768px) {
+  .lyrics-panel {
+    transition: opacity var(--duration-fast) ease;
   }
 }
 
