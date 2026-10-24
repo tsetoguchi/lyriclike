@@ -309,6 +309,15 @@ describe('the extension script in /api/me', () => {
       assert.equal((await getMe(env)).extension_script_url, null, url);
     }
   });
+
+  it('signed out, the 401 still names the script, so visitors get it too', async () => {
+    const env = await setUp({ EXTENSION_SCRIPT_URL: '/ext-test/site.js' });
+    const response = await me.onRequestGet({
+      request: new Request(`${BASE_URL}/api/me`), env, waitUntil: () => {},
+    });
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), { extension_script_url: '/ext-test/site.js' });
+  });
 });
 
 describe('limits and account delete', () => {

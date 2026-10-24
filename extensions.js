@@ -1,18 +1,22 @@
 // An optional extension hook. A site can name one same-origin script in
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
 // That script may swap the limit dialog for its own, listen for the
-// 'limit-reached' event, and add its own items to the header slot. It may
-// also read, open and replace the open page, and hear 'page-changed' on
-// document when another page is on screen, and show any text read-only in
-// the editor's place. With no script set, nothing is fetched and the neutral
-// dialog in limits.js is all anyone sees.
+// 'limit-reached' event, add its own items to the header and sidebar slots,
+// and replace the links in the footer slots. It may also read, open and
+// replace the open page, and hear 'page-changed' on document when another
+// page is on screen, and show any text read-only in the editor's place. With
+// no script set, nothing is fetched and the neutral dialog in limits.js is
+// all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
   const HOOK_VERSION = 2;
   const ANSWER_DELETE = 'delete';
   const ANSWER_OK = 'ok';
+  const FOOTER_SLOT_ID = 'footer-slot';
   const HEADER_SLOT_ID = 'header-slot';
+  const SIDEBAR_FOOT_SLOT_ID = 'sidebar-foot-slot';
+  const SIDEBAR_SLOT_ID = 'sidebar-slot';
   const REASON_INVALID = 'invalid';
   const REASON_NOT_READY = 'not-ready';
   const REASON_OFFLINE = 'offline';
@@ -59,6 +63,23 @@
     if (typeof found === 'function') return found;
     console.warn('Extension hook: the open page is not available here:', name);
     return null;
+  }
+
+  // The links in the fine print under the pad, and at the foot of the
+  // notebook drawer, where a phone shows them instead. Each holds the
+  // Privacy link until a script replaces what's in it with its own.
+  function footerSlot() {
+    return document.getElementById(FOOTER_SLOT_ID);
+  }
+
+  function sidebarFootSlot() {
+    return document.getElementById(SIDEBAR_FOOT_SLOT_ID);
+  }
+
+  // A spot under the notebook's pages for the script's own sidebar items.
+  // It shows signed in or out; the script decides what fits each.
+  function sidebarSlot() {
+    return document.getElementById(SIDEBAR_SLOT_ID);
   }
 
   function currentPage() {
@@ -205,11 +226,12 @@
     return rowActions.slice();
   }
 
-  // /api/me can answer before this file runs, so the account already known
-  // is checked now and every later sign-in through 'auth-checked'.
+  // /api/me can answer before this file runs, so the answer already known is
+  // checked now and every later one through 'auth-checked'. Signed out, the
+  // path comes from the 401's answer instead of the account.
   function loadAccountScript() {
     const user = root.currentUser;
-    if (user) loadScript(user.extension_script_url);
+    loadScript(user ? user.extension_script_url : root.signedOutScriptUrl);
   }
 
   // The note sits above the invite field, so the share dialog owns when it
@@ -230,6 +252,9 @@
     loadScript,
     runLimitDialog,
     headerSlot,
+    footerSlot,
+    sidebarFootSlot,
+    sidebarSlot,
     currentPage,
     openPage,
     replacePage,
