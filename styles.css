@@ -269,7 +269,7 @@ header .nav-icon circle {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background: var(--paper-card);
+  background: var(--paper);
 }
 
 /* One orchestrated moment: the page settles onto the desk. */
@@ -317,9 +317,9 @@ header .nav-icon circle {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  /* The writing surface matches the rhymes panel: with no ruling left to make
-     it read as a pad, the cream only made the two halves look mismatched. */
-  background: var(--paper-card);
+  /* The writing surface is the same slate as the header and side rail, so the
+     page reads as one surface. */
+  background: var(--paper);
 }
 
 .lyrics-panel:has(.syllable-gutter.visible) {
@@ -1067,11 +1067,11 @@ header .nav-icon circle {
 }
 
 /* Plain text, not an outlined pill: it is a note on the arrow, and a pill
-   would read as a button. The card colour behind it breaks the line. */
+   would read as a button. The page colour behind it breaks the line. */
 .sample-pointer-tip {
   position: absolute;
   padding: var(--space-1) var(--space-2);
-  background: var(--paper-card);
+  background: var(--paper);
   font-family: var(--font-ui);
   font-size: var(--text-caption-1);
   color: var(--accent);
@@ -3477,7 +3477,7 @@ body.sidebar-open #sidebar-scrim {
 .app-footer {
   margin: 0;
   padding: var(--space-2) var(--space-4);
-  background: var(--paper-card);
+  background: var(--paper);
   color: var(--ink-faded);
   font-size: var(--text-caption-1);
   text-align: center;
