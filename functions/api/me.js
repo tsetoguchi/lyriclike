@@ -1,14 +1,23 @@
-import { describeAccount } from '../_accounts.js';
+import { describeAccount, extensionScriptUrl } from '../_accounts.js';
 import { DAY_MS } from '../_ratelimit.js';
 import { parseCookies, requireUser, sessionCookie } from '../_shared.js';
 
 const NINETY_DAYS_MS = 90 * DAY_MS;
+const HTTP_UNAUTHORIZED = 401;
+
+// Signed out, the site's extension script still runs, so its path comes back
+// with the 401.
+function signedOut(env) {
+  return Response.json(
+    { extension_script_url: extensionScriptUrl(env) }, { status: HTTP_UNAUTHORIZED }
+  );
+}
 
 export async function onRequestGet({ request, env, waitUntil }) {
   // The page calls this on every load, so it is where a session that is close
   // to running out gets its cookie renewed.
   const { user, cookieMaxAge, response } = await requireUser(request, env, { refresh: true });
-  if (response) return response;
+  if (response) return signedOut(env);
 
   // Clean up expired rows and old logs in the background. Rate-limit counters
   // are kept for the longest window (one day), so a daily counter is not reset
@@ -28,6 +37,6 @@ export async function onRequestGet({ request, env, waitUntil }) {
     headers.append('Set-Cookie', sessionCookie(sid, new URL(request.url), { maxAge: cookieMaxAge }));
   }
   const account = await describeAccount(env, user.id);
-  if (!account) return new Response(null, { status: 401 });
+  if (!account) return signedOut(env);
   return Response.json(account, { headers });
 }

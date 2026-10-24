@@ -15,7 +15,7 @@ async function initAuth() {
       const user = await res.json();
       showUser(user);
     } else {
-      showSignIn();
+      showSignIn(await res.json().catch(() => null));
     }
   } catch {
     showSignIn();
@@ -35,8 +35,11 @@ function showUser(user) {
   if (window.openNotebook) window.openNotebook();
 }
 
-function showSignIn() {
+// signedOut is /api/me's 401 answer, when there is one. It names the site's
+// extension script, which runs for visitors too.
+function showSignIn(signedOut = null) {
   window.currentUser = null;
+  if (signedOut) window.signedOutScriptUrl = signedOut.extension_script_url;
   window.setSignedInProperty(false);
   document.dispatchEvent(new Event('auth-checked'));
   document.body.classList.remove('signed-in');

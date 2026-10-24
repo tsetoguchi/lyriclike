@@ -115,10 +115,10 @@ describe('/api/me', () => {
     assert.doesNotMatch(await (await getMe('tok')).text(), /pbkdf2/);
   });
 
-  it('still answers a missing or unknown session with an empty 401', async () => {
+  it('answers a missing or unknown session with a 401 that says nothing of any account', async () => {
     const response = await getMe('nope');
     assert.equal(response.status, 401);
-    assert.equal(await response.text(), '');
+    assert.deepEqual(await response.json(), { extension_script_url: null });
   });
 
   it('cleans up expired tokens, pending signups and old rate-limit counters', async () => {

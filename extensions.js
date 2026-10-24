@@ -212,11 +212,12 @@
     return rowActions.slice();
   }
 
-  // /api/me can answer before this file runs, so the account already known
-  // is checked now and every later sign-in through 'auth-checked'.
+  // /api/me can answer before this file runs, so the answer already known is
+  // checked now and every later one through 'auth-checked'. Signed out, the
+  // path comes from the 401's answer instead of the account.
   function loadAccountScript() {
     const user = root.currentUser;
-    if (user) loadScript(user.extension_script_url);
+    loadScript(user ? user.extension_script_url : root.signedOutScriptUrl);
   }
 
   // The note sits above the invite field, so the share dialog owns when it
