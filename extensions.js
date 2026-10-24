@@ -1,8 +1,8 @@
 // An optional extension hook. A site can name one same-origin script in
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
 // That script may swap the limit dialog for its own, listen for the
-// 'limit-reached' event, add its own items to the header, sidebar and rail
-// slots, and replace the links in the footer slots. It may also read, open
+// 'limit-reached' event, add its own items to the header, sidebar, rail and
+// account menu slots, and replace the links in the footer slots. It may also read, open
 // and replace the open page, and hear 'page-changed' on document when
 // another page is on screen, and show any text read-only in the editor's
 // place. With no script set, nothing is fetched and the neutral dialog in
@@ -10,7 +10,8 @@
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 2;
+  const HOOK_VERSION = 3;
+  const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
   const ANSWER_OK = 'ok';
   const FOOTER_SLOT_ID = 'footer-slot';
@@ -86,6 +87,12 @@
 
   function railSlot() {
     return document.getElementById(RAIL_SLOT_ID);
+  }
+
+  // A group in the account menu for the script's own items. Empty, it takes
+  // no room.
+  function accountMenuSlot() {
+    return document.getElementById(ACCOUNT_MENU_SLOT_ID);
   }
 
   function currentPage() {
@@ -262,6 +269,7 @@
     sidebarFootSlot,
     sidebarSlot,
     railSlot,
+    accountMenuSlot,
     currentPage,
     openPage,
     replacePage,
