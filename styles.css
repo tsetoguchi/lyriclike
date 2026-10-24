@@ -235,7 +235,7 @@ header h1 a {
   padding: var(--space-2) var(--space-3);
   background: transparent;
   border: var(--hairline) solid var(--ink-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--ink);
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -1787,7 +1787,7 @@ header .nav-icon circle {
   font-weight: var(--weight-regular);
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--ink-faded);
   cursor: pointer;
   transition: color var(--duration-fast), background-color var(--duration-fast);
@@ -2179,7 +2179,7 @@ header .nav-icon circle {
   margin-top: var(--space-2);
   background: transparent;
   border: var(--hairline) solid var(--rule);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--ink-faded);
   font-family: var(--font-ui);
   font-size: var(--text-caption-1);
@@ -2256,7 +2256,6 @@ header .nav-icon circle {
 /* Rounded like the switches in the middle, so the header has one shape. */
 #signed-out-actions .toggle-btn {
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
 }
 
 /* The one solid button on a screen: the thing we most want pressed.
@@ -2814,9 +2813,7 @@ body:not(.signed-in) .header-slot {
   padding: var(--space-6) 0 0;
 }
 
-#auth-panel .google-btn,
-#auth-panel .modal-input,
-#auth-panel .auth-submit {
+#auth-panel .modal-input {
   border-radius: var(--radius-md);
 }
 
@@ -2858,7 +2855,7 @@ body:not(.signed-in) .header-slot {
   padding: var(--space-2) var(--space-4);
   background: var(--google-fill);
   border: var(--hairline) solid var(--google-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--google-text);
   font-family: var(--font-ui);
   font-size: var(--text-subhead);
@@ -3201,7 +3198,7 @@ body.sidebar-open #sidebar-scrim {
   padding: var(--space-2) var(--space-3);
   background: none;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: var(--text-subhead);
@@ -3467,7 +3464,7 @@ body.sidebar-open #sidebar-scrim {
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--ink-faded);
   cursor: pointer;
 }
