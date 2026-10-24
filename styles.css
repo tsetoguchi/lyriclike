@@ -3018,6 +3018,17 @@ body.sidebar-open #sidebar-scrim {
   }
 }
 
+/* The rail's icons brighten slowly under the pointer, like the lyrics do. */
+#sidebar-rail .icon-btn {
+  transition: color var(--duration-hover) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sidebar-rail .icon-btn {
+    transition: none;
+  }
+}
+
 /* Sits level with the header's contents across the top. */
 .sidebar-top {
   display: flex;
