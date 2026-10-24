@@ -3029,6 +3029,40 @@ body.sidebar-open #sidebar-scrim {
   }
 }
 
+/* The name of a rail icon, in a pill beside the rail (see rail-tips.js).
+   Inked in reverse so it reads apart from the page behind it. */
+.rail-tip {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .rail-tip {
+    display: block;
+    position: fixed;
+    transform: translateY(-50%);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--ink);
+    color: var(--paper);
+    font-size: var(--text-subhead);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--duration-fast) ease-out;
+    z-index: var(--z-overlay);
+  }
+
+  .rail-tip.visible {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-tip {
+    transition: none;
+  }
+}
+
 /* Sits level with the header's contents across the top. */
 .sidebar-top {
   display: flex;

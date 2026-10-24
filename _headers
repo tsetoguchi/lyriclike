@@ -121,6 +121,9 @@
 /back-button.js
   Cache-Control: no-cache
 
+/rail-tips.js
+  Cache-Control: no-cache
+
 /analytics.js
   Cache-Control: no-cache
 
