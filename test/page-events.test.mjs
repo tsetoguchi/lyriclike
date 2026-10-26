@@ -263,6 +263,56 @@ describe('page.deleted', () => {
   });
 });
 
+async function parkSave(pageId) {
+  await exec('INSERT INTO event_outbox (id, page_id, body, attempts, next_attempt_at, created_at) ' +
+    "VALUES (?, ?, '{\"type\":\"page.saved\"}', 1, 0, 1)", `parked-${pageId}`, pageId);
+}
+
+async function parkedPages() {
+  const { results } = await env.lyricalmiracle_db.prepare('SELECT page_id, body FROM event_outbox').all();
+  return results.filter(row => JSON.parse(row.body).type === 'page.saved').map(row => row.page_id);
+}
+
+describe('parked saves on delete', () => {
+  it('deleting a page removes its parked saves', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await parkSave(SOLO);
+    await parkSave(SHARED);
+    await call(page.onRequestDelete, 'DELETE', 'sid-ann', SOLO);
+    assert.deepEqual(await parkedPages(), [SHARED]);
+  });
+
+  it('an editor leaving does not remove parked saves', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await parkSave(SHARED);
+    await call(page.onRequestDelete, 'DELETE', 'sid-bo', SHARED);
+    assert.deepEqual(await parkedPages(), [SHARED]);
+  });
+
+  it('deleting an account removes parked saves on its pages', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await exec("INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at) VALUES ('bo-page', 'bo', '', 'x', 0, 1, 1)");
+    await parkSave(SOLO);
+    await parkSave('bo-page');
+    const request = new Request(`${BASE_URL}/api/account`, { method: 'DELETE', headers: { Cookie: 'sid=sid-ann' } });
+    await account.onRequestDelete({ request, env, waitUntil: p => pending.push(p) });
+    await Promise.all(pending);
+    assert.deepEqual(await parkedPages(), ['bo-page']);
+  });
+
+  it('a save still in its tries when the page is deleted is not parked', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    hookStatus = 500;
+    const request = new Request(`${BASE_URL}/api/lyrics/${SOLO}`, {
+      method: 'PUT', headers: { Cookie: 'sid=sid-ann', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: 'two', base_revision: 0 }),
+    });
+    await page.onRequestPut({ request, env, params: { id: SOLO }, waitUntil: p => pending.push(p) });
+    await call(page.onRequestDelete, 'DELETE', 'sid-ann', SOLO);
+    assert.deepEqual(await parkedPages(), []);
+  });
+});
+
 describe('account.deleted', () => {
   async function deleteAccount(sid) {
     env.PAGE_ROOM = fakeRoomBinding();

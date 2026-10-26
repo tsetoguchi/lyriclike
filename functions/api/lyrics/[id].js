@@ -249,8 +249,12 @@ export async function onRequestDelete(context) {
   // The owner deletes the page and its share list; the owner check sits in
   // the share delete too, so nobody else can wipe a page's list this way. An
   // editor calling this only leaves: their own row goes, the page stays.
+  // Parked event hook saves go with the page, so its words leave D1 too.
   const db = env.lyricalmiracle_db;
-  const [, pageDeleted, editorLeft] = await db.batch([
+  const [, , pageDeleted, editorLeft] = await db.batch([
+    db.prepare(
+      'DELETE FROM event_outbox WHERE page_id IN (SELECT id FROM lyrics WHERE id = ? AND user_id = ?)'
+    ).bind(params.id, user.id),
     db.prepare(
       'DELETE FROM lyric_shares WHERE lyric_id IN (SELECT id FROM lyrics WHERE id = ? AND user_id = ?)'
     ).bind(params.id, user.id),

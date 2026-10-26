@@ -68,6 +68,10 @@ export async function onRequestDelete(context) {
       'DELETE FROM lyric_shares WHERE user_id = ? OR email_normalized = ' +
       '(SELECT email_normalized FROM users WHERE id = ?)'
     ).bind(user.id, user.id),
+    // Parked event hook saves hold the pages' words, so they go too.
+    env.lyricalmiracle_db.prepare(
+      'DELETE FROM event_outbox WHERE page_id IN (SELECT id FROM lyrics WHERE user_id = ?)'
+    ).bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM lyrics WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM identities WHERE user_id = ?').bind(user.id),
