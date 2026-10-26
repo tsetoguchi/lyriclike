@@ -1968,10 +1968,11 @@ window.resetRhymesPanel = resetRhymesPanel;
 
 // Fills the rhymes panel for a word the writer did not pick, so the sample
 // verse arrives with the panel already at work. It leaves focus and the caret
-// alone: nothing should jump or raise a keyboard on first load.
+// alone: nothing should jump or raise a keyboard on first load. A word linked
+// from a rhyme page is in no line, so it comes with no bounds and no context.
 function showRhymesForWord(word, bounds) {
   pickHighlightWord(word, bounds, false);
-  selectedContextEl.textContent = getWordContext(textareaEl.value, bounds.start);
+  selectedContextEl.textContent = bounds ? getWordContext(textareaEl.value, bounds.start) : '';
   if (!rhymeIndex) {
     showPendingRhymes(word);
     ensureRhymeData();

@@ -9,6 +9,8 @@ const TOKENS_PATH = '/tokens.css';
 const STYLESHEET_PATH = '/rhymes/rhymes.css';
 const ANALYTICS_PATH = '/analytics.js';
 const SITE_NAME = 'LyricLike';
+// The editor reads this query parameter as the word to open on (storage.js).
+const EDITOR_WORD_PARAM = 'rhymes';
 // The card shown when any page is shared; the homepage uses the same image.
 const PREVIEW_IMAGE_URL = `${SITE_ORIGIN}/assets/lyriclike.png`;
 const PREVIEW_IMAGE_WIDTH = 1200;
@@ -94,6 +96,19 @@ function renderCallToAction() {
 </aside>`;
 }
 
+// Opens the editor with this word's rhymes already beside a blank page, so
+// the reader carries on from where they are rather than starting over.
+export function editorLinkFor(word) {
+  return `/?${EDITOR_WORD_PARAM}=${encodeURIComponent(word)}`;
+}
+
+function renderWordCallToAction(word) {
+  return `<aside class="cta">
+<p>Write your lyrics next to every rhyme for ${quoted(word)}. LyricLike counts syllables and labels your rhyme scheme as you type. Free, no sign-up.</p>
+<a class="cta-button" href="${editorLinkFor(word)}">Write with these rhymes</a>
+</aside>`;
+}
+
 function renderFooter({ withMeanings }) {
   const meanings = withMeanings
     ? '\nMeanings from <a href="https://wordnet.princeton.edu/">WordNet</a>, © Princeton University.'
@@ -133,10 +148,10 @@ function renderSyllableGroup(group, typeKey, pageWords) {
 <ul class="rhyme-list">${items}</ul>`;
 }
 
-function renderSection(section, pageWords) {
+function renderSection(section, pageWords, word) {
   const groups = section.groups.map((group) => renderSyllableGroup(group, section.key, pageWords));
   const note = section.total > section.shownCount
-    ? `<p class="more">Showing ${section.shownCount} of ${section.total.toLocaleString('en-US')}. The editor lists them all.</p>`
+    ? `<p class="more">Showing ${section.shownCount} of ${section.total.toLocaleString('en-US')}. <a href="${editorLinkFor(word)}">See them all in the editor</a>.</p>`
     : '';
   return `<section class="rhyme-section">
 <h2><span class="dot dot-${section.key}"></span>${section.name} rhymes<span class="count">${section.total.toLocaleString('en-US')}</span></h2>
@@ -245,8 +260,9 @@ export function renderRhymePage(model, pageWords) {
 <p class="answer">${renderSummarySentence(model)}</p>
 <p class="fact">${renderSyllableFact(model)}</p>
 ${renderMeaning(model)}
-${renderCallToAction()}
-${model.sections.map((section) => renderSection(section, pageWords)).join('\n')}
+${renderWordCallToAction(model.word)}
+${model.sections.map((section) => renderSection(section, pageWords, model.word)).join('\n')}
+${renderWordCallToAction(model.word)}
 ${renderRelated(model.related)}`;
   return renderDocument(head, main, { withMeanings: Boolean(model.meaning) });
 }
