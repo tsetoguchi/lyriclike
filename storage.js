@@ -699,7 +699,8 @@ function canShareFromList(lyric) {
 // The page a signed-out writer has, shown the way a saved one would be so
 // the notebook they would get is already in view.
 function showLocalPage(container) {
-  const title = escapeHtml(titleForName(currentTitle));
+  // The page on screen, so it reads as the editor's placeholder does.
+  const title = escapeHtml(titleForDisplay(currentTitle) || placeholderTitle());
   container.innerHTML = `
     <div class="lyrics-list-item active">
       <button class="lyrics-list-open" title="Saved in this browser">${title}</button>
@@ -1544,10 +1545,10 @@ function showPlaceholderTitle() {
   document.getElementById('lyrics-panel-title').dataset.placeholder = placeholderTitle();
 }
 
-// Where a page is named rather than edited, the unnamed page reads as the
-// editor's placeholder does.
+// Where a saved page is named rather than edited. A saved page is never the
+// sample, so it never takes the sample's title, even while the sample is up.
 function titleForName(title) {
-  return titleForDisplay(title) || placeholderTitle();
+  return titleForDisplay(title) || PLACEHOLDER_TITLE;
 }
 
 function updatePanelHeader() {
