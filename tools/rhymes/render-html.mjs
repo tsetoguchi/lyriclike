@@ -192,8 +192,14 @@ function renderRelated(related) {
 </section>`;
 }
 
+// Counts the words the page lists, not every match: "7,005 words" reads as a
+// raw dump in a search result, and most of those are loose sound matches.
+function countShownRhymes(model) {
+  return model.sections.reduce((sum, section) => sum + section.shownCount, 0);
+}
+
 function buildRhymeDescription(model, exampleCount) {
-  const count = model.totalRhymes.toLocaleString('en-US');
+  const count = countShownRhymes(model).toLocaleString('en-US');
   const tail = 'Grouped by rhyme type and syllable count.';
   if (exampleCount === 0) return `${count} words that rhyme with ${model.word}. ${tail}`;
   const examples = model.summary.examples.slice(0, exampleCount).join(', ');

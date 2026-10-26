@@ -5,13 +5,18 @@
 import rhymeCore from '../../rhyme-core.js';
 import { toIpa } from './pronounce.mjs';
 
-const { RHYME_TYPES, countSyllables, getStressedSyllable, rankRhymeWords, tierRhymeWords } = rhymeCore;
+const {
+  RHYME_TYPES, countSyllables, extractEndRhymePart, getStressedSyllable, rankRhymeWords, tierRhymeWords
+} = rhymeCore;
 
 const MAX_WORDS_PER_TYPE = 100;
 const SUMMARY_EXAMPLE_COUNT = 5;
 // Strongest first, so the answer at the top draws from the closest sounds.
 const NEAR_RHYME_TYPES = ['family', 'additive', 'subtractive'];
 const LOOSE_RHYME_TYPES = ['assonance', 'consonance'];
+// Every type that keeps the stressed vowel, so a word from any of them can
+// still be heard as a rhyme when its last syllable matches too.
+const STRESSED_VOWEL_TYPES = [...NEAR_RHYME_TYPES, 'assonance'];
 // Common words first, then closest sound: the same tiers and order the
 // editor's panel uses, so a page and the app never disagree about which rhyme
 // is the best one. The editor lists names, rare words and crude words last; a
@@ -64,10 +69,45 @@ function topWords(results, typeKeys, context) {
   return examples;
 }
 
+function rankedWords(results, typeKeys, context) {
+  return typeKeys.flatMap((key) => rankRhymes(results[key], context).map(({ word }) => word));
+}
+
+function endingSound(index, word) {
+  const part = extractEndRhymePart(index.dictionary[word][0]);
+  return part ? [part.vowel, ...part.coda].join(' ') : null;
+}
+
+// "Oranges" for "orange" or "silverware" for "silver" is the word again, not
+// a rhyme for it.
+function isFormOf(word, target) {
+  return word.includes(target) || target.includes(word);
+}
+
+// Same syllable count and same last syllable: "finish" for "english" keeps
+// the whole sound, where "thing" keeps only the stressed vowel.
+function hasSameShape(word, context) {
+  const { index } = context;
+  if (countSyllables(index, word) !== context.targetSyllables) return false;
+  return endingSound(index, word) === context.targetEnding;
+}
+
+// With no perfect rhyme, ranking by commonness alone leads with short words
+// that drop the end of the target, so same-shape words go first.
+function nearExamples(results, context) {
+  const isFresh = (word) => !isFormOf(word, context.word);
+  const near = rankedWords(results, NEAR_RHYME_TYPES, context).filter(isFresh);
+  const sameShape = context.targetEnding
+    ? rankedWords(results, STRESSED_VOWEL_TYPES, context)
+      .filter((word) => isFresh(word) && hasSameShape(word, context))
+    : [];
+  return [...new Set([...sameShape, ...near])].slice(0, SUMMARY_EXAMPLE_COUNT);
+}
+
 function buildSummary(results, context) {
   const perfect = topWords(results, ['perfect'], context);
   if (perfect.length > 0) return { kind: 'perfect', examples: perfect, total: results.perfect.length };
-  const near = topWords(results, NEAR_RHYME_TYPES, context);
+  const near = nearExamples(results, context);
   if (near.length > 0) return { kind: 'near', examples: near };
   return { kind: 'loose', examples: topWords(results, LOOSE_RHYME_TYPES, context) };
 }
@@ -78,14 +118,14 @@ export function countListedRhymes(results) {
 
 export function buildPageModel({ word, results, index, ranks, names, crude, pageExcluded, related, meaning, pronunciation }) {
   const targetSyllables = countSyllables(index, word);
-  const context = { index, ranks, names, crude, pageExcluded, word };
+  const targetEnding = endingSound(index, word);
+  const context = { index, ranks, names, crude, pageExcluded, word, targetSyllables, targetEnding };
   return {
     word,
     syllables: targetSyllables,
     stressedSyllable: getStressedSyllable(index, word),
     ipa: toIpa(pronunciation),
     meaning,
-    totalRhymes: countListedRhymes(results),
     summary: buildSummary(results, context),
     sections: buildSections(results, context),
     related
