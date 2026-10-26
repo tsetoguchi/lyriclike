@@ -3020,6 +3020,21 @@ body:not(.signed-in) .header-slot {
   background-image: linear-gradient(var(--ink-wash), var(--ink-wash));
 }
 
+/* Under the Google button inside Instagram, TikTok and the like, where
+   Google refuses to sign anyone in. It goes when the button does. */
+.auth-in-app {
+  margin-top: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-footnote);
+  line-height: 1.5;
+  color: var(--accent);
+  text-align: center;
+}
+
+.google-btn[hidden] + .auth-in-app {
+  display: none;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;
