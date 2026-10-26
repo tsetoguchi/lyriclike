@@ -1,0 +1,11 @@
+# Cloudflare Pages reads this file. Each line: from, to, status.
+
+# Paths people really visit that have no page of their own. /x probably came
+# from a bad link posted somewhere; about and contact are common guesses.
+/x            /        301
+/about        /guide/  301
+/contact      /guide/  301
+/contact-us   /guide/  301
+
+# Browsers ask for this on every page that names no icon, rhyme pages too.
+/favicon.ico  /assets/icons/icon-v2-192.png  301
