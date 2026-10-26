@@ -70,8 +70,8 @@ Email and password sign-up need extra bindings. See `verifying-accounts`.
 - The browser reports no hover and no fine pointer. Hover features never fire
   from mouse moves. Call the page's hover code directly, and check the media
   query gate on its own.
-- Two console errors are normal on every load: `401` for `/api/me` when
-  signed out, and `404` for `/favicon.ico`. Anything else is worth a look.
+- One console error is normal on every load: `401` for `/api/me` when
+  signed out. Anything else is worth a look.
 
 ## Stop
 
