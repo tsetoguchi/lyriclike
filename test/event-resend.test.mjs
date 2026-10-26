@@ -120,6 +120,18 @@ describe('sendParkedEvents', () => {
     assert.ok(Math.abs(seconds - Date.now() / 1000) < 5);
   });
 
+  it('one row failing to settle does not cut the others short', async () => {
+    await park('a', { attempts: MAX_ATTEMPTS - 1, createdAt: 1 });
+    await park('b', { createdAt: 2 });
+    answer = async () => {
+      // The second post answers later, so it settles after the first throws.
+      if (calls.length === 2) await new Promise(resolve => setTimeout(resolve, 20));
+      return new Response(null, { status: 500 });
+    };
+    await sweep({ onDropped: () => { throw new Error('log down'); } });
+    assert.deepEqual(await rows(), [{ id: 'b', attempts: 2, next_attempt_at: NOW + 240_000 }]);
+  });
+
   it('never throws, even with the table gone', async () => {
     await exec('DROP TABLE event_outbox');
     await sweep();
