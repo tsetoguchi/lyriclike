@@ -554,6 +554,13 @@ header .nav-icon circle {
   gap: var(--space-2);
 }
 
+/* Notice buttons borrow the sample's amber button, which is pinned under the
+   verse; here they sit in the row with the text instead. */
+.page-notice-actions .sample-clear {
+  position: static;
+  transform: none;
+}
+
 .page-notice-close {
   font-size: var(--text-caption-1);
 }
