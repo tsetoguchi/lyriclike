@@ -72,6 +72,9 @@
 /storage.js
   Cache-Control: no-cache
 
+/save-nudge.js
+  Cache-Control: no-cache
+
 /sharing.js
   Cache-Control: no-cache
 
