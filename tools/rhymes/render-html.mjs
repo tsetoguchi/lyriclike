@@ -17,7 +17,7 @@ const PREVIEW_IMAGE_ALT = 'LyricLike logo';
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
 // Bing flags meta descriptions longer than this; Google truncates near it.
 const MAX_DESCRIPTION_LENGTH = 160;
-const MAX_DESCRIPTION_EXAMPLES = 3;
+const MAX_DESCRIPTION_EXAMPLES = 4;
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -198,17 +198,23 @@ function countShownRhymes(model) {
   return model.sections.reduce((sum, section) => sum + section.shownCount, 0);
 }
 
+// Most searchers type "what rhymes with..." or "words that rhyme with...",
+// and a result that shows real rhymes up front gets the click.
+function describeExamples(summary, exampleCount) {
+  const examples = joinWithAnd(summary.examples.slice(0, exampleCount));
+  if (summary.kind === 'perfect') return ` ${capitalize(examples)}.`;
+  const label = summary.kind === 'near' ? 'Closest' : 'Nearest sounds';
+  return ` No perfect rhymes. ${label}: ${examples}.`;
+}
+
 function buildRhymeDescription(model, exampleCount) {
   const count = countShownRhymes(model).toLocaleString('en-US');
-  const tail = 'Grouped by rhyme type and syllable count.';
-  if (exampleCount === 0) return `${count} words that rhyme with ${model.word}. ${tail}`;
-  const examples = model.summary.examples.slice(0, exampleCount).join(', ');
-  const lead = model.summary.kind === 'perfect' ? 'rhymes like' : 'near rhymes like';
-  return `${count} words that rhyme with ${model.word}, including ${lead} ${examples}. ${tail}`;
+  const examples = exampleCount === 0 ? '' : describeExamples(model.summary, exampleCount);
+  return `What rhymes with ${model.word}?${examples} See all ${count} rhymes for songs and poems, sorted by syllable count.`;
 }
 
 // Long example words can push past the limit, so drop examples until it fits.
-function describeRhymePage(model) {
+export function describeRhymePage(model) {
   for (let exampleCount = MAX_DESCRIPTION_EXAMPLES; exampleCount > 0; exampleCount--) {
     const description = buildRhymeDescription(model, exampleCount);
     if (description.length <= MAX_DESCRIPTION_LENGTH) return description;
