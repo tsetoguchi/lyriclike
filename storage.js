@@ -17,6 +17,9 @@ const FIRST_SAVE_KEY = 'first_save_tracked';
 // in sample-verse.js, because the notebook names pages with it on every visit
 // and a cached older copy of that file would leave it undefined.
 const SAMPLE_TITLE = 'Nobody Home';
+// A rhyme page links here as /?rhymes=word to open the editor on that word.
+const LINKED_WORD_PARAM = 'rhymes';
+const LINKED_WORD_PATTERN = /^[a-z][a-z']{0,39}$/;
 const FOCUS_DELAY_MS = 50;
 const CLOSE_DELAY_MS = 250;
 const LYRIC_TITLE_LABEL = 'Title';
@@ -2161,8 +2164,29 @@ function restoreDraft() {
   } catch {}
 }
 
-if (isFirstVisit()) showSample();
-else restoreDraft();
+// The word is taken once and dropped from the address, so a reload or a
+// copied link is the plain editor again.
+function takeLinkedWord() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(LINKED_WORD_PARAM)) return null;
+  const word = url.searchParams.get(LINKED_WORD_PARAM).trim().toLowerCase();
+  url.searchParams.delete(LINKED_WORD_PARAM);
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+  return LINKED_WORD_PATTERN.test(word) ? word : null;
+}
+
+// Someone who came for one word's rhymes gets a blank pad beside them, not
+// the sample with its own word picked. A draft of theirs still comes back.
+function startEditor() {
+  const linkedWord = takeLinkedWord();
+  if (linkedWord === null && isFirstVisit()) showSample();
+  else restoreDraft();
+  if (linkedWord === null || !window.showRhymesForWord) return;
+  window.showRhymesForWord(linkedWord, null);
+  trackEvent('linked_word_opened', { word: linkedWord });
+}
+
+startEditor();
 announcePageIfChanged();
 
 // Every app script is revalidated on load, so the sign-in check can answer

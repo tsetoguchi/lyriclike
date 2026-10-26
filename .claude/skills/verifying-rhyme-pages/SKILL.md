@@ -24,7 +24,9 @@ step. Check the served pages in the browser; check the files with git.
    - h1 "Words that rhyme with night", then the pronunciation `/naɪt/`,
      "What night means", and groups Perfect (72), Family, Additive,
      Subtractive, Assonance, Consonance, each split by syllable count
-   - an "Open the lyric editor" link to `/`
+   - two "Write with these rhymes" links to `/?rhymes=night`. Following
+     one opens the editor on a blank page with night's rhymes showing, and
+     the address goes back to `/`
 2. **Missing word.** `/rhymes/zzqqx/` answers a real 404 with title "Page
    not found | LyricLike", not the app.
 3. **Index.** `/rhymes/` answers 200, "Rhyming Dictionary for Songwriters",
