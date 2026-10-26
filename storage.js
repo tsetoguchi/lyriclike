@@ -2042,7 +2042,6 @@ function hasSeenSampleHint() {
 function retireSampleHint() {
   if (!sampleShowing || hasSeenSampleHint()) return;
   if (window.hideSamplePointer) window.hideSamplePointer();
-  document.getElementById('sample-clear').hidden = false;
   try { localStorage.setItem(SAMPLE_HINT_SEEN_KEY, '1'); } catch {}
 }
 
@@ -2066,9 +2065,7 @@ function showSample() {
   sampleShowing = true;
   isSampleShownUnreported = true;
   reportSampleShown();
-  // The button waits for the first pick, so a new visitor sees one thing to
-  // do at a time: pick a word, then make the pad their own.
-  document.getElementById('sample-clear').hidden = !hasSeenSampleHint();
+  document.getElementById('sample-clear').hidden = false;
   document.getElementById('sample-bar').hidden = false;
   showPlaceholderTitle();
   textarea.value = SAMPLE_VERSE;
@@ -2098,10 +2095,8 @@ function trackFirstWrite() {
   trackEventOnce(FIRST_WRITE_KEY, 'first_write');
 }
 
-// The trigger says which control did it: the note's link, there from the
-// start, or the button that waits for a first pick.
-function clearSample(trigger) {
-  trackEvent('sample_cleared', { trigger });
+function clearSample() {
+  trackEvent('sample_cleared', { trigger: 'button' });
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
   textarea.dispatchEvent(new Event('input'));
@@ -2110,14 +2105,13 @@ function clearSample(trigger) {
 }
 
 // Listening on the scroller in the capture phase runs this before the
-// editor's own input handlers, so the link is gone by the time they measure
+// editor's own input handlers, so the button is gone by the time they measure
 // the page, and before the draft handler below decides whether to save.
 document.querySelector('.lyrics-area').addEventListener('input', (event) => {
   if (sampleShowing && !isSampleShowing()) endSample();
   if (event.isTrusted) trackFirstWrite();
 }, true);
-document.getElementById('sample-clear').addEventListener('click', () => clearSample('button'));
-document.getElementById('sample-note-clear').addEventListener('click', () => clearSample('note'));
+document.getElementById('sample-clear').addEventListener('click', clearSample);
 
 function restoreDraft() {
   try {

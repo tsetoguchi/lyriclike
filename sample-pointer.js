@@ -15,6 +15,8 @@
   const TIP_GAP_PX = 6;
   // On a phone the tip sits under the verse rather than over its lines.
   const TIP_BELOW_VERSE_PX = 12;
+  // sample-start.js's room between the verse and the "Start your own" button.
+  const BUTTON_BELOW_VERSE_PX = 24;
   // Matches the page's side gutter, so the tip never touches the screen edge.
   const TIP_EDGE_PX = 16;
 
@@ -25,6 +27,7 @@
   const panelWordEl = document.getElementById('selected-word');
   const panelEl = document.getElementById('rhymes-panel');
   const rhymesTabEl = document.querySelector('.mobile-tab[data-tab="rhymes"]');
+  const startButtonEl = document.getElementById('sample-clear');
   let isActive = false;
   let placeFrame = null;
 
@@ -113,15 +116,23 @@
     return words[words.length - 1].getBoundingClientRect().bottom;
   }
 
+  // The button sits right under the verse, so the tip goes under the button.
+  // It is worked out from the verse, not read from the button, because the
+  // button may not be placed yet in this frame.
+  function phoneTipTop() {
+    if (startButtonEl.hidden) return verseBottom() + TIP_BELOW_VERSE_PX;
+    return verseBottom() + BUTTON_BELOW_VERSE_PX + startButtonEl.offsetHeight
+      + TIP_BELOW_VERSE_PX;
+  }
+
   // On a wide screen the tip rides the arrow's middle, like a label on it.
-  // On a phone the arrow is short and steep, so the tip waits under the verse.
+  // On a phone the arrow is short and steep, so the tip waits under the verse
+  // and its button.
   function placeTip(arrow) {
     const tipWidth = tipEl.offsetWidth;
     const middle = curveMiddle(arrow);
     const left = arrow.isTab ? arrow.wordRect.right - tipWidth : middle.x - tipWidth / 2;
-    const top = arrow.isTab
-      ? verseBottom() + TIP_BELOW_VERSE_PX
-      : middle.y - tipEl.offsetHeight / 2;
+    const top = arrow.isTab ? phoneTipTop() : middle.y - tipEl.offsetHeight / 2;
     tipEl.style.left = clampTipLeft(left, tipWidth) + 'px';
     tipEl.style.top = top + 'px';
   }
