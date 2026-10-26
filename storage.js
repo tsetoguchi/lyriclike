@@ -2095,8 +2095,10 @@ function trackFirstWrite() {
   trackEventOnce(FIRST_WRITE_KEY, 'first_write');
 }
 
-function clearSample() {
-  trackEvent('sample_cleared');
+// The trigger says which control did it: the note's link, there from the
+// start, or the button that waits for a first pick.
+function clearSample(trigger) {
+  trackEvent('sample_cleared', { trigger });
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
   textarea.dispatchEvent(new Event('input'));
@@ -2111,7 +2113,8 @@ document.querySelector('.lyrics-area').addEventListener('input', (event) => {
   if (sampleShowing && !isSampleShowing()) endSample();
   if (event.isTrusted) trackFirstWrite();
 }, true);
-document.getElementById('sample-clear').addEventListener('click', clearSample);
+document.getElementById('sample-clear').addEventListener('click', () => clearSample('button'));
+document.getElementById('sample-note-clear').addEventListener('click', () => clearSample('note'));
 
 function restoreDraft() {
   try {
