@@ -319,7 +319,7 @@ header .nav-icon circle {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background: var(--paper-card);
+  background: var(--paper-panel);
 }
 
 /* One orchestrated moment: the page settles onto the desk. */
@@ -369,7 +369,7 @@ header .nav-icon circle {
   min-width: 0;
   /* The writing surface matches the rhymes panel: with no ruling left to make
      it read as a pad, the cream only made the two halves look mismatched. */
-  background: var(--paper-card);
+  background: var(--paper-panel);
 }
 
 .lyrics-panel:has(.syllable-gutter.visible) {
@@ -1612,8 +1612,6 @@ header .nav-icon circle {
   background: var(--selection);
 }
 
-/* The memo card on the desk: reference material beside the pad, a step
-   darker than the sheet it sits beside. */
 .rhymes-panel {
   width: var(--rhymes-panel-width);
   flex-shrink: 0;

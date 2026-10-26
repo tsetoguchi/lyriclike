@@ -24,9 +24,9 @@
   --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
   --ink-wash-strong: rgba(226, 231, 239, 0.14);
   --ink-border: rgba(226, 231, 239, 0.22); /* button borders on paper cards */
-  --paper-card: #1c222d;        /* the memo card (lyrics body, overlays) */
-  --paper-panel: #181e28;       /* the rhymes panel: one step under the card, so
-                                   the page reads as two sheets, not one */
+  --paper-card: #1c222d;        /* the memo card (dialogs, menus, overlays) */
+  --paper-panel: #141922;       /* the lyrics and rhymes panels: same as the
+                                   sidebar, so the whole page reads as one surface */
 
   --desk: #0a0d13;              /* surface the pad rests on */
 
