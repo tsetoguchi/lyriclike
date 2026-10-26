@@ -49,8 +49,14 @@ async function call(handler, method, sid, id, json) {
 
 const save = (sid, id, json) => call(page.onRequestPut, 'PUT', sid, id, json);
 
+// The messages as sent, less the id each one gets (event-hook.test.mjs
+// checks that).
 function events() {
-  return sent.map(body => JSON.parse(body));
+  return sent.map(body => {
+    const { id, ...event } = JSON.parse(body);
+    assert.ok(id);
+    return event;
+  });
 }
 
 // Records every statement the routes prepare, and each batch's size.
@@ -198,15 +204,17 @@ describe('page.saved from a save', () => {
     assert.equal(sent.length, 0);
   });
 
-  it('still saves when the hook is down, and logs it once', async () => {
+  it('still saves when the hook is down, and parks the message', async () => {
     hookStatus = 500;
     const response = await save('sid-ann', SOLO, { body: 'two', base_revision: 0 });
     assert.equal(response.status, 200);
     assert.equal(sent.length, 2);
+    const parked = await env.lyricalmiracle_db.prepare('SELECT body FROM event_outbox').all();
+    assert.deepEqual(parked.results.map(row => row.body), [sent[1]]);
     const logged = await env.lyricalmiracle_db.prepare(
       "SELECT count(*) AS n FROM logs WHERE event = 'event_hook_failed'"
     ).first();
-    assert.equal(logged.n, 1);
+    assert.equal(logged.n, 0);
   });
 });
 
@@ -252,6 +260,56 @@ describe('page.deleted', () => {
     env.PAGE_ROOM = fakeRoomBinding();
     await call(page.onRequestDelete, 'DELETE', 'sid-bo', SHARED);
     assert.equal(sent.length, 0);
+  });
+});
+
+async function parkSave(pageId) {
+  await exec('INSERT INTO event_outbox (id, page_id, body, attempts, next_attempt_at, created_at) ' +
+    "VALUES (?, ?, '{\"type\":\"page.saved\"}', 1, 0, 1)", `parked-${pageId}`, pageId);
+}
+
+async function parkedPages() {
+  const { results } = await env.lyricalmiracle_db.prepare('SELECT page_id, body FROM event_outbox').all();
+  return results.filter(row => JSON.parse(row.body).type === 'page.saved').map(row => row.page_id);
+}
+
+describe('parked saves on delete', () => {
+  it('deleting a page removes its parked saves', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await parkSave(SOLO);
+    await parkSave(SHARED);
+    await call(page.onRequestDelete, 'DELETE', 'sid-ann', SOLO);
+    assert.deepEqual(await parkedPages(), [SHARED]);
+  });
+
+  it('an editor leaving does not remove parked saves', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await parkSave(SHARED);
+    await call(page.onRequestDelete, 'DELETE', 'sid-bo', SHARED);
+    assert.deepEqual(await parkedPages(), [SHARED]);
+  });
+
+  it('deleting an account removes parked saves on its pages', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    await exec("INSERT INTO lyrics (id, user_id, title, body, revision, updated_at, created_at) VALUES ('bo-page', 'bo', '', 'x', 0, 1, 1)");
+    await parkSave(SOLO);
+    await parkSave('bo-page');
+    const request = new Request(`${BASE_URL}/api/account`, { method: 'DELETE', headers: { Cookie: 'sid=sid-ann' } });
+    await account.onRequestDelete({ request, env, waitUntil: p => pending.push(p) });
+    await Promise.all(pending);
+    assert.deepEqual(await parkedPages(), ['bo-page']);
+  });
+
+  it('a save still in its tries when the page is deleted is not parked', async () => {
+    env.PAGE_ROOM = fakeRoomBinding();
+    hookStatus = 500;
+    const request = new Request(`${BASE_URL}/api/lyrics/${SOLO}`, {
+      method: 'PUT', headers: { Cookie: 'sid=sid-ann', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: 'two', base_revision: 0 }),
+    });
+    await page.onRequestPut({ request, env, params: { id: SOLO }, waitUntil: p => pending.push(p) });
+    await call(page.onRequestDelete, 'DELETE', 'sid-ann', SOLO);
+    assert.deepEqual(await parkedPages(), []);
   });
 });
 

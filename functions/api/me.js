@@ -1,8 +1,11 @@
 import { describeAccount, extensionScriptUrl } from '../_accounts.js';
+import { isEventHookSet } from '../_event-hook.js';
+import { sendParkedEvents } from '../_event-resend.js';
 import { DAY_MS } from '../_ratelimit.js';
-import { parseCookies, requireUser, sessionCookie } from '../_shared.js';
+import { parseCookies, requireUser, sessionCookie, writeLog } from '../_shared.js';
 
 const NINETY_DAYS_MS = 90 * DAY_MS;
+const EVENT_HOOK_DROPPED = 'event_hook_dropped';
 const HTTP_UNAUTHORIZED = 401;
 
 // Signed out, the site's extension script still runs, so its path comes back
@@ -30,6 +33,10 @@ export async function onRequestGet({ request, env, waitUntil }) {
     env.lyricalmiracle_db.prepare('DELETE FROM pending_signups WHERE expires_at < ?').bind(now),
     env.lyricalmiracle_db.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(now - DAY_MS),
   ]));
+  if (isEventHookSet(env)) {
+    const onDropped = () => writeLog(env, request, { userId: null, event: EVENT_HOOK_DROPPED });
+    waitUntil(sendParkedEvents(env, { onDropped }));
+  }
 
   const headers = new Headers();
   if (cookieMaxAge !== null) {
