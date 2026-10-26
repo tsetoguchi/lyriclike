@@ -1637,6 +1637,15 @@ async function openNotebook() {
   await reconcileRestoredDraft();
   if (typeof openPendingShare === 'function' && await openPendingShare()) return;
   if (lyrics && lyrics.length > 0 && isPadUnused()) await loadLyric(lyrics[0].id);
+  saveSignedOutWords();
+}
+
+// Words written signed out were never saved: their saves were skipped with no
+// one signed in. Without this, signing up showed them on an empty notebook,
+// and they only went to the account once the writer typed again.
+function saveSignedOutWords() {
+  const isUnsavedPage = currentRevision === null && !listedTitles.has(currentLyricId);
+  if (isUnsavedPage && !isPadUnused()) scheduleSave();
 }
 
 // What a reload put back on screen from the stored draft, until sign-in says
@@ -1646,8 +1655,8 @@ let restoredDraft = null;
 // A reload shows the stored draft at once, but on a shared page it can be
 // hours old. With no unsaved edits it is swapped for the page as it is now.
 // With edits, its next save carries its revision, so a stale one gets the
-// conflict bar instead of erasing newer work. A never-saved draft is left to
-// be created by its first save, as before.
+// conflict bar instead of erasing newer work. A never-saved draft is created
+// by saveSignedOutWords once the notebook opens.
 async function reconcileRestoredDraft() {
   const draft = restoredDraft;
   restoredDraft = null;
