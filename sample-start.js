@@ -5,7 +5,8 @@
 (function defineSampleStart() {
   'use strict';
 
-  // Room between the verse's last line and the button.
+  // Room between the verse's last line and the button. sample-pointer.js
+  // uses the same room to put its phone tip under the button.
   const GAP_BELOW_VERSE_PX = 24;
 
   const buttonEl = document.getElementById('sample-clear');
