@@ -49,8 +49,14 @@ async function call(handler, method, sid, id, json) {
 
 const save = (sid, id, json) => call(page.onRequestPut, 'PUT', sid, id, json);
 
+// The messages as sent, less the id each one gets (event-hook.test.mjs
+// checks that).
 function events() {
-  return sent.map(body => JSON.parse(body));
+  return sent.map(body => {
+    const { id, ...event } = JSON.parse(body);
+    assert.ok(id);
+    return event;
+  });
 }
 
 // Records every statement the routes prepare, and each batch's size.
@@ -198,15 +204,17 @@ describe('page.saved from a save', () => {
     assert.equal(sent.length, 0);
   });
 
-  it('still saves when the hook is down, and logs it once', async () => {
+  it('still saves when the hook is down, and parks the message', async () => {
     hookStatus = 500;
     const response = await save('sid-ann', SOLO, { body: 'two', base_revision: 0 });
     assert.equal(response.status, 200);
     assert.equal(sent.length, 2);
+    const parked = await env.lyricalmiracle_db.prepare('SELECT body FROM event_outbox').all();
+    assert.deepEqual(parked.results.map(row => row.body), [sent[1]]);
     const logged = await env.lyricalmiracle_db.prepare(
       "SELECT count(*) AS n FROM logs WHERE event = 'event_hook_failed'"
     ).first();
-    assert.equal(logged.n, 1);
+    assert.equal(logged.n, 0);
   });
 });
 
