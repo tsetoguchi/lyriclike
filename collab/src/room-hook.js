@@ -13,7 +13,7 @@ export function createEventSender({ env, waitUntil, now }) {
   // after the replace when its first try fails. sendEvent never throws.
   let tail = Promise.resolve();
   return event => {
-    tail = tail.then(() => sendEvent(env, event, { onFailed }));
+    tail = tail.then(() => sendEvent(env, event, { onFailed, now }));
     waitUntil(tail);
   };
 }

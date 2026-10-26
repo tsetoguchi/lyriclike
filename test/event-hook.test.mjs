@@ -7,11 +7,13 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { isEventHookSet, sendEvent, signatureHeader } from '../functions/_event-hook.js';
+import { makeEnv, query } from './support/auth-harness.mjs';
 
 const URL_SET = 'https://hooks.example.com/events';
 const SECRET = 'hook-secret-not-a-secret';
 const EVENT = { type: 'page.saved', data: { page_id: 'p1' } };
 const noWait = async () => {};
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 let originalFetch;
 let calls;
@@ -63,7 +65,9 @@ describe('sendEvent', () => {
     const { url, init } = calls[0];
     assert.equal(url, URL_SET);
     assert.equal(init.method, 'POST');
-    assert.deepEqual(JSON.parse(init.body), EVENT);
+    const { id, ...sent } = JSON.parse(init.body);
+    assert.deepEqual(sent, EVENT);
+    assert.match(id, UUID);
     const match = /^t=(\d+),v1=([0-9a-f]{64})$/.exec(init.headers['X-Event-Signature']);
     assert.ok(match);
     assert.ok(Math.abs(Number(match[1]) - Date.now() / 1000) < 5);
@@ -83,7 +87,7 @@ describe('sendEvent', () => {
     assert.equal(failed, 0);
   });
 
-  it('calls onFailed once after two failures', async () => {
+  it('calls onFailed once when two failures cannot be parked', async () => {
     fetchAnswers(503, 503);
     let failed = 0;
     await sendEvent(env, EVENT, { wait: noWait, onFailed: () => { failed += 1; } });
@@ -103,6 +107,33 @@ describe('sendEvent', () => {
     await sendEvent(env, EVENT, { wait: noWait, onFailed: () => { throw new Error('log down'); } });
   });
 
+  it('adds one id and keeps it across both tries', async () => {
+    fetchAnswers(500, 500);
+    await sendEvent(env, EVENT, { wait: noWait, onFailed: () => {} });
+    const [first, second] = calls.map(call => JSON.parse(call.init.body).id);
+    assert.match(first, UUID);
+    assert.equal(second, first);
+  });
+
+  it('parks the message after two misses', async () => {
+    const parkEnv = makeEnv(env);
+    fetchAnswers(500, 500);
+    let failed = 0;
+    const deleted = { type: 'page.deleted', data: { page_id: 'p1' } };
+    await sendEvent(parkEnv, deleted, { wait: noWait, onFailed: () => { failed += 1; } });
+    const rows = await query(parkEnv, 'SELECT body FROM event_outbox');
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].body, calls[1].init.body);
+    assert.equal(failed, 0);
+  });
+
+  it('does not park on success', async () => {
+    const parkEnv = makeEnv(env);
+    fetchAnswers(200);
+    await sendEvent(parkEnv, { type: 'page.deleted', data: { page_id: 'p1' } }, { wait: noWait });
+    assert.deepEqual(await query(parkEnv, 'SELECT id FROM event_outbox'), []);
+  });
+
   it('logs only the type and status, never the body or the address', async () => {
     fetchAnswers(500, 502);
     const lines = [];
@@ -113,9 +144,10 @@ describe('sendEvent', () => {
     } finally {
       console.error = originalError;
     }
-    assert.equal(lines.length, 1);
+    // Two lines here: the miss, and the park that fails with no database.
+    assert.equal(lines.length, 2);
     assert.match(lines[0], /page\.saved/);
     assert.match(lines[0], /502/);
-    assert.doesNotMatch(lines[0], /secret words|hooks\.example/);
+    for (const line of lines) assert.doesNotMatch(line, /secret words|hooks\.example/);
   });
 });
