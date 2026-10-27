@@ -87,6 +87,7 @@ const highlightEl = document.getElementById('lyrics-highlight');
 const mobileTabsEl = document.getElementById('mobile-tabs');
 const mainEl = document.querySelector('.main');
 const selectedContextEl = document.getElementById('selected-context');
+const chipHintEl = document.getElementById('chip-hint');
 const wordBarEl = document.querySelector('.selected-word-bar');
 const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
@@ -628,6 +629,9 @@ updateSortButtons();
 
 let currentHighlightWord = '';
 let pickedBounds = null;
+// Where a chip adds its word when the caret sits on no word, such as a fresh
+// line. Null means a chip swaps the picked word instead.
+let insertCaret = null;
 let highlightedText = '';
 let currentResults = null;
 // What renderResults() was last handed, before sorting, so a sort change can
@@ -811,7 +815,15 @@ function followTextEdit(text) {
   const isStillPicked = shifted !== null &&
     isWholeWordAt(text, shifted, currentHighlightWord);
   pickedBounds = isStillPicked ? shifted : null;
+  insertCaret = shiftCaretForEdit(insertCaret, highlightedText, text);
   highlightedText = text;
+}
+
+// An edit right at the caret spot drops it, as one at the picked word does.
+function shiftCaretForEdit(caret, oldText, newText) {
+  if (caret === null) return null;
+  const shifted = shiftBoundsForEdit({ start: caret, end: caret }, oldText, newText);
+  return shifted ? shifted.start : null;
 }
 
 // Finds the single stretch of text that changed by trimming what the old and
@@ -973,27 +985,63 @@ function handleSelection(event) {
     const end = textareaEl.selectionEnd;
 
     let word = extractWordAtCursor(text, start, end);
+    if (start === end && word === '') {
+      pickLineAboveForCaret(text, start, isPointerPick);
+      return;
+    }
     if (/\s/.test(word)) return;
     word = word.replace(/[^a-zA-Z'‘’]/g, '');
     if (word.length < MIN_WORD_LENGTH) return;
 
-    pickHighlightWord(word, pickedBoundsForSelection(text, start, end), isPointerPick);
-    selectedContextEl.textContent = getWordContext(text, start);
-    flashWordBar();
-    if (isPointerPick) announcePointerPick();
-
-    // Reaching for a word is the clearest signal that the rhymes are wanted.
-    if (!rhymeIndex) {
-      showPendingRhymes(word);
-      ensureRhymeData();
-      return;
-    }
-
-    const results = findRhymes(word);
-    renderResults(word, results);
-    // Typing runs lookups too; only a tap is someone asking for rhymes.
-    if (isPointerPick) trackRhymeLookup(word, results);
+    insertCaret = null;
+    showPickedRhymes(word, pickedBoundsForSelection(text, start, end), isPointerPick);
   }, DEBOUNCE_DELAY_MS);
+}
+
+// A caret on no word, like a fresh line, means the writer is about to answer
+// the line above, so its last word is the one to rhyme with. Its rhymes are
+// then added at the caret rather than swapped over that word.
+function pickLineAboveForCaret(text, caret, isPointerPick) {
+  const target = lastWordOfLineAbove(text, caret);
+  insertCaret = target ? caret : null;
+  if (!target) {
+    updateChipHint();
+    return;
+  }
+  showPickedRhymes(target.word, target.bounds, isPointerPick);
+}
+
+// A blank line above is a stanza break, which has nothing to answer.
+function lastWordOfLineAbove(text, caret) {
+  const lineStart = text.lastIndexOf('\n', caret - 1) + 1;
+  if (lineStart === 0) return null;
+  const aboveStart = text.lastIndexOf('\n', lineStart - 2) + 1;
+  const above = text.slice(aboveStart, lineStart - 1);
+  const words = above.match(new RegExp(WORD_CHAR.source + '+', 'g')) || [];
+  const word = words.filter((candidate) => candidate.length >= MIN_WORD_LENGTH).pop();
+  if (!word) return null;
+  const start = aboveStart + above.lastIndexOf(word);
+  return { word, bounds: { start, end: start + word.length } };
+}
+
+function showPickedRhymes(word, bounds, isPointerPick) {
+  pickHighlightWord(word, bounds, isPointerPick);
+  selectedContextEl.textContent = getWordContext(textareaEl.value, bounds ? bounds.start : 0);
+  updateChipHint();
+  flashWordBar();
+  if (isPointerPick) announcePointerPick();
+
+  // Reaching for a word is the clearest signal that the rhymes are wanted.
+  if (!rhymeIndex) {
+    showPendingRhymes(word);
+    ensureRhymeData();
+    return;
+  }
+
+  const results = findRhymes(word);
+  renderResults(word, results);
+  // Typing runs lookups too; only a tap is someone asking for rhymes.
+  if (isPointerPick) trackRhymeLookup(word, results);
 }
 
 // ── Syllable counting ──
@@ -1494,8 +1542,9 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     return;
   }
 
-  // A chip swaps itself into the lyric. With no word to swap (the picked
-  // word was edited away), the click falls back to the word's meaning.
+  // A chip adds itself at the caret or swaps itself into the lyric. With
+  // nowhere to put it (the picked word was edited away), the click falls back
+  // to the word's meaning.
   const wordEl = clicked.closest('.rhyme-word');
   if (!wordEl) return;
   if (isLongPressClick) {
@@ -1504,8 +1553,9 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   }
   const word = wordEl.textContent.trim();
   const group = wordEl.closest('.rhyme-group');
-  if (replacePickedWord(word)) {
-    trackEvent('rhyme_inserted', { group: group ? group.dataset.type : '' });
+  const mode = insertCaret === null ? CHIP_MODE_SWAP : CHIP_MODE_ADD;
+  if (placeChipWord(word)) {
+    trackEvent('rhyme_inserted', { group: group ? group.dataset.type : '', mode });
     return;
   }
   showDefinition(word, wordEl, false);
@@ -1526,17 +1576,58 @@ function matchWordCase(original, replacement) {
   return replacement;
 }
 
+const CHIP_MODE_ADD = 'add';
+const CHIP_MODE_SWAP = 'swap';
+const CHIP_HINTS = {
+  add: { pointer: 'Click a rhyme to add it to your line', touch: 'Tap a rhyme to add it to your line' },
+  swap: { pointer: 'Click a rhyme to swap it in', touch: 'Tap a rhyme to swap it in' },
+};
+
+// Says what a chip will do, since adding and swapping look the same until
+// one is clicked.
+function updateChipHint() {
+  const mode = insertCaret === null ? CHIP_MODE_SWAP : CHIP_MODE_ADD;
+  const hints = CHIP_HINTS[mode];
+  chipHintEl.textContent = isTouchPrimary() ? hints.touch : hints.pointer;
+}
+
+function placeChipWord(word) {
+  return insertCaret === null ? replacePickedWord(word) : addWordAtCaret(word);
+}
+
+// Once added, the word is picked like a swapped one, so a second chip swaps
+// it rather than adding another word beside it.
+function addWordAtCaret(word) {
+  if (word === '' || !canEditLyrics()) return false;
+  const text = textareaEl.value;
+  const caret = Math.min(insertCaret, text.length);
+  const before = caret > 0 && !/\s/.test(text[caret - 1]) ? ' ' : '';
+  const after = WORD_CHAR.test(text[caret] || '') ? ' ' : '';
+  insertIntoEditor(before + word + after, caret, caret);
+  const start = caret + before.length;
+  insertCaret = null;
+  pickedBounds = { start: start, end: start + word.length };
+  currentHighlightWord = RhymeCore.normalizeWord(word);
+  markPickedWord();
+  updateChipHint();
+  return true;
+}
+
+// The editor is hidden behind a preview, where a change would be unseen.
+// setRangeText ignores readOnly, so a page that is read-only (live editing
+// paused, or waiting for a reload) would change and lose the word.
+function canEditLyrics() {
+  const isPreviewOpen = window.PagePreview && window.PagePreview.isOpen();
+  return !isPreviewOpen && !textareaEl.readOnly;
+}
+
 // Returns false when there is no picked word to replace. The swapped-in word
 // stays picked, so a second chip swaps it again: the writer can try several
 // rhymes in place while the list stays on the word they started from.
 function replacePickedWord(word) {
   console.assert(typeof word === 'string', 'replacePickedWord: word must be a string');
   if (!pickedBounds || typeof word !== 'string' || word === '') return false;
-  // The editor is hidden behind a preview; a swap there would be unseen.
-  if (window.PagePreview && window.PagePreview.isOpen()) return false;
-  // setRangeText ignores readOnly, so a page that is read-only (live editing
-  // paused, or waiting for a reload) would change and lose the swap.
-  if (textareaEl.readOnly) return false;
+  if (!canEditLyrics()) return false;
   const start = pickedBounds.start;
   const end = pickedBounds.end;
   const replacement = matchWordCase(textareaEl.value.slice(start, end), word);
@@ -1951,6 +2042,7 @@ showFirstRunGuidance();
 function resetRhymesPanel() {
   currentHighlightWord = '';
   pickedBounds = null;
+  insertCaret = null;
   currentResults = null;
   baseWord = '';
   baseResults = null;
@@ -1971,6 +2063,8 @@ window.resetRhymesPanel = resetRhymesPanel;
 // alone: nothing should jump or raise a keyboard on first load. A word linked
 // from a rhyme page is in no line, so it comes with no bounds and no context.
 function showRhymesForWord(word, bounds) {
+  insertCaret = null;
+  updateChipHint();
   pickHighlightWord(word, bounds, false);
   selectedContextEl.textContent = bounds ? getWordContext(textareaEl.value, bounds.start) : '';
   if (!rhymeIndex) {

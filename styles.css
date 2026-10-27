@@ -1773,6 +1773,18 @@ header .nav-icon circle {
   display: none;
 }
 
+.chip-hint {
+  width: 100%;
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+}
+
+/* With no chips showing, there is nothing for the hint to describe. */
+.chip-hint:empty,
+.rhymes-panel:has(#rhyme-results > .empty-state) .chip-hint {
+  display: none;
+}
+
 /* Until a word is picked the bar has nothing to show, and an empty strip with
    a rule under it reads as a missing heading. */
 .selected-word-bar:has(#selected-word:empty) {
