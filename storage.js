@@ -1599,6 +1599,17 @@ titleEl.addEventListener('blur', () => {
 document.getElementById('notebook-btn').addEventListener('click', handleNotebookClick);
 document.getElementById('create-btn').addEventListener('click', handleCreateClick);
 document.getElementById('new-lyric-btn').addEventListener('click', handleCreateClick);
+
+// A sliding sidebar is put away first, or it would sit over the lit parts.
+function handleTutorialClick() {
+  closeLyricsList();
+  const tour = isSampleShowing() ? 'sample' : 'page';
+  if (window.replayCoachTour) window.replayCoachTour(tour);
+}
+
+for (const id of ['tutorial-btn', 'rail-tutorial-btn']) {
+  document.getElementById(id).addEventListener('click', handleTutorialClick);
+}
 document.getElementById('rail-open-btn').addEventListener('click', openLyricsList);
 document.getElementById('rail-new-btn').addEventListener('click', handleCreateClick);
 document.getElementById('sidebar-close-btn').addEventListener('click', hideSidebar);
@@ -2074,7 +2085,11 @@ function showSample() {
     const start = SAMPLE_VERSE.indexOf(SAMPLE_PICKED_WORD);
     window.showRhymesForWord(SAMPLE_PICKED_WORD, { start, end: start + SAMPLE_PICKED_WORD.length });
   }
-  if (!hasSeenSampleHint() && window.showSamplePointer) window.showSamplePointer();
+  // The tour teaches what the pointer would, so the two never show at once.
+  const isTouring = Boolean(window.startCoachTour && window.startCoachTour('sample'));
+  if (!isTouring && !hasSeenSampleHint() && window.showSamplePointer) {
+    window.showSamplePointer();
+  }
 }
 
 // Clearing it and writing over it both make the pad the visitor's own, so
@@ -2176,11 +2191,14 @@ function takeLinkedWord() {
 // the sample with its own word picked. A draft of theirs still comes back.
 function startEditor() {
   const linkedWord = takeLinkedWord();
-  if (linkedWord === null && isFirstVisit()) showSample();
+  const isNewVisitor = isFirstVisit();
+  if (linkedWord === null && isNewVisitor) showSample();
   else restoreDraft();
   if (linkedWord === null || !window.showRhymesForWord) return;
   window.showRhymesForWord(linkedWord, null);
   trackEvent('linked_word_opened', { word: linkedWord });
+  // The sample's tour never runs for them, so they get one of their own.
+  if (isNewVisitor && window.startCoachTour) window.startCoachTour('word', linkedWord);
 }
 
 startEditor();
