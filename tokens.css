@@ -29,6 +29,8 @@
                                    sidebar, so the whole page reads as one surface */
 
   --desk: #0a0d13;              /* surface the pad rests on */
+  --desk-dim: rgba(10, 13, 19, 0.82);       /* the desk laid over the pad: the tour's dark */
+  --lamp-glow: rgba(233, 180, 95, 0.07);    /* the lamp's pool on the lit part */
 
   /* Motion. The slow step is what the bottom bar ducks and the notebook
      slides at, so anything that should feel like part of that movement

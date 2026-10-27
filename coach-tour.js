@@ -9,8 +9,9 @@
   // Lets the sample and its rhymes settle first, so nothing moves under the
   // light as the tour opens.
   const START_DELAY_MS = 600;
-  // Room left around a lit part, and between it and the card.
-  const SPOT_PADDING_PX = 6;
+  // Room left around a lit part, and between it and the card. Wide enough
+  // that the light's feathered edge falls on the margin, not the part.
+  const SPOT_PADDING_PX = 12;
   const CARD_GAP_PX = 12;
   // Matches the page's side gutter, so the card never touches the screen edge.
   const EDGE_PX = 16;
@@ -18,13 +19,19 @@
   const OPEN_CLASS = 'is-open';
   const CLOSING_CLASS = 'is-closing';
   const NEW_STEP_CLASS = 'is-new-step';
+  const LIVE_CLASS = 'is-live';
+  const DASH_CLASS = 'coach-dash';
+  const DASH_DONE_CLASS = 'is-done';
   const NEXT_LABEL = 'Next';
   const LAST_LABEL = 'Got it';
 
-  // `click` is swapped for "Tap" on touch screens. A target matching several
-  // elements lights them all as one. A step whose part is hidden is passed
-  // over. The gutters slide open after load, so they are judged by their
-  // switch (`shownWhen`) rather than a width that may still be zero.
+  // `{Click}` and `{click}` become "Tap" and "tap" on touch screens. A target
+  // matching several elements lights them all as one. A `live` part takes
+  // clicks, so what the card offers can be tried; its phone stand-in, a tab
+  // that would switch the view under the tour, never does. A step whose part
+  // is hidden is passed over. The gutters slide open after load, so they are
+  // judged by their switch (`shownWhen`) rather than a width that may still be
+  // zero.
   const STEPS = [
     {
       target: '#lyrics-highlight .lyric-word',
@@ -48,19 +55,21 @@
     {
       target: '#rhymes-panel',
       phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+      live: true,
       title: 'Rhymes',
-      text: '{click} any word in your lyrics to see what rhymes with it. ' +
-        '{click} a rhyme to swap it in.',
+      text: 'Rhymes for the word you picked show here. {Click} one to swap ' +
+        'it into your line, or {click} another word in your lyrics.',
     },
     {
       target: '#rhymes-panel',
       phoneTarget: '.mobile-tab[data-tab="rhymes"]',
       title: 'The next line',
-      text: 'On a new line, the rhymes are for the end of the line above. ' +
-        '{click} one to add it to your line.',
+      text: 'When you start a new line, the rhymes switch to the last word ' +
+        'of the line above, and the one you pick is added to your line.',
     },
     {
       target: '#sample-clear',
+      live: true,
       title: 'Your turn',
       text: 'When you are ready, clear the sample and write your own.',
     },
@@ -69,6 +78,8 @@
   const tourEl = document.getElementById('coach-tour');
   if (!tourEl) return;
   const spotEl = tourEl.querySelector('.coach-spot');
+  const blockEls = tourEl.querySelectorAll('.coach-block');
+  const dashesEl = tourEl.querySelector('.coach-steps');
   const cardEl = tourEl.querySelector('.coach-card');
   const titleEl = document.getElementById('coach-title');
   const textEl = document.getElementById('coach-text');
@@ -124,8 +135,15 @@
   // The phone target is used only when it is on screen, which is how the
   // tabbed layout is told apart from the side-by-side one.
   function targetRect(step) {
-    const phoneRect = step.phoneTarget ? rectOf(step.phoneTarget) : null;
-    return phoneRect || rectOf(step.target);
+    return phoneRectOf(step) || rectOf(step.target);
+  }
+
+  function phoneRectOf(step) {
+    return step.phoneTarget ? rectOf(step.phoneTarget) : null;
+  }
+
+  function isLive(step) {
+    return Boolean(step.live) && phoneRectOf(step) === null;
   }
 
   function hasVisibleTarget(step) {
@@ -134,15 +152,29 @@
   }
 
   function wordForClick(text) {
-    const verb = isTouchPrimary() ? 'Tap' : 'Click';
-    return text.replace(/\{click\}/g, verb);
+    const verb = isTouchPrimary() ? 'tap' : 'click';
+    const capitalVerb = verb.charAt(0).toUpperCase() + verb.slice(1);
+    return text.replace(/\{Click\}/g, capitalVerb).replace(/\{click\}/g, verb);
   }
 
+  function setBox(el, left, top, width, height) {
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    el.style.width = Math.max(0, width) + 'px';
+    el.style.height = Math.max(0, height) + 'px';
+  }
+
+  // The four blocks frame the light: above, below, left and right of it.
   function lightRect(rect) {
-    spotEl.style.left = rect.left - SPOT_PADDING_PX + 'px';
-    spotEl.style.top = rect.top - SPOT_PADDING_PX + 'px';
-    spotEl.style.width = rect.width + SPOT_PADDING_PX * 2 + 'px';
-    spotEl.style.height = rect.height + SPOT_PADDING_PX * 2 + 'px';
+    const left = rect.left - SPOT_PADDING_PX;
+    const top = rect.top - SPOT_PADDING_PX;
+    const right = rect.right + SPOT_PADDING_PX;
+    const bottom = rect.bottom + SPOT_PADDING_PX;
+    setBox(spotEl, left, top, right - left, bottom - top);
+    setBox(blockEls[0], 0, 0, innerWidth, top);
+    setBox(blockEls[1], 0, bottom, innerWidth, innerHeight - bottom);
+    setBox(blockEls[2], 0, top, left, bottom - top);
+    setBox(blockEls[3], right, top, innerWidth - right, bottom - top);
   }
 
   // Each side is tried in turn; a part that fills the screen, like the
@@ -169,10 +201,13 @@
 
   function placeCard(rect) {
     const card = { width: cardEl.offsetWidth, height: cardEl.offsetHeight };
-    const fallback = { left: rect.left, top: innerHeight - EDGE_PX - card.height };
-    const spot = cardSpots(rect, card).find((each) => fitsOnScreen(each, card)) || fallback;
-    cardEl.style.left = clamp(spot.left, EDGE_PX, innerWidth - EDGE_PX - card.width) + 'px';
-    cardEl.style.top = clamp(spot.top, EDGE_PX, innerHeight - EDGE_PX - card.height) + 'px';
+    const maxLeft = innerWidth - EDGE_PX - card.width;
+    const maxTop = innerHeight - EDGE_PX - card.height;
+    const fallback = { left: rect.left, top: maxTop };
+    const fitting = cardSpots(rect, card).find((each) => fitsOnScreen(each, card));
+    const spot = fitting || fallback;
+    cardEl.style.left = clamp(spot.left, EDGE_PX, maxLeft) + 'px';
+    cardEl.style.top = clamp(spot.top, EDGE_PX, maxTop) + 'px';
   }
 
   function placeStep() {
@@ -201,12 +236,29 @@
     const isLast = index === steps.length - 1;
     titleEl.textContent = step.title;
     textEl.textContent = wordForClick(step.text);
-    countEl.textContent = index + 1 + ' of ' + steps.length;
+    countEl.textContent = 'Step ' + (index + 1) + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
+    spotEl.classList.toggle(LIVE_CLASS, isLive(step));
+    markDashes(index);
     replayWordsIn();
     followTarget();
-    nextBtn.focus();
+    // The card, not Next, so no focus ring lands on a button nobody tabbed to.
+    cardEl.focus();
+  }
+
+  function drawDashes() {
+    dashesEl.replaceChildren(...steps.map(() => {
+      const dash = document.createElement('span');
+      dash.className = DASH_CLASS;
+      return dash;
+    }));
+  }
+
+  function markDashes(index) {
+    [...dashesEl.children].forEach((dash, dashIndex) => {
+      dash.classList.toggle(DASH_DONE_CLASS, dashIndex <= index);
+    });
   }
 
   // An animation only plays again once its class has been off for a layout.
@@ -247,7 +299,17 @@
     tourEl.addEventListener('animationend', hideAfterFade);
   }
 
+  // Trying a rhyme on the sample makes it the writer's own, which takes the
+  // "Start your own" button away, so the steps are counted again each move.
+  function refreshSteps() {
+    const current = steps[stepIndex];
+    steps = STEPS.filter((step) => step === current || hasVisibleTarget(step));
+    stepIndex = steps.indexOf(current);
+    drawDashes();
+  }
+
   function goNext() {
+    refreshSteps();
     if (stepIndex === steps.length - 1) {
       endTour('finished');
       return;
@@ -256,18 +318,22 @@
   }
 
   function goBack() {
+    refreshSteps();
     if (stepIndex > 0) showStep(stepIndex - 1);
   }
 
+  // Arrows inside the lyrics move the caret there, not the tour.
   function handleTourKey(event) {
     if (event.key === 'Escape') endTour('skipped');
-    else if (event.key === 'ArrowRight') goNext();
+    if (event.target instanceof HTMLTextAreaElement) return;
+    if (event.key === 'ArrowRight') goNext();
     else if (event.key === 'ArrowLeft') goBack();
   }
 
   function openTour() {
     steps = STEPS.filter(hasVisibleTarget);
     if (steps.length === 0) return;
+    drawDashes();
     tourEl.classList.add(OPENING_CLASS, OPEN_CLASS);
     tourEl.hidden = false;
     document.addEventListener('keydown', handleTourKey);
@@ -289,6 +355,11 @@
   nextBtn.addEventListener('click', goNext);
   backBtn.addEventListener('click', goBack);
   skipBtn.addEventListener('click', () => endTour('skipped'));
+  // Pressing the lit "Start your own" does what the last card asks.
+  document.addEventListener('click', (event) => {
+    if (tourEl.hidden || !(event.target instanceof Element)) return;
+    if (event.target.closest('#sample-clear')) endTour('finished');
+  });
 
   window.startCoachTour = startCoachTour;
 })();
