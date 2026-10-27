@@ -49,10 +49,10 @@ export async function countRewardedFriends(env, userId) {
 }
 
 // Records who invited a new account. A friend who already saved a page is
-// rewarded at once. Returns whether the code was taken.
+// rewarded at once. Returns whether the code was taken, and whether the
+// reward came with it.
 export async function claimInvite(env, friendId, code, now) {
-  const db = env.lyricalmiracle_db;
-  const created = await db.prepare(`
+  const created = await env.lyricalmiracle_db.prepare(`
     INSERT INTO friend_invites (friend_id, inviter_id, created_at, rewarded_at)
     SELECT ?, invite_codes.user_id, ?,
       CASE WHEN EXISTS (SELECT 1 FROM lyrics WHERE user_id = ?) THEN ? END
@@ -60,8 +60,9 @@ export async function claimInvite(env, friendId, code, now) {
     WHERE invite_codes.code = ? AND invite_codes.user_id != ?
       AND (SELECT created_at FROM users WHERE id = ?) > ?
     ON CONFLICT(friend_id) DO NOTHING
-  `).bind(friendId, now, friendId, now, code, friendId, friendId, now - CLAIM_WINDOW_MS).run();
-  return created.meta.changes > 0;
+    RETURNING rewarded_at
+  `).bind(friendId, now, friendId, now, code, friendId, friendId, now - CLAIM_WINDOW_MS).first();
+  return { isClaimed: Boolean(created), isRewarded: Boolean(created && created.rewarded_at) };
 }
 
 // Runs on every new page; only a friend's first one changes anything.

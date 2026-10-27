@@ -85,7 +85,8 @@ describe('a friend taking the code', () => {
   it('a new account takes it; nobody gets pages until the friend saves one', async () => {
     const env = await setUp();
     const { code } = await inviteCode(env);
-    assert.deepEqual((await claim(env, FRIEND, code)).body, { claimed: true });
+    assert.deepEqual((await claim(env, FRIEND, code)).body,
+      { claimed: true, rewarded: false, pages_per_friend: 2 });
     assert.equal(await pageLimit(env, INVITER), 5);
     assert.equal(await pageLimit(env, FRIEND), 5);
   });
@@ -103,7 +104,8 @@ describe('a friend taking the code', () => {
   it('a friend who already saved a page is rewarded at once', async () => {
     const env = await setUp();
     await createPage(env, FRIEND, 'friend-page');
-    await claim(env, FRIEND, (await inviteCode(env)).code);
+    const { body } = await claim(env, FRIEND, (await inviteCode(env)).code);
+    assert.equal(body.rewarded, true);
     assert.equal(await pageLimit(env, INVITER), 7);
   });
 
@@ -120,7 +122,7 @@ describe('a friend taking the code', () => {
     await env.lyricalmiracle_db.prepare('UPDATE users SET created_at = ? WHERE id = ?')
       .bind(Date.now() - TWO_DAYS_MS, FRIEND.id).run();
     assert.deepEqual((await claim(env, FRIEND, (await inviteCode(env)).code)).body,
-      { claimed: false });
+      { claimed: false, rewarded: false, pages_per_friend: 2 });
   });
 
   it('nobody can take their own code', async () => {
@@ -128,7 +130,7 @@ describe('a friend taking the code', () => {
     await env.lyricalmiracle_db.prepare('UPDATE users SET created_at = ? WHERE id = ?')
       .bind(Date.now(), INVITER.id).run();
     assert.deepEqual((await claim(env, INVITER, (await inviteCode(env)).code)).body,
-      { claimed: false });
+      { claimed: false, rewarded: false, pages_per_friend: 2 });
   });
 
   it('only the first code counts', async () => {
@@ -137,12 +139,12 @@ describe('a friend taking the code', () => {
     await addPerson(env, other, 1);
     await claim(env, FRIEND, (await inviteCode(env)).code);
     const second = await claim(env, FRIEND, (await inviteCode(env, other)).code);
-    assert.deepEqual(second.body, { claimed: false });
+    assert.deepEqual(second.body, { claimed: false, rewarded: false, pages_per_friend: 2 });
   });
 
   it('an unknown code is not claimed; a badly shaped one is a 400', async () => {
     const env = await setUp();
-    assert.deepEqual((await claim(env, FRIEND, '0123456789')).body, { claimed: false });
+    assert.deepEqual((await claim(env, FRIEND, '0123456789')).body, { claimed: false, rewarded: false, pages_per_friend: 2 });
     assert.equal((await claim(env, FRIEND, 'nope')).status, 400);
   });
 });

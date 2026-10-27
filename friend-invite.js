@@ -25,6 +25,13 @@
     allJoined: (friends, pages) => `${friends} friends have joined. You've earned ${pages} `
       + 'more pages, the most there is.',
     LOAD_FAILED: "Couldn't load your invite link. Try again.",
+    WELCOME: 'A friend invited you to LyricLike. Sign up and save a page, '
+      + "and you'll both get extra pages.",
+    INVITE_WORKED: 'Your invite worked',
+    saveToEarn: perFriend => `Save your first page, and you and your friend `
+      + `will both get ${perFriend} more pages.`,
+    earned: perFriend => `You and your friend both got ${perFriend} more pages.`,
+    OK: 'OK',
   });
 
   const byId = id => document.getElementById(id);
@@ -33,6 +40,9 @@
   const copyButton = byId('invite-copy');
   const linkInput = byId('invite-link');
   let returnFocusTo = null;
+  // Set after this account takes a code, until its first save brings the
+  // extra pages, so the "3 of 5 pages" line can catch up without a reload.
+  let isAwaitingReward = false;
 
   // ── The friend's side: remember the code, then hand it in once signed in ──
 
@@ -74,6 +84,40 @@
     try { localStorage.removeItem(PENDING_INVITE_KEY); } catch {}
   }
 
+  // Signed out, the sign-up window opens once with a line saying why.
+  function welcomeInvitedVisitor() {
+    if (window.openAuthModal) window.openAuthModal({ message: TEXT.WELCOME });
+  }
+
+  // The new limit is on the server; this brings it to the line under the
+  // notebook. showPageCount and currentOwnPageCount come from storage.js.
+  async function refreshPageLimit() {
+    try {
+      const res = await fetch('/api/me');
+      if (!res.ok || !window.currentUser) return false;
+      const { page_limit: pageLimit } = await res.json();
+      const isRaised = pageLimit !== window.currentUser.page_limit;
+      window.currentUser.page_limit = pageLimit;
+      if (typeof showPageCount === 'function') showPageCount(currentOwnPageCount());
+      return isRaised;
+    } catch {
+      return false;
+    }
+  }
+
+  function showClaimed(data) {
+    window.trackEvent('invite_claimed');
+    window.openDialog({
+      heading: TEXT.INVITE_WORKED,
+      message: data.rewarded ? TEXT.earned(data.pages_per_friend)
+        : TEXT.saveToEarn(data.pages_per_friend),
+      confirmLabel: TEXT.OK,
+      noCancel: true,
+    });
+    if (data.rewarded) refreshPageLimit();
+    isAwaitingReward = !data.rewarded;
+  }
+
   // Any answer from the server is final, so the code is forgotten; only a
   // dropped connection keeps it for the next page load.
   async function claimPendingInvite() {
@@ -87,10 +131,17 @@
       });
       forgetPendingInvite();
       const data = res.ok ? await res.json() : null;
-      if (data && data.claimed) window.trackEvent('invite_claimed');
+      if (data && data.claimed) showClaimed(data);
     } catch {
       // Tried again on the next load.
     }
+  }
+
+  // The server rewards the invite as it creates the first page, so the new
+  // limit is there by the time this hears of it.
+  async function onPageCreated() {
+    if (!isAwaitingReward) return;
+    if (await refreshPageLimit()) isAwaitingReward = false;
   }
 
   // ── The inviter's side: the button and the window ──
@@ -163,15 +214,29 @@
     }
   }
 
+  // Only a visitor who arrived on the link this load is greeted, and once.
+  let isFreshArrival = false;
+
   function onAuthChecked() {
     inviteButton.hidden = !hasPageLimit();
-    claimPendingInvite();
+    if (window.currentUser) {
+      claimPendingInvite();
+    } else if (isFreshArrival) {
+      isFreshArrival = false;
+      welcomeInvitedVisitor();
+    }
   }
 
   const code = readCodeFromAddress();
-  if (code) rememberPendingInvite(code);
+  if (code) {
+    rememberPendingInvite(code);
+    isFreshArrival = true;
+    // The sign-up window is about to open; the first-visit tour waits.
+    window.isTourHeld = true;
+  }
 
   document.addEventListener('auth-checked', onAuthChecked);
+  document.addEventListener('page-created', onPageCreated);
   // The sign-in check may have answered before this script ran.
   if (window.currentUser !== undefined) onAuthChecked();
   inviteButton.addEventListener('click', openInviteDialog);

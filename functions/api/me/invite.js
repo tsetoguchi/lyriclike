@@ -29,7 +29,8 @@ export async function onRequestGet({ request, env }) {
 }
 
 // An unknown code, the account's own, or an account too old to be new all
-// answer claimed: false. The browser forgets the code either way.
+// answer claimed: false. The browser forgets the code either way. rewarded
+// says the friend had already saved a page, so the pages are theirs now.
 export async function onRequestPost({ request, env }) {
   const { user, response } = await requireUser(request, env);
   if (response) return response;
@@ -38,7 +39,9 @@ export async function onRequestPost({ request, env }) {
   if (!body || !isCodeShaped(body.code)) {
     return jsonError(HTTP_BAD_REQUEST, 'bad_code', 'That invite link is not valid.');
   }
-  const isClaimed = await claimInvite(env, user.id, body.code, Date.now());
+  const { isClaimed, isRewarded } = await claimInvite(env, user.id, body.code, Date.now());
   if (isClaimed) await writeLog(env, request, { userId: user.id, event: 'friend_invite_claimed' });
-  return Response.json({ claimed: isClaimed });
+  return Response.json({
+    claimed: isClaimed, rewarded: isRewarded, pages_per_friend: BONUS_PAGES_PER_FRIEND,
+  });
 }
