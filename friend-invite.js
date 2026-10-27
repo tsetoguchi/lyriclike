@@ -14,6 +14,17 @@
   const CODE_PATTERN = /^[0-9a-f]{10}$/;
   const COPIED_LABEL_MS = 2000;
   const COPY_LABEL = 'Copy link';
+  // What Google Analytics hears, in the order a friend goes through it:
+  // the inviter opens and copies, the friend lands, signs up, and saves.
+  const EVENT = Object.freeze({
+    OPEN: 'invite_open',
+    COPY: 'invite_copy',
+    LINK_VISIT: 'invite_link_visit',
+    CLAIMED: 'invite_claimed',
+    REWARDED: 'invite_rewarded',
+  });
+  const PLACE_CORNER = 'corner';
+  const PLACE_HEADER = 'header';
   const COPIED_LABEL = 'Copied';
 
   const TEXT = Object.freeze({
@@ -108,7 +119,8 @@
   }
 
   function showClaimed(data) {
-    window.trackEvent('invite_claimed');
+    window.trackEvent(EVENT.CLAIMED);
+    if (data.rewarded) window.trackEvent(EVENT.REWARDED);
     window.openDialog({
       heading: TEXT.INVITE_WORKED,
       message: data.rewarded ? TEXT.earned(data.pages_per_friend)
@@ -143,7 +155,9 @@
   // limit is there by the time this hears of it.
   async function onPageCreated() {
     if (!isAwaitingReward) return;
-    if (await refreshPageLimit()) isAwaitingReward = false;
+    if (!(await refreshPageLimit())) return;
+    isAwaitingReward = false;
+    window.trackEvent(EVENT.REWARDED);
   }
 
   // ── The inviter's side: the button and the window ──
@@ -184,10 +198,12 @@
     }
   }
 
-  async function openInviteDialog() {
+  // place says which button it came from: the lyrics' corner or the header.
+  async function openInviteDialog(event) {
     returnFocusTo = document.activeElement;
     copyButton.textContent = COPY_LABEL;
-    window.trackEvent('invite_open');
+    const isCorner = event.currentTarget.id === 'invite-btn-panel';
+    window.trackEvent(EVENT.OPEN, { place: isCorner ? PLACE_CORNER : PLACE_HEADER });
     await loadInvite();
     overlay.hidden = false;
     overlay.classList.add('open');
@@ -208,7 +224,7 @@
       await navigator.clipboard.writeText(linkInput.value);
       copyButton.textContent = COPIED_LABEL;
       setTimeout(() => { copyButton.textContent = COPY_LABEL; }, COPIED_LABEL_MS);
-      window.trackEvent('invite_copy');
+      window.trackEvent(EVENT.COPY);
     } catch {
       // Selected instead, for copying by hand.
       linkInput.focus();
@@ -231,6 +247,7 @@
 
   const code = readCodeFromAddress();
   if (code) {
+    window.trackEvent(EVENT.LINK_VISIT);
     rememberPendingInvite(code);
     isFreshArrival = true;
     // The sign-up window is about to open; the first-visit tour waits.
