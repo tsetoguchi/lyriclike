@@ -14,7 +14,6 @@ const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
 const SCROLL_THROTTLE_MS = 16;
-const RHYME_DATA_LOADING_MESSAGE = 'Loading dictionary...';
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
 const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
 const RHYME_SORT_STORAGE_KEY = 'rhymeSort';
@@ -136,8 +135,6 @@ let rhymeDataPromise = null;
 
 function ensureRhymeData() {
   if (rhymeDataPromise) return rhymeDataPromise;
-
-  statusEl.textContent = RHYME_DATA_LOADING_MESSAGE;
 
   // Lookups made before the list lands come back unfiltered, so redo the last
   // one once it is in. It only refines results, so it never gates them.
