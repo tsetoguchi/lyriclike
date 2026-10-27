@@ -69,8 +69,10 @@
       phoneTarget: '.mobile-tab[data-tab="rhymes"]',
       live: true,
       title: 'Rhymes',
-      text: 'Rhymes for the word you picked show here. {Click} one to swap ' +
-        'it into your line, or {click} another word in your lyrics.',
+      text: 'Rhymes for the picked word show here. {Click} one to swap it ' +
+        'into your line.',
+      phoneText: 'Your rhymes are on this tab. Tap one there to swap it into ' +
+        'your line.',
     },
     {
       target: '#rhymes-panel',
@@ -202,10 +204,9 @@
     setBox(blockEls[3], right, top, innerWidth - right, bottom - top);
   }
 
-  // Each side is tried in turn; a part that fills the screen, like the
-  // editor on a phone, gets the card over its foot instead.
-  // Above or below, the card may slide sideways to stay on screen; a part at
-  // the screen's edge, like the phone's bottom bar, still gets it above.
+  // Below, above, left, then right of the part. Above or below, the card may
+  // slide sideways to stay on screen, so a part at the screen's edge, like
+  // the phone's bottom bar, still gets it above.
   function cardSpots(rect, card) {
     const gap = SPOT_PADDING_PX + CARD_GAP_PX;
     const slidLeft = clamp(rect.left, EDGE_PX, innerWidth - EDGE_PX - card.width);
@@ -259,19 +260,25 @@
 
   function showStep(index) {
     stepIndex = index;
-    const step = steps[index];
     const isLast = index === steps.length - 1;
-    titleEl.textContent = step.title;
-    textEl.textContent = wordForClick(textFor(step));
+    titleEl.textContent = steps[index].title;
     countEl.textContent = 'Step ' + (index + 1) + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
-    spotEl.classList.toggle(LIVE_CLASS, isLive(step));
+    fitStepToLayout();
     markDashes(index);
     replayWordsIn();
     followTarget();
     // The card, not Next, so no focus ring lands on a button nobody tabbed to.
     cardEl.focus();
+  }
+
+  // The wording and what can be clicked depend on the layout, so they are
+  // set again when the window crosses into the phone layout or out of it.
+  function fitStepToLayout() {
+    const step = steps[stepIndex];
+    textEl.textContent = wordForClick(textFor(step));
+    spotEl.classList.toggle(LIVE_CLASS, isLive(step));
   }
 
   function drawDashes() {
@@ -349,9 +356,24 @@
     if (stepIndex > 0) showStep(stepIndex - 1);
   }
 
+  // Tab goes round the card's buttons only: the page behind is in the dark
+  // and takes no clicks, so its buttons should take no keys either.
+  function keepFocusInCard(event) {
+    const buttons = [...cardEl.querySelectorAll('button')].filter((btn) => !btn.hidden);
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+    const isLeaving = !cardEl.contains(document.activeElement) ||
+      document.activeElement === (event.shiftKey ? first : last) ||
+      document.activeElement === cardEl;
+    if (!isLeaving) return;
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  }
+
   // Arrows inside the lyrics move the caret there, not the tour.
   function handleTourKey(event) {
     if (event.key === 'Escape') endTour('skipped');
+    if (event.key === 'Tab') keepFocusInCard(event);
     if (event.target instanceof HTMLTextAreaElement) return;
     if (event.key === 'ArrowRight') goNext();
     else if (event.key === 'ArrowLeft') goBack();
@@ -382,6 +404,9 @@
   nextBtn.addEventListener('click', goNext);
   backBtn.addEventListener('click', goBack);
   skipBtn.addEventListener('click', () => endTour('skipped'));
+  window.addEventListener('resize', () => {
+    if (!tourEl.hidden) fitStepToLayout();
+  });
   // Pressing the lit "Start your own" does what the last card asks.
   document.addEventListener('click', (event) => {
     if (tourEl.hidden || !(event.target instanceof Element)) return;

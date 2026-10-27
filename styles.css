@@ -914,9 +914,24 @@ header .nav-icon circle {
   outline: none;
 }
 
+/* The close button sits in the title's row rather than over the card's
+   corner, so on a phone, where it grows to a fingertip, no words run under
+   it. */
+.coach-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.coach-card .coach-head .modal-close {
+  position: static;
+  flex-shrink: 0;
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0 0;
+}
+
 .coach-title {
+  flex: 1;
   margin: 0;
-  padding-right: var(--space-8);
   font-size: var(--text-subhead);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);

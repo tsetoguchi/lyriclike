@@ -275,9 +275,11 @@
     <div class="coach-spot"></div>
     <div class="coach-card" role="dialog" aria-modal="true" aria-labelledby="coach-title"
          aria-describedby="coach-text" tabindex="-1">
-      <button type="button" id="coach-skip" class="icon-btn modal-close"
-              aria-label="Skip the tour">&#x2715;</button>
-      <p id="coach-title" class="coach-title"></p>
+      <div class="coach-head">
+        <p id="coach-title" class="coach-title"></p>
+        <button type="button" id="coach-skip" class="icon-btn modal-close"
+                aria-label="Skip the tour">&#x2715;</button>
+      </div>
       <p id="coach-text" class="coach-text" aria-live="polite"></p>
       <div class="coach-actions">
         <span class="coach-steps" aria-hidden="true"></span>
