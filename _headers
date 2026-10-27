@@ -84,6 +84,9 @@
 /limits.js
   Cache-Control: no-cache
 
+/friend-invite.js
+  Cache-Control: no-cache
+
 /extensions.js
   Cache-Control: no-cache
 

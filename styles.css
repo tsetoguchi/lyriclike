@@ -2635,6 +2635,59 @@ body:not(.signed-in) .header-slot {
   transform: translate(-50%, -50%);
 }
 
+/* Invite: a pill beside the account, the same height as it. The gift is the
+   one bit of lamp amber, so it reads as an offer and not another tool. */
+.invite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--space-8);
+  padding: 0 var(--space-3) 0 var(--space-2);
+  background: var(--ink-wash);
+}
+
+.invite-btn:hover {
+  background: var(--ink-wash-strong);
+}
+
+.invite-btn[hidden],
+body:not(.signed-in) .invite-btn {
+  display: none;
+}
+
+.invite-btn-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Phones have no room beside the centred wordmark, so only the gift shows,
+   in a circle the size of the account's. */
+@media (max-width: 768px) {
+  #user-area .toggle-btn.invite-btn {
+    justify-content: center;
+    width: var(--space-8);
+    padding: 0;
+  }
+
+  .invite-btn-label {
+    display: none;
+  }
+}
+
+.invite-progress {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-family: var(--font-ui);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
+}
+
 /* Pencil grey, not full ink: a bright hairline shows its steps around so
    small a circle. */
 .account-avatar:hover,
