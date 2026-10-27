@@ -267,6 +267,20 @@
       <button type="button" id="whats-new-done" class="toggle-btn">Got it</button>
     </div>
   </div>
+  <div id="coach-tour" class="coach-tour" hidden>
+    <div class="coach-spot"></div>
+    <div class="coach-card" role="dialog" aria-modal="true" aria-labelledby="coach-title"
+         aria-describedby="coach-text">
+      <p id="coach-title" class="coach-title"></p>
+      <p id="coach-text" class="coach-text" aria-live="polite"></p>
+      <div class="coach-actions">
+        <button type="button" id="coach-skip" class="coach-skip">Skip</button>
+        <span class="coach-count"></span>
+        <button type="button" id="coach-back" class="toggle-btn">Back</button>
+        <button type="button" id="coach-next" class="toggle-btn modal-confirm">Next</button>
+      </div>
+    </div>
+  </div>
   <div id="share-overlay" class="modal-overlay" hidden>
     <div id="share-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
       <button type="button" id="share-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
@@ -373,6 +387,7 @@
   <script src="sample-verse.js"></script>
   <script src="sample-pointer.js"></script>
   <script src="sample-start.js"></script>
+  <script src="coach-tour.js"></script>
   <script src="page-menu.js"></script>
   <script src="replace-flow.js"></script>
   <script src="storage.js"></script>

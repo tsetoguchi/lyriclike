@@ -2074,7 +2074,11 @@ function showSample() {
     const start = SAMPLE_VERSE.indexOf(SAMPLE_PICKED_WORD);
     window.showRhymesForWord(SAMPLE_PICKED_WORD, { start, end: start + SAMPLE_PICKED_WORD.length });
   }
-  if (!hasSeenSampleHint() && window.showSamplePointer) window.showSamplePointer();
+  // The tour teaches what the pointer would, so the two never show at once.
+  const isTouring = Boolean(window.startCoachTour && window.startCoachTour());
+  if (!isTouring && !hasSeenSampleHint() && window.showSamplePointer) {
+    window.showSamplePointer();
+  }
 }
 
 // Clearing it and writing over it both make the pad the visitor's own, so
