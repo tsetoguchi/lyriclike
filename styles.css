@@ -829,8 +829,49 @@ header .nav-icon circle {
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
   outline: var(--hairline) solid var(--accent-border);
   pointer-events: none;
-  transition: left var(--duration-fast), top var(--duration-fast),
-    width var(--duration-fast), height var(--duration-fast);
+}
+
+/* Between steps the light and the card glide on the curve the dialogs open
+   with: racing out, then settling. */
+.coach-spot,
+.coach-card {
+  transition: left var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+    top var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+    width var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+    height var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The first place is taken where it stands, not glided to from the corner. */
+.coach-tour.is-opening .coach-spot,
+.coach-tour.is-opening .coach-card {
+  transition: none;
+}
+
+.coach-tour.is-open {
+  animation: modal-fade-in var(--duration-base) ease-out;
+}
+
+.coach-tour.is-open .coach-card {
+  animation: modal-blow-up var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes coach-fade-out {
+  to { opacity: 0; }
+}
+
+.coach-tour.is-closing {
+  animation: coach-fade-out var(--duration-base) ease-in forwards;
+}
+
+@keyframes coach-words-in {
+  from { opacity: 0; }
+}
+
+/* Each step's words fade in as the card arrives, so the swap is not a
+   blink. */
+.coach-card.is-new-step .coach-title,
+.coach-card.is-new-step .coach-text {
+  animation: coach-words-in var(--duration-flash) ease-out;
 }
 
 .coach-card {
@@ -896,8 +937,17 @@ header .nav-icon circle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .coach-spot {
+  .coach-spot,
+  .coach-card {
     transition: none;
+  }
+
+  .coach-tour.is-open,
+  .coach-tour.is-open .coach-card,
+  .coach-tour.is-closing,
+  .coach-card.is-new-step .coach-title,
+  .coach-card.is-new-step .coach-text {
+    animation: none;
   }
 }
 

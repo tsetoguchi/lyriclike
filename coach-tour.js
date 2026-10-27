@@ -14,6 +14,10 @@
   const CARD_GAP_PX = 12;
   // Matches the page's side gutter, so the card never touches the screen edge.
   const EDGE_PX = 16;
+  const OPENING_CLASS = 'is-opening';
+  const OPEN_CLASS = 'is-open';
+  const CLOSING_CLASS = 'is-closing';
+  const NEW_STEP_CLASS = 'is-new-step';
   const NEXT_LABEL = 'Next';
   const LAST_LABEL = 'Got it';
 
@@ -200,15 +204,47 @@
     countEl.textContent = index + 1 + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
+    replayWordsIn();
     followTarget();
     nextBtn.focus();
   }
 
-  function endTour(trigger) {
+  // An animation only plays again once its class has been off for a layout.
+  function replayWordsIn() {
+    cardEl.classList.remove(NEW_STEP_CLASS);
+    void cardEl.offsetWidth;
+    cardEl.classList.add(NEW_STEP_CLASS);
+  }
+
+  function isMotionReduced() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function hideTour() {
     tourEl.hidden = true;
+    tourEl.classList.remove(OPEN_CLASS, CLOSING_CLASS);
+  }
+
+  // The card's own animations bubble up here too; only the fade ends it.
+  function hideAfterFade(event) {
+    if (event.target !== tourEl) return;
+    tourEl.removeEventListener('animationend', hideAfterFade);
+    hideTour();
+  }
+
+  // The tour fades out rather than vanishing; with motion reduced there is
+  // no fade, and so no animationend to wait for.
+  function endTour(trigger) {
+    if (tourEl.classList.contains(CLOSING_CLASS)) return;
     markSeen();
     document.removeEventListener('keydown', handleTourKey);
     trackEvent('tour_ended', { trigger, step: stepIndex + 1, steps: steps.length });
+    if (isMotionReduced()) {
+      hideTour();
+      return;
+    }
+    tourEl.classList.add(CLOSING_CLASS);
+    tourEl.addEventListener('animationend', hideAfterFade);
   }
 
   function goNext() {
@@ -232,10 +268,14 @@
   function openTour() {
     steps = STEPS.filter(hasVisibleTarget);
     if (steps.length === 0) return;
+    tourEl.classList.add(OPENING_CLASS, OPEN_CLASS);
     tourEl.hidden = false;
     document.addEventListener('keydown', handleTourKey);
     trackEvent('tour_started', { steps: steps.length });
     showStep(0);
+    // Laid out once without glides, so the light starts on the first part.
+    void tourEl.offsetWidth;
+    tourEl.classList.remove(OPENING_CLASS);
   }
 
   // Returns whether the tour will run, so the caller can hold back its own
