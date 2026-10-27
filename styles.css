@@ -833,6 +833,8 @@ header .nav-icon circle {
    and a faint amber pool warms the middle. */
 .coach-spot {
   position: fixed;
+  left: 0;
+  top: 0;
   border-radius: var(--radius-lg);
   background: radial-gradient(ellipse at 50% 45%, var(--lamp-glow), transparent 70%);
   box-shadow: 0 0 0 9999px var(--desk-dim), inset 0 0 14px 2px var(--desk-dim);
@@ -843,21 +845,19 @@ header .nav-icon circle {
   pointer-events: none;
 }
 
-/* Between steps the light and the card glide on the curve the dialogs open
-   with: racing out, then settling. */
+/* Between steps the light and the card glide: easing in and out, so the move
+   neither leaps nor crawls to a stop. The blocks are unseen and just jump. */
 .coach-spot,
-.coach-card,
-.coach-block {
-  transition: left var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
-    top var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
-    width var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
-    height var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+.coach-card {
+  will-change: translate;
+  transition: translate var(--duration-glide) var(--ease-glide),
+    width var(--duration-glide) var(--ease-glide),
+    height var(--duration-glide) var(--ease-glide);
 }
 
 /* The first place is taken where it stands, not glided to from the corner. */
 .coach-tour.is-opening .coach-spot,
-.coach-tour.is-opening .coach-card,
-.coach-tour.is-opening .coach-block {
+.coach-tour.is-opening .coach-card {
   transition: none;
 }
 
@@ -885,12 +885,14 @@ header .nav-icon circle {
    blink. */
 .coach-card.is-new-step .coach-title,
 .coach-card.is-new-step .coach-text {
-  animation: coach-words-in var(--duration-flash) ease-out;
+  animation: coach-words-in var(--duration-glide) var(--ease-glide);
 }
 
 /* The same card the sort menu drops: pad colour, ruled edge. */
 .coach-card {
   position: fixed;
+  left: 0;
+  top: 0;
   width: 296px;
   max-width: calc(100vw - 2 * var(--space-4));
   padding: var(--space-5);
@@ -994,7 +996,6 @@ header .nav-icon circle {
 @media (prefers-reduced-motion: reduce) {
   .coach-spot,
   .coach-card,
-  .coach-block,
   .coach-dash {
     transition: none;
   }

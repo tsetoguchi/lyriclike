@@ -41,6 +41,10 @@
   --duration-flash: 0.4s;
   /* A word under the pointer warms to amber and cools back at one pace. */
   --duration-hover: 0.4s;
+  /* Something travelling across the page, like the tour's light: long
+     enough to follow, eased at both ends so it neither leaps nor crawls. */
+  --duration-glide: 0.45s;
+  --ease-glide: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Stacking. Only two things ever lift off the page: the bar above the
      lyrics, and a panel over everything. */

@@ -53,6 +53,18 @@
       text: 'Lines that rhyme share a letter. This verse goes A B A B.',
     },
     {
+      // On a phone the switches live in the bottom bar: Syllables, and the
+      // rhyme letters inside Highlights.
+      target: '#syllable-toggle, #rhyme-scheme-toggle',
+      phoneTarget: '#bottom-nav #syllable-toggle, #bottom-nav #rhymes-menu-btn',
+      live: true,
+      title: 'Show or hide them',
+      text: '{Click} these to turn the syllable counts and the rhyme letters ' +
+        'on and off.',
+      phoneText: 'Tap Syllables to turn the counts on and off. The rhyme ' +
+        'letters are under Highlights.',
+    },
+    {
       target: '#rhymes-panel',
       phoneTarget: '.mobile-tab[data-tab="rhymes"]',
       live: true,
@@ -142,6 +154,10 @@
     return step.phoneTarget ? rectOf(step.phoneTarget) : null;
   }
 
+  function textFor(step) {
+    return step.phoneText && phoneRectOf(step) !== null ? step.phoneText : step.text;
+  }
+
   function isLive(step) {
     return Boolean(step.live) && phoneRectOf(step) === null;
   }
@@ -164,13 +180,22 @@
     el.style.height = Math.max(0, height) + 'px';
   }
 
+  // The light and the card move by `translate`, which the compositor glides
+  // without laying the page out again each frame. It is its own property, so
+  // the card's opening grow (a `transform`) does not fight it.
+  function moveTo(el, left, top) {
+    el.style.translate = left + 'px ' + top + 'px';
+  }
+
   // The four blocks frame the light: above, below, left and right of it.
   function lightRect(rect) {
     const left = rect.left - SPOT_PADDING_PX;
     const top = rect.top - SPOT_PADDING_PX;
     const right = rect.right + SPOT_PADDING_PX;
     const bottom = rect.bottom + SPOT_PADDING_PX;
-    setBox(spotEl, left, top, right - left, bottom - top);
+    moveTo(spotEl, left, top);
+    spotEl.style.width = right - left + 'px';
+    spotEl.style.height = bottom - top + 'px';
     setBox(blockEls[0], 0, 0, innerWidth, top);
     setBox(blockEls[1], 0, bottom, innerWidth, innerHeight - bottom);
     setBox(blockEls[2], 0, top, left, bottom - top);
@@ -179,11 +204,14 @@
 
   // Each side is tried in turn; a part that fills the screen, like the
   // editor on a phone, gets the card over its foot instead.
+  // Above or below, the card may slide sideways to stay on screen; a part at
+  // the screen's edge, like the phone's bottom bar, still gets it above.
   function cardSpots(rect, card) {
     const gap = SPOT_PADDING_PX + CARD_GAP_PX;
+    const slidLeft = clamp(rect.left, EDGE_PX, innerWidth - EDGE_PX - card.width);
     return [
-      { left: rect.left, top: rect.bottom + gap },
-      { left: rect.left, top: rect.top - gap - card.height },
+      { left: slidLeft, top: rect.bottom + gap },
+      { left: slidLeft, top: rect.top - gap - card.height },
       { left: rect.left - gap - card.width, top: rect.top },
       { left: rect.right + gap, top: rect.top },
     ];
@@ -206,8 +234,7 @@
     const fallback = { left: rect.left, top: maxTop };
     const fitting = cardSpots(rect, card).find((each) => fitsOnScreen(each, card));
     const spot = fitting || fallback;
-    cardEl.style.left = clamp(spot.left, EDGE_PX, maxLeft) + 'px';
-    cardEl.style.top = clamp(spot.top, EDGE_PX, maxTop) + 'px';
+    moveTo(cardEl, clamp(spot.left, EDGE_PX, maxLeft), clamp(spot.top, EDGE_PX, maxTop));
   }
 
   function placeStep() {
@@ -235,7 +262,7 @@
     const step = steps[index];
     const isLast = index === steps.length - 1;
     titleEl.textContent = step.title;
-    textEl.textContent = wordForClick(step.text);
+    textEl.textContent = wordForClick(textFor(step));
     countEl.textContent = 'Step ' + (index + 1) + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
