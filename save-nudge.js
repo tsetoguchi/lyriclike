@@ -1,20 +1,18 @@
-// Once a signed-out writer has a few lines of their own, one quiet line under
-// the title says where the page lives and how to keep it. It shows once per
-// device and never blocks the pad. storage.js owns the notice strip and
-// auth.js the sign-in box; this file only decides when to ask.
+// Once a signed-out writer has a few lines of their own, a "Keep this page"
+// button shows under the verse, where the sample's "Start your own" sits. It
+// shows once per device and never blocks the pad. sample-start.js places the
+// button and auth.js owns the sign-in box; this file only decides when to ask.
 (function defineSaveNudge() {
   'use strict';
 
   const NUDGE_SEEN_KEY = 'save_nudge_seen';
   // Enough to be writing something, not just trying the editor out.
   const LINES_BEFORE_NUDGE = 3;
-  const NUDGE_TEXT = 'This page is only saved in this browser. '
-    + 'Sign up free and it goes in your notebook, on any device.';
-  const NUDGE_ACTION = 'Keep this page';
   const SIGN_IN_ENTRY = 'save_nudge';
 
   const lyricsEl = document.getElementById('lyrics');
   const noticeEl = document.getElementById('page-notice');
+  const keepButtonEl = document.getElementById('save-keep');
 
   // Storage that cannot be read counts as seen, so nobody is asked on every
   // keystroke.
@@ -42,19 +40,29 @@
     return countWrittenLines(lyricsEl.value) >= LINES_BEFORE_NUDGE;
   }
 
+  function hideSaveNudge() {
+    keepButtonEl.hidden = true;
+  }
+
   function keepPage() {
-    hideNotice();
+    hideSaveNudge();
     openSignIn(SIGN_IN_ENTRY);
   }
 
   function showSaveNudge() {
     markNudgeSeen();
     trackEvent('save_nudge_shown');
-    showNotice(NUDGE_TEXT, [{ label: NUDGE_ACTION, onClick: keepPage }]);
+    keepButtonEl.hidden = false;
   }
 
-  // Only typing counts: loading a page or the sample fires input too.
+  // Only typing counts: loading a page or the sample fires input too, and
+  // either one means the button no longer belongs to the lines under it.
   lyricsEl.addEventListener('input', (event) => {
-    if (event.isTrusted && isNudgeDue()) showSaveNudge();
+    if (!event.isTrusted) hideSaveNudge();
+    else if (isNudgeDue()) showSaveNudge();
+  });
+  keepButtonEl.addEventListener('click', keepPage);
+  document.addEventListener('auth-checked', () => {
+    if (window.currentUser) hideSaveNudge();
   });
 })();
