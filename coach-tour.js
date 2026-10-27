@@ -465,8 +465,16 @@
   function startCoachTour(name, word) {
     if (isSeen() || !TOURS[name]) return false;
     chooseTour(name, word);
-    setTimeout(openTour, START_DELAY_MS);
+    setTimeout(openTourUnlessHeld, START_DELAY_MS);
     return true;
+  }
+
+  // A window already open (sign-up from a shared page), or one on its way
+  // (window.isTourHeld, set by an invite link), asked first, so the tour
+  // waits for a later visit rather than cover it.
+  function openTourUnlessHeld() {
+    if (window.isTourHeld === true || document.querySelector('.modal-overlay.open')) return;
+    openTour();
   }
 
   // Asked for from the sidebar, so it runs at once, seen before or not.

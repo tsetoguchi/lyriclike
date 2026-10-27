@@ -81,6 +81,12 @@ export async function onRequestDelete(context) {
       '(SELECT email_normalized FROM users WHERE id = ?)'
     ).bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM user_limits WHERE user_id = ?').bind(user.id),
+    // A friend who leaves takes the inviter's bonus for them with it, so an
+    // account made and deleted again can't farm pages.
+    env.lyricalmiracle_db.prepare(
+      'DELETE FROM friend_invites WHERE friend_id = ? OR inviter_id = ?'
+    ).bind(user.id, user.id),
+    env.lyricalmiracle_db.prepare('DELETE FROM invite_codes WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
   for (const id of rooms.owned) closeRoom(context, id);

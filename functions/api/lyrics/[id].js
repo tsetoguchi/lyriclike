@@ -1,4 +1,5 @@
 import { requireUser, writeLog } from '../../_shared.js';
+import { rewardFriendInvite } from '../../_friend-invites.js';
 import { UNLIMITED, findLimits, isLimitsEnforced } from '../../_limits.js';
 import { closeRoom, coWritersClause, evictFromRoom, isLivePage, isPausedFor } from '../../_live.js';
 import {
@@ -159,6 +160,7 @@ async function createLyric(context, id, user, { title = '', body }, now) {
     ON CONFLICT(id) DO NOTHING
   `).bind(id, user.id, title, body, now, now, cap, user.id, cap).run();
   if (created.meta.changes > 0) {
+    await rewardFriendInvite(env, user.id, now);
     queuePageSaved(context, {
       pageId: id, ownerId: user.id, writerIds: [user.id], reason: 'edit',
       before: null, after: snapshot({ title, body, revision: 0, updated_at: now }),

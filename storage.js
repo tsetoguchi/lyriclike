@@ -1211,6 +1211,8 @@ async function sendSave(force) {
     const { revision, live } = await res.json();
     savedAs(body, revision);
     if (live) goLiveFromRest();
+    // A new page can change the account's limits (an invite's reward).
+    if (isCreate) document.dispatchEvent(new CustomEvent('page-created', { detail: { id: pageId } }));
     return;
   }
   if (res.status === HTTP_CONFLICT) {
