@@ -23,6 +23,7 @@
   --ink-faded: #8b96a6;         /* pencil: marginalia, placeholders (5.3:1 on the card) */
   --ink-wash: rgba(226, 231, 239, 0.07);  /* hover/focus tint on paper */
   --ink-wash-strong: rgba(226, 231, 239, 0.14);
+  --field-fill: rgba(226, 231, 239, 0.05);  /* inside a text box, so it reads as a place to type */
   --ink-border: rgba(226, 231, 239, 0.22); /* button borders on paper cards */
   --paper-card: #1c222d;        /* the memo card (dialogs, menus, overlays) */
   --paper-panel: #141922;       /* the lyrics and rhymes panels: same as the
