@@ -36,7 +36,9 @@
 
   const byId = id => document.getElementById(id);
   const overlay = byId('invite-overlay');
-  const inviteButton = byId('invite-btn');
+  // One in the header for phones, one in the lyrics' corner for wider screens;
+  // the stylesheet shows the right one.
+  const inviteButtons = [byId('invite-btn'), byId('invite-btn-panel')].filter(Boolean);
   const copyButton = byId('invite-copy');
   const linkInput = byId('invite-link');
   let returnFocusTo = null;
@@ -218,7 +220,7 @@
   let isFreshArrival = false;
 
   function onAuthChecked() {
-    inviteButton.hidden = !hasPageLimit();
+    for (const button of inviteButtons) button.hidden = !hasPageLimit();
     if (window.currentUser) {
       claimPendingInvite();
     } else if (isFreshArrival) {
@@ -239,7 +241,7 @@
   document.addEventListener('page-created', onPageCreated);
   // The sign-in check may have answered before this script ran.
   if (window.currentUser !== undefined) onAuthChecked();
-  inviteButton.addEventListener('click', openInviteDialog);
+  for (const button of inviteButtons) button.addEventListener('click', openInviteDialog);
   copyButton.addEventListener('click', copyInviteLink);
   byId('invite-done').addEventListener('click', closeInviteDialog);
   byId('invite-close').addEventListener('click', closeInviteDialog);

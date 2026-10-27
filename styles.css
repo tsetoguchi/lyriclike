@@ -363,6 +363,7 @@ header .nav-icon circle {
   transition:
     --sheet-syllables var(--duration-base) ease-out,
     --sheet-scheme var(--duration-base) ease-out;
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -2666,9 +2667,36 @@ body:not(.signed-in) .invite-btn {
   flex-shrink: 0;
 }
 
-/* Phones have no room beside the centred wordmark, so only the gift shows,
-   in a circle the size of the account's. */
+/* Wider screens keep it in the lyrics' top corner, level with the title,
+   clear of the header's tools. */
+.invite-btn-panel {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-5);
+  z-index: var(--z-bar);
+}
+
+@media (min-width: 769px) {
+  .invite-btn-header {
+    display: none;
+  }
+
+  /* On a narrow window the title row reaches the corner, so it stops short
+     of the button instead of running under it. Three of --space-8 clears the
+     button's width. */
+  body.signed-in .lyrics-panel:has(.invite-btn-panel:not([hidden])) .panel-header {
+    padding-right: calc(var(--space-5) + var(--space-8) * 3);
+  }
+}
+
+/* Phones have no title row, so it stays in the header, and there is no room
+   beside the centred wordmark, so only the gift shows, in a circle the size
+   of the account's. */
 @media (max-width: 768px) {
+  .invite-btn-panel {
+    display: none;
+  }
+
   #user-area .toggle-btn.invite-btn {
     justify-content: center;
     width: var(--space-8);
