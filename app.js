@@ -1496,6 +1496,8 @@ textareaEl.addEventListener('input', function handleInput() {
   ensureRhymeData();
   updateGutters();
   renderHighlight();
+  // An edit can take away the word a chip would swap.
+  updateChipHint();
 });
 textareaEl.addEventListener('mousemove', handleEditorPointerMove);
 textareaEl.addEventListener('mouseleave', clearHoveredWord);
@@ -1553,7 +1555,7 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   }
   const word = wordEl.textContent.trim();
   const group = wordEl.closest('.rhyme-group');
-  const mode = insertCaret === null ? CHIP_MODE_SWAP : CHIP_MODE_ADD;
+  const mode = chipMode();
   if (placeChipWord(word)) {
     trackEvent('rhyme_inserted', { group: group ? group.dataset.type : '', mode });
     return;
@@ -1578,16 +1580,23 @@ function matchWordCase(original, replacement) {
 
 const CHIP_MODE_ADD = 'add';
 const CHIP_MODE_SWAP = 'swap';
+const CHIP_MODE_MEANING = 'meaning';
 const CHIP_HINTS = {
   add: { pointer: 'Click a rhyme to add it to your line', touch: 'Tap a rhyme to add it to your line' },
   swap: { pointer: 'Click a rhyme to swap it in', touch: 'Tap a rhyme to swap it in' },
+  meaning: { pointer: 'Click a rhyme to see what it means', touch: 'Tap a rhyme to see what it means' },
 };
 
-// Says what a chip will do, since adding and swapping look the same until
-// one is clicked.
+function chipMode() {
+  if (insertCaret !== null) return CHIP_MODE_ADD;
+  return pickedBounds === null ? CHIP_MODE_MEANING : CHIP_MODE_SWAP;
+}
+
+// Says what a chip will do, since adding, swapping and looking up a meaning
+// look the same until one is clicked. With no word in the lyrics to swap,
+// such as a word linked from a rhyme page, a chip opens its meaning.
 function updateChipHint() {
-  const mode = insertCaret === null ? CHIP_MODE_SWAP : CHIP_MODE_ADD;
-  const hints = CHIP_HINTS[mode];
+  const hints = CHIP_HINTS[chipMode()];
   chipHintEl.textContent = isTouchPrimary() ? hints.touch : hints.pointer;
 }
 
@@ -2064,8 +2073,8 @@ window.resetRhymesPanel = resetRhymesPanel;
 // from a rhyme page is in no line, so it comes with no bounds and no context.
 function showRhymesForWord(word, bounds) {
   insertCaret = null;
-  updateChipHint();
   pickHighlightWord(word, bounds, false);
+  updateChipHint();
   selectedContextEl.textContent = bounds ? getWordContext(textareaEl.value, bounds.start) : '';
   if (!rhymeIndex) {
     showPendingRhymes(word);

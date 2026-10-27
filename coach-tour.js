@@ -1,7 +1,8 @@
-// A first-visit tour over the sample verse: the page dims, one part at a time
-// is lit, and a card beside it says what that part does. storage.js starts it
-// when the sample shows; once finished or skipped it stays gone in this
-// browser.
+// A first-visit tour: the page dims, one part at a time is lit, and a card
+// beside it says what that part does. storage.js starts the sample tour when
+// the sample verse shows, or the word tour for someone arriving from a rhyme
+// page with one word's rhymes open. Once either is finished or skipped,
+// neither comes back in this browser.
 (function defineCoachTour() {
   'use strict';
 
@@ -25,62 +26,77 @@
   const NEXT_LABEL = 'Next';
   const LAST_LABEL = 'Got it';
 
-  // `{Click}` and `{click}` become "Tap" and "tap" on touch screens. A target
+  // `{Click}` and `{click}` become "Tap" and "tap" on touch screens, and
+  // `{word}` the word a rhyme page linked to. A target
   // matching several elements lights them all as one. A `live` part takes
   // clicks, so what the card offers can be tried; its phone stand-in, a tab
   // that would switch the view under the tour, never does. A step whose part
   // is hidden is passed over. The gutters slide open after load, so they are
   // judged by their switch (`shownWhen`) rather than a width that may still be
   // zero.
-  const STEPS = [
+  const SWITCHES_STEP = {
+    // On a phone the switches live in the bottom bar: Syllables, and the
+    // rhyme letters inside Highlights.
+    target: '#syllable-toggle, #rhyme-scheme-toggle',
+    phoneTarget: '#bottom-nav #syllable-toggle, #bottom-nav #rhymes-menu-btn',
+    live: true,
+    title: 'Show or hide them',
+    text: '{Click} these to turn the syllable counts and the rhyme letters ' +
+      'on and off.',
+    phoneText: 'Tap Syllables to turn the counts on and off. The rhyme ' +
+      'letters are under Highlights.',
+  };
+
+  const SYLLABLES_STEP = {
+    target: '#syllable-gutter',
+    shownWhen: '#syllable-gutter.visible',
+    title: 'Syllables',
+    text: 'The number beside each line is how many syllables it has.',
+  };
+
+  // The letters are drawn beside each line's end, outside the gutter's own
+  // box.
+  const SCHEME_STEP = {
+    target: '#rhyme-scheme-gutter .scheme-line',
+    shownWhen: '#rhyme-scheme-gutter.visible',
+    title: 'Rhyme scheme',
+    text: 'Lines that rhyme share a letter, so A A B B is two rhyming pairs.',
+  };
+
+  const RHYMES_STEP = {
+    target: '#rhymes-panel',
+    phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+    live: true,
+    title: 'Rhymes',
+    text: '{Click} a word in your lyrics and its rhymes show here. {Click} ' +
+      'a rhyme to swap it into your line.',
+    phoneText: 'Your rhymes are on this tab. Tap one there to swap it into ' +
+      'your line.',
+  };
+
+  const NEXT_LINE_STEP = {
+    target: '#rhymes-panel',
+    phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+    title: 'The next line',
+    text: 'When you start a new line, the rhymes switch to the last word of ' +
+      'the line above, and the one you pick is added to your line.',
+  };
+
+  const SAMPLE_STEPS = [
     {
       target: '#lyrics-highlight .lyric-word',
       title: 'Write here',
       text: 'This is your page. The verse is a sample to play with.',
     },
+    SYLLABLES_STEP,
+    { ...SCHEME_STEP, text: 'Lines that rhyme share a letter. This verse goes A B A B.' },
+    SWITCHES_STEP,
     {
-      target: '#syllable-gutter',
-      shownWhen: '#syllable-gutter.visible',
-      title: 'Syllables',
-      text: 'The number beside each line is how many syllables it has.',
-    },
-    {
-      // The letters are drawn beside each line's end, outside the gutter's
-      // own box.
-      target: '#rhyme-scheme-gutter .scheme-line',
-      shownWhen: '#rhyme-scheme-gutter.visible',
-      title: 'Rhyme scheme',
-      text: 'Lines that rhyme share a letter. This verse goes A B A B.',
-    },
-    {
-      // On a phone the switches live in the bottom bar: Syllables, and the
-      // rhyme letters inside Highlights.
-      target: '#syllable-toggle, #rhyme-scheme-toggle',
-      phoneTarget: '#bottom-nav #syllable-toggle, #bottom-nav #rhymes-menu-btn',
-      live: true,
-      title: 'Show or hide them',
-      text: '{Click} these to turn the syllable counts and the rhyme letters ' +
-        'on and off.',
-      phoneText: 'Tap Syllables to turn the counts on and off. The rhyme ' +
-        'letters are under Highlights.',
-    },
-    {
-      target: '#rhymes-panel',
-      phoneTarget: '.mobile-tab[data-tab="rhymes"]',
-      live: true,
-      title: 'Rhymes',
+      ...RHYMES_STEP,
       text: 'Rhymes for the picked word show here. {Click} one to swap it ' +
         'into your line.',
-      phoneText: 'Your rhymes are on this tab. Tap one there to swap it into ' +
-        'your line.',
     },
-    {
-      target: '#rhymes-panel',
-      phoneTarget: '.mobile-tab[data-tab="rhymes"]',
-      title: 'The next line',
-      text: 'When you start a new line, the rhymes switch to the last word ' +
-        'of the line above, and the one you pick is added to your line.',
-    },
+    NEXT_LINE_STEP,
     {
       target: '#sample-clear',
       live: true,
@@ -88,6 +104,45 @@
       text: 'When you are ready, clear the sample and write your own.',
     },
   ];
+
+  // The pad is blank, so the rhymes they came for lead. A chip pressed with
+  // nothing written opens its meaning in a dialog the dark would cover, so
+  // the panel is lit but not live.
+  const WORD_STEPS = [
+    {
+      target: '#rhymes-panel',
+      phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+      title: 'Rhymes for "{word}"',
+      text: 'Everything here rhymes with "{word}", the closest first. Near ' +
+        'rhymes and other kinds are further down.',
+      phoneText: 'Your rhymes for "{word}" are on this tab, the closest first.',
+    },
+    {
+      target: '#lyrics',
+      live: true,
+      title: 'Write here',
+      text: 'Type your lyrics here. {Click} any word you write to see what ' +
+        'rhymes with it.',
+    },
+    SWITCHES_STEP,
+  ];
+
+  // Replayed from the sidebar over the writer's own page, so nothing here
+  // speaks of a sample.
+  const PAGE_STEPS = [
+    {
+      target: '#lyrics',
+      title: 'Write here',
+      text: 'This is your page. Type your lyrics here, one line at a time.',
+    },
+    SYLLABLES_STEP,
+    SCHEME_STEP,
+    SWITCHES_STEP,
+    RHYMES_STEP,
+    NEXT_LINE_STEP,
+  ];
+
+  const TOURS = { sample: SAMPLE_STEPS, word: WORD_STEPS, page: PAGE_STEPS };
 
   const tourEl = document.getElementById('coach-tour');
   if (!tourEl) return;
@@ -101,6 +156,8 @@
   const backBtn = document.getElementById('coach-back');
   const nextBtn = document.getElementById('coach-next');
   const skipBtn = document.getElementById('coach-skip');
+  let tourName = '';
+  let tourWord = '';
   let steps = [];
   let stepIndex = 0;
   let placeFrame = null;
@@ -169,10 +226,12 @@
     return targetRect(step) !== null;
   }
 
-  function wordForClick(text) {
+  function fillWords(text) {
     const verb = isTouchPrimary() ? 'tap' : 'click';
     const capitalVerb = verb.charAt(0).toUpperCase() + verb.slice(1);
-    return text.replace(/\{Click\}/g, capitalVerb).replace(/\{click\}/g, verb);
+    return text.replace(/\{Click\}/g, capitalVerb)
+      .replace(/\{click\}/g, verb)
+      .replace(/\{word\}/g, tourWord);
   }
 
   function setBox(el, left, top, width, height) {
@@ -261,7 +320,7 @@
   function showStep(index) {
     stepIndex = index;
     const isLast = index === steps.length - 1;
-    titleEl.textContent = steps[index].title;
+    titleEl.textContent = fillWords(steps[index].title);
     countEl.textContent = 'Step ' + (index + 1) + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
@@ -277,7 +336,7 @@
   // set again when the window crosses into the phone layout or out of it.
   function fitStepToLayout() {
     const step = steps[stepIndex];
-    textEl.textContent = wordForClick(textFor(step));
+    textEl.textContent = fillWords(textFor(step));
     spotEl.classList.toggle(LIVE_CLASS, isLive(step));
   }
 
@@ -324,7 +383,9 @@
     if (tourEl.classList.contains(CLOSING_CLASS)) return;
     markSeen();
     document.removeEventListener('keydown', handleTourKey);
-    trackEvent('tour_ended', { trigger, step: stepIndex + 1, steps: steps.length });
+    trackEvent('tour_ended', {
+      tour: tourName, trigger, step: stepIndex + 1, steps: steps.length,
+    });
     if (isMotionReduced()) {
       hideTour();
       return;
@@ -337,7 +398,7 @@
   // "Start your own" button away, so the steps are counted again each move.
   function refreshSteps() {
     const current = steps[stepIndex];
-    steps = STEPS.filter((step) => step === current || hasVisibleTarget(step));
+    steps = TOURS[tourName].filter((step) => step === current || hasVisibleTarget(step));
     stepIndex = steps.indexOf(current);
     drawDashes();
   }
@@ -380,25 +441,39 @@
   }
 
   function openTour() {
-    steps = STEPS.filter(hasVisibleTarget);
+    steps = TOURS[tourName].filter(hasVisibleTarget);
     if (steps.length === 0) return;
     drawDashes();
     tourEl.classList.add(OPENING_CLASS, OPEN_CLASS);
     tourEl.hidden = false;
     document.addEventListener('keydown', handleTourKey);
-    trackEvent('tour_started', { steps: steps.length });
+    trackEvent('tour_started', { tour: tourName, steps: steps.length });
     showStep(0);
     // Laid out once without glides, so the light starts on the first part.
     void tourEl.offsetWidth;
     tourEl.classList.remove(OPENING_CLASS);
   }
 
-  // Returns whether the tour will run, so the caller can hold back its own
+  function chooseTour(name, word) {
+    tourName = name;
+    tourWord = word || '';
+  }
+
+  // `name` is a key of TOURS; `word` fills the word tour's cards. Returns
+  // whether the tour will run, so the caller can hold back its own
   // first-visit hints.
-  function startCoachTour() {
-    if (isSeen()) return false;
+  function startCoachTour(name, word) {
+    if (isSeen() || !TOURS[name]) return false;
+    chooseTour(name, word);
     setTimeout(openTour, START_DELAY_MS);
     return true;
+  }
+
+  // Asked for from the sidebar, so it runs at once, seen before or not.
+  function replayCoachTour(name) {
+    if (!TOURS[name] || !tourEl.hidden) return;
+    chooseTour(name, '');
+    openTour();
   }
 
   nextBtn.addEventListener('click', goNext);
@@ -414,4 +489,5 @@
   });
 
   window.startCoachTour = startCoachTour;
+  window.replayCoachTour = replayCoachTour;
 })();
