@@ -599,10 +599,31 @@ header .nav-icon circle {
   padding: var(--space-2);
 }
 
+/* The folded sidebar's pill (.rail-tip), sliding down out of the button:
+   the same ink, padding, corners, size and timing. */
 .page-action-btn .tip-btn-label {
   top: calc(100% + var(--space-2));
   bottom: auto;
   z-index: var(--z-bar);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--paper);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  transform: translate(-50%, calc(-1 * var(--space-2)));
+  transition:
+    opacity var(--duration-slow) ease-out,
+    transform var(--duration-slow) ease-out;
+}
+
+.page-action-btn:focus-visible .tip-btn-label {
+  transform: translateX(-50%);
+}
+
+@media (hover: hover) {
+  .page-action-btn:hover .tip-btn-label {
+    transform: translateX(-50%);
+  }
 }
 
 .share-btn-icon {
