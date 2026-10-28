@@ -579,7 +579,8 @@ header .nav-icon circle {
 }
 
 /* Sits where Share does, so an extension's buttons read as part of the same
-   row; the tip shows above each one. */
+   row. The row is the top of the panel, so the tip shows below each one;
+   above, the panel's edge would cut it off. */
 .page-actions {
   display: inline-flex;
   align-items: center;
@@ -596,6 +597,12 @@ header .nav-icon circle {
   justify-content: center;
   min-width: var(--tap-target);
   padding: var(--space-2);
+}
+
+.page-action-btn .tip-btn-label {
+  top: calc(100% + var(--space-2));
+  bottom: auto;
+  z-index: var(--z-bar);
 }
 
 .share-btn-icon {
