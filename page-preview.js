@@ -9,6 +9,8 @@
   const PREVIEW_ID = 'page-preview';
   const EDITOR_ID = 'lyrics';
   const TITLE_ID = 'lyrics-panel-title';
+  const PANEL_TITLE_ID = 'preview-panel-title';
+  const PLACEHOLDER_ATTRIBUTE = 'data-placeholder';
   const AREA_SELECTOR = '.lyrics-area';
   const MAIN_SELECTOR = '.main';
   const PREVIEWING_CLASS = 'is-previewing';
@@ -32,8 +34,10 @@
   function setEditorHidden(isHidden) {
     const area = document.querySelector(AREA_SELECTOR);
     const title = document.getElementById(TITLE_ID);
+    const panelTitle = document.getElementById(PANEL_TITLE_ID);
     if (area) area.hidden = isHidden;
     if (title) title.hidden = isHidden;
+    if (panelTitle) panelTitle.hidden = !isHidden;
     const main = document.querySelector(MAIN_SELECTOR);
     if (main) main.classList.toggle(PREVIEWING_CLASS, isHidden);
   }
@@ -86,11 +90,15 @@
     return row;
   }
 
-  function buildTitle(title) {
-    const heading = buildCell('preview-title', title);
-    heading.setAttribute('role', 'heading');
-    heading.setAttribute('aria-level', '2');
-    return heading;
+  // The preview's title stands in the page title's own place in the row,
+  // read-only, so nothing in the row moves when the preview opens. The page
+  // title can't show it: it's editable, and what's in it is saved.
+  function showTitle(title) {
+    const panelTitle = document.getElementById(PANEL_TITLE_ID);
+    if (!panelTitle) return;
+    const pageTitle = document.getElementById(TITLE_ID);
+    const placeholder = pageTitle ? pageTitle.getAttribute(PLACEHOLDER_ATTRIBUTE) : '';
+    panelTitle.textContent = title || placeholder || '';
   }
 
   function draw() {
@@ -99,7 +107,8 @@
     const sheet = document.createElement('div');
     sheet.className = 'preview-sheet';
     sheet.append(...lines.map((line, index) => buildRow(line, marks[index])));
-    const parts = bar ? [bar, buildTitle(title), sheet] : [buildTitle(title), sheet];
+    showTitle(title);
+    const parts = bar ? [bar, sheet] : [sheet];
     const preview = previewElement();
     if (preview) preview.replaceChildren(...parts);
   }
