@@ -45,4 +45,10 @@ describe('privacy page', () => {
   it('co-writers keep their words without a name', () => {
     assert.match(findSection(html, DELETING_HEADING), /without your name/);
   });
+
+  it('gives an email to ask about your data', () => {
+    const section = findSection(html, '<h2>Contact</h2>');
+    assert.ok(section, 'no contact section');
+    assert.match(section, /mailto:support@lyriclike\.com/);
+  });
 });
