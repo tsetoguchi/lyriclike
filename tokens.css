@@ -10,7 +10,7 @@
 
 :root {
   /* Paper */
-  --paper: #141922;             /* slate pad surface (header, tabs, bottom bar) */
+  --paper: var(--desk);         /* header, sidebar, tabs, bottom bar, menus */
   --rule: #2c3441;              /* soft hairlines within the paper */
   --margin-line: #3b4553;       /* where chrome meets paper: header, tabs, bar */
   --accent: #e9b45f;            /* amber lamp accents (grips, focus, marks) */
@@ -26,8 +26,8 @@
   --field-fill: rgba(226, 231, 239, 0.05);  /* inside a text box, so it reads as a place to type */
   --ink-border: rgba(226, 231, 239, 0.22); /* button borders on paper cards */
   --paper-card: #1c222d;        /* the memo card (dialogs, menus, overlays) */
-  --paper-panel: #141922;       /* the lyrics and rhymes panels: same as the
-                                   sidebar, so the whole page reads as one surface */
+  --paper-panel: var(--desk);   /* the lyrics and rhymes panels: the desk too,
+                                   so every page reads as one dark surface */
 
   --desk: #0a0d13;              /* surface the pad rests on */
   --desk-dim: rgba(10, 13, 19, 0.82);       /* the desk laid over the pad: the tour's dark */
