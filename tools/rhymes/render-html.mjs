@@ -74,7 +74,7 @@ function renderHead({ title, description, path, structuredData }) {
 <meta property="og:image:height" content="${PREVIEW_IMAGE_HEIGHT}">
 <meta property="og:image:alt" content="${PREVIEW_IMAGE_ALT}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#141922">
+<meta name="theme-color" content="#0a0d13">
 <link rel="apple-touch-icon" href="/assets/icons/icon-v2-180.png">
 <link rel="stylesheet" href="${TOKENS_PATH}">
 <link rel="stylesheet" href="${STYLESHEET_PATH}">

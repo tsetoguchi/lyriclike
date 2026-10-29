@@ -4122,7 +4122,8 @@ body.sidebar-open #sidebar-scrim {
 .app-footer {
   margin: 0;
   padding: var(--space-2) var(--space-4);
-  background: var(--paper-card);
+  border-top: var(--hairline) solid var(--rule);
+  background: var(--paper);
   color: var(--ink-faded);
   font-size: var(--text-caption-1);
   text-align: center;
