@@ -142,7 +142,19 @@
     }
     setEditorHidden(false);
     refreshEditor();
+    settleEditor();
     document.dispatchEvent(new Event(CLOSED_EVENT));
+  }
+
+  // Unhiding the editor restarts its entrance animations, such as the rhyme
+  // letters fading in. It never left, so it comes back as it was.
+  function settleEditor() {
+    const area = document.querySelector(AREA_SELECTOR);
+    if (!area || typeof area.getAnimations !== 'function') return;
+    for (const animation of area.getAnimations({ subtree: true })) {
+      // finish() throws on one that loops forever; those aren't entrances.
+      if (animation.effect.getTiming().iterations !== Infinity) animation.finish();
+    }
   }
 
   function redraw() {
