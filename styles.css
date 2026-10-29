@@ -573,33 +573,6 @@ header .nav-icon circle {
   padding: var(--space-2);
 }
 
-/* The folded sidebar's pill (.rail-tip), sliding down out of the button:
-   the same ink, padding, corners, size and timing. */
-.page-action-btn .tip-btn-label {
-  top: calc(100% + var(--space-2));
-  bottom: auto;
-  z-index: var(--z-bar);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  color: var(--paper);
-  font-size: var(--text-subhead);
-  font-weight: var(--weight-regular);
-  transform: translate(-50%, calc(-1 * var(--space-2)));
-  transition:
-    opacity var(--duration-slow) ease-out,
-    transform var(--duration-slow) ease-out;
-}
-
-.page-action-btn:focus-visible .tip-btn-label {
-  transform: translateX(-50%);
-}
-
-@media (hover: hover) {
-  .page-action-btn:hover .tip-btn-label {
-    transform: translateX(-50%);
-  }
-}
-
 .share-btn-icon {
   width: 16px;
   height: 16px;
@@ -1109,6 +1082,61 @@ header .nav-icon circle {
   .tip-btn:hover .tip-btn-label {
     opacity: 1;
   }
+}
+
+/* A tip button whose name shows in the folded sidebar's pill (.rail-tip):
+   the same ink, padding, corners, size and timing, sliding up out of the
+   button. Like the sidebar's, it's for a pointer, so phones go without.
+   .tip-start lines the name up with the button's left edge, for a button
+   at a panel's edge, where a centred name would be cut off. */
+.tip-pill .tip-btn-label {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--paper);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  transform: translate(-50%, var(--space-2));
+  transition:
+    opacity var(--duration-slow) ease-out,
+    transform var(--duration-slow) ease-out;
+}
+
+.tip-pill:focus-visible .tip-btn-label {
+  transform: translateX(-50%);
+}
+
+.tip-pill.tip-start .tip-btn-label {
+  left: 0;
+  transform: translateY(var(--space-2));
+}
+
+.tip-pill.tip-start:focus-visible .tip-btn-label {
+  transform: none;
+}
+
+@media (hover: hover) {
+  .tip-pill:hover .tip-btn-label {
+    transform: translateX(-50%);
+  }
+
+  .tip-pill.tip-start:hover .tip-btn-label {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .tip-pill .tip-btn-label {
+    display: none;
+  }
+}
+
+/* The title row's buttons are .tip-pills that slide down instead of up:
+   the row is the top of the panel, where a name above would be cut off. */
+.page-action-btn .tip-btn-label {
+  top: calc(100% + var(--space-2));
+  bottom: auto;
+  z-index: var(--z-bar);
+  transform: translate(-50%, calc(-1 * var(--space-2)));
 }
 
 /* Switches held in one pill, as in the header: a switch that is on gets a
