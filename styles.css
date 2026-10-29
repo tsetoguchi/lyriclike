@@ -1029,12 +1029,11 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--accent-border);
   border-radius: var(--radius-pill);
   color: var(--accent);
-  transition: background var(--duration-fast), border-color var(--duration-fast);
+  transition: filter var(--duration-fast);
 }
 
 .coach-next:hover {
-  background: var(--accent-wash-strong);
-  border-color: var(--accent);
+  filter: var(--hover-dim);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2543,8 +2542,8 @@ header .nav-icon circle {
 }
 
 /* The thing we most want pressed, tinted like a page that is open rather
-   than filled, so it stays warm without outshining the lyrics. It fills
-   amber when the pointer reaches it. */
+   than filled, so it stays warm without outshining the lyrics. Like every
+   amber button, it dims a little under the pointer. */
 .toggle-btn.primary-btn {
   background: var(--accent-wash);
   border-color: var(--accent-border);
@@ -2552,9 +2551,8 @@ header .nav-icon circle {
 }
 
 .toggle-btn.primary-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-wash);
+  filter: var(--hover-dim);
 }
 
 /* Beside Sign up, Log in steps back to a plain link. */
@@ -2589,9 +2587,8 @@ header .nav-icon circle {
   }
 
   #sign-in-btn:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent-wash);
+    filter: var(--hover-dim);
   }
 }
 
@@ -3175,17 +3172,18 @@ body:not(.signed-in) .invite-btn {
   padding: var(--space-2) var(--space-4);
 }
 
-/* A dialog's main button is solid amber. Two classes, so hovering keeps
-   the fill instead of taking the plain button's wash. */
+/* A dialog's main button is the amber pill: a soft tint, an amber rim and
+   amber words, dimming a little under the pointer. Two classes, so
+   hovering keeps the tint instead of taking the plain button's wash. */
 .toggle-btn.modal-confirm {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-wash);
+  border-color: var(--accent-border);
+  color: var(--accent);
 }
 
 .toggle-btn.modal-confirm:not(:disabled):not(.danger-btn):hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--accent-wash);
+  filter: var(--hover-dim);
 }
 
 /* Losing work should look like it. */
