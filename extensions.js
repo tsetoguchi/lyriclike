@@ -186,7 +186,7 @@
   function buildPageActionButton({ label, icon, onClick }) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'toggle-btn tip-btn page-action-btn';
+    button.className = 'toggle-btn tip-btn tip-pill page-action-btn';
     button.setAttribute('aria-label', label);
     button.innerHTML = icon;
     const svg = button.querySelector('svg');

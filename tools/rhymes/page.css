@@ -204,19 +204,23 @@ h1 {
   font-size: var(--text-subhead);
 }
 
+/* The app's amber pill: a soft tint, an amber rim and amber words,
+   dimming a little under the pointer. */
 .cta-button {
   display: inline-block;
   padding: var(--space-2) var(--space-4);
-  background: var(--accent);
-  border-radius: var(--radius-sm);
-  color: var(--on-accent);
+  background: var(--accent-wash);
+  border: var(--hairline) solid var(--accent-border);
+  border-radius: var(--radius-pill);
+  color: var(--accent);
   font-size: var(--text-subhead);
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  transition: filter var(--duration-fast);
 }
 
-.cta-button:hover { background: var(--accent-hover); }
+.cta-button:hover { filter: var(--hover-dim); }
 
 /* Sections stack like the panel's groups: no cards, a line between each. */
 .rhyme-section,

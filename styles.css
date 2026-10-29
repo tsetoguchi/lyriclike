@@ -122,17 +122,9 @@ header h1 {
   display: none;
 }
 
-/* What the lyrics show: three switches held in one pill. A switch that is on
-   gets a lighter fill inside it; a hairline divides two that are off. */
-.header-tools {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  background: var(--ink-wash);
-  border-radius: var(--radius-pill);
-}
-
+/* What the lyrics show: three switches in a .switch-group (below), which
+   draws the pill and the dividers. The header's own icon rules would
+   otherwise win over the group's shape, so these restate it. */
 header .header-tools .toggle-btn:has(> .nav-icon) {
   position: relative;
   padding: var(--space-2) var(--space-5);
@@ -147,24 +139,6 @@ header .header-tools .toggle-btn:has(> .nav-icon):hover {
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
   background: var(--ink-wash-strong);
-}
-
-header .header-tools .toggle-btn + .toggle-btn::before {
-  content: "";
-  position: absolute;
-  left: calc(-1 * var(--space-1) / 2 - var(--hairline) / 2);
-  top: 25%;
-  height: 50%;
-  border-left: var(--hairline) solid var(--ink-border);
-  pointer-events: none;
-}
-
-/* A fill already marks the edge, so the divider beside it goes. */
-header .header-tools .toggle-btn.active + .toggle-btn::before,
-header .header-tools .toggle-btn:hover + .toggle-btn::before,
-header .header-tools .toggle-btn + .toggle-btn.active::before,
-header .header-tools .toggle-btn + .toggle-btn:hover::before {
-  opacity: 0;
 }
 
 /* The name hides until the cursor rests on the switch, then eases in below
@@ -599,33 +573,6 @@ header .nav-icon circle {
   padding: var(--space-2);
 }
 
-/* The folded sidebar's pill (.rail-tip), sliding down out of the button:
-   the same ink, padding, corners, size and timing. */
-.page-action-btn .tip-btn-label {
-  top: calc(100% + var(--space-2));
-  bottom: auto;
-  z-index: var(--z-bar);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  color: var(--paper);
-  font-size: var(--text-subhead);
-  font-weight: var(--weight-regular);
-  transform: translate(-50%, calc(-1 * var(--space-2)));
-  transition:
-    opacity var(--duration-slow) ease-out,
-    transform var(--duration-slow) ease-out;
-}
-
-.page-action-btn:focus-visible .tip-btn-label {
-  transform: translateX(-50%);
-}
-
-@media (hover: hover) {
-  .page-action-btn:hover .tip-btn-label {
-    transform: translateX(-50%);
-  }
-}
-
 .share-btn-icon {
   width: 16px;
   height: 16px;
@@ -1029,12 +976,11 @@ header .nav-icon circle {
   border: var(--hairline) solid var(--accent-border);
   border-radius: var(--radius-pill);
   color: var(--accent);
-  transition: background var(--duration-fast), border-color var(--duration-fast);
+  transition: filter var(--duration-fast);
 }
 
 .coach-next:hover {
-  background: var(--accent-wash-strong);
-  border-color: var(--accent);
+  filter: var(--hover-dim);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1136,6 +1082,127 @@ header .nav-icon circle {
   .tip-btn:hover .tip-btn-label {
     opacity: 1;
   }
+}
+
+/* A tip button whose name shows in the folded sidebar's pill (.rail-tip):
+   the same ink, padding, corners, size and timing, sliding up out of the
+   button. Like the sidebar's, it's for a pointer, so phones go without.
+   .tip-start lines the name up with the button's left edge, for a button
+   at a panel's edge, where a centred name would be cut off. */
+.tip-pill .tip-btn-label {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--paper);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  transform: translate(-50%, var(--space-2));
+  transition:
+    opacity var(--duration-slow) ease-out,
+    transform var(--duration-slow) ease-out;
+}
+
+.tip-pill:focus-visible .tip-btn-label {
+  transform: translateX(-50%);
+}
+
+.tip-pill.tip-start .tip-btn-label {
+  left: 0;
+  transform: translateY(var(--space-2));
+}
+
+.tip-pill.tip-start:focus-visible .tip-btn-label {
+  transform: none;
+}
+
+@media (hover: hover) {
+  .tip-pill:hover .tip-btn-label {
+    transform: translateX(-50%);
+  }
+
+  .tip-pill.tip-start:hover .tip-btn-label {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .tip-pill .tip-btn-label {
+    display: none;
+  }
+}
+
+/* The title row's buttons are .tip-pills that slide down instead of up:
+   the row is the top of the panel, where a name above would be cut off. */
+.page-action-btn .tip-btn-label {
+  top: calc(100% + var(--space-2));
+  bottom: auto;
+  z-index: var(--z-bar);
+  transform: translate(-50%, calc(-1 * var(--space-2)));
+}
+
+/* Switches held in one pill, as in the header: a switch that is on gets a
+   lighter fill inside it, and a hairline divides two that are off. A switch
+   may hold an icon, a word, or both. Here, after .tip-btn, so a tip button
+   in a group takes the group's shape. */
+.switch-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--ink-wash);
+  border-radius: var(--radius-pill);
+}
+
+.switch-group > .toggle-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font-weight: var(--weight-regular);
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+.switch-group > .toggle-btn:hover {
+  background: var(--ink-wash);
+}
+
+.switch-group > .toggle-btn.active {
+  background: var(--ink-wash-strong);
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.switch-group > .toggle-btn > svg {
+  flex-shrink: 0;
+  width: var(--header-icon-size);
+  height: var(--header-icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.switch-group > .toggle-btn + .toggle-btn::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-1) / 2 - var(--hairline) / 2);
+  top: 25%;
+  height: 50%;
+  border-left: var(--hairline) solid var(--ink-border);
+  pointer-events: none;
+}
+
+/* A fill already marks the edge, so the divider beside it goes. */
+.switch-group > .toggle-btn.active + .toggle-btn::before,
+.switch-group > .toggle-btn:hover + .toggle-btn::before,
+.switch-group > .toggle-btn + .toggle-btn.active::before,
+.switch-group > .toggle-btn + .toggle-btn:hover::before {
+  opacity: 0;
 }
 
 .share-result-text {
@@ -2543,8 +2610,8 @@ header .nav-icon circle {
 }
 
 /* The thing we most want pressed, tinted like a page that is open rather
-   than filled, so it stays warm without outshining the lyrics. It fills
-   amber when the pointer reaches it. */
+   than filled, so it stays warm without outshining the lyrics. Like every
+   amber button, it dims a little under the pointer. */
 .toggle-btn.primary-btn {
   background: var(--accent-wash);
   border-color: var(--accent-border);
@@ -2552,9 +2619,8 @@ header .nav-icon circle {
 }
 
 .toggle-btn.primary-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-wash);
+  filter: var(--hover-dim);
 }
 
 /* Beside Sign up, Log in steps back to a plain link. */
@@ -2589,9 +2655,8 @@ header .nav-icon circle {
   }
 
   #sign-in-btn:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent-wash);
+    filter: var(--hover-dim);
   }
 }
 
@@ -3175,17 +3240,18 @@ body:not(.signed-in) .invite-btn {
   padding: var(--space-2) var(--space-4);
 }
 
-/* A dialog's main button is solid amber. Two classes, so hovering keeps
-   the fill instead of taking the plain button's wash. */
+/* A dialog's main button is the amber pill: a soft tint, an amber rim and
+   amber words, dimming a little under the pointer. Two classes, so
+   hovering keeps the tint instead of taking the plain button's wash. */
 .toggle-btn.modal-confirm {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-wash);
+  border-color: var(--accent-border);
+  color: var(--accent);
 }
 
 .toggle-btn.modal-confirm:not(:disabled):not(.danger-btn):hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--accent-wash);
+  filter: var(--hover-dim);
 }
 
 /* Losing work should look like it. */
