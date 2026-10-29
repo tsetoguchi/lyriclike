@@ -599,10 +599,31 @@ header .nav-icon circle {
   padding: var(--space-2);
 }
 
+/* The folded sidebar's pill (.rail-tip), sliding down out of the button:
+   the same ink, padding, corners, size and timing. */
 .page-action-btn .tip-btn-label {
   top: calc(100% + var(--space-2));
   bottom: auto;
   z-index: var(--z-bar);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--paper);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  transform: translate(-50%, calc(-1 * var(--space-2)));
+  transition:
+    opacity var(--duration-slow) ease-out,
+    transform var(--duration-slow) ease-out;
+}
+
+.page-action-btn:focus-visible .tip-btn-label {
+  transform: translateX(-50%);
+}
+
+@media (hover: hover) {
+  .page-action-btn:hover .tip-btn-label {
+    transform: translateX(-50%);
+  }
 }
 
 .share-btn-icon {
@@ -1890,18 +1911,12 @@ header .nav-icon circle {
   display: none;
 }
 
-/* Written where the page's own title is, starting where the text does. */
-.preview-title {
-  display: block;
-  max-width: var(--sheet-width);
-  margin-inline: auto;
-  padding: var(--space-3) var(--space-5) var(--space-3)
-    calc(var(--sheet-syllables) + var(--editor-pad));
+/* The preview's title, read-only in the page title's place: the same
+   padding and width, so the row doesn't move when it opens. */
+.preview-panel-title {
+  padding: 1px var(--space-1);
+  min-width: var(--title-min-width);
   font-family: var(--font-ui);
-  font-size: var(--text-title-3);
-  font-weight: var(--weight-bold);
-  color: var(--ink);
-  overflow-wrap: anywhere;
 }
 
 .preview-sheet {
