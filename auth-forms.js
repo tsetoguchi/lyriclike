@@ -17,6 +17,12 @@
   const MAX_PASSWORD_LENGTH = 256;
   const MAX_EMAIL_LENGTH = 254;
   const MIN_LOCAL_PART_LENGTH = 4;
+  // While "Check your email" is up, this tab asks every so often whether the
+  // account exists yet. The cap keeps it inside the lookup endpoint's limit.
+  const CONFIRM_CHECK_MS = 90000;
+  const CONFIRM_CHECK_MIN_GAP_MS = 15000;
+  const MAX_CONFIRM_CHECKS = 20;
+  const NEXT_PASSWORD = 'password';
 
   const HTTP_OK = 200;
   const HTTP_CREATED = 201;
@@ -43,6 +49,7 @@
     // The sending domain is new, and some inboxes (Outlook first) file its
     // mail as junk until it has a reputation.
     CHECK_JUNK: 'Not there? Check your junk folder.',
+    SIGNS_IN_HERE: 'Keep this page open. Once you confirm, it signs you in here too.',
   });
 
   const VIEW = Object.freeze({
@@ -129,6 +136,9 @@
   let loginNeedsCheck = false;
   let lookupNeedsCheck = false;
   let returnFocusTo = null;
+  let confirmTimer = null;
+  let confirmChecks = 0;
+  let lastConfirmCheckAt = 0;
   let busy = false;
 
   // ── Server ──
@@ -479,8 +489,57 @@
     }
     pendingSignup = { email, password };
     trackEvent('signup_email_sent');
-    showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME} ${TEXT.CHECK_JUNK}`);
+    showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME} ${TEXT.CHECK_JUNK} ${TEXT.SIGNS_IN_HERE}`);
+    watchForConfirm();
     return null;
+  }
+
+  // ── Confirmed in another browser ──
+
+  // The link often opens somewhere else, like a phone's mail app. That signs
+  // in only there, while the words written before signing up wait in this
+  // tab. So this tab signs in too once the account exists, which saves them.
+  // It asks the lookup, not the login, since failed logins count against
+  // the person's own sign-in limit.
+  function isWaitingForConfirm() {
+    return currentView === VIEW.CHECK_EMAIL && pendingSignup !== null;
+  }
+
+  function watchForConfirm() {
+    confirmChecks = 0;
+    scheduleConfirmCheck();
+  }
+
+  function scheduleConfirmCheck() {
+    clearTimeout(confirmTimer);
+    if (confirmChecks < MAX_CONFIRM_CHECKS) confirmTimer = setTimeout(checkConfirmed, CONFIRM_CHECK_MS);
+  }
+
+  // A hidden tab skips its turn; coming back to it asks again.
+  async function checkConfirmed() {
+    if (!isWaitingForConfirm() || document.visibilityState !== 'visible') return;
+    confirmChecks += 1;
+    lastConfirmCheckAt = Date.now();
+    const result = await postJson(LOOKUP_URL, { email: pendingSignup.email });
+    if (!isWaitingForConfirm()) return;
+    const isConfirmed = result.status === HTTP_OK && result.data && result.data.next === NEXT_PASSWORD;
+    if (isConfirmed) return logInConfirmed();
+    // Over the free lookups, the next one needs a check this tab can't pass.
+    if (result.status !== HTTP_CAPTCHA_REQUIRED) scheduleConfirmCheck();
+    return null;
+  }
+
+  async function logInConfirmed() {
+    const result = await postJson('/api/auth/login', pendingSignup);
+    if (result.status === HTTP_OK && isWaitingForConfirm()) finishSignIn(result.data);
+  }
+
+  function checkConfirmedOnReturn() {
+    if (document.visibilityState !== 'visible' || !isWaitingForConfirm()) return;
+    if (Date.now() - lastConfirmCheckAt < CONFIRM_CHECK_MIN_GAP_MS) return;
+    if (confirmChecks >= MAX_CONFIRM_CHECKS) return;
+    clearTimeout(confirmTimer);
+    checkConfirmed();
   }
 
   // "Send it again" submits the same signup again. It then reads "Sent" until
@@ -674,6 +733,7 @@
   form.addEventListener('submit', handleSubmit);
   document.getElementById('auth-google').addEventListener('click', startSignIn);
   document.getElementById('auth-close').addEventListener('click', closeAuthModal);
+  document.addEventListener('visibilitychange', checkConfirmedOnReturn);
   passwordToggle.addEventListener('click', () => {
     setPasswordVisible(passwordInput.type === 'password');
     passwordInput.focus();
