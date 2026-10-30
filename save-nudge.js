@@ -36,7 +36,7 @@
   // when it says nobody is signed in. Another notice is left alone.
   function isNudgeDue() {
     if (window.currentUser !== null || hasSeenNudge()) return false;
-    if (!noticeEl.hidden || isSampleShowing()) return false;
+    if (!noticeEl.hidden || window.OpenPage.isSampleShowing()) return false;
     return countWrittenLines(lyricsEl.value) >= LINES_BEFORE_NUDGE;
   }
 

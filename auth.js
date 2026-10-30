@@ -124,7 +124,7 @@ function endSession() {
   closeAccountMenu();
   if (window.closePasswordBox) window.closePasswordBox();
   showSignIn();
-  if (window.clearLyricState) window.clearLyricState();
+  if (window.OpenPage) window.OpenPage.clear();
 }
 
 async function signOut() {
@@ -133,7 +133,7 @@ async function signOut() {
   try {
     // Live words still on their way get a moment to save, and offline the
     // writer decides (storage.js).
-    if (window.confirmSignOut && !await window.confirmSignOut()) return;
+    if (window.OpenPage && !await window.OpenPage.confirmSignOut()) return;
     await fetch('/api/auth/logout', { method: 'POST' });
     endSession();
   } finally {

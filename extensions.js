@@ -89,10 +89,11 @@
     return document.getElementById(HEADER_SLOT_ID);
   }
 
-  // storage.js gives the page functions. A page without them (a script that
-  // did not load) answers each call as refused rather than throwing.
-  function pageFunction(name) {
-    const found = root[name];
+  // The page's scripts give these functions: the open page's come from
+  // storage.js's OpenPage. A page without them (a script that did not load)
+  // answers each call as refused rather than throwing.
+  function pageFunction(name, owner = root) {
+    const found = owner ? owner[name] : undefined;
     if (typeof found === 'function') return found;
     console.warn('Extension hook: the open page is not available here:', name);
     return null;
@@ -131,7 +132,7 @@
   }
 
   function currentPage() {
-    const summary = pageFunction('currentPageSummary');
+    const summary = pageFunction('summary', root.OpenPage);
     return summary ? summary() : null;
   }
 
@@ -140,7 +141,7 @@
       console.warn('Extension hook: openPage needs a page id.');
       return false;
     }
-    const open = pageFunction('openPageById');
+    const open = pageFunction('openById', root.OpenPage);
     if (!open) return false;
     try {
       return await open(id);
@@ -156,7 +157,7 @@
       console.warn('Extension hook: replacePage was given words it cannot use.');
       return { ok: false, reason: REASON_INVALID };
     }
-    const replace = pageFunction('replaceWholePage');
+    const replace = pageFunction('replaceWhole', root.OpenPage);
     if (!replace) return { ok: false, reason: REASON_NOT_READY };
     try {
       return await replace(words);
