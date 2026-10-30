@@ -161,6 +161,12 @@ function ensureRhymeData() {
   return rhymeDataPromise;
 }
 
+// Settles once the rhymes are drawn or have failed, or at once when nothing
+// has asked for them. The splash (splash.js) waits on it.
+function rhymeDataSettled() {
+  return rhymeDataPromise || Promise.resolve();
+}
+
 function onRhymeDataReady() {
   statusEl.textContent = '';
   updateGutters();

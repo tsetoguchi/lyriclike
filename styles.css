@@ -4985,6 +4985,54 @@ body.signed-in .sidebar-links {
   }
 }
 
+/* ── Splash ──
+   A signed-in visit opens on the logo, with the wordmark as the credit at
+   the foot, until splash.js lifts it. The mark is drawn 80px across. */
+
+#splash {
+  display: none;
+}
+
+.is-splashing #splash {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-splash);
+  background: var(--desk);
+  transition: opacity var(--duration-slow) ease;
+}
+
+.is-splash-fading #splash {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 80px;
+  height: 80px;
+  transform: translate(-50%, -50%);
+}
+
+.splash-credit {
+  position: absolute;
+  left: 50%;
+  bottom: calc(38px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.splash-by {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  line-height: 20px;
+  color: var(--ink-faded);
+}
+
 /* ── Reduced motion ──
    Kept last: it must out-cascade every animation declared above
    (equal specificity, later source order wins). */

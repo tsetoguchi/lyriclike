@@ -15,6 +15,9 @@ async function initAuth() {
       const user = await res.json();
       showUser(user);
     } else {
+      // Only a real answer forgets the account: offline, the splash
+      // (splash.js) still shows next time.
+      if (window.rememberSignedIn) window.rememberSignedIn(false);
       showSignIn(await res.json().catch(() => null));
     }
   } catch {
@@ -24,6 +27,7 @@ async function initAuth() {
 
 function showUser(user) {
   window.currentUser = user;
+  if (window.rememberSignedIn) window.rememberSignedIn(true);
   window.setSignedInProperty(true);
   trackEventOnce(FIRST_SIGN_IN_KEY, 'first_sign_in');
   document.dispatchEvent(new Event('auth-checked'));
@@ -116,6 +120,7 @@ document.getElementById('sign-up-btn').addEventListener('click', () => openSignI
 // screen. An expired session does not come through here, so writing that
 // has not been saved yet survives it.
 function endSession() {
+  if (window.rememberSignedIn) window.rememberSignedIn(false);
   closeAccountMenu();
   if (window.closePasswordBox) window.closePasswordBox();
   showSignIn();

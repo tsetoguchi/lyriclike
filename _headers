@@ -60,6 +60,9 @@
 /auth-link.js
   Cache-Control: no-cache
 
+/splash.js
+  Cache-Control: no-cache
+
 /auth-forms.js
   Cache-Control: no-cache
 

@@ -5,12 +5,12 @@
 // account menu slots, and replace the links in the fine print slots. It may also read, open
 // and replace the open page, and hear 'page-changed' on document when
 // another page is on screen, and show any text read-only in the editor's
-// place. With no script set, nothing is fetched and the neutral dialog in
+// place, and keep a signed-in visit's splash up until its items are in. With no script set, nothing is fetched and the neutral dialog in
 // limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 4;
+  const HOOK_VERSION = 5;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -26,6 +26,9 @@
 
   let limitDialog = null;
   const loadedUrls = new Set();
+  // Script loads and holds the splash (splash.js) waits for. Each settles,
+  // never rejects, so one failure cannot keep the page covered.
+  const pendingWork = [];
 
   function setLimitDialog(dialog) {
     limitDialog = typeof dialog === 'function' ? dialog : null;
@@ -37,8 +40,32 @@
     loadedUrls.add(url);
     const tag = document.createElement('script');
     tag.src = url;
-    tag.onerror = () => console.warn('Extension script did not load:', url);
+    pendingWork.push(new Promise(done => {
+      tag.onload = done;
+      tag.onerror = () => {
+        console.warn('Extension script did not load:', url);
+        done();
+      };
+    }));
     document.head.appendChild(tag);
+  }
+
+  // A script that fills its slots after an await of its own calls this as it
+  // runs, so its items appear with the page. The splash lifts after a few
+  // seconds whatever happens.
+  function holdSplash(work) {
+    pendingWork.push(Promise.resolve(work).catch(error => {
+      console.warn('Extension hook: work held for the splash failed:', error);
+    }));
+  }
+
+  // Waits again when a settled load added more work, such as a second script.
+  async function whenSettled() {
+    let seen = -1;
+    while (seen !== pendingWork.length) {
+      seen = pendingWork.length;
+      await Promise.all(pendingWork);
+    }
   }
 
   // The swapped dialog's answer, or null to show the neutral one: when none
@@ -287,6 +314,8 @@
     addNotebookRowAction,
     notebookRowActions,
     addShareNote,
+    holdSplash,
+    whenSettled,
   };
   document.addEventListener('auth-checked', loadAccountScript);
   document.addEventListener('auth-checked', showPageActions);

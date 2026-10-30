@@ -55,6 +55,8 @@
   /* The small question dialog can open over another panel (the people
      limit over Share), so it sits above them. */
   --z-dialog: 102;
+  /* The signed-in splash covers all of it while the page gets ready. */
+  --z-splash: 200;
 
   /* Tracking, tightest to widest; the last is the wordmark's alone. */
   --tracking-tight: 0.02em;
