@@ -51,6 +51,9 @@
 /rhyme-core.js
   Cache-Control: no-cache
 
+/lyric-marks.js
+  Cache-Control: no-cache
+
 /app.js
   Cache-Control: no-cache
 
