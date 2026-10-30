@@ -17,7 +17,7 @@
 
   // Topmost first: Back closes the first one that is open.
   const LAYERS = [
-    { isOpen: () => isOverlayOpen(dialogOverlay), close: () => closeDialog(null) },
+    { isOpen: () => isOverlayOpen(dialogOverlay), close: () => window.Dialog.close(null) },
     { isOpen: () => isOverlayOpen(authOverlay), close: () => window.closeAuthModal() },
     { isOpen: () => isOverlayOpen(passwordOverlay), close: () => window.closePasswordBox() },
     { isOpen: () => isOverlayOpen(feedbackOverlay), close: () => window.closeFeedbackBox() },

@@ -51,7 +51,7 @@ describe('OpenPage', () => {
 
     it(`${script} reads none of storage.js's page state directly`, () => {
       const source = readScript(script);
-      const read = STORAGE_STATE_NAMES.filter(name => new RegExp(`\b${name}\b`).test(source));
+      const read = STORAGE_STATE_NAMES.filter(name => new RegExp(`(?<![.\\w])${name}\\b`).test(source));
       assert.deepEqual(read, []);
     });
   }

@@ -162,7 +162,7 @@
     window.trackEvent(EVENT.CLAIMED);
     if (data.rewarded) window.trackEvent(EVENT.REWARDED);
     await whenExtensionsSettled();
-    window.openDialog({
+    window.Dialog.open({
       heading: TEXT.INVITE_WORKED,
       message: claimedMessage(data),
       confirmLabel: TEXT.OK,

@@ -479,15 +479,15 @@
   async function openSharedPage(id, to) {
     const status = await openPage.load(id);
     if (status === HTTP_NOT_FOUND) {
-      showNotice(notAvailableText(to), [
-        { label: 'Log out', onClick: () => { hideNotice(); signOut(); } },
+      PageNotice.show(notAvailableText(to), [
+        { label: 'Log out', onClick: () => { PageNotice.hide(); signOut(); } },
       ]);
       return;
     }
     if (status !== HTTP_OK) return;
     loadLyricsList();
     if (openPage.role === 'editor') {
-      showNotice(`${openPage.ownerName || 'Someone'} shared this with you.`);
+      PageNotice.show(`${openPage.ownerName || 'Someone'} shared this with you.`);
     }
   }
 
@@ -521,7 +521,7 @@
   // open every link in a mail, and must not opt anyone out by doing so.
   async function confirmStop(token) {
     if (!STOP_TOKEN_PATTERN.test(token)) return;
-    const confirmed = await openDialog({
+    const confirmed = await Dialog.open({
       heading: 'Stop these emails', message: TEXT.STOP_QUESTION, confirmLabel: 'Stop these emails',
     });
     if (!confirmed) return;
@@ -533,10 +533,10 @@
       });
       if (!res.ok) throw new Error(String(res.status));
     } catch {
-      await openDialog({ heading: 'Stop these emails', message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
+      await Dialog.open({ heading: 'Stop these emails', message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
       return;
     }
-    await openDialog({ heading: 'Emails stopped', message: TEXT.STOPPED, confirmLabel: 'OK', noCancel: true });
+    await Dialog.open({ heading: 'Emails stopped', message: TEXT.STOPPED, confirmLabel: 'OK', noCancel: true });
   }
 
   function openShareLink(link) {
