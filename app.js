@@ -17,6 +17,10 @@ const MAX_GUTTER_LINES = 2000;
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 1400;
 const SCROLL_THROTTLE_MS = 16;
+// The rhyme buckets are filled in slices short enough that typing and
+// scrolling never wait on them; the clock is read every batch of words.
+const INDEX_SLICE_MS = 8;
+const INDEX_BATCH_WORDS = 250;
 const RHYME_DATA_ERROR_MESSAGE = 'Failed to load dictionary';
 const RHYMES_PENDING_MESSAGE = 'Loading rhymes...';
 const RHYME_SORT_STORAGE_KEY = 'rhymeSort';
@@ -189,7 +193,27 @@ function onRhymeDataError(err) {
 async function loadDictionary() {
   const resp = await fetch(DATA_URLS.dictionary);
   if (!resp.ok) throw new Error('loadDictionary: failed to fetch cmudict.json');
-  rhymeIndex = RhymeCore.buildRhymeIndex(await resp.json());
+  rhymeIndex = RhymeCore.createRhymeIndex(await resp.json());
+  indexRhymesInSlices();
+}
+
+// The gutters read pronunciations, which are there from the start. Rhymes wait
+// for the last slice, which then draws whatever word is picked.
+function indexRhymesInSlices() {
+  const deadline = performance.now() + INDEX_SLICE_MS;
+  while (performance.now() < deadline) {
+    if (RhymeCore.indexMoreWords(rhymeIndex, INDEX_BATCH_WORDS)) {
+      refreshCurrentResults();
+      return;
+    }
+  }
+  setTimeout(indexRhymesInSlices, 0);
+}
+
+// A search before then would finish the index in one go and freeze the page,
+// so callers show the pending message instead.
+function canSearchRhymes() {
+  return rhymeIndex !== null && RhymeCore.isRhymeIndexComplete(rhymeIndex);
 }
 
 // ── Rhyme search ──
@@ -1038,7 +1062,7 @@ function showPickedRhymes(word, bounds, isPointerPick) {
   if (isPointerPick) announcePointerPick();
 
   // Reaching for a word is the clearest signal that the rhymes are wanted.
-  if (!rhymeIndex) {
+  if (!canSearchRhymes()) {
     showPendingRhymes(word);
     ensureRhymeData();
     return;
@@ -1448,10 +1472,10 @@ function handleResizeEnd() {
 
 function refreshCurrentResults() {
   if (!currentHighlightWord) return;
-  // The English word list can land before the dictionary does. Rendering now
+  // The English word list can land before the index is built. Rendering now
   // would replace the pending message with a false "not found"; the rhymes go
-  // in when onRhymeDataReady() calls this again with an index to search.
-  if (!rhymeIndex) return;
+  // in when indexRhymesInSlices() calls this again with an index to search.
+  if (!canSearchRhymes()) return;
   renderResults(currentHighlightWord, findRhymes(currentHighlightWord));
 }
 
@@ -2091,7 +2115,7 @@ function showRhymesForWord(word, bounds) {
   pickHighlightWord(word, bounds, false);
   updateChipHint();
   selectedContextEl.textContent = bounds ? getWordContext(textareaEl.value, bounds.start) : '';
-  if (!rhymeIndex) {
+  if (!canSearchRhymes()) {
     showPendingRhymes(word);
     ensureRhymeData();
     return;
