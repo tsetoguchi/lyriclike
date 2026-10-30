@@ -3,6 +3,8 @@
 // top of the page; Back pops it and this file closes the topmost layer. A
 // layer closed any other way takes the entry back out, so Back never has to
 // be pressed twice to leave.
+import { closeFeedbackBox } from './feedback-box.js';
+
 const GUARD_STATE = { backGuard: true };
 const OPEN_CLASS = 'open';
 
@@ -17,7 +19,7 @@ const LAYERS = [
   { isOpen: () => isOverlayOpen(dialogOverlay), close: () => window.Dialog.close(null) },
   { isOpen: () => isOverlayOpen(authOverlay), close: () => window.closeAuthModal() },
   { isOpen: () => isOverlayOpen(passwordOverlay), close: () => window.closePasswordBox() },
-  { isOpen: () => isOverlayOpen(feedbackOverlay), close: () => window.closeFeedbackBox() },
+  { isOpen: () => isOverlayOpen(feedbackOverlay), close: closeFeedbackBox },
   { isOpen: () => !accountMenu.hidden, close: () => window.closeAccountMenu() },
   { isOpen: isDefinitionOpen, close: closeDefinition },
   { isOpen: isRhymesMenuOpen, close: () => setRhymesMenuOpen(false) },
