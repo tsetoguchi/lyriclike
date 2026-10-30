@@ -2919,6 +2919,23 @@ body:not(.signed-in) .invite-btn {
   display: none;
 }
 
+.account-menu-heading {
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--text-caption-2);
+  color: var(--ink-faded);
+}
+
+/* The rows sit in the group as if the slot weren't there. */
+.account-menu-links {
+  display: contents;
+}
+
+/* No icon, so the text lines up with the other rows' text instead. */
+a.account-menu-link {
+  padding-left: calc(var(--space-4) * 2 + var(--space-3));
+  text-decoration: none;
+}
+
 .account-menu-item {
   display: flex;
   align-items: center;
@@ -3583,6 +3600,13 @@ body:not(.signed-in) .invite-btn {
   cursor: default;
 }
 
+.auth-fine-print {
+  margin: 0;
+  color: var(--ink-faded);
+  font-size: var(--text-caption-1);
+  text-align: center;
+}
+
 /* ── Sidebar: the notebook ──
 
    The notebook as a sidebar, as in Gemini or ChatGPT: the wordmark, New
@@ -4147,17 +4171,6 @@ body.sidebar-open #sidebar-scrim {
   display: none;
 }
 
-/* One quiet line under the pad, where people look for the fine print. */
-.app-footer {
-  margin: 0;
-  padding: var(--space-2) var(--space-4);
-  border-top: var(--hairline) solid var(--rule);
-  background: var(--paper);
-  color: var(--ink-faded);
-  font-size: var(--text-caption-1);
-  text-align: center;
-}
-
 /* An extension script's sidebar items, under the notebook's pages, lined up
    with the items at the top. Empty, it takes no room. */
 .sidebar-slot {
@@ -4218,38 +4231,31 @@ body.sidebar-open #sidebar-scrim {
   font-size: var(--text-caption-1);
 }
 
-.app-footer a,
 .sidebar-contact a,
-.sidebar-links a {
+.sidebar-links a,
+.auth-fine-print a {
   color: var(--ink-faded);
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color var(--duration-fast);
 }
 
-.app-footer a:hover,
 .sidebar-contact a:hover,
-.sidebar-links a:hover {
+.sidebar-links a:hover,
+.auth-fine-print a:hover {
   color: var(--ink);
 }
 
-/* On a phone the bottom bar owns the foot of the screen, so the link moves
-   to the foot of the notebook drawer instead. */
+/* Signed in, these links live in the account menu instead. */
 .sidebar-links {
-  display: none;
-  padding: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0 var(--space-5) var(--space-3);
+  color: var(--ink-faded);
   font-size: var(--text-caption-1);
 }
 
-@media (max-width: 768px) {
-  .app-footer {
-    display: none;
-  }
-
-  .sidebar-links {
-    display: block;
-    padding-top: 0;
-  }
+body.signed-in .sidebar-links {
+  display: none;
 }
 
 /* ── Mobile layout ── */

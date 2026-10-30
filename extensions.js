@@ -2,7 +2,7 @@
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
 // That script may swap the limit dialog for its own, listen for the
 // 'limit-reached' event, add its own items to the header, sidebar, rail and
-// account menu slots, and replace the links in the footer slots. It may also read, open
+// account menu slots, and replace the links in the fine print slots. It may also read, open
 // and replace the open page, and hear 'page-changed' on document when
 // another page is on screen, and show any text read-only in the editor's
 // place. With no script set, nothing is fetched and the neutral dialog in
@@ -10,11 +10,12 @@
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 3;
+  const HOOK_VERSION = 4;
+  const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
   const ANSWER_OK = 'ok';
-  const FOOTER_SLOT_ID = 'footer-slot';
+  const AUTH_FINE_PRINT_SLOT_ID = 'auth-fine-print-slot';
   const HEADER_SLOT_ID = 'header-slot';
   const RAIL_SLOT_ID = 'rail-slot';
   const SIDEBAR_FOOT_SLOT_ID = 'sidebar-foot-slot';
@@ -67,11 +68,15 @@
     return null;
   }
 
-  // The links in the fine print under the pad, and at the foot of the
-  // notebook drawer, where a phone shows them instead. Each holds the
-  // Privacy link until a script replaces what's in it with its own.
-  function footerSlot() {
-    return document.getElementById(FOOTER_SLOT_ID);
+  // The fine print links: in the sign-in dialog, at the foot of the
+  // notebook (shown only signed out), and in the account menu's Legal group.
+  // Each holds the Privacy link until a script replaces what's in it.
+  function authFinePrintSlot() {
+    return document.getElementById(AUTH_FINE_PRINT_SLOT_ID);
+  }
+
+  function accountLegalSlot() {
+    return document.getElementById(ACCOUNT_LEGAL_SLOT_ID);
   }
 
   function sidebarFootSlot() {
@@ -265,7 +270,8 @@
     loadScript,
     runLimitDialog,
     headerSlot,
-    footerSlot,
+    authFinePrintSlot,
+    accountLegalSlot,
     sidebarFootSlot,
     sidebarSlot,
     railSlot,
