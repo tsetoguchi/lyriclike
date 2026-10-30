@@ -30,9 +30,9 @@ function pickLimit(rowValue, siteDefault) {
 
 // Friends who joined through this account's invite link raise its page limit;
 // with no limit there is nothing to raise.
-function addInviteBonus(pageLimit, row) {
+function addInviteBonus(env, pageLimit, row) {
   if (pageLimit === null) return null;
-  return pageLimit + inviteBonusPages(row.rewarded_friends, Boolean(row.was_invited));
+  return pageLimit + inviteBonusPages(env, row.rewarded_friends, Boolean(row.was_invited));
 }
 
 export async function findLimits(env, userId) {
@@ -47,7 +47,7 @@ export async function findLimits(env, userId) {
   `).bind(userId, userId, userId, userId).first();
   const pageLimit = pickLimit(row.page_limit, parseSiteDefault(env.DEFAULT_PAGE_LIMIT));
   return {
-    pageLimit: addInviteBonus(pageLimit, row),
+    pageLimit: addInviteBonus(env, pageLimit, row),
     peopleLimit: pickLimit(row.people_limit, parseSiteDefault(env.DEFAULT_PEOPLE_LIMIT)),
   };
 }

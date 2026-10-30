@@ -1,10 +1,11 @@
-// Inviting a friend: the invite link, a new account taking its code, and the
-// extra pages both sides get once the friend saves a page.
+// Inviting a friend: the invite link, a new account taking its code, the
+// extra pages both sides get once the friend saves a page, and the event hook
+// message that says so.
 //
 //   node --test test/friend-invites.test.mjs
 
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { afterEach, describe, it } from 'node:test';
 
 import * as account from '../functions/api/account.js';
 import * as lyricById from '../functions/api/lyrics/[id].js';
@@ -16,6 +17,8 @@ const INVITER = { id: 'inviter-1', email: 'ann@example.com', token: 'inviter-tok
 const FRIEND = { id: 'friend-1', email: 'bea@example.com', token: 'friend-token' };
 const PAGE_LIMIT = { DEFAULT_PAGE_LIMIT: '5' };
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+const HOOK = { EVENT_HOOK_URL: 'https://hooks.example.com/events', EVENT_HOOK_SECRET: 'hook-secret' };
+const INVITE_REWARDED = 'invite.rewarded';
 
 async function addPerson(env, person, createdAt = Date.now()) {
   await addGoogleUser(env, { id: person.id, email: person.email });
@@ -169,6 +172,33 @@ describe('the bonus', () => {
     assert.equal(await pageLimit(env, INVITER), null);
   });
 
+  it('INVITE_BONUS_PAGES sets the pages per friend', async () => {
+    const env = await setUp({ ...PAGE_LIMIT, INVITE_BONUS_PAGES: '3' });
+    const { code, body } = await inviteCode(env);
+    assert.equal(body.pages_per_friend, 3);
+    await claim(env, FRIEND, code);
+    await createPage(env, FRIEND, 'friend-page');
+    assert.equal(await pageLimit(env, INVITER), 8);
+  });
+
+  it('INVITE_BONUS_PAGES=0 turns the bonus off, and /api/me says so', async () => {
+    const env = await setUp({ ...PAGE_LIMIT, INVITE_BONUS_PAGES: '0' });
+    const { code, body } = await inviteCode(env);
+    assert.equal(body.pages_per_friend, 0);
+    await claim(env, FRIEND, code);
+    await createPage(env, FRIEND, 'friend-page');
+    assert.equal(await pageLimit(env, INVITER), 5);
+    const meBody = await (await call(me, env, INVITER, 'GET', '/api/me')).json();
+    assert.equal(meBody.invite_pages_per_friend, 0);
+  });
+
+  it('a value that is not a whole number keeps 2', async () => {
+    for (const value of ['', 'two', '-1', '1.5']) {
+      const env = await setUp({ ...PAGE_LIMIT, INVITE_BONUS_PAGES: value });
+      assert.equal((await inviteCode(env)).body.pages_per_friend, 2, value);
+    }
+  });
+
   it('counts toward the enforced cap: 5 pages + 1 friend lets a 6th page in', async () => {
     const env = await setUp({ ...PAGE_LIMIT, LIMITS_ENFORCED: 'on' });
     for (let i = 0; i < 5; i++) await createPage(env, INVITER, `own-${i}`);
@@ -197,5 +227,61 @@ describe('invites and account delete', () => {
     assert.equal(response.status, 200);
     assert.deepEqual(await query(env, 'SELECT * FROM invite_codes'), []);
     assert.deepEqual(await query(env, 'SELECT * FROM friend_invites'), []);
+  });
+});
+
+describe('the event hook hears invite.rewarded', () => {
+  let originalFetch;
+  let sent;
+
+  async function setUpWithHook() {
+    sent = [];
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      if (url !== HOOK.EVENT_HOOK_URL) throw new Error(`unexpected fetch ${url}`);
+      sent.push(JSON.parse(init.body));
+      return new Response(null, { status: 200 });
+    };
+    return setUp({ ...PAGE_LIMIT, ...HOOK });
+  }
+
+  function rewardMessages() {
+    return sent.filter(message => message.type === INVITE_REWARDED)
+      .map(message => message.data);
+  }
+
+  afterEach(() => {
+    if (originalFetch) globalThis.fetch = originalFetch;
+    originalFetch = null;
+  });
+
+  it("on the friend's first page, once", async () => {
+    const env = await setUpWithHook();
+    await claim(env, FRIEND, (await inviteCode(env)).code);
+    assert.deepEqual(rewardMessages(), []);
+    await createPage(env, FRIEND, 'page-a');
+    await createPage(env, FRIEND, 'page-b');
+    assert.deepEqual(rewardMessages(), [{ inviter_id: INVITER.id, friend_id: FRIEND.id }]);
+  });
+
+  it('when a friend who already saved a page takes the code', async () => {
+    const env = await setUpWithHook();
+    await createPage(env, FRIEND, 'page-a');
+    await claim(env, FRIEND, (await inviteCode(env)).code);
+    assert.deepEqual(rewardMessages(), [{ inviter_id: INVITER.id, friend_id: FRIEND.id }]);
+  });
+
+  it('never for a page with no invite behind it', async () => {
+    const env = await setUpWithHook();
+    await createPage(env, INVITER, 'own-page');
+    assert.deepEqual(rewardMessages(), []);
+  });
+
+  it('even when the bonus pages are off', async () => {
+    const env = await setUpWithHook();
+    env.INVITE_BONUS_PAGES = '0';
+    await claim(env, FRIEND, (await inviteCode(env)).code);
+    await createPage(env, FRIEND, 'page-a');
+    assert.equal(rewardMessages().length, 1);
   });
 });

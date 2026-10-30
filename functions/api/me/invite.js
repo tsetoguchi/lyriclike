@@ -1,12 +1,14 @@
 // GET  /api/me/invite  this account's invite link and how many friends joined
 // POST /api/me/invite  a new account says which invite link brought it here
 //
-// A friend counts once they save a page; then both sides get extra pages.
+// A friend counts once they save a page; then both sides get extra pages, and
+// the event hook hears invite.rewarded.
 
 import {
-  BONUS_PAGES_PER_FRIEND, MAX_REWARDED_FRIENDS, claimInvite, countRewardedFriends,
+  MAX_REWARDED_FRIENDS, bonusPagesPerFriend, claimInvite, countRewardedFriends,
   findOrCreateInviteCode, isCodeShaped,
 } from '../../_friend-invites.js';
+import { queueInviteRewarded } from '../../_page-events.js';
 import { readJsonObject } from '../../_pages.js';
 import { jsonError, requireUser, writeLog } from '../../_shared.js';
 
@@ -23,7 +25,7 @@ export async function onRequestGet({ request, env }) {
   return Response.json({
     url: link.href,
     friends_joined: await countRewardedFriends(env, user.id),
-    pages_per_friend: BONUS_PAGES_PER_FRIEND,
+    pages_per_friend: bonusPagesPerFriend(env),
     max_friends: MAX_REWARDED_FRIENDS,
   });
 }
@@ -31,7 +33,8 @@ export async function onRequestGet({ request, env }) {
 // An unknown code, the account's own, or an account too old to be new all
 // answer claimed: false. The browser forgets the code either way. rewarded
 // says the friend had already saved a page, so the pages are theirs now.
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   const { user, response } = await requireUser(request, env);
   if (response) return response;
 
@@ -39,9 +42,11 @@ export async function onRequestPost({ request, env }) {
   if (!body || !isCodeShaped(body.code)) {
     return jsonError(HTTP_BAD_REQUEST, 'bad_code', 'That invite link is not valid.');
   }
-  const { isClaimed, isRewarded } = await claimInvite(env, user.id, body.code, Date.now());
+  const { isClaimed, isRewarded, inviterId } = await claimInvite(
+    env, user.id, body.code, Date.now());
   if (isClaimed) await writeLog(env, request, { userId: user.id, event: 'friend_invite_claimed' });
+  if (isRewarded) queueInviteRewarded(context, inviterId, user.id);
   return Response.json({
-    claimed: isClaimed, rewarded: isRewarded, pages_per_friend: BONUS_PAGES_PER_FRIEND,
+    claimed: isClaimed, rewarded: isRewarded, pages_per_friend: bonusPagesPerFriend(env),
   });
 }

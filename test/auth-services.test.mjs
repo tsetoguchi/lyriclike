@@ -96,7 +96,7 @@ describe('/api/me', () => {
     assert.deepEqual(body, {
       id: 'google-1', email: 'ann@example.com', name: 'Ann', has_password: false, providers: ['google'],
       can_share: false, page_count: 0, page_limit: null, people_limit: null,
-      limits_enforced: false, extension_script_url: null,
+      limits_enforced: false, invite_pages_per_friend: 2, extension_script_url: null,
     });
     assert.strictEqual(body.has_password, false);
   });
