@@ -1165,7 +1165,6 @@ async function askToLogOutAnyway() {
   });
   return answer === true;
 }
-window.confirmSignOut = confirmSignOut;
 
 // The sample verse is not the visitor's writing, so it goes out as an empty
 // page. The answer is only used if its page is still the one open: a slow
@@ -1562,6 +1561,15 @@ function updatePanelHeader() {
   announcePageIfChanged();
 }
 
+// A title saved somewhere else: by a co-writer in the live room, or found by
+// the poll (sharing.js).
+function takeRemoteTitle(title) {
+  currentTitle = title;
+  updatePanelHeader();
+  saveDraft();
+  refreshListIfBehind();
+}
+
 // escapeHtml lives in app.js. These three scripts share one global scope, so a
 // second copy here does not shadow anything — it replaces app.js's version for
 // app.js's own callers too, because this file loads last. That collision has
@@ -1818,10 +1826,6 @@ document.getElementById('sidebar').addEventListener('click', event => {
 applyListFolds();
 loadLyricsList();
 
-// Expose state for autosave (step 6).
-window.getLyricState = () => ({ id: currentLyricId, title: currentTitle });
-window.clearLyricState = clearLyricState;
-
 // ── The open page, for the extension hook (extensions.js) ──
 
 function currentPageSummary() {
@@ -1930,10 +1934,6 @@ function replaceWholePage(words) {
   }, words);
 }
 
-window.currentPageSummary = currentPageSummary;
-window.openPageById = openPageById;
-window.replaceWholePage = replaceWholePage;
-
 function showLiveIndicator(text) {
   const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
   setSaveIndicator(isOffline ? '' : text);
@@ -1961,12 +1961,7 @@ window.livePage = {
     clearOfflineNotice();
     showSaved();
   },
-  onTitle(title) {
-    currentTitle = title;
-    updatePanelHeader();
-    saveDraft();
-    refreshListIfBehind();
-  },
+  onTitle: takeRemoteTitle,
   isTitleFocused: () => document.activeElement === titleEl,
   // Unsaved words become a page of the writer's own, as with a REST save.
   onUnavailable({ hasUnsaved }) {
@@ -1994,6 +1989,38 @@ window.livePage = {
     isRoomReadOnly = isReadOnly;
     document.getElementById('lyrics').readOnly = isReadOnly;
   },
+};
+
+// The open page, for the scripts that load after this one (sharing.js,
+// extensions.js, auth.js, save-nudge.js). They go through this object, not
+// this file's globals, so its state has one way in.
+window.OpenPage = {
+  get id() { return currentLyricId; },
+  get title() { return currentTitle; },
+  get revision() { return currentRevision; },
+  get role() { return currentPageInfo.role; },
+  get ownerName() { return currentPageInfo.ownerName; },
+  get shareCount() { return currentPageInfo.shareCount; },
+  get isLiveDraft() { return isLiveDraft; },
+  isSaving: () => saveInFlight !== null || pendingConflict !== null,
+  hasUnsavedEdits,
+  isSampleShowing,
+  summary: currentPageSummary,
+  setShareCount(count) {
+    currentPageInfo.shareCount = count;
+    saveDraft();
+  },
+  takeTitle: takeRemoteTitle,
+  show: showLyric,
+  load: loadLyric,
+  openById: openPageById,
+  replaceWhole: replaceWholePage,
+  saveDraft,
+  drop: dropUnavailablePage,
+  goLiveWhenSaved,
+  goLiveAfterShare,
+  confirmSignOut,
+  clear: clearLyricState,
 };
 
 // Signing out must not leave the last account's lyric on screen, in the

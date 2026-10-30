@@ -50,7 +50,7 @@ function loadPage({ local = fakeStorage(), text = '', isSample = false } = {}) {
     document,
     localStorage: local,
     sessionStorage: fakeStorage(),
-    isSampleShowing: () => isSample,
+    OpenPage: { isSampleShowing: () => isSample },
     trackEvent: (name, params) => events.push({ name, ...params }),
     openSignIn: (entry) => signIns.push(entry),
   };

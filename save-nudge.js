@@ -60,7 +60,7 @@
   function isNudgeDue(minLines) {
     if (window.currentUser !== null || !keepButtonEl.hidden) return false;
     if (timesShown() >= MAX_SHOWS || wasShownThisVisit()) return false;
-    if (!noticeEl.hidden || isSampleShowing()) return false;
+    if (!noticeEl.hidden || window.OpenPage.isSampleShowing()) return false;
     return countWrittenLines(lyricsEl.value) >= minLines;
   }
 

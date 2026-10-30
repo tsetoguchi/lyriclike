@@ -1,9 +1,10 @@
 // Sharing a page by email: the Share button and dialog, the "Shared by" line,
 // the links in invite mail, and the poll that brings in other people's saves.
-// Loads after storage.js and reads its page state (currentLyricId,
-// currentRevision, currentPageInfo, ...): the scripts share one global scope.
+// Loads after storage.js and reads the open page through its OpenPage.
 (function initSharing() {
   'use strict';
+
+  const openPage = window.OpenPage;
 
   // A page id from a link waits here while the person signs in. Every way in
   // leaves the page (Google is a full redirect; the confirm link opens a new
@@ -70,16 +71,16 @@
   // ── The Share button and the line under the title ──
 
   function isShared() {
-    return currentPageInfo.role === 'editor' || currentPageInfo.shareCount > 0;
+    return openPage.role === 'editor' || openPage.shareCount > 0;
   }
 
   function sharingLine() {
-    if (currentPageInfo.role === 'editor') {
-      const owner = currentPageInfo.ownerName || 'someone';
+    if (openPage.role === 'editor') {
+      const owner = openPage.ownerName || 'someone';
       // "Tao S.": live-presence.js loads after this file and holds the rule.
       return `Shared by ${window.LivePresence ? window.LivePresence.shortNameOf(owner) : owner}`;
     }
-    const count = currentPageInfo.shareCount;
+    const count = openPage.shareCount;
     if (count === 0) return '';
     return `Shared with ${count} ${count === 1 ? 'person' : 'people'}`;
   }
@@ -95,10 +96,10 @@
   function refreshPageSharing() {
     const signedIn = Boolean(window.currentUser);
     const button = byId('share-btn');
-    const isEditor = currentPageInfo.role === 'editor';
+    const isEditor = openPage.role === 'editor';
     // An already-shared page keeps the button, so its owner can still see
     // and remove people with sharing paused.
-    button.hidden = !signedIn || currentRevision === null || (!isEditor && !isShared() && !canShare());
+    button.hidden = !signedIn || openPage.revision === null || (!isEditor && !isShared() && !canShare());
     button.innerHTML = (isEditor ? PEOPLE_BUTTON_ICON : SHARE_BUTTON_ICON)
       + `<span>${isEditor ? 'People' : 'Share'}</span>`;
     // Phones hide the title row, so they get a copy of the button above the words.
@@ -308,9 +309,8 @@
         onRemove: isOwner ? () => removePerson(person.email) : null,
       }));
     }
-    if (isOwner && page.id === currentLyricId && currentPageInfo.shareCount !== data.people.length) {
-      currentPageInfo.shareCount = data.people.length;
-      saveDraft();
+    if (isOwner && page.id === openPage.id && openPage.shareCount !== data.people.length) {
+      openPage.setShareCount(data.people.length);
       refreshPageSharing();
     }
     if (data.can_share) setTimeout(() => emailInput.focus(), FOCUS_DELAY_MS);
@@ -370,8 +370,8 @@
         if (data.emailed) showResult(`Shared with ${data.email}.`);
         else showResult(notEmailedText(data.email_limit));
         // The page on the owner's screen goes live now, without a reload.
-        const isOpenPageLive = data.live && page.id === currentLyricId;
-        if (isOpenPageLive && typeof goLiveAfterShare === 'function') await goLiveAfterShare(page.id);
+        const isOpenPageLive = data.live && page.id === openPage.id;
+        if (isOpenPageLive) await openPage.goLiveAfterShare(page.id);
       }
       emailInput.value = '';
       await loadPeople();
@@ -432,7 +432,7 @@
   overlay.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); closeShareDialog(); }
   });
-  const openForCurrentPage = () => openShareDialog(currentLyricId, currentTitle);
+  const openForCurrentPage = () => openShareDialog(openPage.id, openPage.title);
   byId('share-btn').addEventListener('click', openForCurrentPage);
   byId('page-sharing').addEventListener('click', openForCurrentPage);
   if (byId('share-btn-phone')) byId('share-btn-phone').addEventListener('click', openForCurrentPage);
@@ -477,7 +477,7 @@
   }
 
   async function openSharedPage(id, to) {
-    const status = await loadLyric(id);
+    const status = await openPage.load(id);
     if (status === HTTP_NOT_FOUND) {
       showNotice(notAvailableText(to), [
         { label: 'Log out', onClick: () => { hideNotice(); signOut(); } },
@@ -486,8 +486,8 @@
     }
     if (status !== HTTP_OK) return;
     loadLyricsList();
-    if (currentPageInfo.role === 'editor') {
-      showNotice(`${currentPageInfo.ownerName || 'Someone'} shared this with you.`);
+    if (openPage.role === 'editor') {
+      showNotice(`${openPage.ownerName || 'Someone'} shared this with you.`);
     }
   }
 
@@ -570,10 +570,9 @@
 
   function checkWanted() {
     // A live page, or one waiting to reopen live, gets other people's edits
-    // from its room, not the poll. storage.js's live names are read behind
-    // typeof: a tab can hold an older cached storage.js without them.
-    return Boolean(window.currentUser) && currentRevision !== null && !document.hidden
-      && !(typeof isLiveDraft !== 'undefined' && isLiveDraft);
+    // from its room, not the poll.
+    return Boolean(window.currentUser) && openPage.revision !== null && !document.hidden
+      && !openPage.isLiveDraft;
   }
 
   function pollingWanted() {
@@ -590,8 +589,8 @@
   }
 
   function isBusy() {
-    return Date.now() - lastTyped < TYPING_QUIET_MS || hasUnsavedEdits()
-      || saveInFlight !== null || pendingConflict !== null;
+    return Date.now() - lastTyped < TYPING_QUIET_MS || openPage.hasUnsavedEdits()
+      || openPage.isSaving();
   }
 
   async function pollOnce() {
@@ -608,7 +607,7 @@
   // takes those words if so. thenAgain runs while the page is still one to
   // check: not once it's gone, signed out or live.
   async function checkForNewerSave(thenAgain) {
-    const id = currentLyricId;
+    const id = openPage.id;
     let res;
     try {
       res = await fetch(`/api/lyrics/${id}?meta=1`);
@@ -616,12 +615,12 @@
       thenAgain();
       return;
     }
-    if (id !== currentLyricId) return;
+    if (id !== openPage.id) return;
     if (res.status === HTTP_UNAUTHORIZED) return;
     if (res.status === HTTP_NOT_FOUND) {
       // Deleted, or this person was taken off it. There are no unsaved edits
       // (the check waits for those), so nothing needs keeping.
-      dropUnavailablePage();
+      openPage.drop();
       loadLyricsList();
       return;
     }
@@ -629,10 +628,9 @@
       const meta = await res.json();
       // The page went live (shared from another device, or the switch turned
       // on): its room takes over from the poll.
-      if (meta.live && typeof goLiveWhenSaved === 'function') return goLiveWhenSaved();
-      if (meta.live && typeof goLiveFromRest === 'function') return goLiveFromRest();
-      if (meta.revision > currentRevision) await takeTheirWords(id);
-      else if (meta.title !== currentTitle) takeTheirTitle(meta.title);
+      if (meta.live) return openPage.goLiveWhenSaved();
+      if (meta.revision > openPage.revision) await takeTheirWords(id);
+      else if (meta.title !== openPage.title) takeTheirTitle(meta.title);
     }
     thenAgain();
   }
@@ -652,7 +650,7 @@
     }
   }
 
-  // showLyric sets the saved text and revision before the input event, so the
+  // openPage.show sets the saved text and revision before the input event, so the
   // swap is not saved back as if typed here. The cursor keeps its place in
   // the text as best it can.
   async function takeTheirWords(id) {
@@ -662,14 +660,14 @@
     } catch {
       return;
     }
-    if (!res.ok || id !== currentLyricId || isBusy()) return;
+    if (!res.ok || id !== openPage.id || isBusy()) return;
     const lyric = await res.json();
 
     const textarea = byId('lyrics');
     const focused = document.activeElement === textarea;
     const { selectionStart, selectionEnd } = textarea;
-    showLyric(lyric);
-    saveDraft();
+    openPage.show(lyric);
+    openPage.saveDraft();
     if (focused) {
       const end = textarea.value.length;
       textarea.setSelectionRange(Math.min(selectionStart, end), Math.min(selectionEnd, end));
@@ -679,10 +677,7 @@
 
   function takeTheirTitle(title) {
     if (document.activeElement === byId('lyrics-panel-title')) return;
-    currentTitle = title;
-    updatePanelHeader();
-    saveDraft();
-    refreshListIfBehind();
+    openPage.takeTitle(title);
   }
 
   // Any sign of life speeds a slowed poll back up, or restarts a stopped one.
