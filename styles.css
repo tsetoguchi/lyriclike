@@ -2919,20 +2919,85 @@ body:not(.signed-in) .invite-btn {
   display: none;
 }
 
-.account-menu-heading {
-  padding: var(--space-1) var(--space-4);
-  font-size: var(--text-caption-2);
-  color: var(--ink-faded);
+/* The menu's two pages. Only the shown one takes room; the other lies over
+   it, slid a little to its side and faded, so switching reads as turning
+   a page: the account page leaves left, Legal comes in from the right. */
+.account-menu-views {
+  position: relative;
+  overflow: hidden;
+  transition: height var(--duration-slow) var(--ease-glide);
 }
 
-/* The rows sit in the group as if the slot weren't there. */
-.account-menu-links {
-  display: contents;
+.account-menu-view {
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform var(--duration-slow) var(--ease-glide),
+    opacity var(--duration-slow) var(--ease-glide),
+    visibility 0s;
 }
 
-/* No icon, so the text lines up with the other rows' text instead. */
-a.account-menu-link {
-  padding-left: calc(var(--space-4) * 2 + var(--space-3));
+.account-menu-view:not(.is-current) {
+  position: absolute;
+  inset: 0 0 auto;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform var(--duration-slow) var(--ease-glide),
+    opacity var(--duration-slow) var(--ease-glide),
+    visibility 0s linear var(--duration-slow);
+}
+
+#account-menu-main:not(.is-current) {
+  transform: translateX(-30%);
+}
+
+#account-menu-legal:not(.is-current) {
+  transform: translateX(30%);
+}
+
+.account-menu-views.is-instant,
+.account-menu-views.is-instant .account-menu-view {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-menu-views,
+  .account-menu-view,
+  .account-menu-view:not(.is-current) {
+    transition: opacity var(--duration-base) ease-out, visibility 0s;
+  }
+
+  #account-menu-main:not(.is-current),
+  #account-menu-legal:not(.is-current) {
+    transform: none;
+  }
+}
+
+/* Says a row opens another page, as the notebook's groups do. */
+.account-menu-chevron {
+  flex-shrink: 0;
+  width: var(--space-4);
+  height: var(--space-4);
+  margin-left: auto;
+  fill: none;
+  stroke: var(--ink-faded);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The second page's title doubles as the way back. */
+.account-menu-back {
+  font-weight: var(--weight-bold);
+}
+
+.account-menu-back .account-menu-icon {
+  stroke: var(--ink);
+}
+
+a.account-menu-item {
   text-decoration: none;
 }
 

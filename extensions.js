@@ -69,8 +69,8 @@
   }
 
   // The fine print links: in the sign-in dialog, at the foot of the
-  // notebook (shown only signed out), and in the account menu's Legal group.
-  // Each holds the Privacy link until a script replaces what's in it.
+  // notebook (shown only signed out), and on the account menu's Legal page.
+  // Each holds the Privacy link until a script adds to it or replaces it.
   function authFinePrintSlot() {
     return document.getElementById(AUTH_FINE_PRINT_SLOT_ID);
   }
