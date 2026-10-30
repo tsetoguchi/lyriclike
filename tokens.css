@@ -144,6 +144,9 @@
   --editor-font-size: var(--text-body);
   --line-pitch: 28px;
   --editor-pad: 20px;
+  /* How far up from the editor's bottom edge lines fade out when more of the
+     page is below. */
+  --editor-fade-height: 48px;
   /* Set from the measured bar in app.js; zero wherever the bar is hidden. */
   --bottom-nav-height: 0px;
   --border-focus: #8b96a6;

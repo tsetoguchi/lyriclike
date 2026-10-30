@@ -6,6 +6,9 @@ const LOOKUP_NOT_IN_DICTIONARY = 'not_in_dictionary';
 const POLL_INTERVAL_MS = 300;
 const PASTE_DELAY_MS = 0;
 const MIN_WORD_LENGTH = 2;
+// A pixel of slack: zoomed pages report fractional heights, and a page scrolled
+// to its end can still read as a hair short of it.
+const EDITOR_FADE_SLACK_PX = 1;
 // A group opens on its best words and keeps the rest behind "Show all".
 const INITIAL_RESULTS_PER_GROUP = 30;
 const BURIED_TIER = 'buried';
@@ -1137,6 +1140,7 @@ function resizeEditorToContent() {
   textareaEl.style.height = Math.max(contentHeight, floor) + 'px';
 
   lyricsAreaEl.scrollTop = scrollTop;
+  updateEditorFade();
 }
 
 // Where the caret's line sits inside the editor, measured from the top of the
@@ -1512,6 +1516,7 @@ if (document.fonts && document.fonts.ready) {
   });
 }
 lyricsAreaEl.addEventListener('scroll', handleEditorScrollForNav, { passive: true });
+lyricsAreaEl.addEventListener('scroll', updateEditorFade, { passive: true });
 
 resultsEl.addEventListener('click', function handleResultsClick(event) {
   const clicked = event.target;
@@ -1968,6 +1973,13 @@ document.addEventListener('keydown', handleRhymesMenuKey);
 // came back over the writing and stayed there. Position cannot be argued with.
 function handleEditorScrollForNav() {
   setBottomNavDucked(lyricsAreaEl.scrollTop > 0);
+}
+
+// Fades the bottom edge only while some of the page is still below it.
+function updateEditorFade() {
+  const hiddenBelow = lyricsAreaEl.scrollHeight - lyricsAreaEl.scrollTop -
+    lyricsAreaEl.clientHeight;
+  lyricsAreaEl.classList.toggle('has-more-below', hiddenBelow > EDITOR_FADE_SLACK_PX);
 }
 
 // The bar floats over the editor, so the editor has to know how much of its

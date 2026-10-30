@@ -1889,6 +1889,26 @@ header .nav-icon circle {
   scrollbar-width: none;
 }
 
+/* With the scrollbar hidden, a line cut off at the bottom edge looks like the
+   end of the page. Fading it says there is more below; a page that ends on
+   screen keeps its last line sharp. Registered so the fade eases in and out
+   instead of popping. */
+@property --editor-fade {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.lyrics-area {
+  mask-image: linear-gradient(to bottom,
+    #000 calc(100% - var(--editor-fade)), transparent);
+  transition: --editor-fade var(--duration-base);
+}
+
+.lyrics-area.has-more-below {
+  --editor-fade: var(--editor-fade-height);
+}
+
 /* The placeholder is kept for screen readers and to tell CSS the page is
    blank; the greeting below is what shows. */
 #lyrics::placeholder {
