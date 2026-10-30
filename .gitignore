@@ -10,6 +10,10 @@
 !.claude/skills/
 CLAUDE.local.md
 
+# Codex (local config and its copy of the skills)
+.agents/
+.codex/
+
 # Temp files
 *.tmp.*
 
@@ -26,6 +30,10 @@ content/
 # Screenshots / QA artifacts
 *.png
 !assets/**/*.png
+
+# Full-size icon sources (the sized copies are tracked)
+assets/icons/icon-v3.png
+assets/lyriclike no bg.png
 
 # Design reference images (third-party, not for redistribution)
 design_ideas/
