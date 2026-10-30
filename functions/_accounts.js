@@ -1,6 +1,7 @@
 // Account lookups and the session hand-off shared by the password routes, the
 // Google callback and /api/me.
 
+import { bonusPagesPerFriend } from './_friend-invites.js';
 import { findLimits, isLimitsEnforced } from './_limits.js';
 import { isLiveFor } from './_live.js';
 import {
@@ -61,6 +62,8 @@ export async function describeAccount(env, userId) {
     page_limit: limits.pageLimit,
     people_limit: limits.peopleLimit,
     limits_enforced: isLimitsEnforced(env),
+    // At 0 a friend earns no pages, so the Invite button has nothing to offer.
+    invite_pages_per_friend: bonusPagesPerFriend(env),
     extension_script_url: extensionScriptUrl(env),
   };
 }

@@ -5,7 +5,9 @@ import { closeRoom, coWritersClause, evictFromRoom, isLivePage, isPausedFor } fr
 import {
   LIVE_COLUMNS, MAX_BODY_LENGTH, MAX_TITLE_LENGTH, findOpenable, notFound, paused, readJsonObject,
 } from '../../_pages.js';
-import { queuePageDeleted, queuePageSaved, snapshot, writeWithBefore } from '../../_page-events.js';
+import {
+  queueInviteRewarded, queuePageDeleted, queuePageSaved, snapshot, writeWithBefore,
+} from '../../_page-events.js';
 import { CAN_OPEN, canOpenParams } from '../../_shares.js';
 
 const HTTP_OVER_LIMIT = 402;
@@ -160,7 +162,8 @@ async function createLyric(context, id, user, { title = '', body }, now) {
     ON CONFLICT(id) DO NOTHING
   `).bind(id, user.id, title, body, now, now, cap, user.id, cap).run();
   if (created.meta.changes > 0) {
-    await rewardFriendInvite(env, user.id, now);
+    const inviterId = await rewardFriendInvite(env, user.id, now);
+    if (inviterId) queueInviteRewarded(context, inviterId, user.id);
     queuePageSaved(context, {
       pageId: id, ownerId: user.id, writerIds: [user.id], reason: 'edit',
       before: null, after: snapshot({ title, body, revision: 0, updated_at: now }),

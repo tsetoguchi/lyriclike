@@ -1,4 +1,4 @@
-// The messages the page routes send through the event hook. Each is queued
+// The messages the page and invite routes send through the event hook. Each is queued
 // after the D1 write has landed, so it never slows or fails the request.
 import { isEventHookSet, sendEvent } from './_event-hook.js';
 import { writeLog } from './_shared.js';
@@ -43,4 +43,10 @@ export function queuePageDeleted(context, pageId) {
 export function queueAccountDeleted(context, userId, pageIds) {
   if (!isEventHookSet(context.env)) return;
   queue(context, 'account.deleted', { user_id: userId, page_ids: pageIds });
+}
+
+// A friend's first page has rewarded their invite. Sent once per friend.
+export function queueInviteRewarded(context, inviterId, friendId) {
+  if (!isEventHookSet(context.env)) return;
+  queue(context, 'invite.rewarded', { inviter_id: inviterId, friend_id: friendId });
 }
