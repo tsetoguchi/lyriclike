@@ -1130,13 +1130,22 @@ header .nav-icon circle {
   }
 }
 
-/* The title row's buttons are .tip-pills that slide down instead of up:
-   the row is the top of the panel, where a name above would be cut off. */
+/* The title row's buttons name themselves like the header's switches: a
+   card that eases in below, since a name above would be cut off by the
+   panel's top edge. */
 .page-action-btn .tip-btn-label {
   top: calc(100% + var(--space-2));
   bottom: auto;
   z-index: var(--z-bar);
-  transform: translate(-50%, calc(-1 * var(--space-2)));
+  padding: var(--space-1) var(--space-2);
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-popup);
+  color: var(--ink);
+  font-size: var(--text-caption-1);
+  transform: translate(-50%, calc(-1 * var(--space-1)));
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
 }
 
 /* Switches held in one pill, as in the header: a switch that is on gets a
