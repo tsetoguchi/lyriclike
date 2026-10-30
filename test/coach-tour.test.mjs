@@ -114,9 +114,17 @@ function loadTour({ isTouch = false } = {}) {
   return { sandbox, els, parts, events, timers, document };
 }
 
-function openSampleTour(page) {
-  page.sandbox.window.startCoachTour('sample');
+// The tour's timer starts once the modules have run, which DOMContentLoaded
+// marks; the await lets that promise's callback land.
+async function finishLoading(page) {
+  page.document.fire('DOMContentLoaded');
+  await Promise.resolve();
   page.timers.forEach((callback) => callback());
+}
+
+async function openSampleTour(page) {
+  page.sandbox.window.startCoachTour('sample');
+  await finishLoading(page);
 }
 
 function pressNextUntilTitle(page, title) {
@@ -125,51 +133,67 @@ function pressNextUntilTitle(page, title) {
   }
 }
 
-describe('the sample tour rhyme step', () => {
-  it('asks for a click and hides Next until it is done', () => {
+describe('the tour start', () => {
+  it('waits for the modules before it opens', () => {
     const page = loadTour();
-    openSampleTour(page);
+    page.sandbox.window.startCoachTour('sample');
+    assert.deepEqual(page.timers, []);
+  });
+
+  it('stays shut when an invite link, read by a later module, holds it', async () => {
+    const page = loadTour();
+    page.sandbox.window.startCoachTour('sample');
+    page.sandbox.window.isTourHeld = true;
+    await finishLoading(page);
+    assert.equal(page.els['coach-tour'].hidden, true);
+  });
+});
+
+describe('the sample tour rhyme step', () => {
+  it('asks for a click and hides Next until it is done', async () => {
+    const page = loadTour();
+    await openSampleTour(page);
     pressNextUntilTitle(page, 'Try a rhyme');
     assert.equal(page.els['coach-title'].textContent, 'Try a rhyme');
     assert.match(page.els['coach-text'].textContent, /^Click "door" to see what rhymes/);
     assert.equal(page.els['coach-next'].hidden, true);
   });
 
-  it('says tap on a touch screen', () => {
+  it('says tap on a touch screen', async () => {
     const page = loadTour({ isTouch: true });
-    openSampleTour(page);
+    await openSampleTour(page);
     pressNextUntilTitle(page, 'Try a rhyme');
     assert.match(page.els['coach-text'].textContent, /^Tap "door"/);
   });
 
-  it('moves on when the editor reports a rhyme pick', () => {
+  it('moves on when the editor reports a rhyme pick', async () => {
     const page = loadTour();
-    openSampleTour(page);
+    await openSampleTour(page);
     pressNextUntilTitle(page, 'Try a rhyme');
     page.document.fire(RHYMES_PICKED);
     assert.equal(page.els['coach-title'].textContent, 'Rhymes');
     assert.equal(page.els['coach-next'].hidden, false);
   });
 
-  it('ignores a rhyme pick on any other step', () => {
+  it('ignores a rhyme pick on any other step', async () => {
     const page = loadTour();
-    openSampleTour(page);
+    await openSampleTour(page);
     const firstTitle = page.els['coach-title'].textContent;
     page.document.fire(RHYMES_PICKED);
     assert.equal(page.els['coach-title'].textContent, firstTitle);
   });
 
-  it('is not skipped by the right arrow key', () => {
+  it('is not skipped by the right arrow key', async () => {
     const page = loadTour();
-    openSampleTour(page);
+    await openSampleTour(page);
     pressNextUntilTitle(page, 'Try a rhyme');
     page.document.fire('keydown', { key: 'ArrowRight', target: {} });
     assert.equal(page.els['coach-title'].textContent, 'Try a rhyme');
   });
 
-  it('takes one step for the numbers and letters, not three', () => {
+  it('takes one step for the numbers and letters, not three', async () => {
     const page = loadTour();
-    openSampleTour(page);
+    await openSampleTour(page);
     const stepCount = page.events.find((each) => each.name === 'tour_started').params.steps;
     assert.equal(stepCount, 6);
   });

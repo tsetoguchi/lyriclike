@@ -27,6 +27,10 @@
   const PLACE_CORNER = 'corner';
   const PLACE_HEADER = 'header';
   const COPIED_LABEL = 'Copied';
+  // Made while this module runs, which is always before DOMContentLoaded.
+  const modulesRun = new Promise(done => {
+    document.addEventListener('DOMContentLoaded', done, { once: true });
+  });
 
   const TEXT = Object.freeze({
     howItWorks: perFriend => `When a friend signs up with your link and saves a page, `
@@ -75,15 +79,10 @@
     }
   }
 
-  function whenDocumentParsed() {
-    if (document.readyState !== 'loading') return Promise.resolve();
-    return new Promise(done => document.addEventListener('DOMContentLoaded', done, { once: true }));
-  }
-
   // extensions.js comes after this file, and the extension script loads after
   // the sign-in check, so a dialog that speaks for it waits for both.
   async function whenExtensionsSettled() {
-    await whenDocumentParsed();
+    await modulesRun;
     const hooks = window.siteExtensions;
     if (hooks && typeof hooks.whenSettled === 'function') await hooks.whenSettled();
   }

@@ -4,10 +4,11 @@
 // a module that sets nothing on window can't be something another script
 // waits for.
 //
-// The live scripts are the exception: they set names that classic scripts
-// read. A classic script reaches them only as window.X, so a read before the
-// module runs gets undefined rather than a ReferenceError, and storage.js
-// opens pages only after DOMContentLoaded, which waits for the modules.
+// The live, limits, invite and extension scripts are the exception: they set
+// names that classic scripts read. A classic script reaches them only as
+// window.X, so a read before the module runs gets undefined rather than a
+// ReferenceError, and storage.js opens pages and coach-tour.js opens the tour
+// only after DOMContentLoaded, which waits for the modules.
 //
 //   node --test "test/*.test.mjs"
 
@@ -18,6 +19,7 @@ import { describe, it } from 'node:test';
 import { APP_SCRIPTS, MODULE_SCRIPTS } from './support/app-scripts.mjs';
 
 const CONVERTED = [
+  'limits.js', 'friend-invite.js', 'slot-inputs.js', 'extensions.js',
   'in-app-browser.js', 'account-menu-views.js', 'sample-start.js', 'save-nudge.js',
   'whats-new.js', 'live-core.js', 'live-binding.js', 'live-store.js',
   'live-presence-view.js', 'live.js', 'feedback-box.js', 'back-button.js', 'rail-tips.js',
@@ -26,6 +28,10 @@ const IMPORT_LINE = /^import \{([^}]+)\} from '\.\/([^']+\.js)';\r?$/gm;
 const RETIRED_WINDOW_NAMES = ['closeFeedbackBox'];
 // Modules that still set names on window, and the names each one sets.
 const WINDOW_SETTERS = {
+  'limits.js': ['SiteLimits'],
+  'friend-invite.js': ['isTourHeld', 'setInviteOffer'],
+  'slot-inputs.js': ['SlotInputs'],
+  'extensions.js': ['siteExtensions'],
   'live-core.js': ['LiveCore'],
   'live-binding.js': ['LiveBinding'],
   'live-store.js': ['LiveStore'],
