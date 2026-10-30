@@ -919,4 +919,4 @@
   } else {
     root.Live = Live;
   }
-})(this);
+})(globalThis);

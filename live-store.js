@@ -108,4 +108,4 @@
   } else {
     root.LiveStore = LiveStoreApi;
   }
-})(this);
+})(globalThis);

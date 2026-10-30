@@ -188,4 +188,4 @@
   } else {
     root.LiveBinding = LiveBinding;
   }
-})(this);
+})(globalThis);
