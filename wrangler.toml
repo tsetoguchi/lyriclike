@@ -11,12 +11,14 @@ migrations_dir = "migrations"
 # Public values only; secrets are set in the Pages dashboard. The Turnstile site
 # key is public (the browser sees it), but each environment has its own
 # Turnstile site, because the server checks the token's hostname against
-# APP_BASE_URL.
+# APP_BASE_URL. FEEDBACK_EMAIL is where the sidebar's feedback box sends.
 [vars]
 TURNSTILE_SITE_KEY = "0x4AAAAAAFCbadlyB2I-_tMz"
+FEEDBACK_EMAIL = "tao@lyriclike.com"
 
 [env.preview.vars]
 TURNSTILE_SITE_KEY = "0x4AAAAAAFCbfbMHBxSFR0Yk"
+FEEDBACK_EMAIL = "tao@lyriclike.com"
 
 # Preview deployments (any branch or PR build) get their own database, so
 # testing a migration never touches real accounts or lyrics. Pages does not

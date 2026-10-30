@@ -321,8 +321,8 @@ describe('email', () => {
     assert.deepEqual(await events(env), ['email_skipped_pool_account']);
   });
 
-  it('keeps the three daily pools within the free plan of 100', () => {
-    assert.deepEqual(POOL_DAILY_LIMIT, { signup: 40, account: 30, invite: 30 });
+  it('keeps the daily pools within the free plan of 100', () => {
+    assert.deepEqual(POOL_DAILY_LIMIT, { signup: 40, account: 30, invite: 20, feedback: 10 });
     assert.deepEqual(Object.values(EMAIL_POOL).sort(), Object.keys(POOL_DAILY_LIMIT).sort());
     assert.equal(emailSkippedEvent('pool', EMAIL_POOL.INVITE), 'email_skipped_pool_invite');
     assert.equal(emailSkippedEvent('address', EMAIL_POOL.INVITE), 'email_skipped_address');
