@@ -14,7 +14,7 @@ import * as shares from '../functions/api/lyrics/[id]/shares.js';
 import * as lyricList from '../functions/api/lyrics/index.js';
 import * as account from '../functions/api/account.js';
 import * as me from '../functions/api/me.js';
-import { inviteStopToken, sendResetEmail } from '../functions/_email.js';
+import { POOL_DAILY_LIMIT, inviteStopToken, sendResetEmail } from '../functions/_email.js';
 import { sha256Hex } from '../functions/_shared.js';
 import {
   BASE_URL, GOOD_PASSWORD, addSession, events, latestToken, makeEnv, post, query, stubServices,
@@ -259,7 +259,8 @@ describe('invite limits', () => {
 
   it('emails ALERT_EMAIL once when the invite pool reaches 70% of its cap', async () => {
     env.ALERT_EMAIL = 'owner@example.com';
-    const threshold = Math.ceil(30 * 0.7);
+    const cap = POOL_DAILY_LIMIT.invite;
+    const threshold = Math.ceil(cap * 0.7);
     await setCounter('email:pool:invite', threshold - 2);
     await share(alice.sid, 'friend0@example.com');
     await share(alice.sid, 'friend1@example.com');
@@ -267,7 +268,7 @@ describe('invite limits', () => {
     const alerts = services.mail.filter(m => m.to[0] === 'owner@example.com');
 
     assert.equal(alerts.length, 1);
-    assert.match(alerts[0].subject, new RegExp(`invite email is at ${threshold} of 30`));
+    assert.match(alerts[0].subject, new RegExp(`invite email is at ${threshold} of ${cap}`));
     assert.deepEqual((await events(env)).filter(e => e === 'email_quota_warning'),
       ['email_quota_warning']);
   });

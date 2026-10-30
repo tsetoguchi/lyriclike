@@ -4288,15 +4288,16 @@ body.sidebar-open #sidebar-scrim {
   stroke-linejoin: round;
 }
 
-.sidebar-contact {
-  margin: 0;
-  padding: var(--space-3) var(--space-5);
+/* The notebook's last row: the feedback envelope, then the fine print. */
+.sidebar-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-top: var(--hairline) solid var(--margin-line);
-  color: var(--ink-faded);
-  font-size: var(--text-caption-1);
+  flex-shrink: 0;
 }
 
-.sidebar-contact a,
 .sidebar-links a,
 .auth-fine-print a {
   color: var(--ink-faded);
@@ -4305,7 +4306,6 @@ body.sidebar-open #sidebar-scrim {
   transition: color var(--duration-fast);
 }
 
-.sidebar-contact a:hover,
 .sidebar-links a:hover,
 .auth-fine-print a:hover {
   color: var(--ink);
@@ -4314,9 +4314,44 @@ body.sidebar-open #sidebar-scrim {
 /* Signed in, these links live in the account menu instead. */
 .sidebar-links {
   margin: 0;
-  padding: 0 var(--space-5) var(--space-3);
   color: var(--ink-faded);
   font-size: var(--text-caption-1);
+}
+
+/* ── Feedback box ── */
+
+/* Under the title, as a subtitle: closer to it than the gap below. */
+.modal-message.feedback-lead {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--ink-faded);
+}
+
+#feedback-sent .feedback-lead {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* The pill text box, grown into a card for a few lines of writing. */
+.modal-input.feedback-input {
+  height: auto;
+  min-height: calc(var(--tap-target) * 2.5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.feedback-note {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  padding-left: var(--space-4);
+  color: var(--ink-faded);
+  font-family: var(--font-ui);
+  font-size: var(--text-caption-1);
+}
+
+#feedback-form[hidden],
+#feedback-sent[hidden] {
+  display: none;
 }
 
 body.signed-in .sidebar-links {

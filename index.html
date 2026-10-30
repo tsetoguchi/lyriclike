@@ -54,8 +54,11 @@
     <div id="lyrics-list-items"></div>
     <div id="sidebar-slot" class="sidebar-slot"></div>
     <p id="page-count" class="sidebar-page-count" hidden></p>
-    <p class="sidebar-contact">Let me know what you think<br><a href="mailto:tao@lyriclike.com">tao@lyriclike.com</a></p>
-    <p class="sidebar-links" id="sidebar-foot-slot"><a href="/privacy/">Privacy</a></p>
+    <div class="sidebar-foot">
+      <button type="button" id="feedback-btn" class="icon-btn sidebar-toggle" aria-haspopup="dialog"
+              aria-label="Send feedback" title="Send feedback"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
+      <p class="sidebar-links" id="sidebar-foot-slot"><a href="/privacy/">Privacy</a></p>
+    </div>
   </aside>
   <div id="app-content">
   <header>
@@ -377,6 +380,35 @@
       </div>
     </div>
   </div>
+  <div id="feedback-overlay" class="modal-overlay" hidden>
+    <div id="feedback-panel" class="modal-panel" role="dialog" aria-modal="true"
+         aria-labelledby="feedback-title" aria-describedby="feedback-lead">
+      <button type="button" id="feedback-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
+      <div id="feedback-title" class="modal-header">Let me know what you think</div>
+      <form id="feedback-form" novalidate>
+        <div class="modal-body">
+          <p id="feedback-lead" class="modal-message feedback-lead">A bug, an idea, or something you like. It comes straight to me.</p>
+          <label class="visually-hidden" for="feedback-input">Your message</label>
+          <textarea id="feedback-input" class="modal-input feedback-input" maxlength="2000" rows="4"
+                    placeholder="“The rhymes didn't update after I changed a word.”"></textarea>
+          <p id="feedback-note" class="feedback-note"></p>
+          <div id="feedback-error" class="auth-error" aria-live="polite"></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="feedback-cancel" class="toggle-btn">Cancel</button>
+          <button type="submit" id="feedback-send" class="toggle-btn modal-confirm" disabled>Send</button>
+        </div>
+      </form>
+      <div id="feedback-sent" hidden>
+        <div class="modal-body">
+          <p class="modal-message feedback-lead">Thanks! I read every one.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="feedback-done" class="toggle-btn modal-confirm">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="auth-overlay" class="modal-overlay" hidden>
     <div id="auth-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button type="button" id="auth-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
@@ -460,6 +492,7 @@
   <script src="live-presence.js"></script>
   <script src="live-presence-view.js"></script>
   <script src="live.js"></script>
+  <script src="feedback-box.js"></script>
   <script src="back-button.js"></script>
   <script src="rail-tips.js"></script>
 </body>

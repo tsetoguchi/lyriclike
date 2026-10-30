@@ -12,12 +12,14 @@ export const SIGNUP_LINK_HOURS = 24;
 export const RESET_LINK_MINUTES = 30;
 
 // Mail per address per day, and a daily budget kept under Resend's free cap
-// of 100. Signup and invite mail each have their own pool, so abuse that gets
-// past Turnstile, or a burst of shares, cannot use up the quota that reset
-// mail depends on.
+// of 100. Signup, invite and feedback mail each have their own pool, so abuse
+// that gets past Turnstile, a burst of shares, or a flood of feedback cannot
+// use up the quota that reset mail depends on.
 const ADDRESS_DAILY_LIMIT = 5;
-export const EMAIL_POOL = Object.freeze({ SIGNUP: 'signup', ACCOUNT: 'account', INVITE: 'invite' });
-export const POOL_DAILY_LIMIT = Object.freeze({ signup: 40, account: 30, invite: 30 });
+export const EMAIL_POOL = Object.freeze({
+  SIGNUP: 'signup', ACCOUNT: 'account', INVITE: 'invite', FEEDBACK: 'feedback',
+});
+export const POOL_DAILY_LIMIT = Object.freeze({ signup: 40, account: 30, invite: 20, feedback: 10 });
 
 // A pool that reaches this share of its cap emails ALERT_EMAIL, so a busy day
 // shows up before mail starts being refused.
@@ -328,10 +330,11 @@ function quotaWarningMessage(env, pool, count) {
 
 // A thin adapter: one fetch. Returns { ok } and never throws. `headers` are
 // extra mail headers, such as List-Unsubscribe.
-export async function sendEmail(env, { to, subject, text, html, headers }) {
+export async function sendEmail(env, { to, subject, text, html, headers, replyTo }) {
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return { ok: false };
   const message = { from: env.EMAIL_FROM, to: [to], subject, text, html };
   if (headers) message.headers = headers;
+  if (replyTo) message.reply_to = replyTo;
   try {
     const response = await fetch(RESEND_URL, {
       method: 'POST',
@@ -417,6 +420,40 @@ export async function gateEmailPool(env, pool) {
   if (allowed) return null;
   return jsonError(HTTP_SERVICE_UNAVAILABLE, 'email_unavailable', POOL_FULL_MESSAGE[pool],
     { 'Retry-After': String(retryAfterSeconds) });
+}
+
+// ── Feedback ──
+
+const FEEDBACK_SUBJECT_MAX = 60;
+const VISITOR_SIGNATURE = 'From a visitor who was not signed in.';
+
+// Plain text: it is a note to the owner, not mail a person receives.
+function feedbackMessage(message, senderEmail) {
+  return {
+    subject: `Feedback: ${oneLine(message, FEEDBACK_SUBJECT_MAX)}`,
+    text: [message, '', senderEmail ? `From ${senderEmail}.` : VISITOR_SIGNATURE].join('\n'),
+  };
+}
+
+// Every message goes to the one FEEDBACK_EMAIL inbox, so only the pool is
+// counted: the per-address limit would stop it after a handful. A signed-in
+// sender is the Reply-To, so answering is one click. Returns { sent } and,
+// when today's pool is used up, { isPoolFull }.
+export async function sendFeedbackEmail(context, { message, senderEmail }) {
+  const { env } = context;
+  if (!env.FEEDBACK_EMAIL) return { sent: false };
+  const pool = EMAIL_POOL.FEEDBACK;
+  const { count } = await hitRateLimit(env, `email:pool:${pool}`, DAY_MS);
+  if (count > POOL_DAILY_LIMIT[pool]) {
+    await logEmailEvent(context, emailSkippedEvent('pool', pool));
+    return { sent: false, isPoolFull: true };
+  }
+  const { ok } = await sendEmail(env, {
+    to: env.FEEDBACK_EMAIL, ...feedbackMessage(message, senderEmail), replyTo: senderEmail,
+  });
+  await logEmailEvent(context, ok ? 'feedback_sent' : 'email_failed');
+  await warnIfPoolFilling(context, pool, count);
+  return { sent: ok };
 }
 
 export function sendConfirmSignupEmail(context, { to, token }) {
