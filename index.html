@@ -107,15 +107,13 @@
               <span class="account-menu-caption">Signed in as</span>
               <span id="settings-user-email" class="account-menu-email"></span>
             </div>
-            <div class="account-menu-group">
+            <div id="account-menu-password" class="account-menu-group">
               <button id="change-password-btn" class="account-menu-item" type="button" hidden
                       aria-haspopup="dialog">
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Change password</button>
               <button id="add-password-btn" class="account-menu-item" type="button" hidden>
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Add a password</button>
               <p id="security-status" class="account-menu-status" aria-live="polite" hidden></p>
-              <button id="settings-sign-out-btn" class="account-menu-item" type="button">
-                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 8l4 4-4 4M19 12H9"/></svg>Sign out</button>
             </div>
             <div id="account-menu-slot" class="account-menu-group"></div>
             <div class="account-menu-group">
@@ -124,6 +122,8 @@
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM9 7h6M9 10.5h6M9 16.5c.8-1.4 1.6-1.4 2 0s1.3-1.4 2-.6.9.8 2 .4"/></svg>Legal<svg class="account-menu-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
             </div>
             <div class="account-menu-group">
+              <button id="settings-sign-out-btn" class="account-menu-item" type="button">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 8l4 4-4 4M19 12H9"/></svg>Sign out</button>
               <button id="settings-delete-account-btn" class="account-menu-item is-danger" type="button">
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete account</button>
             </div>

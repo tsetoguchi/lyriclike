@@ -2952,6 +2952,11 @@ body:not(.signed-in) .invite-btn {
   display: none;
 }
 
+/* With passwords switched off, the password group has nothing to show. */
+#account-menu-password:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
 /* The menu's two pages. Only the shown one takes room; the other lies over
    it, slid a little to its side and faded, so switching reads as turning
    a page: the account page leaves left, Legal comes in from the right. */
