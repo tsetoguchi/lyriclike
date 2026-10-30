@@ -54,6 +54,9 @@
 /lyric-marks.js
   Cache-Control: no-cache
 
+/rhyme-lookup-count.js
+  Cache-Control: no-cache
+
 /app.js
   Cache-Control: no-cache
 
