@@ -324,4 +324,4 @@
   } else {
     root.LiveCore = LiveCore;
   }
-})(this);
+})(globalThis);

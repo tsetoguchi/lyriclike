@@ -259,4 +259,4 @@
   } else {
     root.LivePresenceView = LivePresenceView;
   }
-})(this);
+})(globalThis);

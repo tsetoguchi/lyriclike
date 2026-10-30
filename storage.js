@@ -1080,10 +1080,15 @@ function isPadUnused() {
 let hasOpenedNotebook = false;
 
 // live.js and sharing.js load after this file, and opening the notebook
-// can reopen a live page, so it waits until every script has run.
+// can reopen a live page, so it waits until every script has run. Not
+// readyState: it leaves 'loading' before the module scripts (live.js) run,
+// and DOMContentLoaded only fires after them.
+const scriptsReady = new Promise(resolve => {
+  document.addEventListener('DOMContentLoaded', resolve, { once: true });
+});
+
 function whenScriptsReady() {
-  if (document.readyState !== 'loading') return Promise.resolve();
-  return new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+  return scriptsReady;
 }
 
 async function openNotebook() {

@@ -4,6 +4,11 @@
 // a module that sets nothing on window can't be something another script
 // waits for.
 //
+// The live scripts are the exception: they set names that classic scripts
+// read. A classic script reaches them only as window.X, so a read before the
+// module runs gets undefined rather than a ReferenceError, and storage.js
+// opens pages only after DOMContentLoaded, which waits for the modules.
+//
 //   node --test "test/*.test.mjs"
 
 import assert from 'node:assert/strict';
@@ -14,13 +19,32 @@ import { APP_SCRIPTS, MODULE_SCRIPTS } from './support/app-scripts.mjs';
 
 const CONVERTED = [
   'in-app-browser.js', 'account-menu-views.js', 'sample-start.js', 'save-nudge.js',
-  'whats-new.js', 'feedback-box.js', 'back-button.js', 'rail-tips.js',
+  'whats-new.js', 'live-core.js', 'live-binding.js', 'live-store.js',
+  'live-presence-view.js', 'live.js', 'feedback-box.js', 'back-button.js', 'rail-tips.js',
 ];
 const IMPORT_LINE = /^import \{([^}]+)\} from '\.\/([^']+\.js)';\r?$/gm;
 const RETIRED_WINDOW_NAMES = ['closeFeedbackBox'];
+// Modules that still set names on window, and the names each one sets.
+const WINDOW_SETTERS = {
+  'live-core.js': ['LiveCore'],
+  'live-binding.js': ['LiveBinding'],
+  'live-store.js': ['LiveStore'],
+  'live-presence-view.js': ['LivePresenceView'],
+  'live.js': ['liveSession', 'Live'],
+};
+const WINDOW_SET = /\b(?:window|root)\.(\w+)\s*=[^=]/g;
 
 function readScript(name) {
   return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+}
+
+function namesSetOnWindow(source) {
+  return [...source.matchAll(WINDOW_SET)].map(([, name]) => name);
+}
+
+// A use like `Live.TEXT` or `liveSession()` with no `window.` in front.
+function bareUse(name) {
+  return new RegExp(`(?<![.\\w$])${name}\\s*[.([]`);
 }
 
 function importsOf(source) {
@@ -40,8 +64,8 @@ describe('module scripts', () => {
   });
 
   for (const script of MODULE_SCRIPTS) {
-    it(`${script} sets nothing on window`, () => {
-      assert.doesNotMatch(readScript(script), /\bwindow\.\w+\s*=[^=]/);
+    it(`${script} sets only its listed names on window`, () => {
+      assert.deepEqual(namesSetOnWindow(readScript(script)), WINDOW_SETTERS[script] || []);
     });
 
     it(`${script} imports only names another module exports`, () => {
@@ -61,5 +85,20 @@ describe('module scripts', () => {
         assert.doesNotMatch(readScript(script), new RegExp(`window\\.${name}\\b`), script);
       }
     }
+  });
+
+  it('classic scripts reach names a module sets only through window', () => {
+    const classicScripts = APP_SCRIPTS.filter(script => !MODULE_SCRIPTS.includes(script));
+    for (const script of classicScripts) {
+      for (const name of Object.values(WINDOW_SETTERS).flat()) {
+        assert.doesNotMatch(readScript(script), bareUse(name), `${script}: ${name}`);
+      }
+    }
+  });
+
+  it('storage.js opens pages only after the modules have run', () => {
+    const source = readScript('storage.js');
+    assert.match(source, /addEventListener\('DOMContentLoaded'/);
+    assert.doesNotMatch(source, /document\.readyState/);
   });
 });
