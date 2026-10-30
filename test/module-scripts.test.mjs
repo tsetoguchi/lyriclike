@@ -12,7 +12,10 @@ import { describe, it } from 'node:test';
 
 import { APP_SCRIPTS, MODULE_SCRIPTS } from './support/app-scripts.mjs';
 
-const CONVERTED = ['feedback-box.js', 'back-button.js', 'rail-tips.js'];
+const CONVERTED = [
+  'in-app-browser.js', 'account-menu-views.js', 'sample-start.js', 'save-nudge.js',
+  'whats-new.js', 'feedback-box.js', 'back-button.js', 'rail-tips.js',
+];
 const IMPORT_LINE = /^import \{([^}]+)\} from '\.\/([^']+\.js)';\r?$/gm;
 const RETIRED_WINDOW_NAMES = ['closeFeedbackBox'];
 
