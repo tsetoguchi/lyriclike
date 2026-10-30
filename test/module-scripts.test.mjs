@@ -12,7 +12,19 @@ import { describe, it } from 'node:test';
 
 import { APP_SCRIPTS, MODULE_SCRIPTS } from './support/app-scripts.mjs';
 
-const CONVERTED = ['back-button.js', 'rail-tips.js'];
+const CONVERTED = ['feedback-box.js', 'back-button.js', 'rail-tips.js'];
+const IMPORT_LINE = /^import \{([^}]+)\} from '\.\/([^']+\.js)';\r?$/gm;
+const RETIRED_WINDOW_NAMES = ['closeFeedbackBox'];
+
+function readScript(name) {
+  return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+}
+
+function importsOf(source) {
+  return [...source.matchAll(IMPORT_LINE)].map(([, names, file]) => ({
+    file, names: names.split(',').map(name => name.trim()),
+  }));
+}
 
 describe('module scripts', () => {
   it('loads the converted scripts as modules', () => {
@@ -26,8 +38,25 @@ describe('module scripts', () => {
 
   for (const script of MODULE_SCRIPTS) {
     it(`${script} sets nothing on window`, () => {
-      const source = readFileSync(new URL(`../${script}`, import.meta.url), 'utf8');
-      assert.doesNotMatch(source, /\bwindow\.\w+\s*=[^=]/);
+      assert.doesNotMatch(readScript(script), /\bwindow\.\w+\s*=[^=]/);
+    });
+
+    it(`${script} imports only names another module exports`, () => {
+      for (const { file, names } of importsOf(readScript(script))) {
+        assert.ok(MODULE_SCRIPTS.includes(file), file);
+        const exported = readScript(file);
+        for (const name of names) {
+          assert.match(exported, new RegExp(`^export (?:async )?(?:function|const) ${name}\\b`, 'm'), name);
+        }
+      }
     });
   }
+
+  it('reaches retired window names only by import', () => {
+    for (const script of APP_SCRIPTS) {
+      for (const name of RETIRED_WINDOW_NAMES) {
+        assert.doesNotMatch(readScript(script), new RegExp(`window\\.${name}\\b`), script);
+      }
+    }
+  });
 });
