@@ -60,7 +60,7 @@
       ? await extensions.runLimitDialog(detail) : null;
     if (swapped) return swapped;
 
-    const answer = await root.openDialog(DIALOGS[kind]);
+    const answer = await root.Dialog.open(DIALOGS[kind]);
     return kind === KIND_PAGES && answer === true ? ANSWER_DELETE : ANSWER_OK;
   }
 

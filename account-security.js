@@ -194,7 +194,7 @@
     }
     if (result.data && result.data.user) window.currentUser = result.data.user;
     closePasswordBox();
-    await openDialog({
+    await Dialog.open({
       heading: TEXT.CHANGED_HEADING, message: TEXT.CHANGED, confirmLabel: 'OK', noCancel: true,
     });
     accountButton.focus();
@@ -223,7 +223,7 @@
   // password to ask for, so the address has to be typed back instead.
   function askToDelete(user, note) {
     if (user.has_password) {
-      return openDialog({
+      return Dialog.open({
         heading: 'Delete account',
         message: note ? `${note} ${TEXT.DELETE_WITH_PASSWORD}` : TEXT.DELETE_WITH_PASSWORD,
         confirmLabel: 'Delete account',
@@ -231,7 +231,7 @@
         field: { label: 'Password', value: '', type: 'password' },
       });
     }
-    return openDialog({
+    return Dialog.open({
       heading: 'Delete account',
       message: `This deletes your account and every page saved to it. It cannot be undone. Type ${user.email} to confirm.`,
       confirmLabel: 'Delete account',
@@ -262,7 +262,7 @@
         continue;
       }
       const message = result.status === HTTP_TOO_MANY_REQUESTS ? TEXT.TOO_MANY : failureMessage(result);
-      await openDialog({ heading: 'Delete account', message, confirmLabel: 'OK' });
+      await Dialog.open({ heading: 'Delete account', message, confirmLabel: 'OK' });
       return;
     }
   }

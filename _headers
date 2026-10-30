@@ -57,6 +57,12 @@
 /rhyme-lookup-count.js
   Cache-Control: no-cache
 
+/dialog.js
+  Cache-Control: no-cache
+
+/page-notice.js
+  Cache-Control: no-cache
+
 /app.js
   Cache-Control: no-cache
 

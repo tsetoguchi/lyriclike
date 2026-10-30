@@ -219,97 +219,8 @@ function isRoomSaved() {
 // reads it and the notebook can be drawn before that code runs.
 let sampleShowing = false;
 
-// ── Dialog ──
-
-// One panel for everything the app needs to ask. It comes in three shapes:
-// a question with a field (naming a page), a question without one (deleting
-// a page), and a question whose field has to be typed correctly before the
-// answer counts (deleting an account with only Google). A field can also be a
-// password (deleting an account that has one). Resolves with the field's contents, or
-// true when there is no field, or null if the person backed out.
-let resolveDialog = null;
-let requiredAnswer = null;
-
-function openDialog({
-  heading, message, confirmLabel, danger, field, noCancel = false, cancelLabel = 'Cancel',
-}) {
-  const overlay = document.getElementById('dialog-overlay');
-  const input = document.getElementById('dialog-input');
-  const confirm = document.getElementById('dialog-confirm');
-  const messageEl = document.getElementById('dialog-message');
-  const fieldEl = document.getElementById('dialog-field');
-
-  document.getElementById('dialog-title').textContent = heading;
-  // A dialog that only tells something has nothing to cancel.
-  const cancel = document.getElementById('dialog-cancel');
-  cancel.hidden = noCancel;
-  cancel.textContent = cancelLabel;
-  confirm.textContent = confirmLabel;
-  confirm.classList.toggle('danger-btn', Boolean(danger));
-
-  messageEl.textContent = message || '';
-  messageEl.hidden = !message;
-
-  fieldEl.hidden = !field;
-  requiredAnswer = field && field.mustMatch ? field.mustMatch : null;
-  if (field) {
-    document.getElementById('dialog-label').textContent = field.label;
-    input.value = field.value || '';
-    // A password field also tells password managers what to fill.
-    input.type = field.type || 'text';
-    input.autocomplete = field.type === 'password' ? 'current-password' : 'off';
-  }
-  updateDialogConfirmState();
-
-  overlay.hidden = false;
-  overlay.classList.add('open');
-
-  // Focus once the panel is on its way in, so iOS raises the keyboard for it.
-  setTimeout(() => {
-    if (field) { input.focus(); input.select(); } else { confirm.focus(); }
-  }, FOCUS_DELAY_MS);
-
-  return new Promise(resolve => { resolveDialog = resolve; });
-}
-
-// Only a field that has to match can hold the button shut.
-function updateDialogConfirmState() {
-  const input = document.getElementById('dialog-input');
-  document.getElementById('dialog-confirm').disabled =
-    requiredAnswer !== null && input.value.trim() !== requiredAnswer;
-}
-
-function closeDialog(answer) {
-  const overlay = document.getElementById('dialog-overlay');
-  overlay.classList.remove('open');
-  // Wait out the fade before taking it out of the page entirely.
-  setTimeout(() => { if (!overlay.classList.contains('open')) overlay.hidden = true; }, CLOSE_DELAY_MS);
-  const resolve = resolveDialog;
-  resolveDialog = null;
-  requiredAnswer = null;
-  if (resolve) resolve(answer);
-}
-
-function submitDialog() {
-  if (document.getElementById('dialog-confirm').disabled) return;
-  const fieldEl = document.getElementById('dialog-field');
-  closeDialog(fieldEl.hidden ? true : document.getElementById('dialog-input').value);
-}
-
-document.getElementById('dialog-confirm').addEventListener('click', submitDialog);
-document.getElementById('dialog-cancel').addEventListener('click', () => closeDialog(null));
-document.getElementById('dialog-close').addEventListener('click', () => closeDialog(null));
-document.getElementById('dialog-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('dialog-overlay')) closeDialog(null);
-});
-document.getElementById('dialog-input').addEventListener('input', updateDialogConfirmState);
-document.getElementById('dialog-overlay').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target.id === 'dialog-input') { e.preventDefault(); submitDialog(); }
-  if (e.key === 'Escape') { e.preventDefault(); closeDialog(null); }
-});
-
 function askForLyricName({ heading, confirmLabel, value }) {
-  return openDialog({
+  return Dialog.open({
     heading,
     confirmLabel,
     field: { label: LYRIC_TITLE_LABEL, value },
@@ -855,7 +766,7 @@ function lockEditor(message) {
 }
 
 function unlockEditor() {
-  if (isEditorLocked) hideNotice();
+  if (isEditorLocked) PageNotice.hide();
   isEditorLocked = false;
   setEditorReadOnly(false);
 }
@@ -864,7 +775,7 @@ function unlockEditor() {
 // frozen without the lock flag: leaving stays refused until a reload.
 function freezeUntilReload(message = NO_LIVE_SESSION_MESSAGE) {
   setEditorReadOnly(true);
-  showNotice(message);
+  PageNotice.show(message);
 }
 
 // live.js asks when reconnects keep failing. A refused upgrade looks like a
@@ -946,7 +857,7 @@ function saveNewLyric() {
 // The server treats both the same way: the owner's call deletes the page,
 // an editor's only takes them off it. Only the words differ.
 async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
-  const confirmed = await openDialog(shared
+  const confirmed = await Dialog.open(shared
     ? {
       heading: LEAVE_LYRIC_HEADING,
       message: `You'll lose access to “${titleForName(title)}”. ${ownerName || 'Its owner'} keeps it.`,
@@ -1001,7 +912,7 @@ async function showPageLimitDialog(limit) {
 }
 
 async function askToLeaveBlockedPage() {
-  const answer = await openDialog({
+  const answer = await Dialog.open({
     heading: LEAVE_BLOCKED_HEADING,
     message: LEAVE_BLOCKED_MESSAGE,
     confirmLabel: 'Leave anyway',
@@ -1122,7 +1033,7 @@ async function flushSave() {
   if (isLive()) return flushLivePage();
   // Offline at load, waiting to reopen live: its words are not safe to leave.
   if (isLiveDraft && !isEditorLocked) {
-    showNotice(UNSAVED_LEAVE_MESSAGE);
+    PageNotice.show(UNSAVED_LEAVE_MESSAGE);
     return false;
   }
   if (pendingConflict) return keepMineAsCopy();
@@ -1139,7 +1050,7 @@ async function flushSave() {
 // says so where phones show it.
 async function flushLivePage() {
   const isSaved = await currentLiveSession().flush();
-  if (!isSaved) showNotice(UNSAVED_LEAVE_MESSAGE);
+  if (!isSaved) PageNotice.show(UNSAVED_LEAVE_MESSAGE);
   return isSaved;
 }
 
@@ -1157,7 +1068,7 @@ async function confirmSignOut() {
 }
 
 async function askToLogOutAnyway() {
-  const answer = await openDialog({
+  const answer = await Dialog.open({
     heading: SIGN_OUT_HEADING,
     message: UNSAVED_SIGN_OUT_MESSAGE,
     confirmLabel: 'Log out anyway',
@@ -1284,7 +1195,7 @@ function handleConflict(theirs, sentBody) {
   clearTimeout(saveTimer);
   setSaveIndicator('Not saved');
   const isOnlyMine = currentPageInfo.role === 'owner' && currentPageInfo.shareCount === 0;
-  showNotice(isOnlyMine ? OWN_CONFLICT_MESSAGE : CONFLICT_MESSAGE, [
+  PageNotice.show(isOnlyMine ? OWN_CONFLICT_MESSAGE : CONFLICT_MESSAGE, [
     { label: 'Load their version', onClick: loadTheirVersion },
     { label: 'Keep mine', onClick: keepMine },
   ], { closable: false });
@@ -1293,7 +1204,7 @@ function handleConflict(theirs, sentBody) {
 function clearConflict() {
   if (!pendingConflict) return;
   pendingConflict = null;
-  hideNotice();
+  PageNotice.hide();
 }
 
 function copyTitle(title) {
@@ -1422,7 +1333,7 @@ function saveAsNewPage({ message }) {
   saveDraft();
   saveQueued = true;
   queuedForce = true;
-  if (message) showNotice(message);
+  if (message) PageNotice.show(message);
 }
 
 // Whether the words on screen differ from what the server last had.
@@ -1486,47 +1397,11 @@ function keepDraftOnLeaving({ id, stamp, text, confirmed, delta }) {
   writeDraft();
 }
 
-// ── Page notice ──
-
-// A strip under the title for what happened to the page: a save that someone
-// else beat, or a page this account can no longer open. Amber buttons are for
-// choices; a notice that only tells closes with a quiet ✕. The conflict bar
-// has no ✕: one of its two choices has to be made.
-function showNotice(text, actions = [], { closable = true } = {}) {
-  const notice = document.getElementById('page-notice');
-  document.getElementById('page-notice-text').textContent = text;
-  const buttons = document.getElementById('page-notice-actions');
-  buttons.innerHTML = '';
-  for (const { label, onClick } of actions) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'sample-clear';
-    button.textContent = label;
-    button.addEventListener('click', onClick);
-    buttons.appendChild(button);
-  }
-  if (closable) {
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'lyrics-action-btn page-notice-close';
-    close.setAttribute('aria-label', 'Dismiss');
-    close.title = 'Dismiss';
-    close.textContent = '✕';
-    close.addEventListener('click', hideNotice);
-    buttons.appendChild(close);
-  }
-  notice.hidden = false;
-}
-
-function hideNotice() {
-  document.getElementById('page-notice').hidden = true;
-}
-
 // A notice is about the page it was shown on, so another page drops it. The
 // offline flag goes too, or its later clear would hide the next page's notice.
 function clearPageNotice() {
   isOfflineNoticeShown = false;
-  hideNotice();
+  PageNotice.hide();
 }
 
 function setSaveIndicator(text) {
@@ -1814,7 +1689,7 @@ async function checkOldAppDraft(id) {
 function dropUnavailablePage() {
   startBlankPage(DEFAULT_TITLE);
   saveDraft();
-  showNotice(UNAVAILABLE_MESSAGE);
+  PageNotice.show(UNAVAILABLE_MESSAGE);
 }
 
 // The group headings fold their pages. One listener, since the shared
@@ -1938,7 +1813,7 @@ function showLiveIndicator(text) {
   const isOffline = Boolean(window.Live) && text === window.Live.TEXT.offline;
   setSaveIndicator(isOffline ? '' : text);
   if (isOffline) {
-    showNotice(text);
+    PageNotice.show(text);
     isOfflineNoticeShown = true;
   } else {
     clearOfflineNotice();
@@ -1948,7 +1823,7 @@ function showLiveIndicator(text) {
 function clearOfflineNotice() {
   if (!isOfflineNoticeShown) return;
   isOfflineNoticeShown = false;
-  hideNotice();
+  PageNotice.hide();
 }
 
 // What the live session shows on the page (live.js). titleEl is declared
@@ -1983,7 +1858,7 @@ window.livePage = {
     sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
     location.reload();
   },
-  notice: text => showNotice(text),
+  notice: text => PageNotice.show(text),
   checkStillLive,
   setReadOnly: isReadOnly => {
     isRoomReadOnly = isReadOnly;
@@ -2039,7 +1914,7 @@ function clearLyricState() {
   queuedForce = false;
   restoredDraft = null;
   pendingConflict = null;
-  hideNotice();
+  PageNotice.hide();
   setPageInfo({});
   // Nothing an extension put in the panel may stay for the next person.
   if (window.SidePanel) window.SidePanel.close();
