@@ -758,12 +758,14 @@ header .nav-icon circle {
   display: none;
 }
 
-/* The one-time "Write together" card: a quiet note in the corner that leaves
-   the page usable, styled like the share dialog it points to. */
+/* The one-time "Write together" card: a note in the middle of the page, where
+   it gets seen, that still leaves the page usable. Styled like the share
+   dialog it points to. */
 .whats-new {
   position: fixed;
-  right: var(--space-6);
-  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
   z-index: var(--z-overlay);
   width: 320px;
   max-width: calc(100vw - 2 * var(--space-4));
@@ -1026,7 +1028,9 @@ header .nav-icon circle {
   .whats-new {
     left: var(--space-4);
     right: var(--space-4);
+    top: auto;
     bottom: calc(var(--whats-new-lift, 0px) + var(--space-4));
+    translate: none;
     width: auto;
     max-width: none;
   }
