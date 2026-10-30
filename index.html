@@ -37,6 +37,8 @@
     <a class="icon-btn sidebar-toggle" href="/guide/" aria-label="How it works" title="How it works"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><line x1="12" y1="17.5" x2="12" y2="17.5"/></svg></a>
     <button id="rail-tutorial-btn" class="icon-btn sidebar-toggle" aria-label="Tutorial" title="Tutorial"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z"/></svg></button>
     <div id="rail-slot" class="rail-slot"></div>
+    <button type="button" class="icon-btn sidebar-toggle rail-feedback-btn" data-feedback-open aria-haspopup="dialog"
+            aria-label="Send feedback" title="Send feedback"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
   </nav>
   <div id="sidebar-scrim"></div>
   <aside id="sidebar" aria-label="My Notebook">
@@ -55,7 +57,7 @@
     <div id="sidebar-slot" class="sidebar-slot"></div>
     <p id="page-count" class="sidebar-page-count" hidden></p>
     <div class="sidebar-foot">
-      <button type="button" id="feedback-btn" class="icon-btn sidebar-toggle" aria-haspopup="dialog"
+      <button type="button" class="icon-btn sidebar-toggle" data-feedback-open aria-haspopup="dialog"
               aria-label="Send feedback" title="Send feedback"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
       <p class="sidebar-links" id="sidebar-foot-slot"><a href="/privacy/">Privacy</a></p>
     </div>

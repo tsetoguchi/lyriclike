@@ -107,7 +107,10 @@
     closeFeedbackBox();
   }
 
-  document.getElementById('feedback-btn').addEventListener('click', openFeedbackBox);
+  // The envelope sits in the sidebar and on the folded sidebar's rail.
+  for (const button of document.querySelectorAll('[data-feedback-open]')) {
+    button.addEventListener('click', openFeedbackBox);
+  }
   document.getElementById('feedback-close').addEventListener('click', closeFeedbackBox);
   document.getElementById('feedback-cancel').addEventListener('click', closeFeedbackBox);
   document.getElementById('feedback-done').addEventListener('click', closeFeedbackBox);
