@@ -45,7 +45,7 @@ describe('global names', () => {
 });
 
 describe('short names outside the presence scripts', () => {
-  for (const script of ['storage.js', 'sharing.js']) {
+  for (const script of ['notebook-list.js', 'sharing.js']) {
     it(`${script} shortens names through window.LivePresence, guarded`, () => {
       const source = readFileSync(new URL(`../${script}`, import.meta.url), 'utf8');
       assert.match(source, /window\.LivePresence \? window\.LivePresence\.shortNameOf\(/);

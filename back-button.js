@@ -24,7 +24,7 @@
     { isOpen: () => !accountMenu.hidden, close: () => window.closeAccountMenu() },
     { isOpen: isDefinitionOpen, close: closeDefinition },
     { isOpen: isRhymesMenuOpen, close: () => setRhymesMenuOpen(false) },
-    { isOpen: () => isSidebarOpen() && !isSidebarDocked(), close: hideSidebar },
+    { isOpen: () => Sidebar.isOpen() && !Sidebar.isDocked(), close: () => Sidebar.hide() },
     { isOpen: isPreviewOnPhone, close: () => window.PagePreview.close() },
     { isOpen: isSidePanelOnPhone, close: () => window.SidePanel.close() },
     { isOpen: isRhymesTabShowing, close: () => switchMobileTab(LYRICS_TAB) },

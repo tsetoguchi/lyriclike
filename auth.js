@@ -49,7 +49,7 @@ function showSignIn(signedOut = null) {
   document.body.classList.remove('signed-in');
   document.getElementById('signed-out-actions').style.display = '';
   document.getElementById('user-info').style.display = 'none';
-  if (window.refreshNotebook) window.refreshNotebook();
+  if (window.NotebookList) window.NotebookList.load();
 }
 
 // The first letter of the address stands for the account in the header.

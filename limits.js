@@ -79,7 +79,7 @@
     shownThisTab.add(kind);
 
     const answer = await showLimitDialog({ kind, limit });
-    if (answer === ANSWER_DELETE && typeof root.openLyricsList === 'function') root.openLyricsList();
+    if (answer === ANSWER_DELETE && root.NotebookList) root.NotebookList.open();
     return !isEnforced && answer === ANSWER_OK;
   }
 

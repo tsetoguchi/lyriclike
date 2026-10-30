@@ -193,7 +193,7 @@
     const page = { id, title, role: null };
     dialogPage = page;
     returnFocusTo = document.activeElement;
-    byId('share-title').textContent = `Share “${titleForName(title)}”`;
+    byId('share-title').textContent = `Share “${OpenPage.nameFor(title)}”`;
     emailInput.value = '';
     submitButton.disabled = false;
     updateActions();
@@ -290,8 +290,8 @@
     page.ownerName = data.owner.name || data.owner.email;
     page.people = data.people.map(person => person.email.toLowerCase());
     byId('share-title').textContent = isOwner
-      ? `Share “${titleForName(page.title)}”`
-      : `People on “${titleForName(page.title)}”`;
+      ? `Share “${OpenPage.nameFor(page.title)}”`
+      : `People on “${OpenPage.nameFor(page.title)}”`;
     setInviteFormHidden(!data.can_share);
     setHidden('share-subtext', !data.can_share);
     // An editor's dialog is headed "People on …" already.
@@ -404,7 +404,7 @@
     const page = dialogPage;
     if (!page) return;
     closeShareDialog();
-    deleteLyric({ id: page.id, title: page.title, shared: true, owner_name: page.ownerName });
+    OpenPage.remove({ id: page.id, title: page.title, shared: true, owner_name: page.ownerName });
   }
 
   async function copyShareLink() {
@@ -485,7 +485,7 @@
       return;
     }
     if (status !== HTTP_OK) return;
-    loadLyricsList();
+    NotebookList.load();
     if (openPage.role === 'editor') {
       PageNotice.show(`${openPage.ownerName || 'Someone'} shared this with you.`);
     }
@@ -621,7 +621,7 @@
       // Deleted, or this person was taken off it. There are no unsaved edits
       // (the check waits for those), so nothing needs keeping.
       openPage.drop();
-      loadLyricsList();
+      NotebookList.load();
       return;
     }
     if (res.ok) {
@@ -672,7 +672,7 @@
       const end = textarea.value.length;
       textarea.setSelectionRange(Math.min(selectionStart, end), Math.min(selectionEnd, end));
     }
-    refreshListIfBehind();
+    NotebookList.refreshIfBehind();
   }
 
   function takeTheirTitle(title) {
