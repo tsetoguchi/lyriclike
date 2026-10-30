@@ -260,9 +260,39 @@
     for (const rhymePart of rhymeParts) indexRhymePart(index, word, rhymePart);
   }
 
+  // Pronunciations can be read from the start; the buckets fill as
+  // indexMoreWords() runs. The editor's gutters only need the pronunciations,
+  // so it fills the buckets in slices rather than freezing the page on load.
+  function createRhymeIndex(dictionary) {
+    return {
+      dictionary, rhymeParts: {}, vowelBuckets: {}, codaBuckets: {},
+      unindexedWords: Object.keys(dictionary), nextWordAt: 0
+    };
+  }
+
+  function isRhymeIndexComplete(index) {
+    return index.unindexedWords === null;
+  }
+
+  // Indexes up to `count` more words, in dictionary order so bucket order
+  // matches a build done in one go. Returns whether the index is complete.
+  function indexMoreWords(index, count) {
+    if (isRhymeIndexComplete(index)) return true;
+    const words = index.unindexedWords;
+    const stopAt = Math.min(index.nextWordAt + count, words.length);
+    for (let i = index.nextWordAt; i < stopAt; i++) indexWord(index, words[i]);
+    index.nextWordAt = stopAt;
+    if (stopAt === words.length) index.unindexedWords = null;
+    return isRhymeIndexComplete(index);
+  }
+
+  function completeRhymeIndex(index) {
+    indexMoreWords(index, Number.POSITIVE_INFINITY);
+  }
+
   function buildRhymeIndex(dictionary) {
-    const index = { dictionary, rhymeParts: {}, vowelBuckets: {}, codaBuckets: {} };
-    for (const word of Object.keys(dictionary)) indexWord(index, word);
+    const index = createRhymeIndex(dictionary);
+    completeRhymeIndex(index);
     return index;
   }
 
@@ -340,6 +370,8 @@
   // A blocked word is never looked up either, so typing one gives no rhymes.
   function findRhymes(index, targetWord, filters) {
     if (filters.blocklist.has(targetWord)) return null;
+    // A half-built index would quietly leave rhymes out.
+    completeRhymeIndex(index);
     if (!hasRhymeEntry(index, targetWord)) return null;
     const targets = index.rhymeParts[targetWord];
     const results = Object.fromEntries(RHYME_TYPES.map(({ key }) => [key, []]));
@@ -452,6 +484,7 @@
   // Exposed for the rhyme-page build, which ranks its own word lists with the
   // order the editor uses rather than one of its own.
   function rankRhymeWords(index, targetWord, words, ranks) {
+    completeRhymeIndex(index);
     if (!hasRhymeEntry(index, targetWord)) return [...words];
     const context = toRankingContext(index, index.rhymeParts[targetWord], ranks);
     return rankByCloseness(context, words);
@@ -1327,6 +1360,9 @@
     extractRhymePart,
     extractEndRhymePart,
     classifyRhyme,
+    createRhymeIndex,
+    indexMoreWords,
+    isRhymeIndexComplete,
     buildRhymeIndex,
     hasRhymeEntry,
     findRhymes,

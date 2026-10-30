@@ -10,7 +10,8 @@ import rhymeCore from '../rhyme-core.js';
 
 const {
   RHYME_TYPES, buildRhymeIndex, classifyRhyme, computeRhymeScheme, countSyllables,
-  countSyllablesForLine, extractEndRhymePart, extractRhymePart, findRhymes,
+  countSyllablesForLine, createRhymeIndex, extractEndRhymePart, extractRhymePart,
+  findRhymes, indexMoreWords, isRhymeIndexComplete, rankRhymeWords,
   getStressedSyllable, normalizeWord, groupRhymeMarks, tierRhymeWords, FUNCTION_WORDS,
   RHYME_SORT_ORDERS, isRhymeSortOrder, rhymeShuffleSeed, shuffleKey, sortRhymeEntries,
   OVERFLOW_FAMILY
@@ -230,6 +231,51 @@ describe('findRhymes with more than one reading', () => {
     const results = findRhymes(READINGS_INDEX, 'read', UNFILTERED);
     const listed = RHYME_TYPES.flatMap(({ key }) => results[key]);
     assert.equal(listed.includes('red'), false);
+  });
+});
+
+describe('building the index a slice at a time', () => {
+  const WORD_COUNT = Object.keys(DICTIONARY).length;
+  const SLICE_WORDS = 5;
+  const UNFILTERED = { englishWords: null, blocklist: new Set() };
+
+  function indexInSlices() {
+    const index = createRhymeIndex(DICTIONARY);
+    while (!indexMoreWords(index, SLICE_WORDS));
+    return index;
+  }
+
+  it('can read pronunciations before any word is indexed', () => {
+    const index = createRhymeIndex(DICTIONARY);
+    assert.equal(countSyllablesForLine(index, 'the happy cat'), 4);
+    assert.equal(isRhymeIndexComplete(index), false);
+  });
+
+  it('says it is done only once every word is in', () => {
+    const index = createRhymeIndex(DICTIONARY);
+    assert.equal(indexMoreWords(index, WORD_COUNT - 1), false);
+    assert.equal(indexMoreWords(index, 1), true);
+    assert.equal(isRhymeIndexComplete(index), true);
+  });
+
+  it('ends with the same buckets as building it all at once', () => {
+    const sliced = indexInSlices();
+    assert.deepEqual(sliced.rhymeParts, INDEX.rhymeParts);
+    assert.deepEqual(sliced.vowelBuckets, INDEX.vowelBuckets);
+    assert.deepEqual(sliced.codaBuckets, INDEX.codaBuckets);
+  });
+
+  it('finishes a half-built index before searching it', () => {
+    const index = createRhymeIndex(DICTIONARY);
+    indexMoreWords(index, SLICE_WORDS);
+    assert.deepEqual(findRhymes(index, 'cat', UNFILTERED), findRhymes(INDEX, 'cat', UNFILTERED));
+    assert.equal(isRhymeIndexComplete(index), true);
+  });
+
+  it('finishes a half-built index before ranking against it', () => {
+    const index = createRhymeIndex(DICTIONARY);
+    const words = ['zat', 'cast', 'hat'];
+    assert.deepEqual(rankRhymeWords(index, 'cat', words), rankRhymeWords(INDEX, 'cat', words));
   });
 });
 
