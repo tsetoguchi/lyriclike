@@ -1648,6 +1648,15 @@ function whenScriptsReady() {
 
 async function openNotebook() {
   hasOpenedNotebook = true;
+  try {
+    await openNotebookPage();
+  } finally {
+    // The splash (splash.js) holds until the page is in place.
+    document.dispatchEvent(new Event('notebook-opened'));
+  }
+}
+
+async function openNotebookPage() {
   await whenScriptsReady();
   refreshSharingUi();
   const lyrics = await loadLyricsList();
