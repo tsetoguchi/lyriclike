@@ -60,6 +60,8 @@
       desc: 'Different vowel, same ending consonants'
     }
   ];
+  // Strongest first, the order RHYME_TYPES is listed in.
+  const RHYME_TYPE_KEYS = RHYME_TYPES.map(({ key }) => key);
 
   // Consonance is too loose to tie two lines together, so it scores nothing.
   const RHYME_STRENGTH = { perfect: 5, family: 4, additive: 3, subtractive: 2, assonance: 1 };
@@ -78,6 +80,8 @@
   // or "you’re" splits into "you" and "re".
   const CURLY_APOSTROPHES = /[‘’]/g;
   const WORD_RUNS_SOURCE = "[a-zA-Z'‘’]+";
+  // A stray quote mark matches WORD_RUNS_SOURCE but is not a syllable.
+  const HAS_LETTER = /[a-z]/;
 
   // ── Phoneme helpers ──
 
@@ -207,15 +211,35 @@
 
   // ── Index ──
 
-  function pushToBucket(buckets, key, word) {
-    if (!buckets[key]) buckets[key] = [];
-    buckets[key].push(word);
+  function rhymePartKey(part) {
+    return [part.onset.join(' '), part.vowel, part.coda.join(' ')].join('|');
   }
 
-  function indexWord(index, word) {
-    const rhymePart = extractRhymePart(index.dictionary[word][0]);
-    if (!rhymePart) return;
-    index.rhymeIndex[word] = rhymePart;
+  // One part per way of saying the word: "read" is both "red" and "reed".
+  // Readings that give the same rhyme part are kept once.
+  function listDistinctRhymeParts(pronunciations) {
+    // Most words have one reading; skipping the dedupe for them keeps the
+    // index build, which the writer waits on, as fast as it was.
+    if (pronunciations.length === 1) {
+      const part = extractRhymePart(pronunciations[0]);
+      return part ? [part] : [];
+    }
+    const parts = new Map();
+    for (const phonemes of pronunciationsWorthRhyming(pronunciations)) {
+      const part = extractRhymePart(phonemes);
+      if (part && !parts.has(rhymePartKey(part))) parts.set(rhymePartKey(part), part);
+    }
+    return [...parts.values()];
+  }
+
+  // A word lands in a bucket once, however many of its readings share it.
+  function pushToBucket(buckets, key, word) {
+    if (!buckets[key]) buckets[key] = [];
+    const bucket = buckets[key];
+    if (bucket[bucket.length - 1] !== word) bucket.push(word);
+  }
+
+  function indexRhymePart(index, word, rhymePart) {
     pushToBucket(index.vowelBuckets, rhymePart.vowel, word);
     if (MERGED_VOWELS.has(rhymePart.vowel)) {
       pushToBucket(index.vowelBuckets, MERGED_VOWELS.get(rhymePart.vowel), word);
@@ -225,8 +249,15 @@
     }
   }
 
+  function indexWord(index, word) {
+    const rhymeParts = listDistinctRhymeParts(index.dictionary[word]);
+    if (rhymeParts.length === 0) return;
+    index.rhymeParts[word] = rhymeParts;
+    for (const rhymePart of rhymeParts) indexRhymePart(index, word, rhymePart);
+  }
+
   function buildRhymeIndex(dictionary) {
-    const index = { dictionary, rhymeIndex: {}, vowelBuckets: {}, codaBuckets: {} };
+    const index = { dictionary, rhymeParts: {}, vowelBuckets: {}, codaBuckets: {} };
     for (const word of Object.keys(dictionary)) indexWord(index, word);
     return index;
   }
@@ -237,7 +268,7 @@
   }
 
   function hasRhymeEntry(index, word) {
-    return hasOwnKey(index.rhymeIndex, word);
+    return hasOwnKey(index.rhymeParts, word);
   }
 
   // ── Rhyme search ──
@@ -246,11 +277,44 @@
     return text.toLowerCase().replace(CURLY_APOSTROPHES, "'").replace(/[^a-z']/g, '');
   }
 
-  function classifyBucket(index, target, words, seen, results) {
+  function isSamePhonemeList(list1, list2) {
+    if (list1.length !== list2.length) return false;
+    return list1.every((phoneme, i) => phoneme === list2[i]);
+  }
+
+  // Runs for every word in a bucket, so it checks the vowel before building
+  // anything.
+  function isSameSound(part1, part2) {
+    return part1.vowel === part2.vowel
+      && isSamePhonemeList(part1.coda, part2.coda)
+      && isSamePhonemeList(part1.onset, part2.onset);
+  }
+
+  function isStrongerType(type, than) {
+    if (than === null) return true;
+    return RHYME_TYPE_KEYS.indexOf(type) < RHYME_TYPE_KEYS.indexOf(than);
+  }
+
+  // The best way any reading of the target rhymes with any reading of the
+  // candidate. A word that sounds just like one reading ("red" for "read") is
+  // that word to the ear, so it is not listed under the other reading either.
+  function classifyBestRhyme(targets, candidates) {
+    let best = null;
+    for (const target of targets) {
+      for (const candidate of candidates) {
+        if (isSameSound(target, candidate)) return null;
+        const type = classifyRhyme(target, candidate);
+        if (type && isStrongerType(type, best)) best = type;
+      }
+    }
+    return best;
+  }
+
+  function classifyBucket(index, targets, words, seen, results) {
     for (const word of words) {
       if (seen.has(word)) continue;
       seen.add(word);
-      const type = classifyRhyme(target, index.rhymeIndex[word]);
+      const type = classifyBestRhyme(targets, index.rhymeParts[word]);
       if (type) results[type].push(word);
     }
   }
@@ -273,17 +337,19 @@
   function findRhymes(index, targetWord, filters) {
     if (filters.blocklist.has(targetWord)) return null;
     if (!hasRhymeEntry(index, targetWord)) return null;
-    const target = index.rhymeIndex[targetWord];
+    const targets = index.rhymeParts[targetWord];
     const results = Object.fromEntries(RHYME_TYPES.map(({ key }) => [key, []]));
     const seen = new Set([targetWord]);
 
-    classifyBucket(index, target, index.vowelBuckets[target.vowel] || [], seen, results);
-    if (target.coda.length > 0) {
+    for (const target of targets) {
+      const vowelWords = index.vowelBuckets[target.vowel] || [];
+      classifyBucket(index, targets, vowelWords, seen, results);
+      if (target.coda.length === 0) continue;
       const codaWords = index.codaBuckets[target.coda.join(' ')] || [];
-      classifyBucket(index, target, codaWords, seen, results);
+      classifyBucket(index, targets, codaWords, seen, results);
     }
     filterResults(results, filters);
-    rankResults(index, target, results, filters.wordRanks);
+    rankResults(index, targets, results, filters.wordRanks);
     return results;
   }
 
@@ -332,17 +398,31 @@
     return 0;
   }
 
-  // ranks may be null: the editor searches before the word list has arrived,
-  // and word length stands in for commonness until it does.
-  function toClosenessEntry(context, word) {
-    const part = context.index.rhymeIndex[word];
+  // target is { part, syllables }, counted once per search.
+  function toPairEntry(word, rank, target, part) {
     return {
       word,
-      vowelMiss: part.vowel === context.target.vowel ? 0 : 1,
-      sharedCoda: countSharedCoda(context.target.coda, part.coda),
-      syllableGap: Math.abs(context.targetSyllables - countPartSyllables(part)),
-      rank: context.ranks ? context.ranks.get(word) ?? UNRANKED : UNRANKED
+      rank,
+      vowelMiss: part.vowel === target.part.vowel ? 0 : 1,
+      sharedCoda: countSharedCoda(target.part.coda, part.coda),
+      syllableGap: Math.abs(target.syllables - countPartSyllables(part))
     };
+  }
+
+  // ranks may be null: the editor searches before the word list has arrived,
+  // and word length stands in for commonness until it does. A word is placed
+  // by its closest pairing of readings, so "need" sits with "seed" under the
+  // "reed" reading of "read".
+  function toClosenessEntry(context, word) {
+    const rank = context.ranks ? context.ranks.get(word) ?? UNRANKED : UNRANKED;
+    let closest = null;
+    for (const target of context.targets) {
+      for (const part of context.index.rhymeParts[word]) {
+        const entry = toPairEntry(word, rank, target, part);
+        if (closest === null || compareCloseness(entry, closest) < 0) closest = entry;
+      }
+    }
+    return closest;
   }
 
   function rankByCloseness(context, words) {
@@ -352,12 +432,14 @@
       .map((entry) => entry.word);
   }
 
-  function toRankingContext(index, target, ranks) {
-    return { index, target, ranks: ranks || null, targetSyllables: countPartSyllables(target) };
+  function toRankingContext(index, targets, ranks) {
+    const counted = targets.map(
+      (part) => ({ part, syllables: countPartSyllables(part) }));
+    return { index, targets: counted, ranks: ranks || null };
   }
 
-  function rankResults(index, target, results, ranks) {
-    const context = toRankingContext(index, target, ranks);
+  function rankResults(index, targets, results, ranks) {
+    const context = toRankingContext(index, targets, ranks);
     for (const { key } of RHYME_TYPES) {
       results[key] = rankByCloseness(context, results[key]);
     }
@@ -367,7 +449,8 @@
   // order the editor uses rather than one of its own.
   function rankRhymeWords(index, targetWord, words, ranks) {
     if (!hasRhymeEntry(index, targetWord)) return [...words];
-    return rankByCloseness(toRankingContext(index, index.rhymeIndex[targetWord], ranks), words);
+    const context = toRankingContext(index, index.rhymeParts[targetWord], ranks);
+    return rankByCloseness(context, words);
   }
 
   // ── Result tiers ──
@@ -551,12 +634,15 @@
   }
 
   // index may be null while the dictionary loads; every word is guessed then.
+  // Words split where getLastWord() splits them: "love—hate" and "self-made"
+  // are two words each, not one the dictionary has never seen.
   function countSyllablesForLine(index, line) {
     if (typeof line !== 'string') return 0;
+    const tokens = stripBrackets(line).match(new RegExp(WORD_RUNS_SOURCE, 'g')) || [];
     let total = 0;
-    for (const token of stripBrackets(line).split(/\s+/)) {
+    for (const token of tokens) {
       const word = normalizeWord(token);
-      if (word.length > 0) total += countWordSyllables(index, word);
+      if (HAS_LETTER.test(word)) total += countWordSyllables(index, word);
     }
     return total;
   }
@@ -703,15 +789,32 @@
   }
 
   // One letter per line ("A", "B", ...) grouping lines whose last words rhyme;
-  // lines with no word get ''. Words the dictionary lacks start a new group.
+  // lines with no word get ''. A word the dictionary lacks starts a new group,
+  // unless it ended an earlier line too.
   function computeRhymeScheme(index, lines) {
     return computeRhymeLabels(index, lines).map(toLabelLetter);
+  }
+
+  // A word the dictionary lacks has no sound to compare, but the same made-up
+  // word twice is still heard as a repeat.
+  function findLineLabel(index, word, pronunciations, earlier) {
+    if (pronunciations.length > 0) {
+      return findBestLabel(index, word, pronunciations, earlier.endings);
+    }
+    return earlier.unknownWords.has(word) ? earlier.unknownWords.get(word) : UNLABELLED;
+  }
+
+  function recordLineEnding(earlier, pronunciations, ending) {
+    recordEnding(earlier.endings, pronunciations, ending);
+    if (pronunciations.length === 0 && !earlier.unknownWords.has(ending.word)) {
+      earlier.unknownWords.set(ending.word, ending.label);
+    }
   }
 
   // The same grouping as numbers, which unlike letters never wrap: the marks
   // pass needs "A" and the 27th group, also printed "A", kept apart.
   function computeRhymeLabels(index, lines) {
-    const earlierEndings = new Map();
+    const earlier = { endings: new Map(), unknownWords: new Map() };
     const labels = [];
     let nextLabel = 0;
     for (const line of lines) {
@@ -721,10 +824,10 @@
         continue;
       }
       const pronunciations = lookupPronunciations(index, word) || [];
-      const matched = findBestLabel(index, word, pronunciations, earlierEndings);
+      const matched = findLineLabel(index, word, pronunciations, earlier);
       const label = matched === UNLABELLED ? nextLabel++ : matched;
       labels.push(label);
-      recordEnding(earlierEndings, pronunciations, { word, label });
+      recordLineEnding(earlier, pronunciations, { word, label });
     }
     return labels;
   }
