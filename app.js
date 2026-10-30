@@ -490,11 +490,13 @@ function describeLookupResult(results) {
   return hasRhymes ? LOOKUP_FOUND : LOOKUP_NO_RHYMES;
 }
 
+const lookupTrigger = RhymeLookupCount.createLookupCounter();
+
 // The word goes along only when it came up empty: those are the dictionary's
 // gaps. A tapped word that did rhyme stays on the device.
-function trackRhymeLookup(word, results) {
+function trackRhymeLookup(word, results, trigger) {
   const result = describeLookupResult(results);
-  const params = { result };
+  const params = { result, trigger };
   if (result !== LOOKUP_FOUND) params.word = RhymeCore.normalizeWord(word);
   trackEvent('rhyme_lookup', params);
 }
@@ -1038,7 +1040,7 @@ function pickLineAboveForCaret(text, caret, isPointerPick) {
     updateChipHint();
     return;
   }
-  showPickedRhymes(target.word, target.bounds, isPointerPick);
+  showPickedRhymes(target.word, target.bounds, isPointerPick, true);
 }
 
 // A blank line above is a stanza break, which has nothing to answer.
@@ -1054,7 +1056,7 @@ function lastWordOfLineAbove(text, caret) {
   return { word, bounds: { start, end: start + word.length } };
 }
 
-function showPickedRhymes(word, bounds, isPointerPick) {
+function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   pickHighlightWord(word, bounds, isPointerPick);
   selectedContextEl.textContent = getWordContext(textareaEl.value, bounds ? bounds.start : 0);
   updateChipHint();
@@ -1070,8 +1072,10 @@ function showPickedRhymes(word, bounds, isPointerPick) {
 
   const results = findRhymes(word);
   renderResults(word, results);
-  // Typing runs lookups too; only a tap is someone asking for rhymes.
-  if (isPointerPick) trackRhymeLookup(word, results);
+  // Typing a word runs lookups too; those aren't anyone asking for rhymes.
+  const start = bounds ? bounds.start : 0;
+  const trigger = lookupTrigger({ isPointerPick, isLineAbove, word, start });
+  if (trigger) trackRhymeLookup(word, results, trigger);
 }
 
 // ── Syllable counting ──
