@@ -1,6 +1,8 @@
 // A one-time card that tells signed-in people about live co-writing. It shows
 // only to accounts the LIVE_EDITING switch lets share, so it goes out with the
-// switch, and once closed it stays closed in this browser.
+// switch, and once closed it stays closed in this browser. It waits for a visit
+// after their first page: before it there is nothing to share, and a card
+// arriving as that page saves would interrupt the writing.
 (function initWhatsNew() {
   'use strict';
 
@@ -34,6 +36,10 @@
     return Boolean(window.currentUser && window.currentUser.can_share);
   }
 
+  function hasOwnPage() {
+    return Boolean(window.currentUser && window.currentUser.page_count > 0);
+  }
+
   // On a phone the card sits just above the bottom menu, not over it.
   function liftAboveBottomNav() {
     const nav = document.querySelector('.bottom-nav');
@@ -57,7 +63,7 @@
       card.hidden = true;
       return;
     }
-    if (isSeen()) return;
+    if (isSeen() || !hasOwnPage()) return;
     setTimeout(() => {
       if (canShare() && !isSeen()) show();
     }, SHOW_DELAY_MS);

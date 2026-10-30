@@ -443,6 +443,9 @@
   function openTour() {
     steps = TOURS[tourName].filter(hasVisibleTarget);
     if (steps.length === 0) return;
+    // Seen once it opens, not once it ends: signing up mid-tour reloads the
+    // page, and the tour started over for the new account.
+    markSeen();
     drawDashes();
     tourEl.classList.add(OPENING_CLASS, OPEN_CLASS);
     tourEl.hidden = false;
