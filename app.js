@@ -1988,36 +1988,34 @@ function publishBottomNavHeight() {
 
 // ── Keyboard-aware resize on mobile ──
 
+function fitAppToVisualViewport() {
+  const appContent = document.getElementById('app-content');
+  if (!appContent) return;
+  // A window widened past the mobile breakpoint would otherwise keep the
+  // narrow height it was last fitted to, and leave the desk showing below.
+  if (!isMobileView()) {
+    appContent.style.height = '';
+    return;
+  }
+  appContent.style.height = window.visualViewport.height + 'px';
+
+  // The app is already sized to the space the keyboard leaves, so the
+  // document behind it never needs to move. iOS scrolls it anyway when it
+  // raises the keyboard, which drags the header off the top of the screen
+  // and leaves the desk showing under the app.
+  window.scrollTo(0, 0);
+}
+
+// Only a resize changes how much room the writing has. Scrolling the visual
+// viewport does not, so it re-fits without disturbing where the writer is.
+function handleViewportResize() {
+  fitAppToVisualViewport();
+  requestAnimationFrame(revealCaretLine);
+}
+
 if (window.visualViewport) {
-  const viewport = window.visualViewport;
-
-  function fitAppToVisualViewport() {
-    const appContent = document.getElementById('app-content');
-    if (!appContent) return;
-    // A window widened past the mobile breakpoint would otherwise keep the
-    // narrow height it was last fitted to, and leave the desk showing below.
-    if (!isMobileView()) {
-      appContent.style.height = '';
-      return;
-    }
-    appContent.style.height = viewport.height + 'px';
-
-    // The app is already sized to the space the keyboard leaves, so the
-    // document behind it never needs to move. iOS scrolls it anyway when it
-    // raises the keyboard, which drags the header off the top of the screen
-    // and leaves the desk showing under the app.
-    window.scrollTo(0, 0);
-  }
-
-  // Only a resize changes how much room the writing has. Scrolling the visual
-  // viewport does not, so it re-fits without disturbing where the writer is.
-  function handleViewportResize() {
-    fitAppToVisualViewport();
-    requestAnimationFrame(revealCaretLine);
-  }
-
-  viewport.addEventListener('resize', handleViewportResize);
-  viewport.addEventListener('scroll', fitAppToVisualViewport);
+  window.visualViewport.addEventListener('resize', handleViewportResize);
+  window.visualViewport.addEventListener('scroll', fitAppToVisualViewport);
 }
 
 // ── First-run guidance ──

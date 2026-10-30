@@ -13,7 +13,9 @@
   const MEASUREMENT_ID = 'G-L7J9BRE65Q';
   const TAG_URL = 'https://www.googletagmanager.com/gtag/js?id=' + MEASUREMENT_ID;
   const PLACEHOLDER_ID = 'G-XXXXXXXXXX';
-  const MAX_ERROR_DESCRIPTION = 150;
+  // GA cuts event values at 100 characters, so the location goes first.
+  const MAX_ERROR_DESCRIPTION = 100;
+  const STACK_SCRIPT_LOCATION = /([\w.-]+\.js):(\d+)/;
   // Set on the owner's own browsers, so a GA data filter can leave them out.
   const INTERNAL_KEY = 'internal_traffic';
   const INTERNAL_PARAM = 'internal';
@@ -84,13 +86,21 @@
     });
   }
 
+  // The first script frame in a stack, as "file.js:line", or '' without one.
+  function stackLocation(stack) {
+    const match = typeof stack === 'string' ? stack.match(STACK_SCRIPT_LOCATION) : null;
+    return match ? match[1] + ':' + match[2] : '';
+  }
+
   window.addEventListener('error', event => {
     const file = (event.filename || '').split('/').pop();
-    reportError(event.message + ' @ ' + file + ':' + event.lineno);
+    reportError(file + ':' + event.lineno + ' ' + event.message);
   });
   window.addEventListener('unhandledrejection', event => {
     const reason = event.reason;
-    reportError('unhandled: ' + (reason && reason.message ? reason.message : reason));
+    const message = reason && reason.message ? reason.message : reason;
+    const location = stackLocation(reason && reason.stack);
+    reportError((location ? location + ' ' : '') + 'unhandled: ' + message);
   });
 
   const tag = document.createElement('script');
