@@ -490,6 +490,9 @@ function describeLookupResult(results) {
   return hasRhymes ? LOOKUP_FOUND : LOOKUP_NO_RHYMES;
 }
 
+// The first-visit tour waits for this to know a word was picked by hand.
+const RHYMES_PICKED_EVENT = 'rhymes-picked';
+
 const lookupTrigger = RhymeLookupCount.createLookupCounter();
 
 // The word goes along only when it came up empty: those are the dictionary's
@@ -1061,7 +1064,10 @@ function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   selectedContextEl.textContent = getWordContext(textareaEl.value, bounds ? bounds.start : 0);
   updateChipHint();
   flashWordBar();
-  if (isPointerPick) announcePointerPick();
+  if (isPointerPick) {
+    announcePointerPick();
+    document.dispatchEvent(new CustomEvent(RHYMES_PICKED_EVENT));
+  }
 
   // Reaching for a word is the clearest signal that the rhymes are wanted.
   if (!canSearchRhymes()) {

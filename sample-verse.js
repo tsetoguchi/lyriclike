@@ -12,13 +12,17 @@
   ].join('\n');
   // The word the rhymes panel opens on: the first line's last word.
   const SAMPLE_PICKED_WORD = 'you';
+  // The word the tour asks the visitor to click: the last line's, so the
+  // rhymes it brings up differ from the ones already showing.
+  const SAMPLE_TOUR_WORD = 'door';
 
-  const sampleVerse = { SAMPLE_VERSE, SAMPLE_PICKED_WORD };
+  const sampleVerse = { SAMPLE_VERSE, SAMPLE_PICKED_WORD, SAMPLE_TOUR_WORD };
 
   if (typeof module === 'object' && module.exports) {
     module.exports = sampleVerse;
   } else {
     root.SAMPLE_VERSE = SAMPLE_VERSE;
     root.SAMPLE_PICKED_WORD = SAMPLE_PICKED_WORD;
+    root.SAMPLE_TOUR_WORD = SAMPLE_TOUR_WORD;
   }
 })(this);
