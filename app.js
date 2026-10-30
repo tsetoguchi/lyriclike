@@ -1226,59 +1226,24 @@ const SCHEME_COLORS = [
   'var(--scheme-4)', 'var(--scheme-5)', 'var(--scheme-6)', 'var(--scheme-7)',
   'var(--scheme-8)', 'var(--scheme-9)'
 ];
+// Letters run from A, so A takes the first colour.
+const FIRST_LETTER_CODE = 'A'.charCodeAt(0);
 
-function splitIntoStanzas(allLines, lineCount) {
-  const stanzas = [];
-  const stanzaStartIndices = [];
-  let currentStanza = [];
-  let currentStart = 0;
-
-  for (let i = 0; i < lineCount; i++) {
-    if (allLines[i].trim() === '') {
-      if (currentStanza.length > 0) {
-        stanzas.push(currentStanza);
-        stanzaStartIndices.push(currentStart);
-        currentStanza = [];
-      }
-    } else {
-      if (currentStanza.length === 0) currentStart = i;
-      currentStanza.push(allLines[i]);
-    }
+// Each line's rhyme letter and its colour. Without the dictionary every
+// label is empty; onRhymeDataReady() redraws.
+function schemeLabelsFor(allLines, lineCount) {
+  if (!rhymeIndex) {
+    const empty = new Array(lineCount).fill('');
+    return { labels: empty, labelColors: empty };
   }
-  if (currentStanza.length > 0) {
-    stanzas.push(currentStanza);
-    stanzaStartIndices.push(currentStart);
-  }
-
-  return { stanzas, stanzaStartIndices };
+  const labels = LyricMarks.schemeLetters(rhymeIndex, allLines, lineCount);
+  return { labels, labelColors: labels.map(schemeColor) };
 }
 
-// Each line's rhyme letter and its colour, worked out stanza by stanza.
-// Without the dictionary every label is empty; onRhymeDataReady() redraws.
-function schemeLabelsFor(allLines, lineCount) {
-  const labels = new Array(lineCount).fill('');
-  const labelColors = new Array(lineCount).fill('');
-  if (!rhymeIndex) return { labels, labelColors };
-
-  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
-  for (let stanzaIdx = 0; stanzaIdx < stanzas.length; stanzaIdx++) {
-    const stanza = stanzas[stanzaIdx];
-    const scheme = RhymeCore.computeRhymeScheme(rhymeIndex, stanza);
-    const startIdx = stanzaStartIndices[stanzaIdx];
-
-    let stanzaLineIdx = 0;
-    for (let lineIdx = startIdx; lineIdx < lineCount && stanzaLineIdx < stanza.length; lineIdx++) {
-      if (allLines[lineIdx].trim() !== '') {
-        labels[lineIdx] = scheme[stanzaLineIdx];
-        if (scheme[stanzaLineIdx]) {
-          const labelIndex = scheme[stanzaLineIdx].charCodeAt(0) - 65;
-          labelColors[lineIdx] = SCHEME_COLORS[labelIndex % SCHEME_COLORS.length];
-        }
-        stanzaLineIdx++;
-      }
-    }
-  }
-  return { labels, labelColors };
+function schemeColor(letter) {
+  if (!letter) return '';
+  const labelIndex = letter.charCodeAt(0) - FIRST_LETTER_CODE;
+  return SCHEME_COLORS[labelIndex % SCHEME_COLORS.length];
 }
 
 function updateRhymeSchemeGutter() {
@@ -1333,44 +1298,13 @@ function redrawPreview() {
   if (window.PagePreview) window.PagePreview.redraw();
 }
 
-// The character offset each line starts at within the whole text, so a mark
-// expressed in a stanza's line-local offsets (what groupRhymeMarks() returns)
-// can be placed against the same global offsets wordsToHtml() keys its spans
-// by.
-function lineStartOffsets(allLines) {
-  const offsets = [];
-  let offset = 0;
-  for (const line of allLines) {
-    offsets.push(offset);
-    offset += line.length + 1; // account for the '\n' split() dropped
-  }
-  return offsets;
-}
-
-// Map<globalOffset, { family, stanza, isSlant }> for every internal-rhyme mark in the text,
-// or null when there is nothing to draw. Computed per stanza, like the
-// scheme gutter, since groupRhymeMarks() only ever sees one stanza at a time.
+// Map<globalOffset, { family, stanza, isSlant }> for every internal-rhyme mark
+// in the text, or null when there is nothing to draw.
 function buildInternalRhymeMarkMap(text) {
   if (!internalRhymesVisible || !rhymeIndex) return null;
   const allLines = text.split('\n');
   const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
-  const { stanzas, stanzaStartIndices } = splitIntoStanzas(allLines, lineCount);
-  const starts = lineStartOffsets(allLines);
-
-  const map = new Map();
-  for (let s = 0; s < stanzas.length; s++) {
-    const { marks } = RhymeCore.groupRhymeMarks(rhymeIndex, stanzas[s]);
-    const startIdx = stanzaStartIndices[s];
-    for (let lineIdx = 0; lineIdx < marks.length; lineIdx++) {
-      const lineStart = starts[startIdx + lineIdx];
-      for (const mark of marks[lineIdx]) {
-        map.set(lineStart + mark.start, {
-          family: mark.family, stanza: s, isSlant: mark.isSlant
-        });
-      }
-    }
-  }
-  return map;
+  return LyricMarks.internalRhymeMarks(rhymeIndex, allLines, lineCount);
 }
 
 function invalidateLineHeightCache() {
