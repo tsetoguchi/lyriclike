@@ -206,6 +206,33 @@ describe('findRhymes', () => {
   });
 });
 
+describe('findRhymes with more than one reading', () => {
+  const READINGS_INDEX = buildRhymeIndex({
+    bed: [['B', 'EH1', 'D']],
+    give: [['G', 'IH1', 'V']],
+    live: [['L', 'AY1', 'V'], ['L', 'IH1', 'V']],
+    need: [['N', 'IY1', 'D']],
+    read: [['R', 'EH1', 'D'], ['R', 'IY1', 'D']],
+    red: [['R', 'EH1', 'D']]
+  });
+  const UNFILTERED = { englishWords: null, blocklist: new Set() };
+
+  it('rhymes every reading of the target', () => {
+    const results = findRhymes(READINGS_INDEX, 'read', UNFILTERED);
+    assert.deepEqual(results.perfect, ['bed', 'need']);
+  });
+
+  it('rhymes a candidate through any of its readings', () => {
+    assert.deepEqual(findRhymes(READINGS_INDEX, 'give', UNFILTERED).perfect, ['live']);
+  });
+
+  it('never lists a word that sounds like one reading of the target', () => {
+    const results = findRhymes(READINGS_INDEX, 'read', UNFILTERED);
+    const listed = RHYME_TYPES.flatMap(({ key }) => results[key]);
+    assert.equal(listed.includes('red'), false);
+  });
+});
+
 describe('tierRhymeWords', () => {
   // Positions as english-words.json would give them, commonest first.
   const RANKS = new Map([['pain', 700], ['wayne', 3100], ['slain', 12000], ['legerdemain', 46000]]);
@@ -270,6 +297,15 @@ describe('syllables', () => {
     assert.equal(countSyllablesForLine(INDEX, 'hmm'), 1);
   });
 
+  it('splits words joined by a dash or hyphen', () => {
+    assert.equal(countSyllablesForLine(INDEX, 'cat—hat'), 2);
+    assert.equal(countSyllablesForLine(INDEX, 'happy-cat'), 3);
+  });
+
+  it('counts nothing for a stray quote mark', () => {
+    assert.equal(countSyllablesForLine(INDEX, "the cat '"), 2);
+  });
+
   it('guesses every word while the dictionary is still loading', () => {
     assert.equal(countSyllablesForLine(null, 'beautiful day'), 4);
   });
@@ -303,6 +339,11 @@ describe('computeRhymeScheme', () => {
 
   it('gives unknown words a group of their own', () => {
     assert.deepEqual(computeRhymeScheme(INDEX, ['cat', 'zzyzx', 'hat']), ['A', 'B', 'A']);
+  });
+
+  it('pairs an unknown word with itself', () => {
+    const lines = ['zzyzx', 'cat', 'zzyzx'];
+    assert.deepEqual(computeRhymeScheme(INDEX, lines), ['A', 'B', 'A']);
   });
 
   it('understands dropped-g endings', () => {
