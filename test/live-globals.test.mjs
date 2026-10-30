@@ -8,12 +8,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
+import { APP_SCRIPTS as SCRIPTS } from './support/app-scripts.mjs';
+
 const WINDOW_NAMES = [
   'liveSession', 'livePage', 'LiveCore', 'LiveBinding', 'LiveStore', 'Live', 'LiveDeps',
   'LivePresence', 'LivePresenceView',
 ];
-const SCRIPTS = [...readFileSync(new URL('../index.html', import.meta.url), 'utf8')
-  .matchAll(/<script src="([^"]+\.js)"><\/script>/g)].map(match => match[1]);
 
 describe('global names', () => {
   it('lists the app scripts', () => {

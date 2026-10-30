@@ -2,18 +2,13 @@
 // pointed at or tabbed to, as in Gemini. The name is each icon's aria-label,
 // so items an extension script adds to the rail slot get one too. The
 // browser's own title tip is taken off on first hover so two never show.
-(function showRailTips() {
-  'use strict';
+const RAIL_ID = 'sidebar-rail';
+const TIP_CLASS = 'rail-tip';
+const VISIBLE_CLASS = 'visible';
+const ITEM_SELECTOR = 'a[aria-label], button[aria-label]';
+const TIP_GAP_PX = 8;
 
-  const RAIL_ID = 'sidebar-rail';
-  const TIP_CLASS = 'rail-tip';
-  const VISIBLE_CLASS = 'visible';
-  const ITEM_SELECTOR = 'a[aria-label], button[aria-label]';
-  const TIP_GAP_PX = 8;
-
-  const rail = document.getElementById(RAIL_ID);
-  if (!rail) return;
-
+function showRailTips(rail) {
   const tip = document.createElement('div');
   tip.className = TIP_CLASS;
   tip.setAttribute('aria-hidden', 'true');
@@ -52,4 +47,7 @@
   rail.addEventListener('focusin', onEnter);
   rail.addEventListener('focusout', onLeave);
   rail.addEventListener('click', hideTip);
-})();
+}
+
+const rail = document.getElementById(RAIL_ID);
+if (rail) showRailTips(rail);

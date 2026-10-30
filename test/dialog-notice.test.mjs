@@ -9,9 +9,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
+import { APP_SCRIPTS as SCRIPTS } from './support/app-scripts.mjs';
+
 const OLD_NAMES = ['openDialog', 'closeDialog', 'showNotice', 'hideNotice'];
-const SCRIPTS = [...readFileSync(new URL('../index.html', import.meta.url), 'utf8')
-  .matchAll(/<script src="([^"]+\.js)"><\/script>/g)].map(match => match[1]);
 
 function readScript(name) {
   return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
