@@ -2754,6 +2754,35 @@ body:not(.signed-in) .invite-btn {
   flex-shrink: 0;
 }
 
+/* The gift shakes once as the pointer arrives, so the offer feels alive
+   without moving while nobody is near it. */
+.invite-btn:hover .invite-btn-icon,
+.invite-btn:focus-visible .invite-btn-icon {
+  animation: gift-shake 1400ms ease-in-out;
+}
+
+/* Each swing takes 1.3 times as long as the one before, so the swings
+   counted so far grow with the log of the time: quick at first, then
+   winding down. */
+@keyframes gift-shake {
+  0%, 100% { transform: rotate(0); }
+  3.1% { transform: rotate(-18deg); }
+  7.2% { transform: rotate(16deg); }
+  12.5% { transform: rotate(-17deg); }
+  19.3% { transform: rotate(15deg); }
+  28.3% { transform: rotate(-13deg); }
+  39.8% { transform: rotate(11deg); }
+  54.9% { transform: rotate(-6deg); }
+  74.5% { transform: rotate(3deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-btn:hover .invite-btn-icon,
+  .invite-btn:focus-visible .invite-btn-icon {
+    animation: none;
+  }
+}
+
 /* Wider screens keep it in the lyrics' top corner, level with the title,
    clear of the header's tools. */
 .invite-btn-panel {
