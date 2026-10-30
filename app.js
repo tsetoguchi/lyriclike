@@ -1524,6 +1524,7 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   const mode = chipMode();
   if (placeChipWord(word)) {
     trackEvent('rhyme_inserted', { group: group ? group.dataset.type : '', mode });
+    document.dispatchEvent(new Event('rhyme-inserted'));
     return;
   }
   showDefinition(word, wordEl, false);
