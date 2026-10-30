@@ -1,7 +1,8 @@
 // Inviting a friend: the Invite button and its window, and the other side of
 // the link, where a new account says whose invite brought it here. A friend
 // counts once they save a page; then both people get extra pages. The button
-// only shows when the site has a page limit, since the reward is pages.
+// only shows when the site has a page limit and gives pages for a friend,
+// unless an extension sets its own offer (siteExtensions.setInviteOffer).
 (function initFriendInvite() {
   'use strict';
 
@@ -56,6 +57,36 @@
   // Set after this account takes a code, until its first save brings the
   // extra pages, so the "3 of 5 pages" line can catch up without a reload.
   let isAwaitingReward = false;
+  // An extension's offer: { isAlwaysShown, text }, already checked by
+  // extensions.js. Null keeps the page-based words.
+  let offer = null;
+
+  // The extension's words for key when it set them, else the page-based ones.
+  function offerText(key, fallback, ...args) {
+    const custom = offer ? offer.text[key] : undefined;
+    if (typeof custom === 'string') return custom;
+    if (typeof custom !== 'function') return fallback;
+    try {
+      const text = custom(...args);
+      return typeof text === 'string' ? text : fallback;
+    } catch (error) {
+      console.warn('Extension invite text failed:', key, error);
+      return fallback;
+    }
+  }
+
+  function whenDocumentParsed() {
+    if (document.readyState !== 'loading') return Promise.resolve();
+    return new Promise(done => document.addEventListener('DOMContentLoaded', done, { once: true }));
+  }
+
+  // extensions.js comes after this file, and the extension script loads after
+  // the sign-in check, so a dialog that speaks for it waits for both.
+  async function whenExtensionsSettled() {
+    await whenDocumentParsed();
+    const hooks = window.siteExtensions;
+    if (hooks && typeof hooks.whenSettled === 'function') await hooks.whenSettled();
+  }
 
   // ── The friend's side: remember the code, then hand it in once signed in ──
 
@@ -98,8 +129,11 @@
   }
 
   // Signed out, the sign-up window opens once with a line saying why.
-  function welcomeInvitedVisitor() {
-    if (window.openAuthModal) window.openAuthModal({ message: TEXT.WELCOME });
+  async function welcomeInvitedVisitor() {
+    await whenExtensionsSettled();
+    if (window.openAuthModal) {
+      window.openAuthModal({ message: offerText('welcome', TEXT.WELCOME) });
+    }
   }
 
   // The new limit is on the server; this brings it to the line under the
@@ -118,13 +152,19 @@
     }
   }
 
-  function showClaimed(data) {
+  function claimedMessage(data) {
+    const perFriend = data.pages_per_friend;
+    return data.rewarded ? offerText('earned', TEXT.earned(perFriend))
+      : offerText('saveToEarn', TEXT.saveToEarn(perFriend));
+  }
+
+  async function showClaimed(data) {
     window.trackEvent(EVENT.CLAIMED);
     if (data.rewarded) window.trackEvent(EVENT.REWARDED);
+    await whenExtensionsSettled();
     window.openDialog({
       heading: TEXT.INVITE_WORKED,
-      message: data.rewarded ? TEXT.earned(data.pages_per_friend)
-        : TEXT.saveToEarn(data.pages_per_friend),
+      message: claimedMessage(data),
       confirmLabel: TEXT.OK,
       noCancel: true,
     });
@@ -162,20 +202,34 @@
 
   // ── The inviter's side: the button and the window ──
 
-  function hasPageLimit() {
+  function isInviteShown() {
     const user = window.currentUser;
-    return Boolean(user) && typeof user.page_limit === 'number';
+    if (!user) return false;
+    if (offer && offer.isAlwaysShown) return true;
+    return typeof user.page_limit === 'number' && user.invite_pages_per_friend !== 0;
+  }
+
+  function showInviteButtons() {
+    for (const button of inviteButtons) button.hidden = !isInviteShown();
+  }
+
+  function setInviteOffer(next) {
+    offer = next;
+    showInviteButtons();
   }
 
   function progressText(data) {
     if (data.friends_joined === 0) return TEXT.NONE_YET;
     const shown = Math.min(data.friends_joined, data.max_friends);
     const pages = shown * data.pages_per_friend;
-    return shown >= data.max_friends ? TEXT.allJoined(shown, pages) : TEXT.joined(shown, pages);
+    return shown >= data.max_friends
+      ? offerText('allJoined', TEXT.allJoined(shown, pages), shown)
+      : offerText('joined', TEXT.joined(shown, pages), shown);
   }
 
   function showInvite(data) {
-    byId('invite-subtext').textContent = TEXT.howItWorks(data.pages_per_friend);
+    byId('invite-subtext').textContent = offerText('howItWorks',
+      TEXT.howItWorks(data.pages_per_friend));
     linkInput.value = data.url;
     byId('invite-progress').textContent = progressText(data);
     copyButton.disabled = false;
@@ -236,7 +290,7 @@
   let isFreshArrival = false;
 
   function onAuthChecked() {
-    for (const button of inviteButtons) button.hidden = !hasPageLimit();
+    showInviteButtons();
     if (window.currentUser) {
       claimPendingInvite();
     } else if (isFreshArrival) {
@@ -254,6 +308,7 @@
     window.isTourHeld = true;
   }
 
+  window.setInviteOffer = setInviteOffer;
   document.addEventListener('auth-checked', onAuthChecked);
   document.addEventListener('page-created', onPageCreated);
   // The sign-in check may have answered before this script ran.

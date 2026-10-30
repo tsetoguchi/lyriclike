@@ -2,15 +2,16 @@
 // EXTENSION_SCRIPT_URL; /api/me passes it on and this file loads it once.
 // That script may swap the limit dialog for its own, listen for the
 // 'limit-reached' event, add its own items to the header, sidebar, rail and
-// account menu slots, and replace the links in the fine print slots. It may also read, open
-// and replace the open page, and hear 'page-changed' on document when
-// another page is on screen, and show any text read-only in the editor's
-// place, and keep a signed-in visit's splash up until its items are in. With no script set, nothing is fetched and the neutral dialog in
-// limits.js is all anyone sees.
+// account menu slots, and replace the links in the fine print slots. It may
+// also read, open and replace the open page, and hear 'page-changed' on
+// document when another page is on screen, and show any text read-only in
+// the editor's place, and keep a signed-in visit's splash up until its items
+// are in. It may also set what the Invite button offers. With no script set,
+// nothing is fetched and the neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 5;
+  const HOOK_VERSION = 6;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -23,6 +24,8 @@
   const REASON_INVALID = 'invalid';
   const REASON_NOT_READY = 'not-ready';
   const REASON_OFFLINE = 'offline';
+  const INVITE_TEXT_KEYS = Object.freeze(
+    ['howItWorks', 'joined', 'allJoined', 'welcome', 'saveToEarn', 'earned']);
 
   let limitDialog = null;
   const loadedUrls = new Set();
@@ -291,6 +294,30 @@
     if (setNote) setNote(note);
   }
 
+  // Only the known words, each a string or a function that returns one; a
+  // missing one keeps the page-based words.
+  function readInviteText(text) {
+    const read = {};
+    for (const key of INVITE_TEXT_KEYS) {
+      const value = text ? text[key] : undefined;
+      if (typeof value === 'string' || typeof value === 'function') read[key] = value;
+      else if (value !== undefined) console.warn('Extension hook: invite text needs a string:', key);
+    }
+    return read;
+  }
+
+  // isAlwaysShown keeps the Invite button on for every signed-in account,
+  // even with no page limit. friend-invite.js owns the button and its window.
+  function setInviteOffer(offer) {
+    const setOffer = pageFunction('setInviteOffer');
+    if (!setOffer) return;
+    const isObject = offer !== null && typeof offer === 'object';
+    setOffer(isObject ? {
+      isAlwaysShown: offer.isAlwaysShown === true,
+      text: readInviteText(offer.text),
+    } : null);
+  }
+
   root.siteExtensions = {
     version: HOOK_VERSION,
     setLimitDialog,
@@ -314,6 +341,7 @@
     addNotebookRowAction,
     notebookRowActions,
     addShareNote,
+    setInviteOffer,
     holdSplash,
     whenSettled,
   };
