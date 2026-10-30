@@ -3777,6 +3777,36 @@ body.sidebar-open #sidebar-scrim {
   #app-content {
     margin-left: var(--rail-width);
   }
+
+  /* The rail's logo stands in for the name while the sidebar is folded. */
+  body:not(.sidebar-open) header h1 {
+    display: none;
+  }
+}
+
+/* The rail's top button wears the logo and shows what it does, the
+   sidebar glyph, only under the pointer or keyboard focus. */
+#rail-open-btn .rail-open-glyph,
+#rail-open-btn:hover .rail-logo,
+#rail-open-btn:focus-visible .rail-logo {
+  display: none;
+}
+
+#rail-open-btn:hover .rail-open-glyph,
+#rail-open-btn:focus-visible .rail-open-glyph {
+  display: block;
+}
+
+#rail-open-btn .rail-logo {
+  stroke: none;
+}
+
+.rail-logo-l {
+  fill: var(--ink);
+}
+
+.rail-logo-frame {
+  fill: var(--accent);
 }
 
 /* The rail's icons brighten slowly under the pointer, like the lyrics do. */
