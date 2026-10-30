@@ -25,6 +25,9 @@
   const DASH_DONE_CLASS = 'is-done';
   const NEXT_LABEL = 'Next';
   const LAST_LABEL = 'Got it';
+  // Sent by the editor when a word is picked by hand; a step that asks for
+  // that click moves on when it hears this.
+  const RHYMES_PICKED_EVENT = 'rhymes-picked';
 
   // `{Click}` and `{click}` become "Tap" and "tap" on touch screens, and
   // `{word}` the word a rhyme page linked to. A target
@@ -33,7 +36,8 @@
   // that would switch the view under the tour, never does. A step whose part
   // is hidden is passed over. The gutters slide open after load, so they are
   // judged by their switch (`shownWhen`) rather than a width that may still be
-  // zero.
+  // zero. A step with `advanceOn` has no Next button: it asks for an action
+  // and moves on when the page reports that event.
   const SWITCHES_STEP = {
     // On a phone the switches live in the bottom bar: Syllables, and the
     // rhyme letters inside Highlights.
@@ -47,20 +51,27 @@
       'letters are under Highlights.',
   };
 
-  const SYLLABLES_STEP = {
-    target: '#syllable-gutter',
-    shownWhen: '#syllable-gutter.visible',
-    title: 'Syllables',
-    text: 'The number beside each line is how many syllables it has.',
+  // The numbers and the letters share one card, and the switches that turn
+  // them off are what it lights.
+  const NUMBERS_STEP = {
+    ...SWITCHES_STEP,
+    title: 'Syllables and rhymes',
+    text: 'The numbers are syllables, and the letters show which lines rhyme. ' +
+      'Turn either off here.',
+    phoneText: 'The numbers are syllables, and the letters show which lines ' +
+      'rhyme. Tap Syllables to turn the counts off; the letters are under ' +
+      'Highlights.',
   };
 
-  // The letters are drawn beside each line's end, outside the gutter's own
-  // box.
-  const SCHEME_STEP = {
-    target: '#rhyme-scheme-gutter .scheme-line',
-    shownWhen: '#rhyme-scheme-gutter.visible',
-    title: 'Rhyme scheme',
-    text: 'Lines that rhyme share a letter, so A A B B is two rhyming pairs.',
+  // Another line's last word than the one already picked, so the rhymes that
+  // appear are the visitor's doing.
+  const TRY_RHYME_STEP = {
+    target: '#lyrics-highlight .lyric-word[data-start="' +
+      SAMPLE_VERSE.lastIndexOf(SAMPLE_TOUR_WORD) + '"]',
+    live: true,
+    advanceOn: RHYMES_PICKED_EVENT,
+    title: 'Try a rhyme',
+    text: '{Click} "' + SAMPLE_TOUR_WORD + '" to see what rhymes with it.',
   };
 
   const RHYMES_STEP = {
@@ -88,13 +99,12 @@
       title: 'Write here',
       text: 'This is your page. The verse is a sample to play with.',
     },
-    SYLLABLES_STEP,
-    { ...SCHEME_STEP, text: 'Lines that rhyme share a letter. This verse goes A B A B.' },
-    SWITCHES_STEP,
+    NUMBERS_STEP,
+    TRY_RHYME_STEP,
     {
       ...RHYMES_STEP,
-      text: 'Rhymes for the picked word show here. {Click} one to swap it ' +
-        'into your line.',
+      text: 'The rhymes for the word you picked show here. {Click} one to ' +
+        'swap it into your line.',
     },
     NEXT_LINE_STEP,
     {
@@ -135,9 +145,7 @@
       title: 'Write here',
       text: 'This is your page. Type your lyrics here, one line at a time.',
     },
-    SYLLABLES_STEP,
-    SCHEME_STEP,
-    SWITCHES_STEP,
+    NUMBERS_STEP,
     RHYMES_STEP,
     NEXT_LINE_STEP,
   ];
@@ -324,6 +332,7 @@
     countEl.textContent = 'Step ' + (index + 1) + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
+    nextBtn.hidden = Boolean(steps[index].advanceOn);
     fitStepToLayout();
     markDashes(index);
     replayWordsIn();
@@ -436,7 +445,8 @@
     if (event.key === 'Escape') endTour('skipped');
     if (event.key === 'Tab') keepFocusInCard(event);
     if (event.target instanceof HTMLTextAreaElement) return;
-    if (event.key === 'ArrowRight') goNext();
+    const isWaiting = Boolean(steps[stepIndex].advanceOn);
+    if (event.key === 'ArrowRight' && !isWaiting) goNext();
     else if (event.key === 'ArrowLeft') goBack();
   }
 
@@ -492,6 +502,10 @@
   skipBtn.addEventListener('click', () => endTour('skipped'));
   window.addEventListener('resize', () => {
     if (!tourEl.hidden) fitStepToLayout();
+  });
+  document.addEventListener(RHYMES_PICKED_EVENT, () => {
+    if (tourEl.hidden || steps[stepIndex].advanceOn !== RHYMES_PICKED_EVENT) return;
+    goNext();
   });
   // Pressing the lit "Start your own" does what the last card asks.
   document.addEventListener('click', (event) => {
