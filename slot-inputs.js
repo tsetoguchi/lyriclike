@@ -1,6 +1,6 @@
 // Checks on what an extension passes to the page slots. Each reader returns
 // the cleaned input, or null when it refuses, so a bad call becomes a warning
-// and a no-op instead of a throw. The browser loads this as a plain script
+// and a no-op instead of a throw. The browser loads this as a module
 // and reads window.SlotInputs; Node loads it with require.
 (function exposeSlotInputs(root) {
   'use strict';
@@ -105,4 +105,4 @@
   } else {
     root.SlotInputs = SlotInputs;
   }
-})(this);
+})(globalThis);

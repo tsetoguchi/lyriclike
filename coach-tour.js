@@ -28,6 +28,11 @@
   // Sent by the editor when a word is picked by hand; a step that asks for
   // that click moves on when it hears this.
   const RHYMES_PICKED_EVENT = 'rhymes-picked';
+  // friend-invite.js, a module, may hold the tour, and DOMContentLoaded only
+  // fires once every module has run.
+  const modulesRun = new Promise(done => {
+    document.addEventListener('DOMContentLoaded', done, { once: true });
+  });
 
   // `{Click}` and `{click}` become "Tap" and "tap" on touch screens, and
   // `{word}` the word a rhyme page linked to. A target
@@ -478,7 +483,7 @@
   function startCoachTour(name, word) {
     if (isSeen() || !TOURS[name]) return false;
     chooseTour(name, word);
-    setTimeout(openTourUnlessHeld, START_DELAY_MS);
+    modulesRun.then(() => setTimeout(openTourUnlessHeld, START_DELAY_MS));
     return true;
   }
 

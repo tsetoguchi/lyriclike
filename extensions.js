@@ -350,4 +350,4 @@
   document.addEventListener('auth-checked', showPageActions);
   document.addEventListener('page-changed', showPageActions);
   loadAccountScript();
-})(this);
+})(globalThis);

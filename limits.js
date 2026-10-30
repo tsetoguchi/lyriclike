@@ -2,7 +2,7 @@
 // "3 of 5 pages" under the notebook, and a plain dialog at New page and Share
 // when the next one would go over. The numbers come from /api/me. With no
 // limits set (a self-hosted copy) none of this shows. The browser loads this
-// as a plain script and reads window.SiteLimits; Node loads it with require.
+// as a module and reads window.SiteLimits; Node loads it with require.
 (function exposeSiteLimits(root) {
   'use strict';
 
@@ -89,5 +89,7 @@
     module.exports = SiteLimits;
   } else {
     root.SiteLimits = SiteLimits;
+    // The notebook list may have drawn before this module ran, with no count.
+    if (root.NotebookList) root.NotebookList.refreshPageCount();
   }
-})(this);
+})(globalThis);
