@@ -9,11 +9,11 @@ import { webcrypto } from 'node:crypto';
 import { describe, it } from 'node:test';
 import vm from 'node:vm';
 
+import { APP_SCRIPTS as SCRIPTS } from './support/app-scripts.mjs';
+
 const SOURCE = readFileSync(new URL('../random-id.js', import.meta.url), 'utf8');
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SAMPLE_COUNT = 500;
-const SCRIPTS = [...readFileSync(new URL('../index.html', import.meta.url), 'utf8')
-  .matchAll(/<script src="([^"]+\.js)"><\/script>/g)].map(match => match[1]);
 
 function runIn(cryptoApi) {
   const context = vm.createContext({ crypto: cryptoApi });
