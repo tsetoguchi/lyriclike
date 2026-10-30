@@ -137,7 +137,7 @@
   }
 
   // The new limit is on the server; this brings it to the line under the
-  // notebook. showPageCount and currentOwnPageCount come from storage.js.
+  // notebook (notebook-list.js).
   async function refreshPageLimit() {
     try {
       const res = await fetch('/api/me');
@@ -145,7 +145,7 @@
       const { page_limit: pageLimit } = await res.json();
       const isRaised = pageLimit !== window.currentUser.page_limit;
       window.currentUser.page_limit = pageLimit;
-      if (typeof showPageCount === 'function') showPageCount(currentOwnPageCount());
+      if (window.NotebookList) window.NotebookList.refreshPageCount();
       return isRaised;
     } catch {
       return false;

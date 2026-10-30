@@ -24,7 +24,7 @@
 
   // On a phone the notebook drawer would cover the full-screen panel.
   function closeNotebookDrawer() {
-    if (typeof root.closeLyricsList === 'function') root.closeLyricsList();
+    if (root.Sidebar) root.Sidebar.close();
   }
 
   function open(element) {

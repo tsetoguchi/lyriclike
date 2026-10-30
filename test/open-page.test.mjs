@@ -12,7 +12,7 @@ const STORAGE_STATE_NAMES = [
   'currentLyricId', 'currentTitle', 'currentRevision', 'currentPageInfo', 'lastSavedBody',
   'saveInFlight', 'pendingConflict', 'isLiveDraft',
 ];
-const CALLERS = ['sharing.js', 'extensions.js', 'auth.js', 'save-nudge.js'];
+const CALLERS = ['sharing.js', 'extensions.js', 'auth.js', 'save-nudge.js', 'notebook-list.js'];
 
 function readScript(name) {
   return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
