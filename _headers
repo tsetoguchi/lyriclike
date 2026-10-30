@@ -69,6 +69,9 @@
 /account-security.js
   Cache-Control: no-cache
 
+/account-menu-views.js
+  Cache-Control: no-cache
+
 /page-menu.js
   Cache-Control: no-cache
 

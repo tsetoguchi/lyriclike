@@ -2919,6 +2919,88 @@ body:not(.signed-in) .invite-btn {
   display: none;
 }
 
+/* The menu's two pages. Only the shown one takes room; the other lies over
+   it, slid a little to its side and faded, so switching reads as turning
+   a page: the account page leaves left, Legal comes in from the right. */
+.account-menu-views {
+  position: relative;
+  overflow: hidden;
+  transition: height var(--duration-slow) var(--ease-glide);
+}
+
+.account-menu-view {
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform var(--duration-slow) var(--ease-glide),
+    opacity var(--duration-slow) var(--ease-glide),
+    visibility 0s;
+}
+
+.account-menu-view:not(.is-current) {
+  position: absolute;
+  inset: 0 0 auto;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform var(--duration-slow) var(--ease-glide),
+    opacity var(--duration-slow) var(--ease-glide),
+    visibility 0s linear var(--duration-slow);
+}
+
+#account-menu-main:not(.is-current) {
+  transform: translateX(-30%);
+}
+
+#account-menu-legal:not(.is-current) {
+  transform: translateX(30%);
+}
+
+.account-menu-views.is-instant,
+.account-menu-views.is-instant .account-menu-view {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-menu-views,
+  .account-menu-view,
+  .account-menu-view:not(.is-current) {
+    transition: opacity var(--duration-base) ease-out, visibility 0s;
+  }
+
+  #account-menu-main:not(.is-current),
+  #account-menu-legal:not(.is-current) {
+    transform: none;
+  }
+}
+
+/* Says a row opens another page, as the notebook's groups do. */
+.account-menu-chevron {
+  flex-shrink: 0;
+  width: var(--space-4);
+  height: var(--space-4);
+  margin-left: auto;
+  fill: none;
+  stroke: var(--ink-faded);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The second page's title doubles as the way back. */
+.account-menu-back {
+  font-weight: var(--weight-bold);
+}
+
+.account-menu-back .account-menu-icon {
+  stroke: var(--ink);
+}
+
+a.account-menu-item {
+  text-decoration: none;
+}
+
 .account-menu-item {
   display: flex;
   align-items: center;
@@ -3583,6 +3665,13 @@ body:not(.signed-in) .invite-btn {
   cursor: default;
 }
 
+.auth-fine-print {
+  margin: 0;
+  color: var(--ink-faded);
+  font-size: var(--text-caption-1);
+  text-align: center;
+}
+
 /* ── Sidebar: the notebook ──
 
    The notebook as a sidebar, as in Gemini or ChatGPT: the wordmark, New
@@ -4147,17 +4236,6 @@ body.sidebar-open #sidebar-scrim {
   display: none;
 }
 
-/* One quiet line under the pad, where people look for the fine print. */
-.app-footer {
-  margin: 0;
-  padding: var(--space-2) var(--space-4);
-  border-top: var(--hairline) solid var(--rule);
-  background: var(--paper);
-  color: var(--ink-faded);
-  font-size: var(--text-caption-1);
-  text-align: center;
-}
-
 /* An extension script's sidebar items, under the notebook's pages, lined up
    with the items at the top. Empty, it takes no room. */
 .sidebar-slot {
@@ -4218,38 +4296,31 @@ body.sidebar-open #sidebar-scrim {
   font-size: var(--text-caption-1);
 }
 
-.app-footer a,
 .sidebar-contact a,
-.sidebar-links a {
+.sidebar-links a,
+.auth-fine-print a {
   color: var(--ink-faded);
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color var(--duration-fast);
 }
 
-.app-footer a:hover,
 .sidebar-contact a:hover,
-.sidebar-links a:hover {
+.sidebar-links a:hover,
+.auth-fine-print a:hover {
   color: var(--ink);
 }
 
-/* On a phone the bottom bar owns the foot of the screen, so the link moves
-   to the foot of the notebook drawer instead. */
+/* Signed in, these links live in the account menu instead. */
 .sidebar-links {
-  display: none;
-  padding: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0 var(--space-5) var(--space-3);
+  color: var(--ink-faded);
   font-size: var(--text-caption-1);
 }
 
-@media (max-width: 768px) {
-  .app-footer {
-    display: none;
-  }
-
-  .sidebar-links {
-    display: block;
-    padding-top: 0;
-  }
+body.signed-in .sidebar-links {
+  display: none;
 }
 
 /* ── Mobile layout ── */
