@@ -69,6 +69,10 @@
   // A word's unstressed ending against another's stressed syllable is weaker
   // evidence, so assonance alone does not pair the lines.
   const MIN_CROSS_STRENGTH = 2;
+  // Two unstressed endings ("walking/running", "nation/motion") share a suffix,
+  // not a rhyme. They still pair two lines, but any rhyme on the stressed
+  // syllable beats them.
+  const ENDING_ONLY_STRENGTH = RHYME_STRENGTH.assonance;
   // Inside a line only an exact match counts: "happy/me" is heard, but
   // "money/feel" and "morning/win" are not.
   const MIN_MARK_CROSS_STRENGTH = RHYME_STRENGTH.perfect;
@@ -677,10 +681,14 @@
     return 0;
   }
 
+  function scoreEndingRhyme(end1, end2) {
+    return Math.min(scoreRhyme(end1, end2), ENDING_ONLY_STRENGTH);
+  }
+
   function scorePronunciations(parts1, parts2) {
     const sameTypeScore = Math.max(
       scoreRhyme(parts1.stressed, parts2.stressed),
-      scoreRhyme(parts1.end, parts2.end)
+      scoreEndingRhyme(parts1.end, parts2.end)
     );
     const crossScore = scoreCrossRhyme(parts1, parts2);
     return crossScore >= MIN_CROSS_STRENGTH ? Math.max(sameTypeScore, crossScore) : sameTypeScore;

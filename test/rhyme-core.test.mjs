@@ -350,6 +350,24 @@ describe('computeRhymeScheme', () => {
     assert.deepEqual(computeRhymeScheme(INDEX, ['running', "cunnin'"]), ['A', 'A']);
   });
 
+  describe('when two lines share only an unstressed ending', () => {
+    const ENDINGS_INDEX = buildRhymeIndex({
+      running: [['R', 'AH1', 'N', 'IH0', 'NG']],
+      sun: [['S', 'AH1', 'N']],
+      walking: [['W', 'AO1', 'K', 'IH0', 'NG']]
+    });
+
+    it('still gives them one letter', () => {
+      const lines = ['walking', 'running'];
+      assert.deepEqual(computeRhymeScheme(ENDINGS_INDEX, lines), ['A', 'A']);
+    });
+
+    it('lets a rhyme on the stressed syllable win', () => {
+      const lines = ['walking', 'sun', 'running'];
+      assert.deepEqual(computeRhymeScheme(ENDINGS_INDEX, lines), ['A', 'B', 'B']);
+    });
+  });
+
   it('rhymes an unstressed ending with a stressed syllable', () => {
     assert.deepEqual(computeRhymeScheme(INDEX, ['happy', 'me']), ['A', 'A']);
   });
