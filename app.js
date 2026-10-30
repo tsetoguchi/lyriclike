@@ -78,6 +78,7 @@ let blocklist = null;
 let debounceTimer = null;
 let lastTextValue = '';
 let lastMeasuredWidth = 0;
+let lastEditorSizeKey = null;
 
 // ── DOM references ──
 const textareaEl = document.getElementById('lyrics');
@@ -1097,14 +1098,8 @@ function buildSyllableLine(line, height) {
   return '<div class="syl-line" style="height:' + height + 'px">' + (count > 0 ? count : '&nbsp;') + '</div>';
 }
 
-function updateSyllableGutter() {
-  const lines = textareaEl.value.split('\n');
-  const lineCount = Math.min(lines.length, MAX_GUTTER_LINES);
-  const heights = measureLineHeights(lines.slice(0, lineCount));
-  const parts = [];
-  for (let i = 0; i < lineCount; i++) {
-    parts.push(buildSyllableLine(lines[i], heights[i]));
-  }
+function updateSyllableGutter(shownLines, heights) {
+  const parts = shownLines.map((line, i) => buildSyllableLine(line, heights[i]));
   gutterEl.innerHTML = '<div class="gutter-inner">' + parts.join('') + '</div>';
 }
 
@@ -1170,17 +1165,20 @@ function resizeEditorToContent() {
 
   textareaEl.style.height = 'auto';
   const contentHeight = textareaEl.scrollHeight;
-  // A short lyric still has to fill the pad, or the writing surface stops
-  // mid-page while the gutters beside it run on. The floor is measured
-  // rather than declared: a percentage min-height resolves against the
-  // wrapper, whose own height is content-driven, so it never applies.
-  // The sample verse's clear link sits above the text in the same scroller,
-  // so the floor is what is left under it; otherwise the pad always scrolls.
-  const floor = lyricsAreaEl.clientHeight - textareaEl.parentElement.offsetTop;
-  textareaEl.style.height = Math.max(contentHeight, floor) + 'px';
+  textareaEl.style.height = Math.max(contentHeight, editorFloor()) + 'px';
 
   lyricsAreaEl.scrollTop = scrollTop;
   updateEditorFade();
+}
+
+// A short lyric still has to fill the pad, or the writing surface stops
+// mid-page while the gutters beside it run on. The floor is measured
+// rather than declared: a percentage min-height resolves against the
+// wrapper, whose own height is content-driven, so it never applies.
+// The sample verse's clear link sits above the text in the same scroller,
+// so the floor is what is left under it; otherwise the pad always scrolls.
+function editorFloor() {
+  return lyricsAreaEl.clientHeight - textareaEl.parentElement.offsetTop;
 }
 
 // Where the caret's line sits inside the editor, measured from the top of the
@@ -1256,20 +1254,18 @@ function schemeColor(letter) {
   return SCHEME_COLORS[labelIndex % SCHEME_COLORS.length];
 }
 
-function updateRhymeSchemeGutter() {
+function textColumnWidth() {
+  const textStyle = getComputedStyle(textareaEl);
+  return textareaEl.clientWidth
+    - parseFloat(textStyle.paddingLeft) - parseFloat(textStyle.paddingRight);
+}
+
+function updateRhymeSchemeGutter(allLines, lineCount, heights, textWidth) {
   if (!rhymeSchemeVisible) return;
   // Dictionary may still be loading; onLoaded() re-renders when it lands.
   if (!rhymeIndex) return;
   console.assert(rhymeSchemeGutterEl !== null, 'updateRhymeSchemeGutter: gutter element must exist');
-  const text = textareaEl.value;
-  const allLines = text.split('\n');
-  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
   const { labels, labelColors } = schemeLabelsFor(allLines, lineCount);
-
-  const heights = measureLineHeights(allLines.slice(0, lineCount));
-  const textStyle = getComputedStyle(textareaEl);
-  const textWidth = textareaEl.clientWidth
-    - parseFloat(textStyle.paddingLeft) - parseFloat(textStyle.paddingRight);
   const parts = [];
   for (let i = 0; i < lineCount; i++) {
     const lineHeight = heights[i];
@@ -1449,9 +1445,30 @@ function canMeasureEditor() {
 
 function updateGutters() {
   if (!canMeasureEditor()) return;
+  const allLines = textareaEl.value.split('\n');
+  const lineCount = Math.min(allLines.length, MAX_GUTTER_LINES);
+  const shownLines = allLines.slice(0, lineCount);
+  resizeEditorIfLinesMoved(shownLines, lineCount < allLines.length);
+  // Every read comes before the first margin is written: a read after a
+  // write lays the whole page out again, which on a long lyric is most of
+  // what a keystroke costs.
+  const heights = measureLineHeights(shownLines);
+  const textWidth = textColumnWidth();
+  updateSyllableGutter(shownLines, heights);
+  updateRhymeSchemeGutter(allLines, lineCount, heights, textWidth);
+}
+
+// Reading the content height means collapsing the editor, which lays the
+// page out twice. The lines only add up to a new height when the content
+// height has changed too, so most keystrokes can skip it. The floor is in
+// the key because ending the sample moves it without touching a line.
+function resizeEditorIfLinesMoved(shownLines, hasUnshownLines) {
+  const linesHeight = measureLineHeights(shownLines)
+    .reduce((total, height) => total + height, 0);
+  const sizeKey = linesHeight + ':' + editorFloor();
+  if (sizeKey === lastEditorSizeKey && !hasUnshownLines) return;
+  lastEditorSizeKey = sizeKey;
   resizeEditorToContent();
-  updateSyllableGutter();
-  updateRhymeSchemeGutter();
 }
 
 // Only a change of width re-wraps the lines, and the width is only worth
@@ -1469,6 +1486,8 @@ textareaEl.addEventListener('input', function handleInput() {
   // Writing is the other signal that the rhyme data is wanted. It arrives in
   // the background while the writer keeps typing.
   ensureRhymeData();
+  // The poll is for edits that never fire input; this one is drawn here.
+  lastTextValue = textareaEl.value;
   updateGutters();
   renderHighlight();
   // An edit can take away the word a chip would swap.
