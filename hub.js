@@ -9,6 +9,7 @@
   const SHOWN_EVENT = 'hub-shown';
   const HIDDEN_EVENT = 'hub-hidden';
   const SIGNED_OUT_CHOICE = 'signed-out';
+  const PHONE_QUERY = '(max-width: 768px)';
   const inviteButton = document.getElementById('invite-btn');
   // Where Invite sits off the start screen, beside Share above the words.
   const inviteHome = { parent: inviteButton.parentElement, next: inviteButton.nextSibling };
@@ -60,6 +61,16 @@
     handleCreateClick();
   }
 
+  // On a phone the notebook's wordmark leads back to the start screen in
+  // place, so the page being written stays open behind it.
+  function reopenHubFromWordmark(event) {
+    if (!window.matchMedia(PHONE_QUERY).matches) return;
+    if (!document.body.classList.contains('signed-in')) return;
+    event.preventDefault();
+    Sidebar.close();
+    showHub();
+  }
+
   // The splash only guesses who is signed in; when the guess was wrong the
   // start screen goes and the signed-out editor stays.
   function hideIfSignedOut() {
@@ -68,6 +79,7 @@
 
   document.getElementById('hub-notebook-btn').addEventListener('click', openNotebookFromHub);
   document.getElementById('hub-create-btn').addEventListener('click', createFromHub);
+  document.querySelector('.sidebar-wordmark').addEventListener('click', reopenHubFromWordmark);
   document.addEventListener('auth-checked', hideIfSignedOut);
   if (isHubShowing()) placeTopBarControls();
 
