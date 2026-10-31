@@ -91,15 +91,16 @@
     return Boolean(window.currentUser && window.currentUser.can_share);
   }
 
-  // Only a page that is on the server can be shared. An editor gets the same
-  // button, to see who else is on the page.
+  // A page not on the server yet still gets the button: clicking it saves
+  // the page first. An editor gets the same button, to see who else is on
+  // the page.
   function refreshPageSharing() {
     const signedIn = Boolean(window.currentUser);
     const button = byId('share-btn');
     const isEditor = openPage.role === 'editor';
     // An already-shared page keeps the button, so its owner can still see
     // and remove people with sharing paused.
-    button.hidden = !signedIn || openPage.revision === null || (!isEditor && !isShared() && !canShare());
+    button.hidden = !signedIn || (!isEditor && !isShared() && !canShare());
     button.innerHTML = (isEditor ? PEOPLE_BUTTON_ICON : SHARE_BUTTON_ICON)
       + `<span>${isEditor ? 'People' : 'Share'}</span>`;
     // Phones hide the title row, so they get a copy of the button above the words.
@@ -432,7 +433,13 @@
   overlay.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); closeShareDialog(); }
   });
-  const openForCurrentPage = () => openShareDialog(openPage.id, openPage.title);
+  // A save that fails already says so in the save indicator, so the dialog
+  // just stays shut.
+  async function openForCurrentPage() {
+    const pageId = openPage.id;
+    if (!await openPage.ensureOnServer() || pageId !== openPage.id) return;
+    openShareDialog(pageId, openPage.title);
+  }
   byId('share-btn').addEventListener('click', openForCurrentPage);
   byId('page-sharing').addEventListener('click', openForCurrentPage);
   if (byId('share-btn-phone')) byId('share-btn-phone').addEventListener('click', openForCurrentPage);
