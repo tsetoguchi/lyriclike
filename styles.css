@@ -1842,17 +1842,9 @@ header .nav-icon circle {
   outline: none;
 }
 
-.lyrics-area::-webkit-scrollbar {
-  display: none;
-}
-
-.lyrics-area {
-  scrollbar-width: none;
-}
-
-/* With the scrollbar hidden, a line cut off at the bottom edge looks like the
-   end of the page. Fading it says there is more below; a page that ends on
-   screen keeps its last line sharp. Registered so the fade eases in and out
+/* A line cut off at the bottom edge can look like the end of the page.
+   Fading it says there is more below; a page that ends on screen keeps its
+   last line sharp. Registered so the fade eases in and out
    instead of popping. */
 @property --editor-fade {
   syntax: '<length>';
@@ -1952,11 +1944,6 @@ header .nav-icon circle {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.page-preview::-webkit-scrollbar {
-  display: none;
 }
 
 /* The preview's title, read-only in the page title's place: the same
@@ -4037,16 +4024,22 @@ body.sidebar-open #sidebar-scrim {
 /* A thin rail that stays faint until the list is under the pointer, then
    turns amber once grabbed, the way every other grip in the app does. The
    clear border insets the line so it is easier to catch than it looks. */
+.lyrics-area::-webkit-scrollbar,
+.page-preview::-webkit-scrollbar,
 #lyrics-list-items::-webkit-scrollbar,
 #rhyme-results::-webkit-scrollbar {
   width: var(--scrollbar-rail-width);
 }
 
+.lyrics-area::-webkit-scrollbar-track,
+.page-preview::-webkit-scrollbar-track,
 #lyrics-list-items::-webkit-scrollbar-track,
 #rhyme-results::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.lyrics-area::-webkit-scrollbar-thumb,
+.page-preview::-webkit-scrollbar-thumb,
 #lyrics-list-items::-webkit-scrollbar-thumb,
 #rhyme-results::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb-rest);
@@ -4055,16 +4048,22 @@ body.sidebar-open #sidebar-scrim {
   border-radius: var(--scrollbar-rail-width);
 }
 
+.lyrics-area:hover::-webkit-scrollbar-thumb,
+.page-preview:hover::-webkit-scrollbar-thumb,
 #lyrics-list-items:hover::-webkit-scrollbar-thumb,
 #rhyme-results:hover::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
 }
 
+.lyrics-area::-webkit-scrollbar-thumb:hover,
+.page-preview::-webkit-scrollbar-thumb:hover,
 #lyrics-list-items::-webkit-scrollbar-thumb:hover,
 #rhyme-results::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover);
 }
 
+.lyrics-area::-webkit-scrollbar-thumb:active,
+.page-preview::-webkit-scrollbar-thumb:active,
 #lyrics-list-items::-webkit-scrollbar-thumb:active,
 #rhyme-results::-webkit-scrollbar-thumb:active {
   background-color: var(--accent);
@@ -4073,12 +4072,16 @@ body.sidebar-open #sidebar-scrim {
 /* Chrome drops the rules above if it also sees scrollbar-color, so only
    browsers without them get the standard properties. */
 @supports not selector(::-webkit-scrollbar) {
+  .lyrics-area,
+  .page-preview,
   #lyrics-list-items,
   #rhyme-results {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb-rest) transparent;
   }
 
+  .lyrics-area:hover,
+  .page-preview:hover,
   #lyrics-list-items:hover,
   #rhyme-results:hover {
     scrollbar-color: var(--scrollbar-thumb) transparent;
