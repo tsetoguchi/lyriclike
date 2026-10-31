@@ -25,12 +25,13 @@
     return document.documentElement.classList.contains(HUB_CLASS);
   }
 
-  // The start screen's top bar is the header: Invite, the extension slot,
-  // then Account. Off it, both go back where the editor keeps them.
+  // The start screen's top bar is the header: Invite on the left, the
+  // extension slot and Account on the right. Off it, both go back where the
+  // editor keeps them.
   function placeTopBarControls() {
     if (isHubShowing()) {
-      const slot = document.getElementById('header-slot');
-      slot.parentElement.insertBefore(inviteButton, slot);
+      const header = document.querySelector('header');
+      header.insertBefore(inviteButton, header.firstElementChild);
     } else {
       inviteHome.parent.insertBefore(inviteButton, inviteHome.next);
     }
