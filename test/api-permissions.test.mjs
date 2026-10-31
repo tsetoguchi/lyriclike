@@ -247,7 +247,16 @@ describe('own lyrics', () => {
     const listed = await (await listLyrics(alice.sid)).json();
     assert.deepEqual(listed.map((lyric) => lyric.id), [ALICE_LYRIC_ID, 'older']);
     assert.deepEqual(
-      Object.keys(listed[0]).sort(), ['created_at', 'id', 'share_count', 'title', 'updated_at']);
+      Object.keys(listed[0]).sort(),
+      ['created_at', 'id', 'is_empty', 'share_count', 'title', 'updated_at']);
+  });
+
+  it('say which ones have no words yet', async () => {
+    await addLyric(alice.id, { id: 'blank', title: 'Untitled', body: '', updatedAt: 1 });
+    const listed = await (await listLyrics(alice.sid)).json();
+    const isEmptyById = Object.fromEntries(
+      listed.map(lyric => [lyric.id, lyric.is_empty]));
+    assert.deepEqual(isEmptyById, { [ALICE_LYRIC_ID]: 0, blank: 1 });
   });
 
   it('keep their created date in the list after a rename', async () => {

@@ -1,8 +1,8 @@
 import { requireUser } from '../../_shared.js';
 
 // The notebook: this user's own pages, then the ones shared with them. Each
-// group is newest first. Owned pages say how many people have them; shared
-// ones say whose they are.
+// group is newest first. Owned pages say how many people have them and
+// whether they have words yet; shared ones say whose they are.
 export async function onRequestGet({ request, env }) {
   const { user, response } = await requireUser(request, env);
   if (response) return response;
@@ -10,7 +10,7 @@ export async function onRequestGet({ request, env }) {
   const db = env.lyricalmiracle_db;
   const [owned, shared] = await Promise.all([
     db.prepare(`
-      SELECT id, title, updated_at, created_at,
+      SELECT id, title, updated_at, created_at, body = '' AS is_empty,
         (SELECT count(*) FROM lyric_shares WHERE lyric_shares.lyric_id = lyrics.id) AS share_count
       FROM lyrics WHERE user_id = ? ORDER BY updated_at DESC
     `).bind(user.id).all(),
