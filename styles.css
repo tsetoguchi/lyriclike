@@ -4657,7 +4657,14 @@ body.signed-in .sidebar-links {
 
   .share-btn-phone:not([hidden]) {
     display: inline-flex;
+    justify-content: center;
+    min-width: var(--tap-target);
     margin-left: auto;
+    padding: var(--space-2);
+  }
+
+  .share-btn-phone span {
+    display: none;
   }
 
   .page-actions-phone:not([hidden]) {

@@ -108,6 +108,8 @@
     if (phoneButton) {
       phoneButton.hidden = button.hidden;
       phoneButton.innerHTML = button.innerHTML;
+      // Its word is hidden on a phone, so the icon needs a name.
+      phoneButton.setAttribute('aria-label', isEditor ? 'People' : 'Share');
     }
 
     const line = byId('page-sharing');
