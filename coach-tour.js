@@ -28,6 +28,8 @@
   // Sent by the editor when a word is picked by hand; a step that asks for
   // that click moves on when it hears this.
   const RHYMES_PICKED_EVENT = 'rhymes-picked';
+  // tour_ended's trigger when the page goes away with the tour still open.
+  const LEFT_TRIGGER = 'left';
   // friend-invite.js, a module, may hold the tour, and DOMContentLoaded only
   // fires once every module has run.
   const modulesRun = new Promise(done => {
@@ -515,6 +517,11 @@
   skipBtn.addEventListener('click', () => endTour('skipped'));
   window.addEventListener('resize', () => {
     if (!tourEl.hidden) fitStepToLayout();
+  });
+  // Without this, closing the tab mid-tour sent no tour_ended at all, so
+  // half the tours never said which step they were left on.
+  window.addEventListener('pagehide', () => {
+    if (!tourEl.hidden) endTour(LEFT_TRIGGER);
   });
   document.addEventListener(RHYMES_PICKED_EVENT, () => {
     if (tourEl.hidden || steps[stepIndex].advanceOn !== RHYMES_PICKED_EVENT) return;
