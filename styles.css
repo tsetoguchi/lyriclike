@@ -4021,8 +4021,8 @@ body.sidebar-open #sidebar-scrim {
   display: none;
 }
 
-/* A thin rounded rail that fades in while the pointer is over the scroller or
-   it is moving (scroll-reveal.js sets .is-scrolling), and fades out again.
+/* A thin rounded rail, invisible until the scroller moves. It fades in while
+   scrolling (scroll-reveal.js sets .is-scrolling) and fades out shortly after.
    It turns amber once grabbed, the way every other grip in the app does. The
    clear border insets the line so it is easier to catch than it looks. */
 .lyrics-area::-webkit-scrollbar,
@@ -4050,18 +4050,11 @@ body.sidebar-open #sidebar-scrim {
   transition: background-color var(--duration-glide) ease;
 }
 
-.lyrics-area:hover::-webkit-scrollbar-thumb,
-.page-preview:hover::-webkit-scrollbar-thumb,
-#lyrics-list-items:hover::-webkit-scrollbar-thumb,
-#rhyme-results:hover::-webkit-scrollbar-thumb,
 .is-scrolling::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
 }
 
-.lyrics-area::-webkit-scrollbar-thumb:hover,
-.page-preview::-webkit-scrollbar-thumb:hover,
-#lyrics-list-items::-webkit-scrollbar-thumb:hover,
-#rhyme-results::-webkit-scrollbar-thumb:hover {
+.is-scrolling::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover);
 }
 
@@ -4083,10 +4076,6 @@ body.sidebar-open #sidebar-scrim {
     scrollbar-color: transparent transparent;
   }
 
-  .lyrics-area:hover,
-  .page-preview:hover,
-  #lyrics-list-items:hover,
-  #rhyme-results:hover,
   .is-scrolling {
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }

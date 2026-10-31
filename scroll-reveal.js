@@ -1,7 +1,7 @@
-// The scrollbars stay hidden until the pointer is over a scroller or it is
-// moving. Hover is plain CSS; this adds .is-scrolling while the content moves
-// (wheel, touch, keys, or the editor following the caret) and drops it a
-// moment after it stops, so the bar fades out instead of vanishing mid-read.
+// The scrollbars stay invisible until a scroller moves. This adds
+// .is-scrolling while the content moves (wheel, touch, keys, dragging the bar,
+// or the editor following the caret) and drops it a moment after it stops, so
+// the bar fades out instead of vanishing mid-read.
 const SCROLLER_SELECTOR =
   '.lyrics-area, .page-preview, #lyrics-list-items, #rhyme-results';
 const SCROLLING_CLASS = 'is-scrolling';
