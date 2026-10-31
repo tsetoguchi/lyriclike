@@ -101,6 +101,7 @@
   const SAMPLE_STEPS = [
     {
       target: '#lyrics-highlight .lyric-word',
+      keepClear: '#sample-clear',
       title: 'Write here',
       text: 'This is your page. The verse is a sample to play with.',
     },
@@ -300,6 +301,13 @@
     return Math.max(low, Math.min(value, high));
   }
 
+  // The card is placed around the lit part and anything the step says to
+  // keep clear, so it never covers a button the writer may want next.
+  function clearanceRect(step, rect) {
+    const extra = step.keepClear ? rectOf(step.keepClear) : null;
+    return extra ? unionRect([rect, extra]) : rect;
+  }
+
   function placeCard(rect) {
     const card = { width: cardEl.offsetWidth, height: cardEl.offsetHeight };
     const maxLeft = innerWidth - EDGE_PX - card.width;
@@ -316,7 +324,7 @@
     const rect = targetRect(steps[stepIndex]);
     if (rect) {
       lightRect(rect);
-      placeCard(rect);
+      placeCard(clearanceRect(steps[stepIndex], rect));
     }
     placeFrame = requestAnimationFrame(placeStep);
   }
