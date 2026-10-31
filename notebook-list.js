@@ -63,7 +63,18 @@
     }
   }
 
+  // storage.js, which defines OpenPage, has run by the time the page is parsed.
+  function whenPageParsed() {
+    if (document.readyState !== 'loading') return Promise.resolve();
+    return new Promise(done => {
+      document.addEventListener('DOMContentLoaded', done, { once: true });
+    });
+  }
+
   async function load() {
+    // auth.js asks /api/me before storage.js runs, and the answer can land
+    // while storage.js is still downloading.
+    if (!window.OpenPage) await whenPageParsed();
     setNewPageEnabled(window.currentUser !== undefined);
 
     // Signed out, the only page is the one in this browser. Before the sign-in
