@@ -2844,13 +2844,14 @@ body:not(.signed-in) .invite-btn {
 }
 
 /* Phones have no title row, so it sits beside Share in the row above the
-   words, and takes Share's box so the two read as a pair. */
+   words, and stretches to the row so it stands as tall as the icon buttons. */
 @media (max-width: 768px) {
   .invite-btn-panel {
     display: none;
   }
 
   .page-meta .toggle-btn.invite-btn {
+    align-self: stretch;
     height: auto;
     padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
     background: transparent;
