@@ -95,6 +95,7 @@
   --scrollbar-inset: 2px;
   --scrollbar-end-gap: 8px;
   --scrollbar-fade: 1s;
+  --scrollbar-fade-in: 0.5s;
   --dot-size: 8px;
 
   --sheet-handle-width: 36px;
