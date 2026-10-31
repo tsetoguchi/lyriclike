@@ -566,6 +566,11 @@ header .nav-icon circle {
   display: none;
 }
 
+/* Phones only (below): desktop has the buttons in the title row. */
+.page-actions-phone {
+  display: none;
+}
+
 .page-action-btn {
   position: relative;
   justify-content: center;
@@ -4652,6 +4657,15 @@ body.signed-in .sidebar-links {
 
   .share-btn-phone:not([hidden]) {
     display: inline-flex;
+    margin-left: auto;
+  }
+
+  .page-actions-phone:not([hidden]) {
+    display: inline-flex;
+    margin-left: 0;
+  }
+
+  .share-btn-phone[hidden] + .page-actions-phone:not([hidden]) {
     margin-left: auto;
   }
 
