@@ -824,7 +824,9 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   animation: coach-words-in var(--duration-glide) var(--ease-glide);
 }
 
-/* The same card the sort menu drops: pad colour, ruled edge. */
+/* The panels' slate card, a radius step smaller to suit its size. The edge
+   is clear so forced colours, which drop the fill and shadow, still draw
+   one. */
 .coach-card {
   position: fixed;
   left: 0;
@@ -835,10 +837,10 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  background: var(--paper);
-  border: var(--hairline) solid var(--margin-line);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-popup);
+  background: var(--panel-card);
+  border: var(--hairline) solid transparent;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--panel-shadow);
   font-family: var(--font-ui);
   color: var(--ink);
   pointer-events: auto;
@@ -851,18 +853,37 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
 }
 
 /* The close button sits in the title's row rather than over the card's
-   corner, so on a phone, where it grows to a fingertip, no words run under
-   it. */
+   corner, so no words run under it. */
 .coach-head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.coach-card .coach-head .modal-close {
-  position: static;
+/* The panels' small, faint X. Repeated on hover so the ringed X's hover
+   fill never shows, and sized here so a phone doesn't grow it. */
+.coach-card .coach-head .modal-close,
+.coach-card .coach-head .modal-close:hover {
+  position: relative;
+  inset: auto;
   flex-shrink: 0;
-  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0 0;
+  width: var(--panel-close-size);
+  height: var(--panel-close-size);
+  margin: calc(var(--space-1) * -1) calc(var(--space-1) * -1) 0 0;
+  border: none;
+  color: var(--ink-faded);
+}
+
+.coach-card .coach-head .modal-close:hover {
+  background: var(--panel-fill);
+  color: var(--ink);
+}
+
+/* A fingertip's worth of room around the small mark. */
+.coach-card .coach-head .modal-close::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--panel-close-size) - var(--tap-target)) / 2);
 }
 
 .coach-title {
@@ -3142,7 +3163,7 @@ a.account-menu-item {
   transform: none;
 }
 
-/* The ringed X the tour and the "Write together" note still close from. */
+/* The ringed X the "Write together" note still closes from. */
 .icon-btn.modal-close {
   position: absolute;
   top: var(--space-3);
