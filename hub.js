@@ -1,4 +1,4 @@
-// The phone start screen: the mark, "Your move." and two ways in, Notebook
+// The phone start screen: the mark, "Get started." and two ways in, Notebook
 // and Create. hub-gate.js decides at load whether this visit opens on it;
 // this script puts it away once a way in is picked, and announces it coming
 // and going so extension scripts can move what they keep in its top bar.
