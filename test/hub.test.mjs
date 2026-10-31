@@ -29,6 +29,9 @@ function fakeEventTarget() {
     addEventListener(type, listener) {
       (listeners[type] ||= []).push(listener);
     },
+    removeEventListener(type, listener) {
+      listeners[type] = (listeners[type] || []).filter(kept => kept !== listener);
+    },
     dispatchEvent(event) {
       (listeners[event.type] || []).forEach(listener => listener(event));
     },
@@ -42,14 +45,16 @@ function fakeElement() {
 }
 
 class FakeEvent {
-  constructor(type) {
+  constructor(type, fields = {}) {
     this.type = type;
+    Object.assign(this, fields);
   }
   preventDefault() {}
 }
 
 function fakePage({ htmlClasses, currentUser }) {
   const elements = {
+    hub: fakeElement(),
     'invite-btn': fakeElement(),
     'header-slot': fakeElement(),
     'hub-notebook-btn': fakeElement(),
@@ -60,6 +65,7 @@ function fakePage({ htmlClasses, currentUser }) {
   const wordmark = fakeElement();
   const phoneQuery = { ...fakeEventTarget(), matches: true };
   const tracked = [];
+  const opened = [];
   const document = {
     ...fakeEventTarget(),
     documentElement: { classList: fakeClassList(htmlClasses) },
@@ -75,19 +81,25 @@ function fakePage({ htmlClasses, currentUser }) {
     placeAccountMenu: () => {},
     trackEvent: (name, params) => tracked.push({ name, params }),
     HubGate: { markTab: () => {} },
-    NotebookList: { open: () => {} },
+    NotebookList: { open: () => opened.push('notebook') },
     Sidebar: { close: () => {} },
-    handleCreateClick: () => {},
+    handleCreateClick: () => opened.push('create'),
   };
   window.window = window;
-  return { window, document, elements, phoneQuery, tracked };
+  return { window, document, elements, phoneQuery, tracked, opened };
 }
 
 function loadHub(options) {
   const page = fakePage(options);
   vm.runInNewContext(HUB_SOURCE, page.window);
   page.isHubShowing = () => page.document.documentElement.classList.contains('is-hub');
+  page.isHubLeaving = () => page.document.documentElement.classList.contains('is-hub-leaving');
   return page;
+}
+
+function finishHubFade(page) {
+  const hub = page.elements.hub;
+  hub.dispatchEvent(new FakeEvent('transitionend', { target: hub, propertyName: 'opacity' }));
 }
 
 describe('hub.js', () => {
@@ -123,13 +135,27 @@ describe('hub.js', () => {
     assert.deepEqual(page.tracked, []);
   });
 
-  it('counts Notebook as a hub choice', () => {
+  it('opens Notebook at once and hides the hub once it has faded', () => {
     const page = loadHub({ htmlClasses: ['is-hub', 'is-splashing'], currentUser: SIGNED_IN });
     page.elements['hub-notebook-btn'].dispatchEvent(new FakeEvent('click'));
+    assert.deepEqual(page.opened, ['notebook']);
+    assert.equal(page.isHubShowing(), true);
+    assert.equal(page.isHubLeaving(), true);
+    finishHubFade(page);
     assert.equal(page.isHubShowing(), false);
+    assert.equal(page.isHubLeaving(), false);
     // Plain copy: params was built inside the vm, so its prototype differs.
     const tracked = JSON.parse(JSON.stringify(page.tracked));
     assert.deepEqual(tracked, [{ name: 'hub_choice', params: { choice: 'notebook' } }]);
+  });
+
+  it('ignores a second pick while the hub fades', () => {
+    const page = loadHub({ htmlClasses: ['is-hub', 'is-splashing'], currentUser: SIGNED_IN });
+    page.elements['hub-create-btn'].dispatchEvent(new FakeEvent('click'));
+    page.elements['hub-notebook-btn'].dispatchEvent(new FakeEvent('click'));
+    finishHubFade(page);
+    assert.deepEqual(page.opened, ['create']);
+    assert.equal(page.tracked.length, 1);
   });
 });
 

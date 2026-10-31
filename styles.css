@@ -5147,6 +5147,23 @@ body.signed-in .sidebar-links {
     background: var(--desk);
   }
 
+  /* Leaving, the start screen and its top bar fade together at the
+     notebook's sliding pace (hub.js). The bar is lifted out of the flow so
+     the editor under them is already in place when it shows. */
+  .is-hub-leaving .hub,
+  .is-hub.is-hub-leaving body.signed-in header {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow) ease;
+  }
+
+  .is-hub.is-hub-leaving body.signed-in header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
   .hub-mark {
     position: absolute;
     left: 50%;

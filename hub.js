@@ -6,6 +6,7 @@
   'use strict';
 
   const HUB_CLASS = 'is-hub';
+  const LEAVING_CLASS = 'is-hub-leaving';
   const SHOWN_EVENT = 'hub-shown';
   const HIDDEN_EVENT = 'hub-hidden';
   const SIGNED_OUT_CHOICE = 'signed-out';
@@ -48,7 +49,7 @@
   // Marking the tab keeps the start screen away when this tab reloads.
   function hideHub(choice) {
     if (!isHubShowing()) return;
-    document.documentElement.classList.remove(HUB_CLASS);
+    document.documentElement.classList.remove(HUB_CLASS, LEAVING_CLASS);
     try {
       window.HubGate.markTab(window);
     } catch {
@@ -59,14 +60,28 @@
     if (!UNPICKED_CHOICES.has(choice)) window.trackEvent('hub_choice', { choice });
   }
 
+  // A picked way in opens at once and slides or fades in over the start
+  // screen while it fades out, so the editor shows through gradually.
+  function fadeOutHub(choice) {
+    const root = document.documentElement;
+    if (!isHubShowing() || root.classList.contains(LEAVING_CLASS)) return false;
+    const hub = document.getElementById('hub');
+    hub.addEventListener('transitionend', function finishFade(event) {
+      if (event.target !== hub || event.propertyName !== 'opacity') return;
+      hub.removeEventListener('transitionend', finishFade);
+      root.classList.remove(LEAVING_CLASS);
+      hideHub(choice);
+    });
+    root.classList.add(LEAVING_CLASS);
+    return true;
+  }
+
   function openNotebookFromHub() {
-    hideHub('notebook');
-    NotebookList.open();
+    if (fadeOutHub('notebook')) NotebookList.open();
   }
 
   function createFromHub() {
-    hideHub('create');
-    handleCreateClick();
+    if (fadeOutHub('create')) handleCreateClick();
   }
 
   // On a phone the notebook's wordmark leads back to the start screen in
