@@ -23,6 +23,7 @@ const CONVERTED = [
   'in-app-browser.js', 'account-menu-views.js', 'sample-start.js', 'save-nudge.js',
   'whats-new.js', 'live-core.js', 'live-binding.js', 'live-store.js',
   'live-presence-view.js', 'live.js', 'feedback-box.js', 'back-button.js', 'rail-tips.js',
+  'scroll-reveal.js',
 ];
 const IMPORT_LINE = /^import \{([^}]+)\} from '\.\/([^']+\.js)';\r?$/gm;
 const RETIRED_WINDOW_NAMES = ['closeFeedbackBox'];
