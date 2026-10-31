@@ -34,6 +34,8 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"LyricLike","url":"https://lyriclike.com/"},{"@type":"WebApplication","name":"LyricLike","url":"https://lyriclike.com/","description":"Write lyrics with live syllable counts, rhyme-scheme labels, and a rhyme finder that matches sounds, near rhymes included.","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}]}</script> <!-- word-check: allow -->
 </head>
 <body>
+  <script src="sidebar-boot.js"></script>
+  <script src="sample-space-boot.js"></script>
   <div id="splash" aria-hidden="true">
     <svg class="splash-logo" viewBox="0 -6 222 222"><path class="rail-logo-l" d="M0 0h49v170h105v40H0z"/><path class="rail-logo-frame" d="M68 0h154v210h-48V40H68z"/></svg>
     <div class="splash-credit">
@@ -155,7 +157,7 @@
     <button class="mobile-tab active" data-tab="lyrics">Lyrics</button>
     <button class="mobile-tab" data-tab="rhymes">Rhymes<span class="tab-word" id="tab-rhyme-word"></span></button>
   </nav>
-  <div class="main">
+  <div class="main show-lyrics">
     <div class="lyrics-panel">
       <button type="button" id="invite-btn-panel" class="toggle-btn invite-btn invite-btn-panel"
               aria-haspopup="dialog" hidden><svg class="invite-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C9.5 3 12 5.5 12 8c0-2.5 2.5-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg><span class="invite-btn-label">Invite</span></button>
@@ -189,6 +191,7 @@
           </div>
         </div>
         <div class="syllable-gutter" id="syllable-gutter"></div>
+        <script src="syllable-gutter-boot.js"></script>
         <div class="lyrics-wrapper">
           <div id="presence-under" class="presence-layer" aria-hidden="true"></div>
           <div id="lyrics-highlight" aria-hidden="true"></div>
