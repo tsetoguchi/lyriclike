@@ -1045,8 +1045,7 @@ let bodyBeforeInput = '';
 let firstLineTitleTimer = null;
 
 function titleFromFirstLine(body) {
-  const firstLine = body.split('
-').find(line => line.trim()) || '';
+  const firstLine = body.split('\n').find(line => line.trim()) || '';
   const title = firstLine.trim().replace(/\s+/g, ' ').slice(0, FIRST_LINE_TITLE_LENGTH).trim();
   return title || DEFAULT_TITLE;
 }
