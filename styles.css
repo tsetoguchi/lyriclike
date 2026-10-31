@@ -4662,13 +4662,20 @@ body.signed-in .sidebar-links {
     padding-top: calc(var(--space-3) + env(safe-area-inset-top));
   }
 
+  /* Signed out, the wordmark leads on the left: the sidebar that carries it
+     is closed, so this is the only place a new visitor sees the name. */
   .header-left {
-    grid-column: 2;
-    justify-content: center;
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: flex-start;
   }
 
-  /* The sidebar carries the wordmark; the header keeps only Log in. */
-  header h1 {
+  header .wordmark-text {
+    font-size: var(--text-title-3);
+  }
+
+  /* The start screen's top bar holds Invite in that cell instead. */
+  .is-hub .header-left {
     display: none;
   }
 
@@ -4702,6 +4709,15 @@ body.signed-in .sidebar-links {
      dropping when they arrive. */
   header {
     min-height: var(--header-height-phone);
+  }
+
+  /* Off the start screen the header shows only signed out, holding the
+     wordmark and a 40px Log in, so it is slimmer than the start screen's
+     top bar with its 44px buttons. */
+  :root:not(.is-hub) header {
+    padding-block: var(--space-2);
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
+    min-height: calc(var(--header-height-phone-slim) + env(safe-area-inset-top));
   }
 
   /* The account controls move out of it on phones, and the status line is
@@ -4744,8 +4760,10 @@ body.signed-in .sidebar-links {
     letter-spacing: var(--tracking-tight);
   }
 
-  /* Alone and signed out, Log in is sized like the start screen's pills. */
+  /* Drawn at 40px, not the start screen pills' 48, so the header stays
+     slim. Its ::after still gives a full tap target. */
   #user-area #sign-in-btn {
+    height: var(--space-10);
     font-size: var(--text-footnote);
     padding: 0 var(--space-4);
   }
