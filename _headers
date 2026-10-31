@@ -120,6 +120,9 @@
 /side-panel.js
   Cache-Control: no-cache
 
+/bottom-bar.js
+  Cache-Control: no-cache
+
 /page-preview.js
   Cache-Control: no-cache
 

@@ -4857,6 +4857,22 @@ body.signed-in .sidebar-links {
     opacity: 0;
   }
 
+  /* An extension's own buttons take the whole bar while it holds the slot,
+     and the bar stays up however the page was scrolled. */
+  .bottom-nav.has-bar-slot > :not(.bottom-bar-slot) {
+    display: none;
+  }
+
+  .bottom-nav.has-bar-slot.ducked {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .bottom-bar-slot {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .bottom-nav > .toggle-btn,
   .rhymes-menu {
     flex: 1 1 0;
