@@ -163,6 +163,9 @@
 /rail-tips.js
   Cache-Control: no-cache
 
+/scroll-reveal.js
+  Cache-Control: no-cache
+
 /analytics.js
   Cache-Control: no-cache
 
