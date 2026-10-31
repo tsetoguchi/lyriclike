@@ -410,6 +410,7 @@ function startBlankPage(title) {
 // left unnamed stays Untitled.
 async function createLyric() {
   holdTitleForNewPage();
+  if (await openEmptyUntitledPage()) return;
   const isAllowed = !window.SiteLimits
     || await window.SiteLimits.askAtLimit('pages', NotebookList.ownPageCount());
   if (!isAllowed) return releaseHeldTitle();
@@ -423,6 +424,52 @@ async function createLyric() {
   titleEl.focus();
 
   await saveNewLyric();
+}
+
+// One blank Untitled page is enough, so Create page goes back to it rather
+// than making another. True when it did; false leaves the title held.
+async function openEmptyUntitledPage() {
+  if (isOpenPageEmptyUntitled()) return showOpenPageForWriting();
+  const id = await findEmptyUntitledPageId();
+  if (!id) return false;
+  // Held, the title would keep the opened page's header from being drawn.
+  isTitleHeld = false;
+  if (await loadLyric(id) !== HTTP_OK) {
+    holdTitleForNewPage();
+    return false;
+  }
+  titleEl.focus();
+  return true;
+}
+
+// Read from the screen, not the list: the list may be from before the
+// writer's last words or rename.
+function isOpenPageEmptyUntitled() {
+  return currentPageInfo.role === 'owner'
+    && currentTitle === DEFAULT_TITLE
+    && document.getElementById('lyrics').value === '';
+}
+
+function showOpenPageForWriting() {
+  isTitleHeld = false;
+  titleEl.textContent = titleForDisplay(currentTitle);
+  Sidebar.close();
+  titleEl.focus();
+  return true;
+}
+
+// The list is fetched fresh, since a page may have been written in on
+// another device. The open page is left out; the screen has its newest words.
+async function findEmptyUntitledPageId() {
+  const lyrics = await NotebookList.load();
+  if (!lyrics) return null;
+  const page = lyrics.find(
+    lyric => lyric.id !== currentLyricId && isEmptyUntitledPage(lyric));
+  return page ? page.id : null;
+}
+
+function isEmptyUntitledPage(lyric) {
+  return !lyric.shared && Boolean(lyric.is_empty) && lyric.title === DEFAULT_TITLE;
 }
 
 // iPhone Safari raises the keyboard only for a focus made during the tap
