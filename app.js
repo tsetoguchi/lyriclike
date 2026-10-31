@@ -9,6 +9,8 @@ const MIN_WORD_LENGTH = 2;
 // A pixel of slack: zoomed pages report fractional heights, and a page scrolled
 // to its end can still read as a hair short of it.
 const EDITOR_FADE_SLACK_PX = 1;
+// How many screens of blank page can be scrolled past the last line.
+const EDITOR_OVERSCROLL_PAGES = 3;
 // A group opens on its best words and keeps the rest behind "Show all".
 const INITIAL_RESULTS_PER_GROUP = 30;
 const BURIED_TIER = 'buried';
@@ -1149,6 +1151,9 @@ function measureLineHeights(lines) {
 // The editor area is the only thing that scrolls, so the gutters and the
 // highlight overlay move with the text by construction. Sizing the textarea to
 // its content is what keeps it that way: it must never scroll on its own.
+// Where the last line's page ends, apart from the blank scroll room under it.
+let editorContentEnd = 0;
+
 function resizeEditorToContent() {
   // A hidden panel measures zero, which would collapse the editor.
   if (textareaEl.offsetParent === null) return;
@@ -1165,7 +1170,10 @@ function resizeEditorToContent() {
 
   textareaEl.style.height = 'auto';
   const contentHeight = textareaEl.scrollHeight;
-  textareaEl.style.height = Math.max(contentHeight, editorFloor()) + 'px';
+  const realHeight = Math.max(contentHeight, editorFloor());
+  editorContentEnd = textareaEl.parentElement.offsetTop + realHeight;
+  textareaEl.style.height =
+    realHeight + lyricsAreaEl.clientHeight * EDITOR_OVERSCROLL_PAGES + 'px';
 
   lyricsAreaEl.scrollTop = scrollTop;
   updateEditorFade();
@@ -1971,7 +1979,7 @@ function handleEditorScrollForNav() {
 
 // Fades the bottom edge only while some of the page is still below it.
 function updateEditorFade() {
-  const hiddenBelow = lyricsAreaEl.scrollHeight - lyricsAreaEl.scrollTop -
+  const hiddenBelow = editorContentEnd - lyricsAreaEl.scrollTop -
     lyricsAreaEl.clientHeight;
   lyricsAreaEl.classList.toggle('has-more-below', hiddenBelow > EDITOR_FADE_SLACK_PX);
 }
