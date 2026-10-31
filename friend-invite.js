@@ -14,7 +14,7 @@
   const INVITE_PARAM = 'invite';
   const CODE_PATTERN = /^[0-9a-f]{10}$/;
   const COPIED_LABEL_MS = 2000;
-  const COPY_LABEL = 'Copy link';
+  const COPY_LABEL = 'Copy';
   // What Google Analytics hears, in the order a friend goes through it:
   // the inviter opens and copies, the friend lands, signs up, and saves.
   const EVENT = Object.freeze({

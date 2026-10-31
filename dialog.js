@@ -20,6 +20,7 @@
   const cancel = document.getElementById('dialog-cancel');
   const messageEl = document.getElementById('dialog-message');
   const fieldEl = document.getElementById('dialog-field');
+  const closeButton = document.getElementById('dialog-close');
 
   let resolveDialog = null;
   let requiredAnswer = null;
@@ -29,6 +30,7 @@
     requiredAnswer = field && field.mustMatch ? field.mustMatch : null;
     if (!field) return;
     document.getElementById('dialog-label').textContent = field.label;
+    input.placeholder = field.label;
     input.value = field.value || '';
     // A password field also tells password managers what to fill.
     input.type = field.type || 'text';
@@ -39,8 +41,10 @@
     heading, message, confirmLabel, danger, field, noCancel = false, cancelLabel = 'Cancel',
   }) {
     document.getElementById('dialog-title').textContent = heading;
-    // A dialog that only tells something has nothing to cancel.
+    // A dialog that only tells something has nothing to cancel, so the X
+    // closes it instead.
     cancel.hidden = noCancel;
+    closeButton.hidden = !noCancel;
     cancel.textContent = cancelLabel;
     confirm.textContent = confirmLabel;
     confirm.classList.toggle('danger-btn', Boolean(danger));
@@ -86,7 +90,7 @@
 
   confirm.addEventListener('click', submit);
   cancel.addEventListener('click', () => close(null));
-  document.getElementById('dialog-close').addEventListener('click', () => close(null));
+  closeButton.addEventListener('click', () => close(null));
   overlay.addEventListener('click', e => {
     if (e.target === overlay) close(null);
   });

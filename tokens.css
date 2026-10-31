@@ -103,6 +103,8 @@
   /* Weights: the face ships two, and the app uses both. */
   --weight-regular: 400;
   --weight-bold: 700;
+  /* Panel titles and buttons only, which set in the system's sans. */
+  --weight-semibold: 600;
 
   /* Marks that show what is selected, and the ring that shows what has
      keyboard focus. */
@@ -171,6 +173,31 @@
   --danger-border: rgba(240, 131, 122, 0.45);
   --danger-border-hover: #f0837a;
   --danger-bg: rgba(240, 131, 122, 0.14);
+  /* A panel's destructive button: a dark red tint with soft red words. */
+  --danger-tint: rgba(240, 120, 130, 0.14);
+  --danger-tint-hover: rgba(240, 120, 130, 0.22);
+  --danger-text: #f08a8f;
+
+  /* Panels (questions, Share, Invite, Feedback, Log in, Change password):
+     a slate card a step lighter than the menus, with gray fields and
+     buttons. No button is amber or white; the one most likely wanted is a
+     step lighter than the rest. */
+  --panel-card: #232a35;
+  --panel-fill: #2e3644;
+  --panel-fill-hover: #374050;
+  --panel-fill-strong: #434c5c;
+  --panel-fill-strong-hover: #4b5567;
+  --panel-button-ink: #c9d0da;
+  --panel-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --panel-radius: 24px;
+  --field-radius: 14px;
+  --field-action-radius: 10px;
+  --field-action-height: 32px;
+  --panel-button-height: 38px;
+  --panel-close-size: 28px;
+  /* Between two steps of the scale on purpose: a callout read too small
+     over a panel, and a title-3 too loud. */
+  --text-panel-title: 18px;
 
   /* Rhyme categories: lifted off the dark card, six hues that stay apart
      from each other at the 8px dot the panel draws them as */

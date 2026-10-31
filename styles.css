@@ -696,59 +696,9 @@ header .nav-icon circle {
   margin-bottom: var(--space-2);
 }
 
-/* No rule under the title: the dialog reads as one card. */
-#share-panel .modal-header {
-  border-bottom: none;
-  font-size: var(--text-title-3);
-  font-weight: var(--weight-regular);
-}
-
-/* What adding someone gives them, said once under the title. */
-.share-subtext {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-footnote);
-  font-weight: var(--weight-regular);
-  line-height: 1.5;
-  color: var(--ink-faded);
-}
-
-.share-subtext[hidden] {
-  display: none;
-}
-
-/* A line an extension adds above the invite field: plain body text. */
-.share-note {
-  margin: 0;
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--ink-faded);
-}
-
+/* A line an extension adds above the invite field. */
 .share-note[hidden] {
   display: none;
-}
-
-/* Taller rows, so the list breathes like the rest of the dialog. */
-#share-panel .share-person {
-  min-height: 52px;
-}
-
-/* Roomier than the other dialogs: a wider margin, and more air between parts. */
-#share-panel .modal-header {
-  padding: var(--space-6) calc(var(--tap-target) + var(--space-3)) 0 var(--space-6);
-}
-
-#share-panel .modal-body {
-  gap: var(--space-6);
-  padding: var(--space-6);
-}
-
-#share-panel .share-people-block {
-  gap: var(--space-3);
-}
-
-#share-panel .modal-actions {
-  padding: var(--space-2) var(--space-6) var(--space-6);
 }
 
 /* Copy link, and Leave for a co-writer, sit on the left like the link button
@@ -1235,13 +1185,6 @@ header .nav-icon circle {
   color: var(--danger);
 }
 
-/* Nothing to share yet: a plain outline, turning amber once there is. */
-.toggle-btn.modal-confirm:disabled {
-  background: transparent;
-  border-color: var(--ink-border);
-  color: var(--ink-faded);
-  cursor: default;
-}
 
 .share-result[hidden],
 .share-people-block[hidden] {
@@ -2884,14 +2827,6 @@ body:not(.signed-in) .invite-btn {
   }
 }
 
-.invite-progress {
-  margin: 0;
-  padding-left: var(--space-5);
-  font-family: var(--font-ui);
-  font-size: var(--text-footnote);
-  color: var(--ink-faded);
-}
-
 /* Pencil grey, not full ink: a bright hairline shows its steps around so
    small a circle. */
 .account-avatar:hover,
@@ -3125,7 +3060,8 @@ a.account-menu-item {
 }
 
 /* ── Change password box ──
-   Set like the share dialog: a large regular-weight title over the form. */
+   The shared panel below, on an overlay of its own that fades out rather
+   than being hidden. */
 
 #password-overlay {
   display: flex;
@@ -3135,6 +3071,7 @@ a.account-menu-item {
   z-index: var(--z-overlay);
   align-items: center;
   justify-content: center;
+  padding: var(--space-4);
   opacity: 0;
   visibility: hidden;
   transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
@@ -3146,56 +3083,28 @@ a.account-menu-item {
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
-/* The shadow alone is lost on the dimmed desk, which is nearly as dark as it
-   is. A hairline at the edge, as the definition popup has, is what lifts the
-   panel off it. */
 #password-panel {
-  background: var(--paper-card);
-  border: var(--hairline) solid var(--rule);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-popup);
-  transform: scale(0.88);
-  transition: transform var(--duration-flash) ease-out;
-  width: var(--dialog-width);
-  max-width: 92vw;
   max-height: 90vh;
   overflow-y: auto;
-  box-sizing: border-box;
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
 }
 
 #password-overlay.open #password-panel {
   transform: none;
 }
 
-.password-title {
-  margin: 0;
-  font-family: var(--font-ui);
-  font-size: var(--text-title-3);
-  font-weight: var(--weight-regular);
-  letter-spacing: var(--tracking-tight);
-  color: var(--ink);
+#change-password-form {
+  margin-top: var(--space-5);
 }
 
-.security-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
+#change-password-form .modal-actions {
+  margin-top: var(--space-2);
 }
 
-.security-actions .toggle-btn {
-  min-height: var(--tap-target);
-  padding: var(--space-2) var(--space-4);
-}
-
-/* ── Modals ──
-   One surface for everything the app asks in a panel: naming a page, deleting
-   one, deleting an account, and signing in. Same surface, motion and type as
-   the account panel; raised, because a question can be asked from the
-   notebook. */
+/* ── Panels ──
+   One surface for everything the app asks in a panel: the question dialog,
+   Share, Invite, Feedback, Log in and Change password. One width, padding
+   and corner on every screen, lifted by its shadow alone. Raised, because a
+   question can be asked from the notebook. */
 .modal-overlay[hidden] {
   display: none;
 }
@@ -3224,14 +3133,15 @@ a.account-menu-item {
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
-/* Shadow and hairline, for the same reason as account settings above. */
 .modal-panel {
+  position: relative;
   width: var(--dialog-width);
   max-width: 100%;
-  background: var(--paper-card);
-  border: var(--hairline) solid var(--rule);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-popup);
+  box-sizing: border-box;
+  padding: var(--space-6);
+  background: var(--panel-card);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--panel-shadow);
   transform: scale(0.88);
   transition: transform var(--duration-flash) ease-out;
   display: flex;
@@ -3242,13 +3152,7 @@ a.account-menu-item {
   transform: none;
 }
 
-/* Every pop-up closes from an X in its top right corner. */
-.modal-panel,
-#password-panel {
-  position: relative;
-}
-
-/* A ringed X, as tall as the text boxes. */
+/* The ringed X the tour and the "Write together" note still close from. */
 .icon-btn.modal-close {
   position: absolute;
   top: var(--space-3);
@@ -3268,20 +3172,50 @@ a.account-menu-item {
   background: var(--ink-wash);
 }
 
-/* A full tap target for a finger, as the text boxes get. */
 @media (max-width: 768px) {
   .icon-btn.modal-close {
     width: var(--tap-target);
     height: var(--tap-target);
   }
-
 }
 
-/* Titles stop short of the X. */
-.modal-panel .modal-header,
-.password-title,
 .whats-new-title {
   padding-right: calc(var(--tap-target) + var(--space-3));
+}
+
+/* A panel with no Cancel closes from a small, faint X instead. Repeated for
+   phones, which would otherwise take the ringed X's tap-target size. */
+.modal-panel .icon-btn.modal-close,
+.modal-panel .icon-btn.modal-close:hover {
+  top: var(--space-4);
+  right: var(--space-4);
+  width: var(--panel-close-size);
+  height: var(--panel-close-size);
+  border: none;
+  color: var(--ink-faded);
+}
+
+@media (max-width: 768px) {
+  .modal-panel .icon-btn.modal-close {
+    width: var(--panel-close-size);
+    height: var(--panel-close-size);
+  }
+}
+
+.modal-panel .icon-btn.modal-close:hover {
+  background: var(--panel-fill);
+  color: var(--ink);
+}
+
+/* A fingertip's worth of room around the small mark. */
+.modal-panel .icon-btn.modal-close::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--panel-close-size) - var(--tap-target)) / 2);
+}
+
+.modal-panel .icon-btn.modal-close[hidden] {
+  display: none;
 }
 
 /* Opening plays as an animation, not a transition: the overlay was hidden a
@@ -3306,7 +3240,6 @@ a.account-menu-item {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #password-panel,
   .modal-panel {
     transform: none;
   }
@@ -3317,34 +3250,64 @@ a.account-menu-item {
   }
 }
 
-/* No rule under the title, as in Share and Log in: one card. */
 .modal-header {
-  padding: var(--space-5) var(--space-5) 0;
+  margin: 0;
   font-family: var(--font-ui);
-  font-size: var(--text-title-3);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-tight);
+  font-size: var(--text-panel-title);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
   color: var(--ink);
 }
 
-.modal-label {
+/* Titles stop short of the X, where there is one. */
+.modal-panel:has(> .modal-close:not([hidden])) .modal-header {
+  padding-right: var(--space-8);
+}
+
+/* What the panel is for, said once under the title. */
+.modal-subtext {
+  margin: var(--space-2) 0 0;
   font-family: var(--font-ui);
-  font-size: var(--text-footnote);
+  font-size: var(--text-subhead);
+  line-height: 1.5;
   color: var(--ink-faded);
 }
 
+.modal-subtext[hidden],
+.modal-subtext:empty {
+  display: none;
+}
+
 .modal-body {
-  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+/* A question with no field has nothing in its body. */
+.modal-body:not(:has(> :not([hidden]))) {
+  display: none;
 }
 
 .modal-message {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* Small print beside a field: what it holds, or how it went. */
+.share-note,
+.invite-progress,
+.feedback-note,
+.modal-panel .auth-hint {
+  margin: 0;
   font-family: var(--font-ui);
   font-size: var(--text-footnote);
   line-height: 1.5;
-  color: var(--ink);
+  color: var(--ink-faded);
 }
 
 /* A display of its own outranks the attribute, so say it again here. */
@@ -3358,27 +3321,29 @@ a.account-menu-item {
   gap: var(--space-2);
 }
 
-/* Lined up with the text inside the box below it. */
-.modal-field > .modal-label {
-  padding-left: var(--space-5);
-  color: var(--ink);
+/* Shown only where two fields sit together and a placeholder alone would
+   not say which is which (Change password). */
+.modal-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-footnote);
+  color: var(--ink-faded);
 }
 
-/* Every text box, as tall as the Google button, and filled so it reads as
-   a place to type rather than another button. */
+/* Filled and borderless, so a field reads as a place to type rather than
+   another button. */
 .modal-input {
   width: 100%;
-  height: calc(var(--tap-target) + var(--space-1));
-  padding: 0 var(--space-5);
-  background: var(--field-fill);
-  border: var(--hairline) solid var(--ink-wash);
-  border-radius: var(--radius-pill);
+  box-sizing: border-box;
+  height: var(--tap-target);
+  padding: 0 var(--space-4);
+  background: var(--panel-fill);
+  border: none;
+  border-radius: var(--field-radius);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: var(--text-subhead);
   outline: none;
-  transition: background var(--duration-base), border-color var(--duration-base),
-    box-shadow var(--duration-base);
+  transition: background var(--duration-base), box-shadow var(--duration-base);
 }
 
 /* Callout size on phones, because a smaller field makes iOS zoom the page. */
@@ -3389,58 +3354,145 @@ a.account-menu-item {
 }
 
 .modal-input:hover {
-  background: var(--ink-wash);
+  background: var(--panel-fill-hover);
 }
 
-/* A full-strength amber hairline shows its steps around a pill's tight
-   ends; a softer one with a glow reads as a smooth curve. */
 .modal-input:focus {
-  background: var(--field-fill);
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 var(--space-1) var(--accent-wash-strong);
+  background: var(--panel-fill);
+  box-shadow: 0 0 0 2px var(--accent-border);
 }
 
 .modal-input::placeholder {
   color: var(--ink-faded);
 }
 
+/* A field with its button inside it: Add in Share, Copy in Invite. The row
+   wears the field's fill and focus, and the input inside goes clear. */
+.modal-field.field-with-action {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: calc((var(--tap-target) - var(--field-action-height)) / 2);
+  background: var(--panel-fill);
+  border-radius: var(--field-radius);
+  transition: background var(--duration-base), box-shadow var(--duration-base);
+}
+
+.field-with-action:hover {
+  background: var(--panel-fill-hover);
+}
+
+.field-with-action:has(> .modal-input:focus) {
+  background: var(--panel-fill);
+  box-shadow: 0 0 0 2px var(--accent-border);
+}
+
+.field-with-action > .modal-input,
+.field-with-action > .modal-input:hover,
+.field-with-action > .modal-input:focus {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  box-shadow: none;
+  text-overflow: ellipsis;
+}
+
+/* Muted until there is something to act on, then a step lighter. */
+.field-action {
+  flex: none;
+  height: var(--field-action-height);
+  padding: 0 var(--space-3);
+  background: var(--panel-fill-hover);
+  border: none;
+  border-radius: var(--field-action-radius);
+  color: var(--ink-faded);
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+.field-action.is-ready {
+  background: var(--panel-fill-strong);
+  color: var(--ink);
+}
+
+.field-action.is-ready:hover {
+  background: var(--panel-fill-strong-hover);
+}
+
+.field-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  padding: 0 var(--space-5) var(--space-5);
+  margin-top: var(--space-6);
 }
 
-.modal-actions .toggle-btn {
-  min-height: var(--tap-target);
-  padding: var(--space-2) var(--space-4);
+/* Filled gray pills. The panel's class too, so they outrank the plain
+   toggle button's outline. */
+.modal-panel .toggle-btn {
+  min-height: var(--panel-button-height);
+  padding: 0 var(--space-4);
+  background: var(--panel-fill);
+  border: none;
+  color: var(--panel-button-ink);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
 }
 
-/* A dialog's main button is the amber pill: a soft tint, an amber rim and
-   amber words, dimming a little under the pointer. Two classes, so
-   hovering keeps the tint instead of taking the plain button's wash. */
-.toggle-btn.modal-confirm {
-  background: var(--accent-wash);
-  border-color: var(--accent-border);
-  color: var(--accent);
+.modal-panel .toggle-btn:hover {
+  background: var(--panel-fill-hover);
 }
 
-.toggle-btn.modal-confirm:not(:disabled):not(.danger-btn):hover {
-  background: var(--accent-wash);
-  filter: var(--hover-dim);
+@media (max-width: 768px) {
+  .modal-panel .toggle-btn {
+    min-height: var(--tap-target);
+  }
+}
+
+/* The answer most likely wanted is a step lighter. */
+.modal-panel .toggle-btn.modal-confirm {
+  background: var(--panel-fill-strong);
+  color: var(--ink);
+}
+
+.modal-panel .toggle-btn.modal-confirm:not(:disabled):hover {
+  background: var(--panel-fill-strong-hover);
 }
 
 /* Losing work should look like it. */
-.toggle-btn.modal-confirm.danger-btn {
-  background: var(--danger-bg);
-  border-color: var(--danger-border-hover);
-  color: var(--danger);
+.modal-panel .toggle-btn.modal-confirm.danger-btn {
+  background: var(--danger-tint);
+  color: var(--danger-text);
+}
+
+.modal-panel .toggle-btn.modal-confirm.danger-btn:not(:disabled):hover {
+  background: var(--danger-tint-hover);
 }
 
 /* Held shut until what was asked for has been typed. */
-.toggle-btn.modal-confirm:disabled {
+.modal-panel .toggle-btn.modal-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Share's icon buttons (Copy link, Leave) are round. */
+.modal-panel .modal-actions .tip-btn {
+  min-width: var(--panel-button-height);
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .modal-panel .modal-actions .tip-btn {
+    min-width: var(--tap-target);
+  }
 }
 
 /* ── Sign-in modal ──
@@ -3459,32 +3511,15 @@ a.account-menu-item {
   padding-top: min(18vh, 160px);
 }
 
-#auth-panel {
-  position: relative;
-  border-radius: var(--radius-lg);
-  padding: var(--space-8) var(--space-6) var(--space-6);
-}
-
-
-/* Clear of the close button on both sides, so the title stays centered. */
 .auth-heading {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  padding: 0 var(--space-8);
-  text-align: center;
-}
-
-.auth-title {
-  margin: 0;
-  font-family: var(--font-ui);
-  font-size: var(--text-title-2);
-  font-weight: var(--weight-bold);
-  color: var(--ink);
 }
 
 .auth-message {
+  margin: 0;
   font-family: var(--font-ui);
   font-size: var(--text-subhead);
   line-height: 1.5;
@@ -3515,16 +3550,13 @@ a.account-menu-item {
   border: none;
   font-family: var(--font-ui);
   font-size: var(--text-subhead);
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration: underline;
   cursor: pointer;
 }
 
 .auth-edit:hover {
   text-decoration: underline;
-}
-
-.auth-body {
-  padding: var(--space-6) 0 0;
 }
 
 #auth-panel .password-wrap .modal-input {
@@ -3535,28 +3567,13 @@ a.account-menu-item {
   right: var(--space-1);
 }
 
-#auth-panel .auth-hint {
-  padding: 0 var(--space-5);
-}
-
-/* Room for "Enter your password" on one line on a phone. */
-@media (max-width: 480px) {
-  #auth-panel {
-    padding: var(--space-8) var(--space-5) var(--space-5);
-  }
-
-  .auth-heading {
-    padding: 0 var(--space-6);
-  }
-}
-
 .google-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
   width: 100%;
-  min-height: calc(var(--tap-target) + var(--space-1));
+  min-height: var(--tap-target);
   padding: var(--space-2) var(--space-4);
   background: var(--google-fill);
   border: var(--hairline) solid var(--google-border);
@@ -3661,8 +3678,7 @@ a.account-menu-item {
 /* After the focus rule, so a field with a problem stays red while it is
    being fixed. */
 .modal-input.has-error {
-  border-color: var(--danger-border-hover);
-  box-shadow: none;
+  box-shadow: 0 0 0 2px var(--danger-border-hover);
 }
 
 .auth-error {
@@ -3694,10 +3710,9 @@ a.account-menu-item {
   white-space: nowrap;
 }
 
-.toggle-btn.auth-submit {
+.modal-panel .toggle-btn.auth-submit {
   width: 100%;
-  min-height: calc(var(--tap-target) + var(--space-1));
-  font-size: var(--text-subhead);
+  min-height: var(--tap-target);
 }
 
 .auth-links {
@@ -4437,33 +4452,17 @@ body.sidebar-open #sidebar-scrim {
 
 /* ── Feedback box ── */
 
-/* Under the title, as a subtitle: closer to it than the gap below. */
-.modal-message.feedback-lead {
-  margin: calc(-1 * var(--space-2)) 0 0;
-  color: var(--ink-faded);
-}
-
-#feedback-sent .feedback-lead {
-  margin: 0;
-  color: var(--ink);
-}
-
-/* The pill text box, grown into a card for a few lines of writing. */
+/* The text box, grown for a few lines of writing. */
 .modal-input.feedback-input {
   height: auto;
   min-height: calc(var(--tap-target) * 2.5);
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
   line-height: 1.5;
   resize: vertical;
 }
 
-.feedback-note {
-  margin: calc(-1 * var(--space-2)) 0 0;
-  padding-left: var(--space-4);
-  color: var(--ink-faded);
-  font-family: var(--font-ui);
-  font-size: var(--text-caption-1);
+.feedback-note:empty {
+  display: none;
 }
 
 #feedback-form[hidden],

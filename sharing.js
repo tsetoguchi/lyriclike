@@ -159,11 +159,9 @@
     byId('share-result-text').classList.toggle('is-error', error);
   }
 
-  // Share takes Done's place while there is an address to send to.
+  // Add, inside the field, steps up once there is an address to send to.
   function updateActions() {
-    const hasEmail = Boolean(emailInput.value.trim());
-    submitButton.hidden = !hasEmail;
-    byId('share-done').hidden = hasEmail;
+    submitButton.classList.toggle('is-ready', Boolean(emailInput.value.trim()));
   }
 
   // The link only opens for people on the page, so it is offered once
