@@ -5145,12 +5145,45 @@ body.signed-in .sidebar-links {
     stroke: none;
   }
 
-  /* Active is a colour change on icon and label together, since there is no
-     longer a box to fill. */
+  /* The bar mixes switches (Syllables, Highlights) with places to go
+     (Notebook, Create). A brighter colour for "on" made the switches read as
+     the selected tab, so every item keeps one ink and an on switch gets a dot
+     under its name instead. */
   .bottom-nav .toggle-btn.active {
     background: transparent;
     border: none;
-    color: var(--ink);
+    color: var(--ink-faded);
+  }
+
+  .bottom-nav > .toggle-btn,
+  .rhymes-menu > .toggle-btn {
+    position: relative;
+  }
+
+  /* Hangs in the bar's bottom padding so it costs no height. */
+  .bottom-nav > .toggle-btn.active::after,
+  .rhymes-menu > .toggle-btn.active::after {
+    content: "";
+    position: absolute;
+    top: calc(100% + var(--on-dot-gap));
+    left: 50%;
+    width: var(--on-dot-size);
+    height: var(--on-dot-size);
+    translate: -50% 0;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Splits the switches from the places, so the two kinds don't read as one
+     row of tabs. */
+  .bottom-nav > #notebook-btn::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: var(--space-1);
+    bottom: 0;
+    width: var(--hairline);
+    background: var(--margin-line);
   }
 
   .bottom-nav .toggle-btn:hover {
@@ -5219,6 +5252,17 @@ body.signed-in .sidebar-links {
     background: currentColor;
     -webkit-mask: var(--check-mask) center / contain no-repeat;
     mask: var(--check-mask) center / contain no-repeat;
+  }
+}
+
+/* Forced colors would paint the dot and divider as Canvas, which hides
+   them. */
+@media (max-width: 768px) and (forced-colors: active) {
+  .bottom-nav > .toggle-btn.active::after,
+  .rhymes-menu > .toggle-btn.active::after,
+  .bottom-nav > #notebook-btn::before {
+    forced-color-adjust: none;
+    background: ButtonText;
   }
 }
 

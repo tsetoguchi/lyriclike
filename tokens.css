@@ -98,6 +98,8 @@
   --scrollbar-inset: 2px;
   --scrollbar-end-gap: 8px;
   --dot-size: 8px;
+  --on-dot-size: 4px;
+  --on-dot-gap: 2px;
 
   --sheet-handle-width: 36px;
   --sheet-handle-height: 4px;
