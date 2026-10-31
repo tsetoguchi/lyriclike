@@ -92,7 +92,8 @@
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
   --scrollbar-rail-width: 10px;
-  --scrollbar-inset: 3px;
+  --scrollbar-inset: 2px;
+  --scrollbar-fade: 1s;
   --dot-size: 8px;
 
   --sheet-handle-width: 36px;

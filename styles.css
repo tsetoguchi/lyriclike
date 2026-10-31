@@ -4048,7 +4048,7 @@ body.sidebar-open #sidebar-scrim {
   background-clip: padding-box;
   border: var(--scrollbar-inset) solid transparent;
   border-radius: var(--scrollbar-rail-width);
-  transition: background-color var(--duration-glide) ease;
+  transition: background-color var(--scrollbar-fade) ease-in-out;
 }
 
 .lyrics-area:hover::-webkit-scrollbar-thumb,
