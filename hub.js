@@ -9,6 +9,13 @@
   const SHOWN_EVENT = 'hub-shown';
   const HIDDEN_EVENT = 'hub-hidden';
   const SIGNED_OUT_CHOICE = 'signed-out';
+  const NO_ANSWER_CHOICE = 'no-answer';
+  const WIDE_SCREEN_CHOICE = 'wide-screen';
+  // Ways the start screen leaves without the writer picking anything.
+  const UNPICKED_CHOICES = new Set([SIGNED_OUT_CHOICE, NO_ANSWER_CHOICE, WIDE_SCREEN_CHOICE]);
+  const SPLASH_CLASS = 'is-splashing';
+  const SPLASH_FADING_CLASS = 'is-splash-fading';
+  const SPLASH_LIFTED_EVENT = 'splash-lifted';
   const PHONE_QUERY = '(max-width: 768px)';
   const inviteButton = document.getElementById('invite-btn');
   // Where Invite sits off the start screen, beside Share above the words.
@@ -48,7 +55,7 @@
     }
     placeTopBarControls();
     document.dispatchEvent(new Event(HIDDEN_EVENT));
-    if (choice !== SIGNED_OUT_CHOICE) window.trackEvent('hub_choice', { choice });
+    if (!UNPICKED_CHOICES.has(choice)) window.trackEvent('hub_choice', { choice });
   }
 
   function openNotebookFromHub() {
@@ -77,10 +84,32 @@
     if (window.currentUser === null) hideHub(SIGNED_OUT_CHOICE);
   }
 
+  function isSplashLifted() {
+    const classes = document.documentElement.classList;
+    return !classes.contains(SPLASH_CLASS) || classes.contains(SPLASH_FADING_CLASS);
+  }
+
+  // A sign-in check slower than the splash's time cap goes to the editor, so
+  // the start screen never shows without the account it belongs to.
+  function hideIfUnanswered() {
+    if (window.currentUser === undefined) hideHub(NO_ANSWER_CHOICE);
+  }
+
+  // The start screen is phone only; a phone turned wide gets the editor, and
+  // turning back keeps it.
+  function hideIfWide(event) {
+    if (!event.matches) hideHub(WIDE_SCREEN_CHOICE);
+  }
+
   document.getElementById('hub-notebook-btn').addEventListener('click', openNotebookFromHub);
   document.getElementById('hub-create-btn').addEventListener('click', createFromHub);
   document.querySelector('.sidebar-wordmark').addEventListener('click', reopenHubFromWordmark);
   document.addEventListener('auth-checked', hideIfSignedOut);
+  document.addEventListener(SPLASH_LIFTED_EVENT, hideIfUnanswered);
+  window.matchMedia(PHONE_QUERY).addEventListener('change', hideIfWide);
+  // Either answer can come before this script, which loads late in the body.
+  hideIfSignedOut();
+  if (isSplashLifted()) hideIfUnanswered();
   if (isHubShowing()) placeTopBarControls();
 
   window.isHubShowing = isHubShowing;

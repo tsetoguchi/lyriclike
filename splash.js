@@ -10,6 +10,7 @@
   const SPLASH_CLASS = 'is-splashing';
   const FADING_CLASS = 'is-splash-fading';
   const NOTEBOOK_OPENED_EVENT = 'notebook-opened';
+  const LIFTED_EVENT = 'splash-lifted';
   // Counted from when the page was requested.
   const MIN_SHOW_MS = 600;
   const MAX_SHOW_MS = 3000;
@@ -64,6 +65,7 @@
     const html = document.documentElement;
     if (!html.classList.contains(SPLASH_CLASS) || html.classList.contains(FADING_CLASS)) return;
     html.classList.add(FADING_CLASS);
+    document.dispatchEvent(new Event(LIFTED_EVENT));
     setTimeout(() => html.classList.remove(SPLASH_CLASS, FADING_CLASS), FADE_MS);
   }
 
