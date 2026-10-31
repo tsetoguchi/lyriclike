@@ -99,6 +99,9 @@
 /sample-space-boot.js
   Cache-Control: no-cache
 
+/syllable-gutter-boot.js
+  Cache-Control: no-cache
+
 /sidebar.js
   Cache-Control: no-cache
 
