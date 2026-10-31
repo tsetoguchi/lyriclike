@@ -3816,6 +3816,46 @@ body.sidebar-open #sidebar-scrim {
   body.sidebar-open header h1 {
     display: none;
   }
+
+  /* Folded, it waits behind the rail rather than off screen, so its edge
+     and the page's travel the same distance and stay joined as they move.
+     The strip over the rail fades, so the rail's icons give way to it
+     instead of being covered at once. */
+  #sidebar {
+    transform: translateX(calc(var(--rail-width) - 100%));
+    opacity: 0;
+  }
+
+  body.sidebar-open #sidebar {
+    opacity: 1;
+  }
+
+  body.sidebar-animate #sidebar {
+    transition:
+      transform var(--duration-slow) var(--ease-glide),
+      opacity var(--duration-fast) ease-in
+        calc(var(--duration-slow) - var(--duration-fast)),
+      visibility 0s linear var(--duration-slow);
+  }
+
+  body.sidebar-animate.sidebar-open #sidebar {
+    transition:
+      transform var(--duration-slow) var(--ease-glide),
+      opacity var(--duration-fast) ease-out,
+      visibility 0s;
+  }
+
+  body.sidebar-animate #app-content {
+    transition: margin-left var(--duration-slow) var(--ease-glide);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.sidebar-animate #sidebar,
+  body.sidebar-animate.sidebar-open #sidebar,
+  body.sidebar-animate #app-content {
+    transition: none;
+  }
 }
 
 /* What stays of the sidebar while it is hidden, as in ChatGPT: a strip
