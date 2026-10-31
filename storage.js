@@ -43,10 +43,6 @@ const LOST_ACCESS_MESSAGE =
 const UNAVAILABLE_MESSAGE = "This page isn't available to this account.";
 const COPY_SUFFIX = ' (my copy)';
 const MAX_TITLE_LENGTH = 300;
-// An unnamed page is called after its first line, cut to this many characters.
-const FIRST_LINE_TITLE_LENGTH = 60;
-// How long the first line has to sit still before its name is saved.
-const FIRST_LINE_TITLE_DELAY_MS = 1000;
 // HTTP_NOT_FOUND comes from app.js: the scripts share one global scope.
 const HTTP_CONFLICT = 409;
 const HTTP_FORBIDDEN = 403;
@@ -410,8 +406,8 @@ function startBlankPage(title) {
   NotebookList.mark(currentLyricId);
 }
 
-// No name is asked for: the page is called after its first line until it is
-// renamed (followFirstLine).
+// No name is asked for up front: the cursor starts in the title, and a page
+// left unnamed stays Untitled.
 async function createLyric() {
   if (window.SiteLimits && !await window.SiteLimits.askAtLimit('pages', NotebookList.ownPageCount())) return;
   trackEvent('page_created');
@@ -420,7 +416,7 @@ async function createLyric() {
   startBlankPage(DEFAULT_TITLE);
   saveDraft();
   Sidebar.close();
-  document.getElementById('lyrics').focus();
+  document.getElementById('lyrics-panel-title').focus();
 
   await saveNewLyric();
 }
@@ -618,7 +614,6 @@ async function waitForSaves() {
 // caught in an unresolved conflict are kept as a page of their own. Returns
 // false when that failed, and the page must stay open so nothing is lost.
 async function flushSave() {
-  await flushFirstLineTitle();
   if (isLive()) return flushLivePage();
   // Offline at load, waiting to reopen live: its words are not safe to leave.
   if (isLiveDraft && !isEditorLocked) {
@@ -1039,51 +1034,6 @@ function takeRemoteTitle(title) {
 // app.js's own callers too, because this file loads last. That collision has
 // happened twice now; leave the single definition where it is.
 
-// The words as of the last input, so a title can be checked against the first
-// line it was named after.
-let bodyBeforeInput = '';
-let firstLineTitleTimer = null;
-
-function titleFromFirstLine(body) {
-  const firstLine = body.split('\n').find(line => line.trim()) || '';
-  const title = firstLine.trim().replace(/\s+/g, ' ').slice(0, FIRST_LINE_TITLE_LENGTH).trim();
-  return title || DEFAULT_TITLE;
-}
-
-// An unnamed page, or one still named after the line it had before this edit,
-// follows its first line. Renaming it to anything else stops that.
-function isNamedByFirstLine(previousBody) {
-  return currentTitle === DEFAULT_TITLE || currentTitle === titleFromFirstLine(previousBody);
-}
-
-function followFirstLine(previousBody) {
-  if (isSampleShowing() || !isNamedByFirstLine(previousBody)) return;
-  const title = titleFromFirstLine(document.getElementById('lyrics').value);
-  if (title === currentTitle) return;
-  currentTitle = title;
-  updatePanelHeader();
-  saveDraft();
-  scheduleFirstLineTitle();
-}
-
-// Waits for the line to sit still, so typing it is not a rename per key. A
-// page left meanwhile sends it from flushSave instead.
-function scheduleFirstLineTitle() {
-  clearTimeout(firstLineTitleTimer);
-  const pageId = currentLyricId;
-  firstLineTitleTimer = setTimeout(() => {
-    firstLineTitleTimer = null;
-    if (pageId === currentLyricId) saveTitle();
-  }, FIRST_LINE_TITLE_DELAY_MS);
-}
-
-async function flushFirstLineTitle() {
-  if (!firstLineTitleTimer) return;
-  clearTimeout(firstLineTitleTimer);
-  firstLineTitleTimer = null;
-  await saveTitle();
-}
-
 // Signed out, the title lives in the draft alone, and the notebook's one row
 // shows it.
 async function saveTitle() {
@@ -1095,11 +1045,7 @@ async function saveTitle() {
   }
 }
 
-document.getElementById('lyrics').addEventListener('input', e => {
-  // Only typing names a page: words put in by opening it or by a co-writer
-  // come as untrusted events.
-  if (e.isTrusted) followFirstLine(bodyBeforeInput);
-  bodyBeforeInput = e.target.value;
+document.getElementById('lyrics').addEventListener('input', () => {
   // A synced live page's draft goes out with its local copy (saveDraft).
   if (!liveHasLocalCopy()) writeDraft();
   scheduleSave();
@@ -1114,7 +1060,9 @@ titleEl.addEventListener('focus', () => {
   sel.addRange(range);
 });
 titleEl.addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+  // Enter goes on to the words, so a new page can be named and written in
+  // without reaching for the mouse.
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lyrics').focus(); }
 });
 titleEl.addEventListener('blur', () => {
   const newTitle = titleEl.textContent.trim() || DEFAULT_TITLE;
