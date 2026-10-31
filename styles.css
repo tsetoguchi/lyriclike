@@ -4101,6 +4101,41 @@ body.sidebar-open #sidebar-scrim {
   }
 }
 
+/* Firefox's stand-in for the rail above, drawn by pill-scrollbar.js over the
+   scroller's right edge. Same size, colours and fade as the native version. */
+.pill-scrollbar {
+  position: fixed;
+  z-index: var(--z-bar);
+  box-sizing: border-box;
+  width: var(--scrollbar-rail-width);
+  padding: var(--scrollbar-end-gap) 0;
+  pointer-events: none;
+}
+
+.pill-scrollbar[hidden] {
+  display: none;
+}
+
+.pill-scrollbar-thumb {
+  margin-inline: var(--scrollbar-inset);
+  border-radius: var(--scrollbar-rail-width);
+  background: transparent;
+  pointer-events: auto;
+  transition: background-color var(--scrollbar-fade) ease-in-out;
+}
+
+.pill-scrollbar-thumb.is-shown {
+  background: var(--scrollbar-thumb);
+}
+
+.pill-scrollbar-thumb.is-shown:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.pill-scrollbar-thumb.is-dragging {
+  background: var(--accent);
+}
+
 .lyrics-list-item {
   display: flex;
   align-items: center;
