@@ -91,8 +91,9 @@
   --header-icon-size: 20px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
-  --scrollbar-rail-width: 10px;
+  --scrollbar-rail-width: 12px;
   --scrollbar-inset: 2px;
+  --scrollbar-end-gap: 8px;
   --scrollbar-fade: 1s;
   --dot-size: 8px;
 
@@ -242,9 +243,9 @@
   --shadow-popup: 0 8px 32px rgba(0, 0, 0, 0.60);
   --shadow-bottom-nav: 0 -2px 12px rgba(0, 0, 0, 0.45);
   --sheet-handle: rgba(226, 231, 239, 0.28);
-  --scrollbar-thumb: rgba(226, 231, 239, 0.24);
+  --scrollbar-thumb: rgba(226, 231, 239, 0.36);
   --scrollbar-thumb-rest: rgba(226, 231, 239, 0.10);
-  --scrollbar-thumb-hover: rgba(226, 231, 239, 0.40);
+  --scrollbar-thumb-hover: rgba(226, 231, 239, 0.52);
   /* Google's dark sign-in button, as their branding rules give it. */
   --google-fill: #131314;
   --google-border: #8e918f;

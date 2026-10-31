@@ -4038,6 +4038,8 @@ body.sidebar-open #sidebar-scrim {
 #lyrics-list-items::-webkit-scrollbar-track,
 #rhyme-results::-webkit-scrollbar-track {
   background: transparent;
+  /* Keeps the thumb's rounded ends clear of the top and bottom edges. */
+  margin: var(--scrollbar-end-gap) 0;
 }
 
 .lyrics-area::-webkit-scrollbar-thumb,
