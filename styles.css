@@ -4634,22 +4634,26 @@ body.signed-in .sidebar-links {
       --sheet-syllables var(--duration-base) ease-out;
   }
 
+  /* Phones keep only the title here, so a page can be named where it is
+     written. Share, who is here and the rest live in the row below it. */
   .panel-header {
+    padding-bottom: 0;
+  }
+
+  .panel-header > :not(#lyrics-panel-title, #preview-panel-title) {
     display: none;
   }
 
-  /* With no title row above them, these need their own space from the tabs. */
   .page-notice,
   .page-sharing {
-    padding-top: var(--space-3);
+    padding-top: var(--space-2);
   }
 
   .page-sharing {
     margin-top: 0;
   }
 
-  /* The title row is hidden, so who is here, the sharing line and Share
-     share one row above the words. */
+  /* Who is here, the sharing line and Share share one row above the words. */
   .page-meta {
     display: flex;
     align-items: center;

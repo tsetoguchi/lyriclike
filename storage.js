@@ -409,16 +409,35 @@ function startBlankPage(title) {
 // No name is asked for up front: the cursor starts in the title, and a page
 // left unnamed stays Untitled.
 async function createLyric() {
-  if (window.SiteLimits && !await window.SiteLimits.askAtLimit('pages', NotebookList.ownPageCount())) return;
+  holdTitleForNewPage();
+  const isAllowed = !window.SiteLimits
+    || await window.SiteLimits.askAtLimit('pages', NotebookList.ownPageCount());
+  if (!isAllowed) return releaseHeldTitle();
   trackEvent('page_created');
 
-  if (!await flushSave()) return;
+  if (!await flushSave()) return releaseHeldTitle();
   startBlankPage(DEFAULT_TITLE);
+  isTitleHeld = false;
   saveDraft();
   Sidebar.close();
-  document.getElementById('lyrics-panel-title').focus();
+  titleEl.focus();
 
   await saveNewLyric();
+}
+
+// iPhone Safari raises the keyboard only for a focus made during the tap
+// itself, so the title is taken before the waits in createLyric.
+function holdTitleForNewPage() {
+  isTitleHeld = true;
+  titleEl.textContent = '';
+  titleEl.focus();
+}
+
+// No new page opened, so the page still open gets its own title back.
+function releaseHeldTitle() {
+  isTitleHeld = false;
+  titleEl.textContent = titleForDisplay(currentTitle);
+  if (document.activeElement === titleEl) titleEl.blur();
 }
 
 // A lyric someone has just named belongs in the notebook straight away, even
@@ -1052,6 +1071,9 @@ document.getElementById('lyrics').addEventListener('input', () => {
 });
 
 const titleEl = document.getElementById('lyrics-panel-title');
+// True while Create waits with the cursor already in the title. What shows
+// there then belongs to the page about to open, not the one still open.
+let isTitleHeld = false;
 titleEl.addEventListener('focus', () => {
   const range = document.createRange();
   range.selectNodeContents(titleEl);
@@ -1065,6 +1087,7 @@ titleEl.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lyrics').focus(); }
 });
 titleEl.addEventListener('blur', () => {
+  if (isTitleHeld) return;
   const newTitle = titleEl.textContent.trim() || DEFAULT_TITLE;
   titleEl.textContent = titleForDisplay(newTitle);
   if (newTitle !== currentTitle) {
