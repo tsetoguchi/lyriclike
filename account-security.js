@@ -269,7 +269,6 @@
 
   changeButton.addEventListener('click', openPasswordBox);
   cancelButton.addEventListener('click', cancelPasswordBox);
-  document.getElementById('password-close').addEventListener('click', cancelPasswordBox);
   overlay.addEventListener('click', event => {
     if (event.target === overlay) cancelPasswordBox();
   });

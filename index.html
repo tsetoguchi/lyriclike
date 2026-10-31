@@ -260,9 +260,8 @@
   </nav>
   </div>
   <div id="password-overlay">
-    <div id="password-panel" role="dialog" aria-modal="true" aria-labelledby="password-title">
-      <button type="button" id="password-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
-      <h2 id="password-title" class="password-title">Change password</h2>
+    <div id="password-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="password-title">
+      <h2 id="password-title" class="modal-header">Change password</h2>
       <form id="change-password-form" class="auth-form security-form" novalidate>
         <input id="security-username" type="email" autocomplete="username" hidden>
         <div class="modal-field">
@@ -277,7 +276,7 @@
           <p id="new-password-hint" class="auth-hint">At least 8 characters</p>
         </div>
         <div id="security-error" class="auth-error" aria-live="polite"></div>
-        <div class="security-actions">
+        <div class="modal-actions">
           <button id="cancel-password-btn" class="toggle-btn" type="button">Cancel</button>
           <button id="save-password-btn" class="toggle-btn modal-confirm" type="submit">Save password</button>
         </div>
@@ -286,19 +285,19 @@
   </div>
   <div id="dialog-overlay" class="modal-overlay" hidden>
     <div id="dialog-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-      <button type="button" id="dialog-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
-      <div id="dialog-header" class="modal-header"><span id="dialog-title">Create page</span></div>
+      <button type="button" id="dialog-close" class="icon-btn modal-close" aria-label="Close" hidden>&#x2715;</button>
+      <h2 id="dialog-header" class="modal-header"><span id="dialog-title"></span></h2>
+      <p id="dialog-message" class="modal-subtext" hidden></p>
       <div id="dialog-body" class="modal-body">
-        <p id="dialog-message" class="modal-message" hidden></p>
         <div id="dialog-field" class="modal-field">
-          <label id="dialog-label" class="modal-label" for="dialog-input">Title</label>
+          <label id="dialog-label" class="visually-hidden" for="dialog-input">Title</label>
           <input id="dialog-input" class="modal-input" type="text" maxlength="300"
                  autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
       </div>
       <div id="dialog-actions" class="modal-actions">
         <button id="dialog-cancel" class="toggle-btn">Cancel</button>
-        <button id="dialog-confirm" class="toggle-btn modal-confirm">Create</button>
+        <button id="dialog-confirm" class="toggle-btn modal-confirm">OK</button>
       </div>
     </div>
   </div>
@@ -343,16 +342,15 @@
   <div id="share-overlay" class="modal-overlay" hidden>
     <div id="share-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
       <button type="button" id="share-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
-      <div class="modal-header">
-        <span id="share-title">Share page</span>
-        <p id="share-subtext" class="share-subtext" hidden>People you add can read and edit this page.</p>
-      </div>
+      <h2 class="modal-header"><span id="share-title">Share page</span></h2>
+      <p id="share-subtext" class="modal-subtext" hidden>People you add can read and edit this page.</p>
       <div class="modal-body">
         <p id="share-note" class="share-note" hidden></p>
-        <form id="share-form" class="modal-field" novalidate>
+        <form id="share-form" class="modal-field field-with-action" novalidate>
           <input id="share-email" class="modal-input" type="email" maxlength="254"
                  placeholder="Add people by email" aria-label="Add people by email"
                  autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <button type="submit" id="share-submit" class="field-action">Add</button>
         </form>
         <div id="share-result" class="share-result" role="status" hidden>
           <p id="share-result-text" class="share-result-text"></p>
@@ -377,40 +375,35 @@
           </svg><span class="tip-btn-label">Leave this page</span>
         </button>
         <button type="button" id="share-done" class="toggle-btn">Done</button>
-        <button type="submit" id="share-submit" form="share-form"
-                class="toggle-btn modal-confirm" hidden>Share</button>
       </div>
     </div>
   </div>
   <div id="invite-overlay" class="modal-overlay" hidden>
     <div id="invite-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="invite-title">
       <button type="button" id="invite-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
-      <div class="modal-header">
-        <span id="invite-title">Invite a friend</span>
-        <p id="invite-subtext" class="share-subtext"></p>
-      </div>
+      <h2 class="modal-header"><span id="invite-title">Invite a friend</span></h2>
+      <p id="invite-subtext" class="modal-subtext"></p>
       <div class="modal-body">
-        <div class="modal-field">
-          <label class="modal-label" for="invite-link">Your invite link</label>
+        <div class="modal-field field-with-action">
+          <label class="visually-hidden" for="invite-link">Your invite link</label>
           <input id="invite-link" class="modal-input" type="text" readonly
                  autocomplete="off" autocorrect="off" spellcheck="false">
+          <button type="button" id="invite-copy" class="field-action is-ready">Copy</button>
         </div>
         <p id="invite-progress" class="invite-progress" role="status"></p>
       </div>
       <div class="modal-actions">
         <button type="button" id="invite-done" class="toggle-btn">Done</button>
-        <button type="button" id="invite-copy" class="toggle-btn modal-confirm">Copy link</button>
       </div>
     </div>
   </div>
   <div id="feedback-overlay" class="modal-overlay" hidden>
     <div id="feedback-panel" class="modal-panel" role="dialog" aria-modal="true"
          aria-labelledby="feedback-title" aria-describedby="feedback-lead">
-      <button type="button" id="feedback-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
-      <div id="feedback-title" class="modal-header">Let me know what you think</div>
+      <h2 id="feedback-title" class="modal-header">Let me know what you think</h2>
+      <p id="feedback-lead" class="modal-subtext">A bug, an idea, or something you like. It comes straight to me.</p>
       <form id="feedback-form" novalidate>
         <div class="modal-body">
-          <p id="feedback-lead" class="modal-message feedback-lead">A bug, an idea, or something you like. It comes straight to me.</p>
           <label class="visually-hidden" for="feedback-input">Your message</label>
           <textarea id="feedback-input" class="modal-input feedback-input" maxlength="2000" rows="4"
                     placeholder="“The rhymes didn't update after I changed a word.”"></textarea>
@@ -424,7 +417,7 @@
       </form>
       <div id="feedback-sent" hidden>
         <div class="modal-body">
-          <p class="modal-message feedback-lead">Thanks! I read every one.</p>
+          <p class="modal-message">Thanks! I read every one.</p>
         </div>
         <div class="modal-actions">
           <button type="button" id="feedback-done" class="toggle-btn modal-confirm">Done</button>
@@ -436,7 +429,7 @@
     <div id="auth-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button type="button" id="auth-close" class="icon-btn modal-close" aria-label="Close">&#x2715;</button>
       <div class="auth-heading">
-        <h2 id="auth-title" class="auth-title">Log in or sign up</h2>
+        <h2 id="auth-title" class="modal-header">Log in or sign up</h2>
         <p id="auth-email-shown" class="auth-email-shown" hidden>
           <span id="auth-email-text"></span>
           <button class="auth-edit" type="button" data-auth-link="edit-email">Edit</button>
