@@ -497,6 +497,7 @@ function describeLookupResult(results) {
 const RHYMES_PICKED_EVENT = 'rhymes-picked';
 
 const lookupTrigger = RhymeLookupCount.createLookupCounter();
+const LINE_ABOVE_TRIGGER = RhymeLookupCount.TRIGGER.LINE_ABOVE;
 
 // The word goes along only when it came up empty: those are the dictionary's
 // gaps. A tapped word that did rhyme stays on the device.
@@ -1084,7 +1085,11 @@ function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   // Typing a word runs lookups too; those aren't anyone asking for rhymes.
   const start = bounds ? bounds.start : 0;
   const trigger = lookupTrigger({ isPointerPick, isLineAbove, word, start });
-  if (trigger) trackRhymeLookup(word, results, trigger);
+  if (!trigger) return;
+  trackRhymeLookup(word, results, trigger);
+  // On a phone these rhymes land on the other tab, so a new line would fill
+  // it unseen. The trigger is set once per line, so the tab flashes once too.
+  if (trigger === LINE_ABOVE_TRIGGER) flashRhymesTab();
 }
 
 // ── Syllable counting ──
@@ -2028,8 +2033,12 @@ if (window.visualViewport) {
 
 // ── First-run guidance ──
 
-const RHYME_HINT_TOUCH = 'Tap a word, then open Rhymes to see what it rhymes with.';
-const RHYME_HINT_POINTER = 'Click any word to see what rhymes with it.';
+// A blank page has no word to click yet, so the hint points at the rhymes
+// that come by themselves once a line is done.
+const RHYME_HINT_TOUCH =
+  'Write a line. Its last word’s rhymes show under Rhymes when you start the next one.';
+const RHYME_HINT_POINTER =
+  'Write a line. Its last word’s rhymes show up when you start the next one.';
 const EMPTY_RESULTS_TOUCH = 'Tap a word in your lyrics<br>and its rhymes appear here';
 const EMPTY_RESULTS_POINTER = 'Click a word in your lyrics<br>to see what rhymes with it';
 
