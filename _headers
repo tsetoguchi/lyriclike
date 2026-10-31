@@ -93,6 +93,12 @@
 /page-menu.js
   Cache-Control: no-cache
 
+/sidebar-boot.js
+  Cache-Control: no-cache
+
+/sample-space-boot.js
+  Cache-Control: no-cache
+
 /sidebar.js
   Cache-Control: no-cache
 

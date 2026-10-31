@@ -9,6 +9,9 @@
    Every color in the app flows through here. */
 
 :root {
+  /* The phone header once the account controls are in it (app.js). */
+  --header-height-phone: 73px;
+
   /* Paper */
   --paper: var(--desk);         /* header, sidebar, tabs, bottom bar, menus */
   --rule: #2c3441;              /* soft hairlines within the paper */

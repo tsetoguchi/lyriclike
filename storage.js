@@ -1758,6 +1758,8 @@ function startEditor() {
   const isNewVisitor = isFirstVisit();
   if (linkedWord === null && isNewVisitor) showSample();
   else restoreDraft();
+  // The strip was held open from the first paint; the sample bar owns it now.
+  document.body.classList.remove('expects-sample');
   if (linkedWord === null || !window.showRhymesForWord) return;
   window.showRhymesForWord(linkedWord, null);
   trackEvent('linked_word_opened', { word: linkedWord });

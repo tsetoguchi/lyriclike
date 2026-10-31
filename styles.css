@@ -399,7 +399,8 @@ header .nav-icon circle {
    the top of the scroller. The strip is padding on the scroller itself, so
    the gutters and the text move down together and every mark stays beside
    its line. */
-.lyrics-area:has(> .sample-bar:not([hidden])) {
+.lyrics-area:has(> .sample-bar:not([hidden])),
+body.expects-sample .lyrics-area {
   padding-top: var(--space-8);
 }
 
@@ -407,7 +408,9 @@ header .nav-icon circle {
    The editor's measured floor already fills the pad (see
    resizeEditorToContent), so these can be their content's height. */
 .lyrics-area:has(> .sample-bar:not([hidden])) > .lyrics-wrapper,
-.lyrics-area:has(> .sample-bar:not([hidden])) > .rhyme-scheme-gutter {
+.lyrics-area:has(> .sample-bar:not([hidden])) > .rhyme-scheme-gutter,
+body.expects-sample .lyrics-area > .lyrics-wrapper,
+body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   min-height: 0;
 }
 
@@ -4653,6 +4656,13 @@ body.signed-in .sidebar-links {
     grid-row: 1;
     justify-self: end;
     width: auto;
+  }
+
+  /* app.js moves the account controls into the header after the first
+     paint. Holding the finished height keeps the tabs and the page from
+     dropping when they arrive. */
+  header {
+    min-height: var(--header-height-phone);
   }
 
   /* The account controls move out of it on phones, and the status line is
