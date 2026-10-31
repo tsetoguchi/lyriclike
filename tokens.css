@@ -50,6 +50,10 @@
   /* Stacking. Only two things ever lift off the page: the bar above the
      lyrics, and a panel over everything. */
   --z-bar: 5;
+  /* The phone start screen, with its top bar just over it. Panels and the
+     account menu still open on top. */
+  --z-hub: 50;
+  --z-hub-bar: 51;
   --z-overlay: 100;
   --z-overlay-raised: 101;
   /* The small question dialog can open over another panel (the people
@@ -63,6 +67,13 @@
   --tracking-normal: 0.05em;
   --tracking-wide: 0.08em;
   --tracking-wordmark: 0.14em;
+
+  /* The logo on the splash and the start screen, drawn the same size so one
+     can hand off to the other without it moving. */
+  --mark-size: 80px;
+  /* The start screen's Notebook and Create pills. */
+  --hub-pill-height: 40px;
+  --hub-icon-size: 18px;
 
   /* Fixed widths that hold the layout apart. */
   --gutter-syllables: 56px;
