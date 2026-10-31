@@ -4919,11 +4919,15 @@ body.signed-in .sidebar-links {
     --editor-pad: 16px;
   }
 
-  /* A phone gets a narrower margin than the desk does. It belongs on the open
+  /* A phone gets narrower margins than the desk does. It belongs on the open
      state: as a bare width it also outranks the closed state's zero, so the
-     margin kept 40px of the page with nothing written in it. */
+     margin kept 40px of the page with nothing written in it.
+     The scheme margin only ever holds one letter. At the desk's 44px the
+     sample verse wrapped on phones up to 393px wide, splitting "blue"
+     from its line; these widths keep it whole from 375px up. */
   :root {
-    --gutter-syllables: 40px;
+    --gutter-syllables: 36px;
+    --gutter-scheme: 24px;
   }
 
   .syllable-gutter .syl-line,
