@@ -11,6 +11,8 @@
 :root {
   /* The phone header once the account controls are in it (app.js). */
   --header-height-phone: 73px;
+  /* Signed out off the start screen: a 40px Log in, padding and hairline. */
+  --header-height-phone-slim: 57px;
 
   /* Paper */
   --paper: var(--desk);         /* header, sidebar, tabs, bottom bar, menus */
