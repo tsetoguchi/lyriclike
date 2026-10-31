@@ -4050,7 +4050,7 @@ body.sidebar-open #sidebar-scrim {
   background-clip: padding-box;
   border: var(--scrollbar-inset) solid transparent;
   border-radius: var(--scrollbar-rail-width);
-  transition: background-color var(--scrollbar-fade) ease-in-out;
+  transition: background-color calc(var(--duration-glide) * 2) ease-in-out;
 }
 
 .lyrics-area:hover::-webkit-scrollbar-thumb,
@@ -4063,8 +4063,8 @@ body.sidebar-open #sidebar-scrim {
 #rhyme-results.is-scrolling::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
   /* The rule that is active when a transition starts sets its length, so
-     this is the fade in and the base rule's --scrollbar-fade is the fade out. */
-  transition-duration: var(--scrollbar-fade-in);
+     this is the fade in and the base rule's doubled glide is the fade out. */
+  transition-duration: var(--duration-glide);
 }
 
 .lyrics-area::-webkit-scrollbar-thumb:hover,
@@ -4124,12 +4124,12 @@ body.sidebar-open #sidebar-scrim {
   border-radius: var(--scrollbar-rail-width);
   background: transparent;
   pointer-events: auto;
-  transition: background-color var(--scrollbar-fade) ease-in-out;
+  transition: background-color calc(var(--duration-glide) * 2) ease-in-out;
 }
 
 .pill-scrollbar-thumb.is-shown {
   background: var(--scrollbar-thumb);
-  transition-duration: var(--scrollbar-fade-in);
+  transition-duration: var(--duration-glide);
 }
 
 .pill-scrollbar-thumb.is-shown:hover {
