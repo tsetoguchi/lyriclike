@@ -96,7 +96,7 @@ function loadTour({ isTouch = false } = {}) {
   document.querySelectorAll = () => [{ getBoundingClientRect: () => VISIBLE_RECT }];
   const sandbox = {
     document,
-    window: { matchMedia: () => ({ matches: isTouch }), addEventListener() {} },
+    window: new FakeElement(),
     localStorage: { getItem: () => null, setItem() {} },
     trackEvent: (name, params) => events.push({ name, params }),
     setTimeout: (callback) => timers.push(callback),
@@ -107,6 +107,7 @@ function loadTour({ isTouch = false } = {}) {
     Element: FakeElement,
     HTMLTextAreaElement: class {},
   };
+  sandbox.window.matchMedia = () => ({ matches: isTouch });
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
   vm.runInContext(VERSE_SOURCE, sandbox);
@@ -196,5 +197,36 @@ describe('the sample tour rhyme step', () => {
     await openSampleTour(page);
     const stepCount = page.events.find((each) => each.name === 'tour_started').params.steps;
     assert.equal(stepCount, 6);
+  });
+});
+
+describe('leaving the page mid-tour', () => {
+  function tourEnds(page) {
+    return page.events.filter((each) => each.name === 'tour_ended');
+  }
+
+  it('reports the step the visitor left on', async () => {
+    const page = loadTour();
+    await openSampleTour(page);
+    page.els['coach-next'].fire('click');
+    page.sandbox.window.fire('pagehide');
+    const ends = tourEnds(page);
+    assert.equal(ends.length, 1);
+    assert.equal(ends[0].params.trigger, 'left');
+    assert.equal(ends[0].params.step, 2);
+  });
+
+  it('sends nothing when the tour never opened', () => {
+    const page = loadTour();
+    page.sandbox.window.fire('pagehide');
+    assert.deepEqual(tourEnds(page), []);
+  });
+
+  it('sends nothing more after the tour was skipped', async () => {
+    const page = loadTour();
+    await openSampleTour(page);
+    page.els['coach-skip'].fire('click');
+    page.sandbox.window.fire('pagehide');
+    assert.deepEqual(tourEnds(page).map((each) => each.params.trigger), ['skipped']);
   });
 });
