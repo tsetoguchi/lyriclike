@@ -200,7 +200,7 @@
     if (root.PagePreview) root.PagePreview.close();
   }
 
-  const PAGE_ACTIONS_ID = 'page-actions';
+  const PAGE_ACTIONS_IDS = ['page-actions', 'page-actions-phone'];
   const NOTEBOOK_ACTIONS_EVENT = 'notebook-actions-changed';
   const ICON_CLASS = 'tip-btn-icon';
   const rowActions = [];
@@ -213,10 +213,14 @@
 
   // The span shows only while signed in and holding a button, so a page with
   // no extension script never shows an empty gap.
+  function pageActionSpans() {
+    return PAGE_ACTIONS_IDS.map((id) => document.getElementById(id)).filter(Boolean);
+  }
+
   function showPageActions() {
-    const span = document.getElementById(PAGE_ACTIONS_ID);
-    if (!span) return;
-    span.hidden = !(root.currentUser && span.childElementCount > 0);
+    pageActionSpans().forEach((span) => {
+      span.hidden = !(root.currentUser && span.childElementCount > 0);
+    });
   }
 
   function buildPageActionButton({ label, icon, onClick }) {
@@ -243,13 +247,17 @@
 
   function addPageAction(action) {
     const read = readAction(action);
-    const span = document.getElementById(PAGE_ACTIONS_ID);
-    if (!read || !span) return null;
-    const button = buildPageActionButton(read);
-    span.appendChild(button);
+    const spans = pageActionSpans();
+    if (!read || spans.length === 0) return null;
+    // The title row is hidden on a phone, so each button is built for both rows.
+    const buttons = spans.map((span) => {
+      const button = buildPageActionButton(read);
+      span.appendChild(button);
+      return button;
+    });
     showPageActions();
     return function remove() {
-      button.remove();
+      buttons.forEach((button) => button.remove());
       showPageActions();
     };
   }
