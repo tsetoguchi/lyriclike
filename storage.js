@@ -428,6 +428,17 @@ function saveNewLyric() {
   return performSave({ force: true });
 }
 
+// Sharing needs the page on the server. A fresh one goes out now, empty if
+// nothing is typed yet. False when it could not be saved.
+async function ensurePageOnServer() {
+  await waitForSaves();
+  if (currentRevision !== null) return true;
+  clearTimeout(saveTimer);
+  await saveNewLyric();
+  await waitForSaves();
+  return currentRevision !== null;
+}
+
 // The server treats both the same way: the owner's call deletes the page,
 // an editor's only takes them off it. Only the words differ.
 async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
@@ -1432,6 +1443,7 @@ window.OpenPage = {
   get isLiveDraft() { return isLiveDraft; },
   isSaving: () => saveInFlight !== null || pendingConflict !== null,
   hasUnsavedEdits,
+  ensureOnServer: ensurePageOnServer,
   isSampleShowing,
   summary: currentPageSummary,
   setShareCount(count) {
