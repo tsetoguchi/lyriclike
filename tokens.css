@@ -243,9 +243,9 @@
   --shadow-popup: 0 8px 32px rgba(0, 0, 0, 0.60);
   --shadow-bottom-nav: 0 -2px 12px rgba(0, 0, 0, 0.45);
   --sheet-handle: rgba(226, 231, 239, 0.28);
-  --scrollbar-thumb: rgba(226, 231, 239, 0.36);
+  --scrollbar-thumb: rgba(226, 231, 239, 0.46);
   --scrollbar-thumb-rest: rgba(226, 231, 239, 0.10);
-  --scrollbar-thumb-hover: rgba(226, 231, 239, 0.52);
+  --scrollbar-thumb-hover: rgba(226, 231, 239, 0.64);
   /* Google's dark sign-in button, as their branding rules give it. */
   --google-fill: #131314;
   --google-border: #8e918f;

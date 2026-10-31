@@ -4057,7 +4057,10 @@ body.sidebar-open #sidebar-scrim {
 .page-preview:hover::-webkit-scrollbar-thumb,
 #lyrics-list-items:hover::-webkit-scrollbar-thumb,
 #rhyme-results:hover::-webkit-scrollbar-thumb,
-.is-scrolling::-webkit-scrollbar-thumb {
+.lyrics-area.is-scrolling::-webkit-scrollbar-thumb,
+.page-preview.is-scrolling::-webkit-scrollbar-thumb,
+#lyrics-list-items.is-scrolling::-webkit-scrollbar-thumb,
+#rhyme-results.is-scrolling::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
 }
 
@@ -4090,7 +4093,10 @@ body.sidebar-open #sidebar-scrim {
   .page-preview:hover,
   #lyrics-list-items:hover,
   #rhyme-results:hover,
-  .is-scrolling {
+  .lyrics-area.is-scrolling,
+  .page-preview.is-scrolling,
+  #lyrics-list-items.is-scrolling,
+  #rhyme-results.is-scrolling {
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 }
