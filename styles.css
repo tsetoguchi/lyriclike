@@ -3144,6 +3144,8 @@ a.account-menu-item {
   transition: opacity var(--duration-base) ease, visibility 0s;
 }
 
+/* The edge is clear so forced colours, which drop the fill and shadow,
+   still draw one. The same goes for the fields and buttons inside. */
 .modal-panel {
   position: relative;
   width: var(--dialog-width);
@@ -3151,6 +3153,7 @@ a.account-menu-item {
   box-sizing: border-box;
   padding: var(--space-6);
   background: var(--panel-card);
+  border: var(--hairline) solid transparent;
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow);
   transform: scale(0.88);
@@ -3340,15 +3343,15 @@ a.account-menu-item {
   color: var(--ink-faded);
 }
 
-/* Filled and borderless, so a field reads as a place to type rather than
-   another button. */
+/* Filled, with a clear edge, so a field reads as a place to type rather
+   than another button. */
 .modal-input {
   width: 100%;
   box-sizing: border-box;
   height: var(--tap-target);
   padding: 0 var(--space-4);
   background: var(--panel-fill);
-  border: none;
+  border: var(--hairline) solid transparent;
   border-radius: var(--field-radius);
   color: var(--ink);
   font-family: var(--font-ui);
@@ -3377,6 +3380,20 @@ a.account-menu-item {
   color: var(--ink-faded);
 }
 
+/* Forced colours drop the focus glow, so a field shows the outline the
+   rest of the page uses. */
+@media (forced-colors: active) {
+  .modal-input:focus,
+  .field-with-action:has(> .modal-input:focus) {
+    outline: 2px solid var(--accent);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .field-with-action > .modal-input:focus {
+    outline: none;
+  }
+}
+
 /* A field with its button inside it: Add in Share, Copy in Invite. The row
    wears the field's fill and focus, and the input inside goes clear. */
 .modal-field.field-with-action {
@@ -3385,6 +3402,7 @@ a.account-menu-item {
   gap: var(--space-2);
   padding-right: calc((var(--tap-target) - var(--field-action-height)) / 2);
   background: var(--panel-fill);
+  border: var(--hairline) solid transparent;
   border-radius: var(--field-radius);
   transition: background var(--duration-base), box-shadow var(--duration-base);
 }
@@ -3404,6 +3422,7 @@ a.account-menu-item {
   flex: 1;
   min-width: 0;
   background: transparent;
+  border: none;
   box-shadow: none;
   text-overflow: ellipsis;
 }
@@ -3414,7 +3433,7 @@ a.account-menu-item {
   height: var(--field-action-height);
   padding: 0 var(--space-3);
   background: var(--panel-fill-hover);
-  border: none;
+  border: var(--hairline) solid transparent;
   border-radius: var(--field-action-radius);
   color: var(--ink-faded);
   font-family: var(--font-ui);
@@ -3451,7 +3470,7 @@ a.account-menu-item {
   min-height: var(--panel-button-height);
   padding: 0 var(--space-4);
   background: var(--panel-fill);
-  border: none;
+  border: var(--hairline) solid transparent;
   color: var(--panel-button-ink);
   font-size: var(--text-subhead);
   font-weight: var(--weight-semibold);
