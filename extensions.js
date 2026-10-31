@@ -8,12 +8,13 @@
 // the editor's place, and keep a signed-in visit's splash up until its items
 // are in. It may also set what the Invite button offers, and ask whether the
 // phone start screen is up, hearing 'hub-shown' and 'hub-hidden' on document
-// as it comes and goes. With no script set, nothing is fetched and the
+// as it comes and goes. On a phone it may also fill the bottom bar with its
+// own buttons. With no script set, nothing is fetched and the
 // neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 7;
+  const HOOK_VERSION = 8;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -185,6 +186,23 @@
     if (root.SidePanel) root.SidePanel.close();
   }
 
+  // On a phone only: the bottom bar's place for the extension's own buttons.
+  function openBottomBar(element) {
+    if (!(element instanceof Element)) {
+      console.warn('Extension hook: openBottomBar needs an element.');
+      return false;
+    }
+    if (!root.BottomBar) {
+      console.warn('Extension hook: the bottom bar is not available here.');
+      return false;
+    }
+    return root.BottomBar.open(element);
+  }
+
+  function closeBottomBar() {
+    if (root.BottomBar) root.BottomBar.close();
+  }
+
   function showPreview(input) {
     const read = root.SlotInputs ? root.SlotInputs.readPreview(input) : null;
     if (!read) {
@@ -352,6 +370,8 @@
     replacePage,
     openSidePanel,
     closeSidePanel,
+    openBottomBar,
+    closeBottomBar,
     showPreview,
     closePreview,
     addPageAction,
