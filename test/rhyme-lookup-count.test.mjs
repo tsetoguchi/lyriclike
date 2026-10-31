@@ -64,3 +64,10 @@ describe('createLookupCounter', () => {
     assert.equal(lookupTrigger(NIGHT_LINE_ABOVE), 'line_above');
   });
 });
+
+describe('TRIGGER', () => {
+  it('names the line-above trigger the counter returns, so app.js can match it', () => {
+    const lookupTrigger = createLookupCounter();
+    assert.equal(lookupTrigger(NIGHT_LINE_ABOVE), rhymeLookupCount.TRIGGER.LINE_ABOVE);
+  });
+});

@@ -28,7 +28,7 @@
     };
   }
 
-  const RhymeLookupCount = { createLookupCounter };
+  const RhymeLookupCount = { createLookupCounter, TRIGGER };
 
   if (typeof module === 'object' && module.exports) {
     module.exports = RhymeLookupCount;
