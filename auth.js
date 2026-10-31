@@ -7,6 +7,18 @@ const ACCOUNT_OPEN_WAIT_MS = 600;
 
 const accountButton = document.getElementById('account-settings-btn');
 const accountMenu = document.getElementById('account-menu');
+// Phones keep the account in the sidebar's foot, since the header is bare.
+const PHONE_QUERY = window.matchMedia('(max-width: 768px)');
+
+function placeAccountMenu() {
+  const userInfo = document.getElementById('user-info');
+  const home = PHONE_QUERY.matches
+    ? document.getElementById('sidebar-account-slot')
+    : document.getElementById('user-area');
+  if (userInfo.parentElement !== home) home.appendChild(userInfo);
+}
+PHONE_QUERY.addEventListener('change', placeAccountMenu);
+placeAccountMenu();
 
 async function initAuth() {
   try {

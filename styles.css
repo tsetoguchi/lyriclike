@@ -2826,7 +2826,7 @@ body:not(.signed-in) .invite-btn {
 }
 
 @media (min-width: 769px) {
-  .invite-btn-header {
+  .invite-btn-phone {
     display: none;
   }
 
@@ -2838,22 +2838,21 @@ body:not(.signed-in) .invite-btn {
   }
 }
 
-/* Phones have no title row, so it stays in the header, and there is no room
-   beside the centred wordmark, so only the gift shows, in a circle the size
-   of the account's. */
+/* Phones have no title row, so it sits beside Share in the row above the
+   words, and takes Share's box so the two read as a pair. */
 @media (max-width: 768px) {
   .invite-btn-panel {
     display: none;
   }
 
-  #user-area .toggle-btn.invite-btn {
-    justify-content: center;
-    width: var(--space-8);
-    padding: 0;
+  .page-meta .toggle-btn.invite-btn {
+    height: auto;
+    padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+    background: transparent;
   }
 
-  .invite-btn-label {
-    display: none;
+  .page-meta .toggle-btn.invite-btn:hover {
+    background: var(--ink-wash);
   }
 }
 
@@ -4389,6 +4388,18 @@ body.sidebar-open #sidebar-scrim {
   color: var(--ink);
 }
 
+/* Phones only: auth.js moves the account here, to the foot's far right. Its
+   menu opens upward, as the foot is the sidebar's bottom edge. */
+.sidebar-account-slot {
+  margin-left: auto;
+}
+
+.sidebar-account-slot .account-menu-popover {
+  top: auto;
+  bottom: calc(100% + var(--space-2));
+  transform-origin: bottom right;
+}
+
 /* Signed in, these links live in the account menu instead. */
 .sidebar-links {
   margin: 0;
@@ -4457,9 +4468,18 @@ body.signed-in .sidebar-links {
     justify-content: center;
   }
 
+  /* The sidebar carries the wordmark; the header keeps only Log in. */
   header h1 {
-    width: auto;
-    text-align: center;
+    display: none;
+  }
+
+  /* Signed in, nothing is left in it: the account lives in the sidebar. */
+  body.signed-in header {
+    display: none;
+  }
+
+  body.signed-in .mobile-tabs {
+    padding-top: env(safe-area-inset-top);
   }
 
   /* Their buttons move to the bottom bar on phones, leaving these empty,
