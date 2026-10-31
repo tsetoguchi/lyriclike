@@ -4463,6 +4463,41 @@ body.sidebar-open #sidebar-scrim {
   stroke-linejoin: round;
 }
 
+/* The foot's feedback envelope names itself the way the header switches do,
+   not with the browser's own tooltip. It sits at the screen's bottom left,
+   so the name opens above and runs right. */
+.sidebar-foot [data-feedback-open] {
+  position: relative;
+}
+
+.hover-tip {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 20;
+  padding: var(--space-1) var(--space-2);
+  background: var(--paper-card);
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-popup);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-caption-1);
+  font-weight: var(--weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(var(--space-1));
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+  pointer-events: none;
+}
+
+.sidebar-foot [data-feedback-open]:hover .hover-tip,
+.sidebar-foot [data-feedback-open]:focus-visible .hover-tip {
+  opacity: 1;
+  transform: none;
+}
+
 /* The notebook's last row: the feedback envelope, then the fine print. */
 .sidebar-foot {
   display: flex;
