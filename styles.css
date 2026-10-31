@@ -5030,7 +5030,8 @@ body.signed-in .sidebar-links {
 
 /* ── Splash ──
    A signed-in visit opens on the logo, with the wordmark as the credit at
-   the foot, until splash.js lifts it. The mark is drawn 80px across. */
+   the foot, until splash.js lifts it. The mark is drawn --mark-size across,
+   the same as on the phone start screen. */
 
 #splash {
   display: none;
@@ -5054,8 +5055,8 @@ body.signed-in .sidebar-links {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 80px;
-  height: 80px;
+  width: var(--mark-size);
+  height: var(--mark-size);
   transform: translate(-50%, -50%);
 }
 
@@ -5074,6 +5075,132 @@ body.signed-in .sidebar-links {
   font-size: var(--text-subhead);
   line-height: 20px;
   color: var(--ink-faded);
+}
+
+/* ── Start screen ──
+   A signed-in phone's fresh open lands here when the splash lifts (hub.js).
+   The mark sits exactly where the splash drew it, so only the words and the
+   pills appear around it. The header stays over it as the top bar. */
+
+.hub {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .is-hub .hub {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-hub);
+    background: var(--desk);
+  }
+
+  .hub-mark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--mark-size);
+    height: var(--mark-size);
+    transform: translate(-50%, -50%);
+  }
+
+  .hub-greeting {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(50% + var(--mark-size) / 2 + var(--space-5));
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-ui);
+    font-size: var(--text-title-2);
+    font-weight: var(--weight-bold);
+    color: var(--ink);
+  }
+
+  .hub-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  .hub-actions .hub-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--hub-pill-height);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-bold);
+  }
+
+  #hub-notebook-btn {
+    background: var(--ink-wash);
+  }
+
+  /* Drawn at 40px, each still gets a full tap target. */
+  .hub-pill::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: var(--tap-target);
+    transform: translateY(-50%);
+  }
+
+  .hub-pill-icon {
+    width: var(--hub-icon-size);
+    height: var(--hub-icon-size);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  /* The phone header is bare once signed in, so it comes back only as the
+     start screen's top bar, carrying Invite and Account (moved in by hub.js
+     and auth.js). */
+  .is-hub header,
+  .is-hub body.signed-in header {
+    display: grid;
+    position: relative;
+    z-index: var(--z-hub-bar);
+    background: transparent;
+    border-bottom: none;
+  }
+
+  /* A sign-in check slower than the splash must not flash Log in over it. */
+  .is-hub #signed-out-actions {
+    display: none;
+  }
+
+  .is-hub header #user-area {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* Icon only and round, as the gift sat in the header before. */
+  .is-hub header .toggle-btn.invite-btn {
+    justify-content: center;
+    width: var(--space-8);
+    height: var(--space-8);
+    padding: 0;
+    border-radius: var(--radius-pill);
+    background: var(--ink-wash);
+  }
+
+  .is-hub header .invite-btn-label {
+    display: none;
+  }
 }
 
 /* ── Reduced motion ──

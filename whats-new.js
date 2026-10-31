@@ -54,14 +54,23 @@ function dismiss() {
   markSeen();
 }
 
+// The phone start screen keeps the screen to itself; the card waits until
+// it goes. The hub can also come back during the delay, so both ask.
+function waitForHub() {
+  if (!window.isHubShowing?.()) return false;
+  document.addEventListener('hub-hidden', update, { once: true });
+  return true;
+}
+
 function update() {
   if (!canShare()) {
     card.hidden = true;
     return;
   }
-  if (isSeen() || !hasOwnPage()) return;
+  if (isSeen() || !hasOwnPage() || waitForHub()) return;
   setTimeout(() => {
-    if (canShare() && !isSeen()) show();
+    if (!canShare() || isSeen() || waitForHub()) return;
+    show();
   }, SHOW_DELAY_MS);
 }
 

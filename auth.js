@@ -7,12 +7,15 @@ const ACCOUNT_OPEN_WAIT_MS = 600;
 
 const accountButton = document.getElementById('account-settings-btn');
 const accountMenu = document.getElementById('account-menu');
-// Phones keep the account in the sidebar's foot, since the header is bare.
+// Phones keep the account in the sidebar's foot, since the header is bare,
+// except on the start screen (hub.js), whose top bar is the header.
 const PHONE_QUERY = window.matchMedia('(max-width: 768px)');
+const HUB_CLASS = 'is-hub';
 
 function placeAccountMenu() {
   const userInfo = document.getElementById('user-info');
-  const home = PHONE_QUERY.matches
+  const isHub = document.documentElement.classList.contains(HUB_CLASS);
+  const home = PHONE_QUERY.matches && !isHub
     ? document.getElementById('sidebar-account-slot')
     : document.getElementById('user-area');
   if (userInfo.parentElement !== home) home.appendChild(userInfo);
