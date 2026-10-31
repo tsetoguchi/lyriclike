@@ -4038,6 +4038,8 @@ body.sidebar-open #sidebar-scrim {
 #lyrics-list-items::-webkit-scrollbar-track,
 #rhyme-results::-webkit-scrollbar-track {
   background: transparent;
+  /* Keeps the thumb's rounded ends clear of the top and bottom edges. */
+  margin: var(--scrollbar-end-gap) 0;
 }
 
 .lyrics-area::-webkit-scrollbar-thumb,
@@ -4048,15 +4050,21 @@ body.sidebar-open #sidebar-scrim {
   background-clip: padding-box;
   border: var(--scrollbar-inset) solid transparent;
   border-radius: var(--scrollbar-rail-width);
-  transition: background-color var(--scrollbar-fade) ease-in-out;
+  transition: background-color calc(var(--duration-glide) * 2) ease-in-out;
 }
 
 .lyrics-area:hover::-webkit-scrollbar-thumb,
 .page-preview:hover::-webkit-scrollbar-thumb,
 #lyrics-list-items:hover::-webkit-scrollbar-thumb,
 #rhyme-results:hover::-webkit-scrollbar-thumb,
-.is-scrolling::-webkit-scrollbar-thumb {
+.lyrics-area.is-scrolling::-webkit-scrollbar-thumb,
+.page-preview.is-scrolling::-webkit-scrollbar-thumb,
+#lyrics-list-items.is-scrolling::-webkit-scrollbar-thumb,
+#rhyme-results.is-scrolling::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb);
+  /* The rule that is active when a transition starts sets its length, so
+     this is the fade in and the base rule's doubled glide is the fade out. */
+  transition-duration: var(--duration-glide);
 }
 
 .lyrics-area::-webkit-scrollbar-thumb:hover,
@@ -4088,9 +4096,48 @@ body.sidebar-open #sidebar-scrim {
   .page-preview:hover,
   #lyrics-list-items:hover,
   #rhyme-results:hover,
-  .is-scrolling {
+  .lyrics-area.is-scrolling,
+  .page-preview.is-scrolling,
+  #lyrics-list-items.is-scrolling,
+  #rhyme-results.is-scrolling {
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }
+}
+
+/* Firefox's stand-in for the rail above, drawn by pill-scrollbar.js over the
+   scroller's right edge. Same size, colours and fade as the native version. */
+.pill-scrollbar {
+  position: fixed;
+  z-index: var(--z-bar);
+  box-sizing: border-box;
+  width: var(--scrollbar-rail-width);
+  padding: var(--scrollbar-end-gap) 0;
+  pointer-events: none;
+}
+
+.pill-scrollbar[hidden] {
+  display: none;
+}
+
+.pill-scrollbar-thumb {
+  margin-inline: var(--scrollbar-inset);
+  border-radius: var(--scrollbar-rail-width);
+  background: transparent;
+  pointer-events: auto;
+  transition: background-color calc(var(--duration-glide) * 2) ease-in-out;
+}
+
+.pill-scrollbar-thumb.is-shown {
+  background: var(--scrollbar-thumb);
+  transition-duration: var(--duration-glide);
+}
+
+.pill-scrollbar-thumb.is-shown:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.pill-scrollbar-thumb.is-dragging {
+  background: var(--accent);
 }
 
 .lyrics-list-item {

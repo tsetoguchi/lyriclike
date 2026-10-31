@@ -166,6 +166,9 @@
 /scroll-reveal.js
   Cache-Control: no-cache
 
+/pill-scrollbar.js
+  Cache-Control: no-cache
+
 /analytics.js
   Cache-Control: no-cache
 
