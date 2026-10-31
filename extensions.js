@@ -6,12 +6,14 @@
 // also read, open and replace the open page, and hear 'page-changed' on
 // document when another page is on screen, and show any text read-only in
 // the editor's place, and keep a signed-in visit's splash up until its items
-// are in. It may also set what the Invite button offers. With no script set,
-// nothing is fetched and the neutral dialog in limits.js is all anyone sees.
+// are in. It may also set what the Invite button offers, and ask whether the
+// phone start screen is up, hearing 'hub-shown' and 'hub-hidden' on document
+// as it comes and goes. With no script set, nothing is fetched and the
+// neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 6;
+  const HOOK_VERSION = 7;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -319,6 +321,12 @@
     } : null);
   }
 
+  // hub.js gives this; a page without it never shows the start screen.
+  function isHubShowing() {
+    const isShowing = pageFunction('isHubShowing');
+    return isShowing ? isShowing() === true : false;
+  }
+
   root.siteExtensions = {
     version: HOOK_VERSION,
     setLimitDialog,
@@ -343,6 +351,7 @@
     notebookRowActions,
     addShareNote,
     setInviteOffer,
+    isHubShowing,
     holdSplash,
     whenSettled,
   };
