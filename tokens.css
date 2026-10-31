@@ -71,9 +71,10 @@
   /* The logo on the splash and the start screen, drawn the same size so one
      can hand off to the other without it moving. */
   --mark-size: 80px;
-  /* The start screen's Notebook and Create pills. */
-  --hub-pill-height: 40px;
-  --hub-icon-size: 18px;
+  /* The start screen's Notebook and Create pills: its largest buttons, a
+     step above the top bar's tap-target height. */
+  --hub-pill-height: 48px;
+  --hub-icon-size: 20px;
 
   /* Fixed widths that hold the layout apart. */
   --gutter-syllables: 56px;
