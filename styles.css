@@ -467,14 +467,14 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   display: none;
 }
 
-/* The way out of the sample, there from the start: centred in the
-   pad under the verse, finger-sized. sample-start.js sets its top. It keeps
-   the outlined amber of a switch that is on; solid amber is sign-up's. */
+/* The way out of the sample, there from the start: under the verse and
+   lined up with where its lines start, finger-sized. sample-start.js sets
+   its top and left. It keeps the outlined amber of a switch that is on;
+   solid amber is sign-up's. */
 .sample-clear {
   position: absolute;
-  left: 50%;
+  left: 0;
   z-index: 1;
-  transform: translateX(-50%);
   min-height: var(--tap-target);
   padding: var(--space-2) var(--space-6);
   background: var(--accent-wash);
@@ -536,7 +536,6 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
    verse; here they sit in the row with the text instead. */
 .page-notice-actions .sample-clear {
   position: static;
-  transform: none;
 }
 
 .page-notice-close {

@@ -12,6 +12,7 @@ const buttonEls = [
   document.getElementById('save-keep'),
 ];
 const lyricsAreaEl = document.querySelector('.lyrics-area');
+const lyricsEl = document.getElementById('lyrics');
 let placeFrame = null;
 
 function lastWordRect() {
@@ -25,13 +26,28 @@ function shownButtons() {
 
 // The buttons scroll with the text, so their top is measured in the
 // scroller's content, not the viewport.
+function buttonTop(lastRect, areaRect) {
+  return lastRect.bottom - areaRect.top + lyricsAreaEl.scrollTop + GAP_BELOW_VERSE_PX;
+}
+
+// Where the verse's lines start. The sheet is centred in the scroller, so
+// this moves with the window and the panel's width.
+function textStartLeft(areaRect) {
+  const padLeft = parseFloat(getComputedStyle(lyricsEl).paddingLeft);
+  return lyricsEl.getBoundingClientRect().left + padLeft - areaRect.left;
+}
+
 function placeSampleStart() {
   placeFrame = null;
   const lastRect = lastWordRect();
   if (lastRect === null) return;
-  const areaTop = lyricsAreaEl.getBoundingClientRect().top;
-  const top = lastRect.bottom - areaTop + lyricsAreaEl.scrollTop + GAP_BELOW_VERSE_PX;
-  shownButtons().forEach((buttonEl) => { buttonEl.style.top = top + 'px'; });
+  const areaRect = lyricsAreaEl.getBoundingClientRect();
+  const top = buttonTop(lastRect, areaRect) + 'px';
+  const left = textStartLeft(areaRect) + 'px';
+  shownButtons().forEach((buttonEl) => {
+    buttonEl.style.top = top;
+    buttonEl.style.left = left;
+  });
 }
 
 function schedulePlace() {
@@ -48,7 +64,7 @@ buttonEls.forEach((buttonEl) => {
     attributeFilter: ['hidden'],
   });
 });
-document.getElementById('lyrics').addEventListener('input', schedulePlace);
+lyricsEl.addEventListener('input', schedulePlace);
 new ResizeObserver(schedulePlace).observe(lyricsAreaEl);
 window.addEventListener('resize', schedulePlace);
 document.fonts.ready.then(schedulePlace);
