@@ -2666,6 +2666,10 @@ header .nav-icon circle {
   border-color: transparent;
 }
 
+.sign-in-icon {
+  display: none;
+}
+
 /* A narrow desktop window has no room for Sign up beside the five tools; it
    runs off the edge below about 900px. Log in's modal links to sign up, so
    Log in takes Sign up's amber tint there. Phones fall under this too. */
@@ -2674,14 +2678,32 @@ header .nav-icon circle {
     display: none;
   }
 
+  /* As tall as the start screen's pills, with the same icon. */
   #sign-in-btn {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--hub-pill-height);
+    padding: 0 var(--space-4);
     background: var(--accent-wash);
     border-color: var(--accent-border);
     color: var(--accent);
   }
 
-  /* Drawn at 25px, it gets a full tap target without growing the header. */
+  .sign-in-icon {
+    display: block;
+    width: var(--hub-icon-size);
+    height: var(--hub-icon-size);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  /* Drawn at 40px, it gets a full tap target without growing the header. */
   #sign-in-btn::after {
     content: "";
     position: absolute;
@@ -4542,6 +4564,12 @@ body.signed-in .sidebar-links {
     font-size: var(--text-caption-1);
     padding: var(--space-1) var(--space-2);
     letter-spacing: var(--tracking-tight);
+  }
+
+  /* Alone and signed out, Log in is sized like the start screen's pills. */
+  #user-area #sign-in-btn {
+    font-size: var(--text-footnote);
+    padding: 0 var(--space-4);
   }
 
   /* No room for two buttons either. Log in's modal links to sign up, and the
