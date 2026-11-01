@@ -167,7 +167,7 @@
   // The link only opens for people on the page, so it is offered once
   // someone is.
   function showCopyLink(page, hasPeople) {
-    copyLink = hasPeople ? `${location.origin}/#shared=${page.id}` : '';
+    copyLink = hasPeople ? `${window.NativeShell.siteOrigin}/#shared=${page.id}` : '';
     copyButton.hidden = !hasPeople;
     byId('share-copy-label').textContent = 'Copy link';
   }

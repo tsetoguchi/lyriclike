@@ -40,14 +40,19 @@
     limitDialog = typeof dialog === 'function' ? dialog : null;
   }
 
+  // The script is a path on the site. The bundled app does not have it, so
+  // there it comes from the real site, the way it does on the website.
+  function scriptSource(url) {
+    const shell = root.NativeShell;
+    return shell && shell.isNative ? new URL(url, shell.siteOrigin).href : url;
+  }
+
   // A broken script must not break the page, so a failed load is only logged.
   function loadScript(url) {
-    // The script is a path on the site, which the bundled app does not have.
-    if (root.NativeShell && root.NativeShell.isNative) return;
     if (!url || loadedUrls.has(url)) return;
     loadedUrls.add(url);
     const tag = document.createElement('script');
-    tag.src = url;
+    tag.src = scriptSource(url);
     pendingWork.push(new Promise(done => {
       tag.onload = done;
       tag.onerror = () => {

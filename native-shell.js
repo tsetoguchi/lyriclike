@@ -23,8 +23,9 @@
   const HTTP_UNAUTHORIZED = 401;
   const SIGN_IN_FAILED_EVENT = 'native-sign-in-failed';
   const LIVE_PATH_PATTERN = /^\/api\/lyrics\/([^/?]+)\/live\?/;
-  // Pages that are not in the app: the rhyme pages alone are over 100 MB.
-  const WEB_ONLY_PREFIXES = Object.freeze(['/rhymes', '/guide', '/privacy', '/content']);
+  // The only pages in the bundle. Any other page of the site (the guide, the
+  // rhyme pages, the legal pages) lives on the real site and opens there.
+  const APP_PAGE_PATHS = Object.freeze(['/', '/index.html']);
   const WEB_PROTOCOLS = Object.freeze(['http:', 'https:']);
 
   function isSameSite(url, pageUrl) {
@@ -45,8 +46,8 @@
   function externalTargetFor(href, pageUrl) {
     const url = new URL(href, pageUrl);
     if (isSameSite(url, pageUrl)) {
-      const isWebOnly = WEB_ONLY_PREFIXES.some(prefix => url.pathname.startsWith(prefix));
-      return isWebOnly ? API_ORIGIN + url.pathname + url.search + url.hash : null;
+      const isAppPage = APP_PAGE_PATHS.includes(url.pathname);
+      return isAppPage ? null : API_ORIGIN + url.pathname + url.search + url.hash;
     }
     return WEB_PROTOCOLS.includes(url.protocol) ? url.href : null;
   }
@@ -211,6 +212,7 @@
     app.addListener('appUrlOpen', event => finishGoogleSignIn(event.url, context));
     root.NativeShell = {
       isNative: true,
+      siteOrigin: API_ORIGIN,
       startGoogleSignIn: () => startGoogleSignIn(context),
       openLiveSocket: path => openLiveSocket(path, context),
     };
@@ -225,5 +227,5 @@
     return;
   }
   if (isNativeApp()) install();
-  else root.NativeShell = { isNative: false };
+  else root.NativeShell = { isNative: false, siteOrigin: globalThis.location.origin };
 })(this);
