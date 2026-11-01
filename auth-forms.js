@@ -56,6 +56,7 @@
     START: 'start',
     SIGN_IN: 'sign-in',
     GOOGLE_ONLY: 'google-only',
+    APPLE_ONLY: 'apple-only',
     SIGN_UP: 'sign-up',
     CHECK_EMAIL: 'check-email',
     FORGOT: 'forgot',
@@ -88,6 +89,12 @@
       title: 'Log in with Google', google: true, email: 'shown', password: null,
       message: 'This account uses Google to log in.',
       submit: null, links: [], turnstile: null,
+    },
+    [VIEW.APPLE_ONLY]: {
+      title: 'Log in with Apple', google: false, email: 'shown', password: null,
+      message: 'This account uses Sign in with Apple. Open the LyricLike app on your '
+        + 'iPhone to log in, or reset your password to log in here.',
+      submit: null, links: ['forgot'], turnstile: null,
     },
     [VIEW.CHECK_EMAIL]: {
       title: 'Check your email', google: false, email: false, password: null,
@@ -423,6 +430,7 @@
   const NEXT_VIEW = Object.freeze({
     'password': VIEW.SIGN_IN,
     'google': VIEW.GOOGLE_ONLY,
+    'apple': VIEW.APPLE_ONLY,
     'sign-up': VIEW.SIGN_UP,
   });
 

@@ -111,9 +111,9 @@ function closeAccountMenuOnEscape(event) {
   accountButton.focus();
 }
 
-// Google sign-in in the app ended without a session (native-shell.js).
+// Sign-in in the app ended without a session (native-shell.js).
 document.addEventListener('native-sign-in-failed', () => {
-  PageNotice.show('Google sign-in did not finish. Please try again.');
+  PageNotice.show('Sign-in did not finish. Please try again.');
 });
 
 // Signing in with Google is also how an account is made: the first visit

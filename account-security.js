@@ -12,6 +12,7 @@
 
   const TEXT = Object.freeze({
     ENTER_CURRENT: 'Enter your current password.',
+    DELETE_WORD: 'DELETE',
     TOO_SHORT: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
     TOO_LONG: `Use at most ${MAX_PASSWORD_LENGTH} characters.`,
     CHANGED_HEADING: 'Password changed',
@@ -219,8 +220,14 @@
 
   // ── Deleting the account ──
 
-  // An account with a password gives it again. One with only Google has no
-  // password to ask for, so the address has to be typed back instead.
+  // An account with a password gives it again. One without has none to ask
+  // for, so the address has to be typed back instead. Sign in with Apple can
+  // hide the address behind a relay one the person never saw, so there a word
+  // is typed instead.
+  function hasAppleSignIn(user) {
+    return Array.isArray(user.providers) && user.providers.includes('apple');
+  }
+
   function askToDelete(user, note) {
     if (user.has_password) {
       return Dialog.open({
@@ -231,12 +238,15 @@
         field: { label: 'Password', value: '', type: 'password' },
       });
     }
+    const typed = hasAppleSignIn(user)
+      ? { label: 'Type DELETE', word: TEXT.DELETE_WORD }
+      : { label: 'Email address', word: user.email };
     return Dialog.open({
       heading: 'Delete account',
-      message: `This deletes your account and every page saved to it. It cannot be undone. Type ${user.email} to confirm.`,
+      message: `This deletes your account and every page saved to it. It cannot be undone. Type ${typed.word} to confirm.`,
       confirmLabel: 'Delete account',
       danger: true,
-      field: { label: 'Email address', value: '', mustMatch: user.email },
+      field: { label: typed.label, value: '', mustMatch: typed.word },
     });
   }
 

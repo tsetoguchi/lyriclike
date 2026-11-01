@@ -9,7 +9,8 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import * as lookup from '../functions/api/auth/lookup.js';
 import { hashPassword } from '../functions/_password.js';
 import {
-  GOOD_PASSWORD, addGoogleUser, addPasswordUser, makeEnv, post, stubServices, turnstileToken,
+  GOOD_PASSWORD, addAppleUser, addGoogleUser, addIdentity, addPasswordUser, makeEnv, post,
+  stubServices, turnstileToken,
 } from './support/auth-harness.mjs';
 
 const LOOKUP = '/api/auth/lookup';
@@ -50,6 +51,24 @@ describe('email lookup', () => {
   it('points a Google-only account to Google', async () => {
     await addGoogleUser(env);
     assert.equal(await nextStep(), 'google');
+  });
+
+  it('points an Apple-only account to Apple, not Google', async () => {
+    await addAppleUser(env);
+    assert.equal(await nextStep(), 'apple');
+  });
+
+  it('keeps an account with both Google and Apple on the Google screen', async () => {
+    await addGoogleUser(env);
+    await addIdentity(env, 'google-1', 'apple');
+    assert.equal(await nextStep(), 'google');
+  });
+
+  it('still asks for the password when an Apple account has one', async () => {
+    await addAppleUser(env);
+    await env.lyricalmiracle_db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+      .bind(await hashPassword(GOOD_PASSWORD, env), 'apple-1').run();
+    assert.equal(await nextStep(), 'password');
   });
 
   it('offers signup for an address with no account', async () => {
