@@ -73,6 +73,8 @@ describe('externalTargetFor', () => {
       assert.equal(shell.externalTargetFor('/guide/', page), `${API_ORIGIN}/guide/`);
       assert.equal(shell.externalTargetFor('/rhymes/love/?a=1#b', page), `${API_ORIGIN}/rhymes/love/?a=1#b`);
       assert.equal(shell.externalTargetFor('/privacy/', page), `${API_ORIGIN}/privacy/`);
+      assert.equal(shell.externalTargetFor('/terms/', page), `${API_ORIGIN}/terms/`);
+      assert.equal(shell.externalTargetFor('/anything-else', page), `${API_ORIGIN}/anything-else`);
     });
 
     it(`keeps the app's own pages inside the app from ${page.protocol}`, () => {
