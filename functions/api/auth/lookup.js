@@ -1,9 +1,9 @@
 // POST /api/auth/lookup { email, turnstile? }
 //
 // The first step of the sign-in modal: says what comes after the email.
-// { next: 'password' } for an account with a password, 'google' for one that
-// only signs in with Google, and 'sign-up' for an address with no account (a
-// signup that was never confirmed counts as none).
+// { next: 'password' } for an account with a password, 'google' or 'apple' for
+// one that only signs in that way, and 'sign-up' for an address with no
+// account (a signup that was never confirmed counts as none).
 //
 // This tells anyone whether an address has an account, as Google's and
 // ChatGPT's sign-in pages do. The limits keep that to a trickle: a few
@@ -27,13 +27,24 @@ const HTTP_CAPTCHA_REQUIRED = 428;
 export const NEXT_STEP = Object.freeze({
   PASSWORD: 'password',
   GOOGLE: 'google',
+  APPLE: 'apple',
   SIGN_UP: 'sign-up',
 });
 
+async function providersOf(env, userId) {
+  const { results } = await env.lyricalmiracle_db.prepare(
+    'SELECT provider FROM identities WHERE user_id = ?'
+  ).bind(userId).all();
+  return results.map(row => row.provider);
+}
+
+// Google first, so an account with both keeps the screen it always had.
 async function nextStepFor(env, emailNormalized) {
   const user = await findUserByEmail(env, emailNormalized);
   if (!user) return NEXT_STEP.SIGN_UP;
   if (user.password_hash) return NEXT_STEP.PASSWORD;
+  const providers = await providersOf(env, user.id);
+  if (!providers.includes('google') && providers.includes('apple')) return NEXT_STEP.APPLE;
   return NEXT_STEP.GOOGLE;
 }
 

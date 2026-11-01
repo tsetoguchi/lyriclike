@@ -1,9 +1,13 @@
 // Cloudflare Turnstile, the CAPTCHA on signup, forgot-password, challenged
 // logins and busy email lookups. The widget belongs to one form, so the response must name that form.
 
+import { isAppClient, isAppOrigin } from './_shared.js';
+
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const SITEVERIFY_TIMEOUT_MS = 3000;
 const MAX_TOKEN_LENGTH = 2048;
+// The apps' pages run on localhost, so the widget there is issued for it.
+const APP_HOSTNAME = 'localhost';
 
 export const TURNSTILE_ACTION = Object.freeze({
   SIGNUP: 'signup',
@@ -20,9 +24,18 @@ function expectedHostname(env) {
   }
 }
 
+// The site's hostname, and localhost too for a request that comes from an app:
+// an app origin with the app's marker header. The challenge still has to be
+// passed; only the hostname it was issued for differs.
+function acceptedHostnames(request, hostname) {
+  const isFromApp = isAppClient(request) && isAppOrigin(request.headers.get('Origin'));
+  return isFromApp ? [hostname, APP_HOSTNAME] : [hostname];
+}
+
 // True only when Cloudflare says the token is good, was issued for this site's
-// hostname, and was issued for this form. Anything else, including a missing
-// secret or a network failure, is a refusal: a CAPTCHA that fails open is none.
+// hostname (or an app's), and was issued for this form. Anything else,
+// including a missing secret or a network failure, is a refusal: a CAPTCHA
+// that fails open is none.
 export async function verifyTurnstile(token, request, env, action) {
   if (typeof token !== 'string' || !token || token.length > MAX_TOKEN_LENGTH) return false;
   const hostname = expectedHostname(env);
@@ -40,7 +53,8 @@ export async function verifyTurnstile(token, request, env, action) {
     });
     if (!response.ok) return false;
     const result = await response.json();
-    return result.success === true && result.hostname === hostname && result.action === action;
+    const isRightHost = acceptedHostnames(request, hostname).includes(result.hostname);
+    return result.success === true && isRightHost && result.action === action;
   } catch {
     return false;
   }

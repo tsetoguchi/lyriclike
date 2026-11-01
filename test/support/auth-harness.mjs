@@ -158,16 +158,30 @@ export async function addPasswordUser(env, {
   return id;
 }
 
-export async function addGoogleUser(env, { id = 'google-1', email = 'ann@example.com' } = {}) {
+export function addGoogleUser(env, options = {}) {
+  return addProviderUser(env, 'google', { id: 'google-1', ...options });
+}
+
+export function addAppleUser(env, options = {}) {
+  return addProviderUser(env, 'apple', { id: 'apple-1', ...options });
+}
+
+async function addProviderUser(env, provider, { id, email = 'ann@example.com' }) {
   await env.lyricalmiracle_db.batch([
     env.lyricalmiracle_db.prepare(
       'INSERT INTO users (id, email, email_normalized, name, created_at) VALUES (?, ?, ?, ?, ?)'
     ).bind(id, email, email.trim().toLowerCase(), 'Ann', 1),
     env.lyricalmiracle_db.prepare(
       'INSERT INTO identities (id, user_id, provider, provider_subject, created_at) VALUES (?, ?, ?, ?, ?)'
-    ).bind(`identity-${id}`, id, 'google', `sub-${id}`, 1),
+    ).bind(`identity-${id}-${provider}`, id, provider, `sub-${id}`, 1),
   ]);
   return id;
+}
+
+export async function addIdentity(env, userId, provider) {
+  await env.lyricalmiracle_db.prepare(
+    'INSERT INTO identities (id, user_id, provider, provider_subject, created_at) VALUES (?, ?, ?, ?, ?)'
+  ).bind(`identity-${userId}-${provider}`, userId, provider, `sub-${userId}-${provider}`, 1).run();
 }
 
 export async function addSession(env, userId, token) {
