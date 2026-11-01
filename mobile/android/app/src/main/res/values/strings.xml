@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LyricLike</string>
+    <string name="title_activity_main">LyricLike</string>
+    <string name="package_name">com.lyriclike.app</string>
+    <string name="custom_url_scheme">com.lyriclike.app</string>
+</resources>
