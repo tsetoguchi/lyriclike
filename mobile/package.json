@@ -1,0 +1,22 @@
+{
+  "name": "lyriclike-mobile",
+  "private": true,
+  "description": "Capacitor shell that bundles the LyricLike site into the iOS and Android apps.",
+  "scripts": {
+    "copy": "node scripts/copy-web.mjs",
+    "sync": "npm run copy && cap sync",
+    "android": "npm run sync && cap open android",
+    "ios": "npm run sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/preferences": "^8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0"
+  }
+}
