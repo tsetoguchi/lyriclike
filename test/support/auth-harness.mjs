@@ -120,8 +120,8 @@ export async function events(env) {
 // Calls a route the way Pages does, then waits for whatever it queued with
 // waitUntil. `body` may be an object or a raw string.
 export async function post(handler, env, path, body, options = {}) {
-  const { ip = DEFAULT_IP, cookie, method = 'POST' } = options;
-  const headers = { 'Content-Type': 'application/json' };
+  const { ip = DEFAULT_IP, cookie, method = 'POST', headers: extraHeaders = {} } = options;
+  const headers = { 'Content-Type': 'application/json', ...extraHeaders };
   if (ip) headers['CF-Connecting-IP'] = ip;
   if (cookie) headers.Cookie = cookie;
 
