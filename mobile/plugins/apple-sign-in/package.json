@@ -1,0 +1,19 @@
+{
+  "name": "lyriclike-apple-sign-in",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sign in with Apple for the LyricLike iOS app, for Capacitor 8.",
+  "license": "MIT",
+  "files": [
+    "ios/Sources",
+    "Package.swift"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}

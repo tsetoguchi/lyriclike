@@ -14,7 +14,8 @@
     "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",
-    "@capacitor/preferences": "^8.0.1"
+    "@capacitor/preferences": "^8.0.1",
+    "lyriclike-apple-sign-in": "file:plugins/apple-sign-in"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.0"

@@ -71,7 +71,7 @@
   // action the widget runs for.
   const VIEWS = Object.freeze({
     [VIEW.START]: {
-      title: 'Log in or sign up', google: true, email: 'field', password: null,
+      title: 'Log in or sign up', google: true, apple: true, email: 'field', password: null,
       message: 'Save every page you write and open it on any device.',
       submit: 'Continue', links: [], turnstile: null,
     },
@@ -91,9 +91,10 @@
       submit: null, links: [], turnstile: null,
     },
     [VIEW.APPLE_ONLY]: {
-      title: 'Log in with Apple', google: false, email: 'shown', password: null,
+      title: 'Log in with Apple', google: false, apple: true, email: 'shown', password: null,
       message: 'This account uses Sign in with Apple. Open the LyricLike app on your '
         + 'iPhone to log in, or reset your password to log in here.',
+      appleMessage: 'This account uses Sign in with Apple.',
       submit: null, links: ['forgot'], turnstile: null,
     },
     [VIEW.CHECK_EMAIL]: {
@@ -136,7 +137,7 @@
   const linkButtons = Array.from(document.querySelectorAll('[data-auth-link]'));
 
   let methodsPromise = null;
-  let methods = { password: false, turnstileSiteKey: null };
+  let methods = { password: false, apple: false, turnstileSiteKey: null };
   let currentView = VIEW.START;
   let linkToken = null;
   let pendingSignup = null;
@@ -160,6 +161,7 @@
       .then(body => {
         methods = {
           password: Boolean(body && body.password === true),
+          apple: Boolean(body && body.apple === true),
           turnstileSiteKey: body && typeof body.turnstileSiteKey === 'string' ? body.turnstileSiteKey : null,
         };
         return methods;
@@ -308,14 +310,23 @@
     return { ...VIEWS[VIEW.START], email: false, submit: null };
   }
 
+  // Sign in with Apple is for the iOS app: the server has it set up, and the
+  // view is one that offers it.
+  function isAppleOffered(view) {
+    const shell = window.NativeShell;
+    return Boolean(view.apple && methods.apple && shell && shell.platform === 'ios');
+  }
+
   function showView(name, message) {
     const view = describeView(name);
+    const hasApple = isAppleOffered(view);
     currentView = name;
     loginNeedsCheck = false;
     document.getElementById('auth-title').textContent = view.title;
-    showMessage(message || view.message);
+    showMessage(message || (hasApple && view.appleMessage) || view.message);
+    setShown(document.getElementById('auth-apple'), hasApple);
     setShown(document.getElementById('auth-google'), view.google);
-    setShown(document.getElementById('auth-divider'), view.google && Boolean(view.submit));
+    setShown(document.getElementById('auth-divider'), (view.google || hasApple) && Boolean(view.submit));
     setShown(form, Boolean(view.submit));
     setShown(document.getElementById('auth-email-field'), view.email === 'field');
     document.getElementById('auth-email-text').textContent = emailInput.value.trim();
@@ -665,7 +676,8 @@
   // Runs on a delay, so the modal may have been closed in the meantime.
   function focusFirstField() {
     if (!overlay.classList.contains('open')) return;
-    const candidates = [emailInput, passwordInput, submitButton, document.getElementById('auth-google'),
+    const candidates = [emailInput, passwordInput, submitButton, document.getElementById('auth-apple'),
+      document.getElementById('auth-google'),
       ...linkButtons, document.getElementById('auth-close')];
     const target = candidates.find(element => element.offsetParent !== null);
     if (target) target.focus();
@@ -740,6 +752,7 @@
 
   form.addEventListener('submit', handleSubmit);
   document.getElementById('auth-google').addEventListener('click', startSignIn);
+  document.getElementById('auth-apple').addEventListener('click', startAppleSignIn);
   document.getElementById('auth-close').addEventListener('click', closeAuthModal);
   document.addEventListener('visibilitychange', checkConfirmedOnReturn);
   passwordToggle.addEventListener('click', () => {

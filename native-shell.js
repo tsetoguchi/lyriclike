@@ -23,6 +23,10 @@
   const VERIFIER_BYTES = 32;
   const HTTP_UNAUTHORIZED = 401;
   const SIGN_IN_FAILED_EVENT = 'native-sign-in-failed';
+  const APPLE_SIGN_IN_PATH = '/api/auth/apple';
+  // The system's code for a person closing the Apple sheet.
+  const APPLE_CANCELLED_CODE = '1001';
+  const APPLE_SCOPES = 'email name';
   const LIVE_PATH_PATTERN = /^\/api\/lyrics\/([^/?]+)\/live\?/;
   // The only pages in the bundle. Any other page of the site (the guide, the
   // rhyme pages, the legal pages) lives on the real site and opens there.
@@ -143,6 +147,10 @@
     return hexOf(globalThis.crypto.getRandomValues(new Uint8Array(VERIFIER_BYTES)));
   }
 
+  function failSignIn() {
+    globalThis.document.dispatchEvent(new globalThis.CustomEvent(SIGN_IN_FAILED_EVENT));
+  }
+
   // The hash goes to the server now; the secret stays here until the app is
   // handed the code, so only this app can finish the sign-in it started.
   async function startGoogleSignIn({ preferences, browser }) {
@@ -177,8 +185,46 @@
       return true;
     }
     // auth.js, which loads after this file, words the notice.
-    globalThis.document.dispatchEvent(new globalThis.CustomEvent(SIGN_IN_FAILED_EVENT));
+    failSignIn();
     return true;
+  }
+
+  // Asks the system for Apple's identity token. The nonce is made here: Apple
+  // gets its hash, the server gets the original, and a token made for another
+  // sign-in will not match. Returns the sheet's fields, or null if the person
+  // closed it or it failed (a failure says so through the sign-in event).
+  async function askApple(appleSignIn, rawNonce) {
+    try {
+      const result = await appleSignIn.authorize({
+        scopes: APPLE_SCOPES, nonce: await sha256Hex(rawNonce),
+      });
+      return result.response;
+    } catch (error) {
+      if (!error || String(error.code) !== APPLE_CANCELLED_CODE) failSignIn();
+      return null;
+    }
+  }
+
+  function appleSignInRequest(fields, rawNonce) {
+    const { identityToken, authorizationCode, givenName, familyName } = fields;
+    return {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identityToken, authorizationCode, nonce: rawNonce, givenName, familyName,
+      }),
+    };
+  }
+
+  // apiFetch keeps the session token the server answers with, so the page only
+  // has to start again signed in.
+  async function startAppleSignIn({ appleSignIn, apiFetch }) {
+    const rawNonce = randomVerifier();
+    const fields = await askApple(appleSignIn, rawNonce);
+    if (!fields) return;
+    const response = await apiFetch(APPLE_SIGN_IN_PATH, appleSignInRequest(fields, rawNonce));
+    if (response.ok) globalThis.location.reload();
+    else failSignIn();
   }
 
   function openLiveSocket(path, { apiFetch, WebSocketImpl, TicketSocket }) {
@@ -209,6 +255,7 @@
     const context = {
       preferences, browser, apiFetch, WebSocketImpl: globalThis.WebSocket,
       TicketSocket: root.NativeSocket.TicketSocket,
+      appleSignIn: globalThis.Capacitor.Plugins.AppleSignIn,
     };
 
     globalThis.fetch = apiFetch;
@@ -216,20 +263,22 @@
     app.addListener('appUrlOpen', event => finishGoogleSignIn(event.url, context));
     root.NativeShell = {
       isNative: true,
+      platform: globalThis.Capacitor.getPlatform(),
       siteOrigin: API_ORIGIN,
       startGoogleSignIn: () => startGoogleSignIn(context),
+      startAppleSignIn: () => startAppleSignIn(context),
       openLiveSocket: path => openLiveSocket(path, context),
     };
   }
 
   const NativeShell = {
     API_ORIGIN, toApiUrl, externalTargetFor, createTokenStore, createApiFetch, rememberSession,
-    startGoogleSignIn, finishGoogleSignIn, openLiveSocket,
+    startGoogleSignIn, finishGoogleSignIn, startAppleSignIn, openLiveSocket,
   };
   if (typeof module === 'object' && module.exports) {
     module.exports = NativeShell;
     return;
   }
   if (isNativeApp()) install();
-  else root.NativeShell = { isNative: false, siteOrigin: globalThis.location.origin };
+  else root.NativeShell = { isNative: false, platform: 'web', siteOrigin: globalThis.location.origin };
 })(this);

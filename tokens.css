@@ -256,6 +256,9 @@
   --google-fill: #131314;
   --google-border: #8e918f;
   --google-text: #e3e3e3;
+  /* Apple's white sign-in button, as their guidelines give it. */
+  --apple-fill: #ffffff;
+  --apple-text: #000000;
 
   /* Type */
   /* Montserrat is the wordmark's face alone. The lyrics, and the syllable

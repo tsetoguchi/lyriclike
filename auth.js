@@ -128,6 +128,12 @@ function startSignIn() {
   window.location.href = GOOGLE_SIGN_IN_URL;
 }
 
+// Sign in with Apple, offered by the iOS app only (auth-forms.js).
+function startAppleSignIn() {
+  trackEvent('apple_sign_in_started');
+  window.NativeShell.startAppleSignIn();
+}
+
 // The modal (auth-forms.js) offers Google and, when it is switched on, email
 // and password. It asks for the email first and works out from it whether this
 // is a log in or a sign up, so every button opens the same step. Without the
@@ -177,5 +183,6 @@ document.addEventListener('click', closeAccountMenuOnOutsideClick);
 window.handleSessionExpired = showSignIn;
 window.closeAccountMenu = closeAccountMenu;
 window.startSignIn = startSignIn;
+window.startAppleSignIn = startAppleSignIn;
 
 initAuth();
