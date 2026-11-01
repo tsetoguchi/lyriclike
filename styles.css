@@ -5084,7 +5084,8 @@ body.signed-in .sidebar-links {
   }
 
   .bottom-nav.ducked,
-  .bottom-nav.off-screen {
+  .bottom-nav.off-screen,
+  .bottom-nav.keyboard-up {
     /* Past 100% so the shadow clears the edge too. */
     transform: translateY(130%);
     opacity: 0;
