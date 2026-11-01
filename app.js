@@ -1214,7 +1214,8 @@ function caretLineBounds() {
 // the editor is still hidden.
 function bottomNavObstruction() {
   const isHidden = bottomNavEl.classList.contains('ducked') ||
-    bottomNavEl.classList.contains('off-screen');
+    bottomNavEl.classList.contains('off-screen') ||
+    bottomNavEl.classList.contains('keyboard-up');
   return isHidden ? 0 : bottomNavEl.offsetHeight;
 }
 
@@ -2019,9 +2020,34 @@ function fitAppToVisualViewport() {
   window.scrollTo(0, 0);
 }
 
+// A keyboard shows as the visible area losing at least this much height. A
+// browser's own toolbar sliding away changes it by far less.
+const KEYBOARD_MIN_HEIGHT_PX = 150;
+let tallestViewportHeight = window.visualViewport ? window.visualViewport.height : 0;
+let measuredViewportWidth = window.innerWidth;
+
+function isKeyboardUp() {
+  const { height } = window.visualViewport;
+  // Turning the phone changes the height without a keyboard, so start over.
+  if (window.innerWidth !== measuredViewportWidth) {
+    measuredViewportWidth = window.innerWidth;
+    tallestViewportHeight = 0;
+  }
+  tallestViewportHeight = Math.max(tallestViewportHeight, height);
+  return tallestViewportHeight - height >= KEYBOARD_MIN_HEIGHT_PX;
+}
+
+// In the apps the keyboard covers the tool bar instead of pushing it up above
+// itself, so the writing keeps the room. On the website the bar stays put.
+function hideBottomNavUnderKeyboard() {
+  if (!window.NativeShell || !window.NativeShell.isNative) return;
+  bottomNavEl.classList.toggle('keyboard-up', isKeyboardUp());
+}
+
 // Only a resize changes how much room the writing has. Scrolling the visual
 // viewport does not, so it re-fits without disturbing where the writer is.
 function handleViewportResize() {
+  hideBottomNavUnderKeyboard();
   fitAppToVisualViewport();
   requestAnimationFrame(revealCaretLine);
 }
