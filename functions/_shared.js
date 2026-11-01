@@ -101,6 +101,11 @@ export function base64Url(bytes) {
     .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 }
 
+export function fromBase64Url(text) {
+  const padded = text.replaceAll('-', '+').replaceAll('_', '/') + '==='.slice((text.length + 3) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
 export async function sha256Bytes(value) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return new Uint8Array(digest);
