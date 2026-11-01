@@ -2,6 +2,7 @@
   "appId": "com.lyriclike.app",
   "appName": "LyricLike",
   "webDir": "www",
+  "backgroundColor": "#0a0d13",
   "server": {
     "androidScheme": "https"
   }

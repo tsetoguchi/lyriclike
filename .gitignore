@@ -56,3 +56,5 @@ node_modules/
 
 # Built by mobile/scripts/copy-web.mjs
 /mobile/www/
+!mobile/assets/*.png
+!mobile/android/**/*.png
