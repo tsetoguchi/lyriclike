@@ -1,0 +1,129 @@
+name: Build the iOS app
+
+# Builds mobile/ios on a GitHub macOS runner, since iOS apps only build on a
+# Mac. Run by hand from the Actions tab; nothing here runs on its own, so it
+# cannot spend macOS minutes by itself.
+#
+# Without "upload" it only compiles the app with no signing, which needs no
+# secrets and shows whether the project builds. With "upload" (and only from
+# main) it signs with an App Store Connect API key and sends the build to
+# TestFlight. That needs these repo secrets:
+#   ASC_KEY_ID      the API key's Key ID
+#   ASC_ISSUER_ID   the Issuer ID shown above the keys in App Store Connect
+#   ASC_KEY_P8      the text of the AuthKey .p8 file
+#   APPLE_TEAM_ID   the 10-character Team ID
+# The key needs the App Manager role, and the app's bundle ID must exist in
+# the developer account with the Sign in with Apple capability.
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Sign the build and upload it to TestFlight (main only)
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      PROJECT_DIR: mobile/ios/App
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install the app's dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Copy the site into the app
+        working-directory: mobile
+        run: |
+          npm run copy
+          npx cap sync ios
+
+      - name: Show the tools
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Compile without signing
+        if: ${{ !inputs.upload }}
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          xcodebuild build \
+            -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Refuse to upload from any branch but main
+        if: ${{ inputs.upload && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Uploads run from main only."
+          exit 1
+
+      - name: Archive, sign and upload to TestFlight
+        if: ${{ inputs.upload && github.ref == 'refs/heads/main' }}
+        working-directory: ${{ env.PROJECT_DIR }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then echo "The $name secret is not set."; exit 1; fi
+          done
+
+          key_path="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_KEY_P8" > "$key_path"
+          chmod 600 "$key_path"
+          auth=(-allowProvisioningUpdates
+                -authenticationKeyPath "$key_path"
+                -authenticationKeyID "$ASC_KEY_ID"
+                -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild archive \
+            -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            "${auth[@]}" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            "${auth[@]}"
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
