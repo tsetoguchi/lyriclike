@@ -8,7 +8,11 @@ site root. On the website they do nothing.
 
 ## Android
 
-You need Android Studio and JDK 21 (Capacitor 8 builds with Java 21).
+You need Android Studio and JDK 21. Capacitor 8 pins Gradle 8.14, which can't
+read the newer Java that Android Studio bundles (25 at the time of writing), so
+install a separate JDK 21 (`winget install EclipseAdoptium.Temurin.21.JDK`) and
+pick it under Settings > Build, Execution, Deployment > Build Tools > Gradle >
+Gradle JDK.
 
 ```
 cd mobile
@@ -16,7 +20,11 @@ npm install
 npm run android      # copies the site, syncs, opens Android Studio
 ```
 
-Run it from Android Studio on an emulator or a phone. The API calls go to
+To build the debug APK without Android Studio, point `JAVA_HOME` at the JDK 21
+and `ANDROID_HOME` at the SDK, then run `./gradlew assembleDebug` in
+`mobile/android`. The APK lands in `app/build/outputs/apk/debug/`.
+
+Or run it from Android Studio on an emulator or a phone. The API calls go to
 https://lyriclike.com, so sign-in and saving use the real site.
 
 Run `npm run sync` after any change to the site's files. `www/` and
