@@ -12,7 +12,7 @@ import {
   MINUTE_MS, hitRateLimit, peekRateLimit, rateLimitedResponse,
 } from './_ratelimit.js';
 import {
-  SESSION_COOKIE_MAX_AGE, createSession, isAppClient, jsonError, randomHex, sessionCookie,
+  SESSION_COOKIE_MAX_AGE, createSession, isFromApp, jsonError, randomHex, sessionCookie,
   sessionTokenFrom, sha256Hex,
 } from './_shared.js';
 
@@ -91,7 +91,7 @@ export async function signedInResponse(env, request, userId, status) {
 
   const token = await createSession(env, userId);
   const account = await describeAccount(env, userId);
-  if (isAppClient(request)) return Response.json({ user: account, token }, { status });
+  if (isFromApp(request)) return Response.json({ user: account, token }, { status });
 
   const headers = new Headers();
   headers.append('Set-Cookie',

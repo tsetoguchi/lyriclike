@@ -6,7 +6,7 @@
 // Settings: APPLE_CLIENT_ID (the app's bundle ID), APPLE_TEAM_ID, APPLE_KEY_ID,
 // and APPLE_PRIVATE_KEY (the .p8 file's text). With any missing, it is off.
 
-import { base64Url, fromBase64Url, sha256Hex } from './_shared.js';
+import { base64Url, fromBase64Url, sha256Bytes, sha256Hex } from './_shared.js';
 
 const APPLE_ISSUER = 'https://appleid.apple.com';
 const KEYS_URL = `${APPLE_ISSUER}/auth/keys`;
@@ -22,6 +22,8 @@ const MAX_TOKEN_AGE_SECONDS = 10 * 60;
 const CLIENT_SECRET_LIFETIME_SECONDS = 10 * 60;
 const MAX_JWT_LENGTH = 4096;
 const SIGNATURE_BYTES = 64;
+const SEALED_PREFIX = 'v1';
+const SEAL_IV_BYTES = 12;
 
 export const REJECTION = Object.freeze({
   MALFORMED: 'malformed',
@@ -131,6 +133,34 @@ export function isTrue(value) {
 }
 
 // ── Calling Apple ──
+
+// The key comes from the .p8 text, a secret the server already holds, so a copy
+// of the database alone cannot revoke anyone's grant.
+async function sealingKey(env) {
+  const raw = await sha256Bytes(env.APPLE_PRIVATE_KEY);
+  return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+
+// "v1.<iv>.<ciphertext>", safe to put in the database.
+export async function sealRefreshToken(env, refreshToken) {
+  const iv = crypto.getRandomValues(new Uint8Array(SEAL_IV_BYTES));
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, await sealingKey(env), new TextEncoder().encode(refreshToken));
+  return [SEALED_PREFIX, base64Url(iv), base64Url(new Uint8Array(cipher))].join('.');
+}
+
+// The token back, or null when the value is not one this server sealed.
+export async function openRefreshToken(env, sealed) {
+  const [prefix, iv, cipher, ...extra] = String(sealed).split('.');
+  if (prefix !== SEALED_PREFIX || !iv || !cipher || extra.length) return null;
+  try {
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: fromBase64Url(iv) }, await sealingKey(env), fromBase64Url(cipher));
+    return new TextDecoder().decode(plain);
+  } catch {
+    return null;
+  }
+}
 
 function pemToDer(pem) {
   const body = pem.replace(/\\n/g, '\n').replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '');

@@ -272,6 +272,14 @@ describe('Google sign-in', () => {
     assert.equal(api.preferences.values.has(TOKEN_KEY), false);
   });
 
+  it('tells the person when the exchange cannot reach the server', async () => {
+    const api = await makeApi({ answer: () => { throw new TypeError('offline'); } });
+    await begin(api);
+    await shell.finishGoogleSignIn('lyriclike://auth?code=abc', { ...api, browser });
+    assert.equal(reloads, 0);
+    assert.equal(failures, 1);
+  });
+
   it('tells the person when it has no secret to answer with', async () => {
     const api = await makeApi();
     await shell.finishGoogleSignIn('lyriclike://auth?code=abc', { ...api, browser });

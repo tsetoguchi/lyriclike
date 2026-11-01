@@ -1,7 +1,7 @@
 // Cloudflare Turnstile, the CAPTCHA on signup, forgot-password, challenged
 // logins and busy email lookups. The widget belongs to one form, so the response must name that form.
 
-import { isAppClient, isAppOrigin } from './_shared.js';
+import { isFromApp } from './_shared.js';
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const SITEVERIFY_TIMEOUT_MS = 3000;
@@ -28,8 +28,7 @@ function expectedHostname(env) {
 // an app origin with the app's marker header. The challenge still has to be
 // passed; only the hostname it was issued for differs.
 function acceptedHostnames(request, hostname) {
-  const isFromApp = isAppClient(request) && isAppOrigin(request.headers.get('Origin'));
-  return isFromApp ? [hostname, APP_HOSTNAME] : [hostname];
+  return isFromApp(request) ? [hostname, APP_HOSTNAME] : [hostname];
 }
 
 // True only when Cloudflare says the token is good, was issued for this site's
