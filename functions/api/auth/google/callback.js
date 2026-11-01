@@ -1,4 +1,5 @@
 import { findUserByEmail, issueResetToken } from '../../../_accounts.js';
+import { SIGNIN_TICKET, issueAppTicket } from '../../../_app-tickets.js';
 import { sendGoogleAddedEmail } from '../../../_email.js';
 import { runInBackground } from '../../../_request.js';
 import { claimShares } from '../../../_shares.js';
@@ -9,6 +10,7 @@ import {
 
 const PROVIDER = 'google';
 const HTTP_FORBIDDEN = 403;
+const APP_RETURN_URL = 'lyriclike://auth';
 
 function sql(env, text) {
   return env.lyricalmiracle_db.prepare(text);
@@ -17,6 +19,22 @@ function sql(env, text) {
 function clearOauthCookies(headers, url) {
   headers.append('Set-Cookie', cookieHeader('oauth_state', '', url, { maxAge: 0 }));
   headers.append('Set-Cookie', cookieHeader('oauth_verifier', '', url, { maxAge: 0 }));
+  headers.append('Set-Cookie', cookieHeader('oauth_app_challenge', '', url, { maxAge: 0 }));
+}
+
+// The app opened this sign-in in the system browser. A page, not a redirect:
+// some in-app browsers refuse to follow a redirect to a custom scheme, and the
+// button covers the ones that block the automatic jump.
+async function appReturnPage(env, url, userId, challenge) {
+  const code = await issueAppTicket(env, { kind: SIGNIN_TICKET, userId, challenge });
+  const target = `${APP_RETURN_URL}?code=${code}`;
+  const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+  clearOauthCookies(headers, url);
+  const html = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">' +
+    '<title>Signed in</title>' +
+    `<p>You are signed in. <a href="${target}">Return to LyricLike</a></p>` +
+    `<script>location.href=${JSON.stringify(target)}</script>`;
+  return new Response(html, { status: 200, headers });
 }
 
 // Shown when Google will not vouch for the address. A bare 400 would look like
@@ -163,6 +181,10 @@ export async function onRequestGet(context) {
   };
   const userId = await resolveUser(context, profile, sub);
   if (!userId) return unverifiedEmailPage(url);
+
+  if (cookies.oauth_app_challenge) {
+    return appReturnPage(env, url, userId, cookies.oauth_app_challenge);
+  }
 
   const sessionToken = await createSession(env, userId);
 

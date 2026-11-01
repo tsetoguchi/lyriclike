@@ -1,0 +1,8 @@
+{
+  "appId": "com.lyriclike.app",
+  "appName": "LyricLike",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

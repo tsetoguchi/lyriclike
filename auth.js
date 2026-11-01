@@ -111,10 +111,20 @@ function closeAccountMenuOnEscape(event) {
   accountButton.focus();
 }
 
+// Google sign-in in the app ended without a session (native-shell.js).
+document.addEventListener('native-sign-in-failed', () => {
+  PageNotice.show('Google sign-in did not finish. Please try again.');
+});
+
 // Signing in with Google is also how an account is made: the first visit
 // creates it.
 function startSignIn() {
   trackEvent('google_sign_in_started');
+  // The system browser runs Google sign-in in the apps; a webview can't.
+  if (window.NativeShell.isNative) {
+    window.NativeShell.startGoogleSignIn();
+    return;
+  }
   window.location.href = GOOGLE_SIGN_IN_URL;
 }
 

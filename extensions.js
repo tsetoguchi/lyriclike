@@ -42,6 +42,8 @@
 
   // A broken script must not break the page, so a failed load is only logged.
   function loadScript(url) {
+    // The script is a path on the site, which the bundled app does not have.
+    if (root.NativeShell && root.NativeShell.isNative) return;
     if (!url || loadedUrls.has(url)) return;
     loadedUrls.add(url);
     const tag = document.createElement('script');

@@ -11,7 +11,7 @@ import { sendPasswordChangedEmail } from '../../_email.js';
 import { hashPassword } from '../../_password.js';
 import { gatePasswordAuth, readJsonBody } from '../../_request.js';
 import {
-  jsonError, parseCookies, requireUser, sha256Hex, writeLog,
+  jsonError, requireUser, sessionTokenFrom, sha256Hex, writeLog,
 } from '../../_shared.js';
 
 const HTTP_BAD_REQUEST = 400;
@@ -61,7 +61,7 @@ export async function onRequestPost(context) {
   if (rejected) return rejected;
 
   const newHash = await hashPassword(body.password, env);
-  const sessionId = await sha256Hex(parseCookies(request).sid);
+  const sessionId = await sha256Hex(sessionTokenFrom(request));
   if (!await applyChange(env, user.id, current.passwordHash, newHash, sessionId)) {
     return jsonError(HTTP_CONFLICT, 'password_changed_elsewhere',
       'Your password was just changed somewhere else. Try again.');

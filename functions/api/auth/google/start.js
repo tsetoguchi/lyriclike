@@ -4,6 +4,18 @@ import {
 
 const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
 const PKCE_VERIFIER_BYTES = 32;
+const APP_CLIENT = 'app';
+const APP_CHALLENGE_PATTERN = /^[0-9a-f]{64}$/;
+
+// The app starts Google sign-in in the system browser and sends the hash of a
+// secret it keeps. The callback ties its one-time code to that hash, so only
+// the app that started the sign-in can finish it. Returns the hash, or null
+// for a website sign-in or a request that does not carry a usable one.
+function appChallengeFrom(url) {
+  if (url.searchParams.get('client') !== APP_CLIENT) return null;
+  const challenge = url.searchParams.get('challenge') || '';
+  return APP_CHALLENGE_PATTERN.test(challenge) ? challenge : null;
+}
 
 export async function onRequestGet({ request, env }) {
   const state = randomHex(16);
@@ -31,6 +43,10 @@ export async function onRequestGet({ request, env }) {
   const maxAge = OAUTH_COOKIE_MAX_AGE_SECONDS;
   headers.append('Set-Cookie', cookieHeader('oauth_state', state, url, { maxAge }));
   headers.append('Set-Cookie', cookieHeader('oauth_verifier', verifier, url, { maxAge }));
+  const appChallenge = appChallengeFrom(url);
+  if (appChallenge) {
+    headers.append('Set-Cookie', cookieHeader('oauth_app_challenge', appChallenge, url, { maxAge }));
+  }
 
   return new Response(null, { status: 302, headers });
 }

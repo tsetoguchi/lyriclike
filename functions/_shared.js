@@ -8,6 +8,9 @@ const SESSION_MAX_AGE_MS = 90 * DAY_MS;
 export const SESSION_COOKIE_MAX_AGE = SESSION_LIFETIME_MS / 1000;
 
 const SESSION_COOKIE = 'sid';
+const BEARER_PREFIX = 'Bearer ';
+const APP_CLIENT_HEADER = 'X-LyricLike-Client';
+const APP_CLIENT_VALUE = 'app';
 const SESSION_TOKEN_BYTES = 32;
 
 const MAX_EMAIL_LENGTH = 254;
@@ -47,6 +50,32 @@ export function parseCookies(request) {
       .filter(([k]) => k)
       .map(([k, ...v]) => [k, v.join('=')])
   );
+}
+
+// The app has no cookie jar to lean on, so it sends the same token as a Bearer
+// header. Returns the token, or null when the request carries neither.
+export function sessionTokenFrom(request) {
+  const authorization = request.headers.get('Authorization') || '';
+  if (authorization.startsWith(BEARER_PREFIX)) {
+    return authorization.slice(BEARER_PREFIX.length).trim() || null;
+  }
+  return parseCookies(request)[SESSION_COOKIE] || null;
+}
+
+// Where the iOS and Android apps load their bundled pages from. They are the
+// only other origins allowed to call the API.
+const APP_ORIGINS = new Set(['capacitor://localhost', 'https://localhost']);
+
+export function isAppOrigin(origin) {
+  return APP_ORIGINS.has(origin);
+}
+
+export function hasBearerToken(request) {
+  return (request.headers.get('Authorization') || '').startsWith(BEARER_PREFIX);
+}
+
+export function isAppClient(request) {
+  return request.headers.get(APP_CLIENT_HEADER) === APP_CLIENT_VALUE;
 }
 
 // The key accounts are matched on. Only case and surrounding spaces are folded:
@@ -183,10 +212,10 @@ async function extendSession(env, sessionId, session, now) {
 // a session near its end is extended and cookieMaxAge says how long the
 // cookie should now live; otherwise cookieMaxAge is null.
 export async function getSession(request, env, { refresh = false } = {}) {
-  const cookies = parseCookies(request);
-  if (!cookies[SESSION_COOKIE]) return null;
+  const token = sessionTokenFrom(request);
+  if (!token) return null;
 
-  const sessionId = await sha256Hex(cookies[SESSION_COOKIE]);
+  const sessionId = await sha256Hex(token);
   const now = Date.now();
   // One query, not two: every signed-in request waits on it, and each query is
   // a round trip to the database. email_normalized is what shared pages are

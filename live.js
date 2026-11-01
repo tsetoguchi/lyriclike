@@ -875,7 +875,9 @@
     return {
       textarea, loadDeps, liveCore: root.LiveCore, createTextBinding: root.LiveBinding.createTextBinding,
       store: root.LiveStore.createLiveStore(root),
-      openSocket: path => new WebSocket(`${scheme}://${location.host}${path}`),
+      openSocket: path => (root.NativeShell && root.NativeShell.isNative
+        ? root.NativeShell.openLiveSocket(path)
+        : new WebSocket(`${scheme}://${location.host}${path}`)),
       now: () => Date.now(),
       setTimeout: (fn, ms) => setTimeout(fn, ms),
       clearTimeout: id => clearTimeout(id),

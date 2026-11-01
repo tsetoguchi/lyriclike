@@ -2,7 +2,9 @@ import { describeAccount, extensionScriptUrl } from '../_accounts.js';
 import { isEventHookSet } from '../_event-hook.js';
 import { sendParkedEvents } from '../_event-resend.js';
 import { DAY_MS } from '../_ratelimit.js';
-import { parseCookies, requireUser, sessionCookie, truncateIp, writeLog } from '../_shared.js';
+import {
+  hasBearerToken, parseCookies, requireUser, sessionCookie, truncateIp, writeLog,
+} from '../_shared.js';
 
 const NINETY_DAYS_MS = 90 * DAY_MS;
 const EVENT_HOOK_DROPPED = 'event_hook_dropped';
@@ -44,6 +46,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE created_at < ?').bind(now - NINETY_DAYS_MS),
     env.lyricalmiracle_db.prepare('DELETE FROM reset_tokens WHERE expires_at < ?').bind(now),
     env.lyricalmiracle_db.prepare('DELETE FROM pending_signups WHERE expires_at < ?').bind(now),
+    env.lyricalmiracle_db.prepare('DELETE FROM app_tickets WHERE expires_at < ?').bind(now),
     env.lyricalmiracle_db.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(now - DAY_MS),
   ]));
   waitUntil(logDailyVisit(env, request, user.id, now));
@@ -53,7 +56,8 @@ export async function onRequestGet({ request, env, waitUntil }) {
   }
 
   const headers = new Headers();
-  if (cookieMaxAge !== null) {
+  // The app holds its token itself, so there is no cookie to extend.
+  if (cookieMaxAge !== null && !hasBearerToken(request)) {
     const { sid } = parseCookies(request);
     headers.append('Set-Cookie', sessionCookie(sid, new URL(request.url), { maxAge: cookieMaxAge }));
   }

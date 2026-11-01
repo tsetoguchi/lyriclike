@@ -12,8 +12,8 @@ import {
   MINUTE_MS, hitRateLimit, peekRateLimit, rateLimitedResponse,
 } from './_ratelimit.js';
 import {
-  SESSION_COOKIE_MAX_AGE, createSession, jsonError, parseCookies, randomHex, sessionCookie,
-  sha256Hex,
+  SESSION_COOKIE_MAX_AGE, createSession, isAppClient, jsonError, randomHex, sessionCookie,
+  sessionTokenFrom, sha256Hex,
 } from './_shared.js';
 
 const RESET_TOKEN_BYTES = 32;
@@ -81,9 +81,9 @@ export function extensionScriptUrl(env) {
 // Signs the person in: a fresh session, its cookie, and the account in the
 // body so the client needs no second /api/me call. A session the browser
 // already held is dropped, so signing in as someone else never leaves the old
-// one alive.
+// one alive. The app gets the token in the body instead of a cookie.
 export async function signedInResponse(env, request, userId, status) {
-  const previous = parseCookies(request).sid;
+  const previous = sessionTokenFrom(request);
   if (previous) {
     await env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE id = ?')
       .bind(await sha256Hex(previous)).run();
@@ -91,6 +91,8 @@ export async function signedInResponse(env, request, userId, status) {
 
   const token = await createSession(env, userId);
   const account = await describeAccount(env, userId);
+  if (isAppClient(request)) return Response.json({ user: account, token }, { status });
+
   const headers = new Headers();
   headers.append('Set-Cookie',
     sessionCookie(token, new URL(request.url), { maxAge: SESSION_COOKIE_MAX_AGE }));

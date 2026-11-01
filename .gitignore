@@ -53,3 +53,6 @@ instructions.txt
 
 # Dependencies (collab/ pins its own; run npm ci --prefix collab)
 node_modules/
+
+# Built by mobile/scripts/copy-web.mjs
+/mobile/www/
