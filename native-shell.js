@@ -14,6 +14,7 @@
   const EXCHANGE_PATH = '/api/auth/app-exchange';
   const LOGOUT_PATH = '/api/auth/logout';
   const ACCOUNT_PATH = '/api/account';
+  const SESSION_CHECK_PATH = '/api/me';
   const TOKEN_KEY = 'session_token';
   const VERIFIER_KEY = 'google_sign_in_verifier';
   const CLIENT_HEADER = 'X-LyricLike-Client';
@@ -89,9 +90,12 @@
   }
 
   // Keeps the token a sign-in answers with, and drops it when the session is
-  // over, whether the person ended it or the server did.
+  // over, whether the person ended it or the server did. Only the account
+  // check can say the session is gone: another route answering 401 may just
+  // not understand the token yet (a server deployed in two parts), and
+  // throwing the token away for that signs the person out for good.
   async function rememberSession(response, { path, method, hadToken }, tokenStore) {
-    if (response.status === HTTP_UNAUTHORIZED && hadToken && !path.startsWith(AUTH_PREFIX)) {
+    if (response.status === HTTP_UNAUTHORIZED && hadToken && path === SESSION_CHECK_PATH) {
       await tokenStore.clear();
       return;
     }
