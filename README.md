@@ -67,6 +67,22 @@ EMAIL_FROM=LyricLike <noreply@your-domain>
 Google sign-in shows up. Every link that gets emailed is built from
 `APP_BASE_URL`. The public Turnstile site key is in `wrangler.toml`.
 
+Sign in with Apple is for the iOS app, and stays off unless you set all four:
+
+```
+APPLE_CLIENT_ID=com.lyriclike.app
+APPLE_TEAM_ID=your-10-character-team-id
+APPLE_KEY_ID=your-10-character-key-id
+APPLE_PRIVATE_KEY=the-text-of-your-.p8-file
+```
+
+`APPLE_CLIENT_ID` is the app's bundle ID. The first three are not secret. The
+key is a Sign in with Apple key made in the Apple developer account, and it
+belongs in the dashboard's secrets, not in `wrangler.toml`. The app sends the
+identity token to `POST /api/auth/apple`. The server keeps the refresh token
+Apple returns so it can revoke the grant when an account is deleted, which Apple
+requires.
+
 You can also set `ALERT_EMAIL` to an address that should get a heads up when a
 day's signup or account email reaches 70% of its cap in `functions/_email.js`.
 Once a cap is reached, the signup, forgot-password and set-password requests

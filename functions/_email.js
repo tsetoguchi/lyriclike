@@ -3,7 +3,7 @@
 // Tokens ride in the URL fragment, so they never reach request logs.
 
 import { DAY_MS, checkRateLimit, hitRateLimit, peekRateLimit } from './_ratelimit.js';
-import { base64Url, jsonError, sha256Hex, writeLog } from './_shared.js';
+import { base64Url, fromBase64Url, jsonError, sha256Hex, writeLog } from './_shared.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const RESEND_TIMEOUT_MS = 5000;
@@ -185,13 +185,16 @@ function passwordChangedMessage(env) {
   };
 }
 
-function googleAddedMessage(env, token) {
+const PROVIDER_LABELS = Object.freeze({ google: 'Google', apple: 'Apple' });
+
+function providerAddedMessage(env, token, provider) {
+  const label = PROVIDER_LABELS[provider];
   return {
-    subject: 'Google sign-in was added to your LyricLike account',
+    subject: `${label} sign-in was added to your LyricLike account`,
     ...renderEmail(env, {
-      heading: 'Google sign-in was added',
+      heading: `${label} sign-in was added`,
       paragraphs: [
-        'Someone signed in with Google using this address, so Google sign-in now works ' +
+        `Someone signed in with ${label} using this address, so ${label} sign-in now works ` +
           'on your existing LyricLike account.',
         `If that wasn't you, set a new password now. The link works for ${RESET_LINK_MINUTES} minutes.`,
       ],
@@ -222,11 +225,6 @@ export async function inviteStopToken(env, emailNormalized) {
   const hash = await sha256Hex(emailNormalized);
   const signature = await crypto.subtle.sign('HMAC', await signingKey(env), new TextEncoder().encode(hash));
   return `${hash}.${base64Url(new Uint8Array(signature))}`;
-}
-
-function fromBase64Url(text) {
-  const padded = text.replaceAll('-', '+').replaceAll('_', '/') + '==='.slice((text.length + 3) % 4);
-  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
 }
 
 // Returns the address hash a valid token carries, or null. The compare is
@@ -476,6 +474,6 @@ export function sendPasswordChangedEmail(context, { to }) {
   return deliverEmail(context, EMAIL_POOL.ACCOUNT, to, env => passwordChangedMessage(env));
 }
 
-export function sendGoogleAddedEmail(context, { to, token }) {
-  return deliverEmail(context, EMAIL_POOL.ACCOUNT, to, env => googleAddedMessage(env, token));
+export function sendProviderAddedEmail(context, { to, token, provider }) {
+  return deliverEmail(context, EMAIL_POOL.ACCOUNT, to, env => providerAddedMessage(env, token, provider));
 }

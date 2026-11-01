@@ -2,10 +2,11 @@
 // load makes (GET /api/me) stays simple.
 
 import { checkCurrentPassword } from '../_accounts.js';
+import { isAppleConfigured, revokeRefreshToken } from '../_apple.js';
 import { isEventHookSet } from '../_event-hook.js';
 import { closeRoom, evictFromRoom } from '../_live.js';
 import { queueAccountDeleted } from '../_page-events.js';
-import { readJsonBody } from '../_request.js';
+import { readJsonBody, runInBackground } from '../_request.js';
 import { clearedSessionCookie, requireUser, writeLog } from '../_shared.js';
 
 // An account with a password has to give it again: a session left open on a
@@ -45,6 +46,23 @@ async function ownedPageIds(env, user) {
   return owned.results.map(row => row.id);
 }
 
+// The Apple refresh token this account holds, if any. Read before the rows go,
+// since revoking it needs it.
+async function readAppleGrant(env, userId) {
+  const row = await env.lyricalmiracle_db.prepare(
+    'SELECT refresh_token FROM apple_grants WHERE user_id = ?'
+  ).bind(userId).first();
+  return row ? row.refresh_token : null;
+}
+
+// Apple wants the app's grant revoked when the account goes, so the app leaves
+// the person's Apple ID settings. A failure is logged with no user, since the
+// user is gone, and does not undo the deletion.
+async function revokeAppleGrant(env, request, refreshToken) {
+  if (await revokeRefreshToken(env, refreshToken)) return;
+  await writeLog(env, request, { userId: null, event: 'apple_revoke_failed' });
+}
+
 export async function onRequestDelete(context) {
   const { request, env } = context;
   const { user, response } = await requireUser(request, env);
@@ -55,6 +73,7 @@ export async function onRequestDelete(context) {
 
   await writeLog(env, request, { userId: user.id, event: 'delete_account' });
 
+  const appleGrant = isAppleConfigured(env) ? await readAppleGrant(env, user.id) : null;
   const rooms = await roomsToLeave(env, user);
   const pageIds = await ownedPageIds(env, user);
   await env.lyricalmiracle_db.batch([
@@ -75,6 +94,7 @@ export async function onRequestDelete(context) {
     env.lyricalmiracle_db.prepare('DELETE FROM lyrics WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM identities WHERE user_id = ?').bind(user.id),
+    env.lyricalmiracle_db.prepare('DELETE FROM apple_grants WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM reset_tokens WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare(
       'DELETE FROM pending_signups WHERE email_normalized = ' +
@@ -92,6 +112,9 @@ export async function onRequestDelete(context) {
   for (const id of rooms.owned) closeRoom(context, id);
   for (const id of rooms.joined) evictFromRoom(context, id, user.email_normalized);
   queueAccountDeleted(context, user.id, pageIds);
+  if (appleGrant) {
+    runInBackground(context, 'apple revoke', () => revokeAppleGrant(env, request, appleGrant));
+  }
 
   const headers = new Headers();
   headers.append('Set-Cookie', clearedSessionCookie(new URL(request.url)));
