@@ -1,6 +1,6 @@
 // Everything that applies to every answer under /api lives here.
 
-import { hasBearerToken, isAppClient } from '../_shared.js';
+import { hasBearerToken, isAppClient, isAppOrigin } from '../_shared.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const JSON_MEDIA_TYPE = 'application/json';
@@ -10,18 +10,15 @@ const HTTP_FORBIDDEN = 403;
 const HTTP_UNSUPPORTED_MEDIA_TYPE = 415;
 const HTTP_SERVER_ERROR = 500;
 
-// Where the iOS and Android apps load their bundled pages from. They are the
-// only other origins allowed to call the API, and only with a Bearer token:
-// no cookie travels with those calls, so there is nothing for a forged request
-// to ride on.
-const APP_ORIGINS = new Set(['capacitor://localhost', 'https://localhost']);
+// The app origins may call the API only with a Bearer token: no cookie travels
+// with those calls, so there is nothing for a forged request to ride on.
 const APP_ALLOWED_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
 const APP_ALLOWED_HEADERS = 'Authorization, Content-Type, X-LyricLike-Client';
 const PREFLIGHT_MAX_AGE_SECONDS = '86400';
 
 function appOrigin(request) {
   const origin = request.headers.get('Origin');
-  return APP_ORIGINS.has(origin) ? origin : null;
+  return isAppOrigin(origin) ? origin : null;
 }
 
 function corsHeaders(origin) {

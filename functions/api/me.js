@@ -46,6 +46,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE created_at < ?').bind(now - NINETY_DAYS_MS),
     env.lyricalmiracle_db.prepare('DELETE FROM reset_tokens WHERE expires_at < ?').bind(now),
     env.lyricalmiracle_db.prepare('DELETE FROM pending_signups WHERE expires_at < ?').bind(now),
+    env.lyricalmiracle_db.prepare('DELETE FROM app_tickets WHERE expires_at < ?').bind(now),
     env.lyricalmiracle_db.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(now - DAY_MS),
   ]));
   waitUntil(logDailyVisit(env, request, user.id, now));

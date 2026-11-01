@@ -62,6 +62,14 @@ export function sessionTokenFrom(request) {
   return parseCookies(request)[SESSION_COOKIE] || null;
 }
 
+// Where the iOS and Android apps load their bundled pages from. They are the
+// only other origins allowed to call the API.
+const APP_ORIGINS = new Set(['capacitor://localhost', 'https://localhost']);
+
+export function isAppOrigin(origin) {
+  return APP_ORIGINS.has(origin);
+}
+
 export function hasBearerToken(request) {
   return (request.headers.get('Authorization') || '').startsWith(BEARER_PREFIX);
 }
