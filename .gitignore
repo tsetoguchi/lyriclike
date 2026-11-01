@@ -58,3 +58,4 @@ node_modules/
 /mobile/www/
 !mobile/assets/*.png
 !mobile/android/**/*.png
+!mobile/ios/**/*.png

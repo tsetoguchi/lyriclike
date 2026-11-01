@@ -40,9 +40,27 @@ What was set up by hand in `android/`:
 
 ## iOS
 
-Needs a Mac (or a cloud Mac) with Xcode. Run `npx cap add ios`, then add a
-URL type with the scheme `lyriclike` to `Info.plist` for Google sign-in.
-Sign in with Apple is also needed before review.
+iOS apps only build on a Mac, so the builds run on a GitHub macOS runner
+(`.github/workflows/ios.yml`, started by hand from the Actions tab). The project
+in `ios/` was made with `npx cap add ios` and then set up by hand, without
+Xcode:
+- `Info.plist`: the `lyriclike` URL scheme that Google sign-in returns through,
+  `ITSAppUsesNonExemptEncryption` off (the app only talks HTTPS), `arm64`, and a
+  dark interface, since the site is dark only.
+- iPhone only (`TARGETED_DEVICE_FAMILY = 1`), iOS 15 and up.
+- `App.entitlements`: the Sign in with Apple capability.
+- A plain `#0a0d13` launch screen, and the 1024 px App Store icon (the 512 px
+  site icon with every pixel doubled, and no transparency, which the App Store
+  rejects).
+
+To build: run the workflow without "upload" to check the app compiles (no
+secrets needed). To send a build to TestFlight, run it from `main` with
+"upload" ticked, after adding the repo secrets listed at the top of the
+workflow file. The app's bundle ID, `com.lyriclike.app`, has to exist in the
+Apple developer account with the Sign in with Apple capability turned on.
+
+After changing the site's files, run `npm run sync` here so `ios/App/App/public`
+is rebuilt. It isn't tracked.
 
 ## Checks before each release
 
