@@ -5192,18 +5192,6 @@ body.signed-in .sidebar-links {
     background: var(--accent);
   }
 
-  /* Splits the switches from the places, so the two kinds don't read as one
-     row of tabs. */
-  .bottom-nav > #notebook-btn::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: var(--space-1);
-    bottom: 0;
-    width: var(--hairline);
-    background: var(--margin-line);
-  }
-
   .bottom-nav .toggle-btn:hover {
     background: transparent;
   }
@@ -5273,12 +5261,10 @@ body.signed-in .sidebar-links {
   }
 }
 
-/* Forced colors would paint the dot and divider as Canvas, which hides
-   them. */
+/* Forced colors would paint the dot as Canvas, which hides it. */
 @media (max-width: 768px) and (forced-colors: active) {
   .bottom-nav > .toggle-btn.active::after,
-  .rhymes-menu > .toggle-btn.active::after,
-  .bottom-nav > #notebook-btn::before {
+  .rhymes-menu > .toggle-btn.active::after {
     forced-color-adjust: none;
     background: ButtonText;
   }
