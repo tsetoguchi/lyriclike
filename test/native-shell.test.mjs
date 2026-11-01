@@ -176,6 +176,16 @@ describe('the fetch wrapper', () => {
     assert.equal(preferences.values.has(TOKEN_KEY), false);
   });
 
+  it('keeps the token when another route answers 401', async () => {
+    for (const path of ['/api/invites/mine', '/api/define/word', '/api/lyrics']) {
+      const { apiFetch, preferences } = await makeApi({
+        stored: { [TOKEN_KEY]: 'tok' }, answer: () => new Response(null, { status: 401 }),
+      });
+      await apiFetch(path);
+      assert.equal(preferences.values.get(TOKEN_KEY), 'tok', path);
+    }
+  });
+
   it('keeps the token when a sign-in attempt is refused', async () => {
     const { apiFetch, preferences } = await makeApi({
       stored: { [TOKEN_KEY]: 'tok' }, answer: () => new Response(null, { status: 401 }),
