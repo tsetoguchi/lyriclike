@@ -78,6 +78,12 @@ export function isAppClient(request) {
   return request.headers.get(APP_CLIENT_HEADER) === APP_CLIENT_VALUE;
 }
 
+// The marker header alone is not proof: a script on the website can set it.
+// Together with an app origin, which only the app's own pages can send, it is.
+export function isFromApp(request) {
+  return isAppClient(request) && isAppOrigin(request.headers.get('Origin'));
+}
+
 // The key accounts are matched on. Only case and surrounding spaces are folded:
 // Gmail dots and "+" tags are left alone, since treating them as the same
 // address is a known cause of accounts merging that should not. Returns null

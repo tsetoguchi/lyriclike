@@ -9,7 +9,9 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import * as account from '../functions/api/account.js';
 import * as appleRoute from '../functions/api/auth/apple.js';
 import * as methods from '../functions/api/auth/methods.js';
-import { forgetAppleKeys, makeClientSecret } from '../functions/_apple.js';
+import {
+  forgetAppleKeys, makeClientSecret, openRefreshToken, sealRefreshToken,
+} from '../functions/_apple.js';
 import { base64Url, fromBase64Url, sha256Hex } from '../functions/_shared.js';
 import {
   BASE_URL, addPasswordUser, addSession, events, makeEnv, post, query,
@@ -151,13 +153,23 @@ describe('Sign in with Apple: a new account', () => {
   it('keeps the refresh token Apple gives for the code, signed as the app', async () => {
     await signInWith(await identityToken());
     const [row] = await query(env, 'SELECT user_id, refresh_token FROM apple_grants');
-    assert.equal(row.refresh_token, 'refresh-token-1');
+    assert.doesNotMatch(row.refresh_token, /refresh-token-1/);
+    assert.equal(await openRefreshToken(env, row.refresh_token), 'refresh-token-1');
 
     const [call] = appleCalls('/auth/token');
     assert.equal(call.form.grant_type, 'authorization_code');
     assert.equal(call.form.code, 'one-time-code');
     assert.equal(call.form.client_id, CLIENT_ID);
     assert.match(call.form.client_secret, /^[\w-]+\.[\w-]+\.[\w-]+$/);
+  });
+
+  it('seals the refresh token so only this server can read it back', async () => {
+    const sealed = await sealRefreshToken(env, 'secret-token');
+    assert.notEqual(sealed, await sealRefreshToken(env, 'secret-token'));
+    assert.equal(await openRefreshToken(env, sealed), 'secret-token');
+    assert.equal(await openRefreshToken({ APPLE_PRIVATE_KEY: 'other' }, sealed), null);
+    assert.equal(await openRefreshToken(env, 'plain-token'), null);
+    assert.equal(await openRefreshToken(env, sealed.slice(0, -2)), null);
   });
 
   it('works without a code, and then there is nothing to revoke later', async () => {

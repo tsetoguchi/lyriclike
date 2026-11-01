@@ -7,7 +7,7 @@
 
 import { signedInResponse } from '../../_accounts.js';
 import {
-  exchangeAuthorizationCode, isAppleConfigured, isTrue, verifyIdentityToken,
+  exchangeAuthorizationCode, isAppleConfigured, isTrue, sealRefreshToken, verifyIdentityToken,
 } from '../../_apple.js';
 import { resolveOauthUser } from '../../_oauth-accounts.js';
 import { MINUTE_MS, checkRateLimit, clientIpKey, rateLimitedResponse } from '../../_ratelimit.js';
@@ -78,7 +78,7 @@ async function storeGrant(env, request, userId, code) {
   }
   await env.lyricalmiracle_db.prepare(
     'INSERT OR REPLACE INTO apple_grants (user_id, refresh_token, created_at) VALUES (?, ?, ?)'
-  ).bind(userId, refreshToken, Date.now()).run();
+  ).bind(userId, await sealRefreshToken(env, refreshToken), Date.now()).run();
 }
 
 function refuseToken(env, request) {

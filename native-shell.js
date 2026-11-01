@@ -177,8 +177,9 @@
     await preferences.remove({ key: VERIFIER_KEY });
     await browser.close().catch(() => {});
 
+    // A network failure must end like a refusal, not as an unhandled rejection.
     const response = code && verifier
-      ? await apiFetch(EXCHANGE_PATH, exchangeRequestFor(code, verifier))
+      ? await apiFetch(EXCHANGE_PATH, exchangeRequestFor(code, verifier)).catch(() => null)
       : null;
     if (response && response.ok) {
       globalThis.location.reload();

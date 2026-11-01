@@ -152,13 +152,22 @@ describe('app sign-in and sign-out', () => {
     await addPasswordUser(env);
     const response = await post(login, env, '/api/auth/login', {
       email: 'ann@example.com', password: GOOD_PASSWORD,
-    }, { headers: APP_HEADERS });
+    }, { headers: { ...APP_HEADERS, Origin: ANDROID_ORIGIN } });
     const body = await response.json();
 
     assert.equal(response.status, OK);
     assert.equal(response.headers.get('Set-Cookie'), null);
     assert.match(body.token, /^[0-9a-f]{64}$/);
     assert.equal((await sessionRows(body.token)).length, 1);
+  });
+
+  it('the marker header without an app origin still gets a cookie, no token', async () => {
+    await addPasswordUser(env);
+    const response = await post(login, env, '/api/auth/login', {
+      email: 'ann@example.com', password: GOOD_PASSWORD,
+    }, { headers: { ...APP_HEADERS, Origin: BASE_URL } });
+    assert.match(response.headers.get('Set-Cookie'), /^sid=/);
+    assert.equal((await response.json()).token, undefined);
   });
 
   it('login from the website still sets the cookie and returns no token', async () => {

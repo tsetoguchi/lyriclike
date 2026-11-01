@@ -24,6 +24,8 @@ public class AppleSignIn: CAPPlugin, CAPBridgedPlugin {
         request.requestedScopes = requestedScopes(from: call)
         request.nonce = call.getString("nonce")
 
+        // A second tap before the first sheet answers would orphan its call.
+        takePendingCall()?.reject("Another Apple sign-in was started.", "0")
         pendingCallId = call.callbackId
         bridge?.saveCall(call)
 
@@ -44,6 +46,7 @@ public class AppleSignIn: CAPPlugin, CAPBridgedPlugin {
     }
 
     // The saved call, taken out of the bridge so it is answered once.
+    @discardableResult
     private func takePendingCall() -> CAPPluginCall? {
         controller = nil
         guard let id = pendingCallId, let call = bridge?.savedCall(withID: id) else { return nil }

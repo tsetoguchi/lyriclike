@@ -31,6 +31,15 @@ function logDailyVisit(env, request, userId, now) {
   ).bind(crypto.randomUUID(), userId, APP_OPEN, ip, now, userId, APP_OPEN, dayStart).run();
 }
 
+// Each statement on its own: one table that is missing (a database not yet
+// migrated) must not stop the others from being cleaned.
+async function runCleanup(statements) {
+  const results = await Promise.allSettled(statements.map(statement => statement.run()));
+  for (const result of results) {
+    if (result.status === 'rejected') console.error('cleanup failed', result.reason);
+  }
+}
+
 export async function onRequestGet({ request, env, waitUntil }) {
   // The page calls this on every load, so it is where a session that is close
   // to running out gets its cookie renewed.
@@ -41,7 +50,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
   // are kept for the longest window (one day), so a daily counter is not reset
   // early.
   const now = Date.now();
-  waitUntil(env.lyricalmiracle_db.batch([
+  waitUntil(runCleanup([
     env.lyricalmiracle_db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now),
     env.lyricalmiracle_db.prepare('DELETE FROM logs WHERE created_at < ?').bind(now - NINETY_DAYS_MS),
     env.lyricalmiracle_db.prepare('DELETE FROM reset_tokens WHERE expires_at < ?').bind(now),

@@ -2,7 +2,7 @@
 // load makes (GET /api/me) stays simple.
 
 import { checkCurrentPassword } from '../_accounts.js';
-import { isAppleConfigured, revokeRefreshToken } from '../_apple.js';
+import { isAppleConfigured, openRefreshToken, revokeRefreshToken } from '../_apple.js';
 import { isEventHookSet } from '../_event-hook.js';
 import { closeRoom, evictFromRoom } from '../_live.js';
 import { queueAccountDeleted } from '../_page-events.js';
@@ -52,7 +52,7 @@ async function readAppleGrant(env, userId) {
   const row = await env.lyricalmiracle_db.prepare(
     'SELECT refresh_token FROM apple_grants WHERE user_id = ?'
   ).bind(userId).first();
-  return row ? row.refresh_token : null;
+  return row ? openRefreshToken(env, row.refresh_token) : null;
 }
 
 // Apple wants the app's grant revoked when the account goes, so the app leaves
