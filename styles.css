@@ -3617,6 +3617,37 @@ a.account-menu-item {
   background-image: linear-gradient(var(--ink-wash), var(--ink-wash));
 }
 
+/* Same size and shape as the Google button: Apple asks for a button no less
+   prominent than the other ways in. */
+.apple-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  background: var(--apple-fill);
+  border: var(--hairline) solid var(--apple-fill);
+  border-radius: var(--radius-pill);
+  color: var(--apple-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  cursor: pointer;
+}
+
+.apple-btn[hidden] {
+  display: none;
+}
+
+.apple-btn-logo {
+  fill: currentColor;
+}
+
+.apple-btn:hover {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.08));
+}
+
 /* Under the Google button inside Instagram, TikTok and the like, where
    Google refuses to sign anyone in. It goes when the button does. */
 .auth-in-app {

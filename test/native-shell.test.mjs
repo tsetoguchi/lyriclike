@@ -280,6 +280,119 @@ describe('Google sign-in', () => {
   });
 });
 
+describe('Apple sign-in', () => {
+  const originalLocation = globalThis.location;
+  const originalDocument = globalThis.document;
+  const SHEET = {
+    response: {
+      user: 'apple-user', email: null, givenName: 'Ann', familyName: 'Lee',
+      identityToken: 'identity.token.here', authorizationCode: 'one-time-code',
+    },
+  };
+  let reloads;
+  let failures;
+  let authorizeCalls;
+
+  beforeEach(() => {
+    reloads = 0;
+    failures = 0;
+    authorizeCalls = [];
+    Object.defineProperty(globalThis, 'location', {
+      value: { reload: () => { reloads += 1; } }, configurable: true,
+    });
+    globalThis.document = {
+      dispatchEvent: event => { if (event.type === 'native-sign-in-failed') failures += 1; },
+    };
+  });
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'location', { value: originalLocation, configurable: true });
+    globalThis.document = originalDocument;
+  });
+
+  function fakeSheet(answer) {
+    return {
+      authorize: async options => {
+        authorizeCalls.push(options);
+        if (answer instanceof Error) throw answer;
+        return answer;
+      },
+    };
+  }
+
+  async function sha256(text) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Buffer.from(digest).toString('hex');
+  }
+
+  it('asks Apple for the hash of a nonce, and tells the server the nonce itself', async () => {
+    const api = await makeApi({ answer: () => Response.json({ user: {}, token: 'fresh' }) });
+    await shell.startAppleSignIn({ appleSignIn: fakeSheet(SHEET), apiFetch: api.apiFetch });
+
+    const [options] = authorizeCalls;
+    assert.equal(options.scopes, 'email name');
+    const [request] = api.network.calls;
+    const body = await request.json();
+    assert.match(body.nonce, HEX_64);
+    assert.equal(options.nonce, await sha256(body.nonce));
+    assert.notEqual(options.nonce, body.nonce);
+  });
+
+  it('sends the token, the code and the name to the server, and keeps the session', async () => {
+    const api = await makeApi({ answer: () => Response.json({ user: {}, token: 'fresh' }) });
+    await shell.startAppleSignIn({ appleSignIn: fakeSheet(SHEET), apiFetch: api.apiFetch });
+
+    const [request] = api.network.calls;
+    assert.equal(request.url, `${API_ORIGIN}/api/auth/apple`);
+    assert.equal(request.method, 'POST');
+    const body = await request.json();
+    assert.equal(body.identityToken, 'identity.token.here');
+    assert.equal(body.authorizationCode, 'one-time-code');
+    assert.equal(body.givenName, 'Ann');
+    assert.equal(body.familyName, 'Lee');
+    assert.equal(api.preferences.values.get(TOKEN_KEY), 'fresh');
+    assert.equal(reloads, 1);
+    assert.equal(failures, 0);
+  });
+
+  it('uses a new nonce each time', async () => {
+    const api = await makeApi({ answer: () => Response.json({ user: {}, token: 'fresh' }) });
+    const context = { appleSignIn: fakeSheet(SHEET), apiFetch: api.apiFetch };
+    await shell.startAppleSignIn(context);
+    await shell.startAppleSignIn(context);
+    const [first, second] = await Promise.all(api.network.calls.map(call => call.json()));
+    assert.notEqual(first.nonce, second.nonce);
+  });
+
+  it('says nothing and sends nothing when the person closes the sheet', async () => {
+    const api = await makeApi();
+    const closed = Object.assign(new Error('The operation could not be completed.'), { code: '1001' });
+    await shell.startAppleSignIn({ appleSignIn: fakeSheet(closed), apiFetch: api.apiFetch });
+
+    assert.equal(api.network.calls.length, 0);
+    assert.equal(failures, 0);
+    assert.equal(reloads, 0);
+  });
+
+  it('says so when the sheet fails for any other reason', async () => {
+    const api = await makeApi();
+    const broken = Object.assign(new Error('Sign in with Apple is not set up.'), { code: '1000' });
+    await shell.startAppleSignIn({ appleSignIn: fakeSheet(broken), apiFetch: api.apiFetch });
+
+    assert.equal(api.network.calls.length, 0);
+    assert.equal(failures, 1);
+  });
+
+  it('says so, and keeps no session, when the server turns the sign-in away', async () => {
+    const api = await makeApi({ answer: () => new Response(null, { status: 401 }) });
+    await shell.startAppleSignIn({ appleSignIn: fakeSheet(SHEET), apiFetch: api.apiFetch });
+
+    assert.equal(failures, 1);
+    assert.equal(reloads, 0);
+    assert.equal(api.preferences.values.has(TOKEN_KEY), false);
+  });
+});
+
 describe('TicketSocket', () => {
   class FakeWebSocket {
     constructor(url) {
