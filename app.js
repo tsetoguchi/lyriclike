@@ -2037,11 +2037,21 @@ function isKeyboardUp() {
   return tallestViewportHeight - height >= KEYBOARD_MIN_HEIGHT_PX;
 }
 
-// In the apps the keyboard covers the tool bar instead of pushing it up above
-// itself, so the writing keeps the room. On the website the bar stays put.
+// A keyboard only comes up for a field, so a short window with nothing typed
+// into is not one. Without this, dragging a narrow desktop window shorter
+// would hide the bar.
+function isTextFieldFocused() {
+  const { activeElement } = document;
+  return Boolean(activeElement) && activeElement.matches('textarea, input');
+}
+
+// The keyboard covers the tool bar instead of pushing it up above itself, so
+// the writing keeps the room. The height is measured every time, so a
+// rotation resets it even when nothing is focused.
 function hideBottomNavUnderKeyboard() {
-  if (!window.NativeShell || !window.NativeShell.isNative) return;
-  bottomNavEl.classList.toggle('keyboard-up', isKeyboardUp());
+  const hasKeyboardHeight = isKeyboardUp();
+  const isUp = hasKeyboardHeight && isMobileView() && isTextFieldFocused();
+  bottomNavEl.classList.toggle('keyboard-up', isUp);
 }
 
 // Only a resize changes how much room the writing has. Scrolling the visual
