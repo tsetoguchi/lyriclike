@@ -418,8 +418,8 @@
     tourEl.addEventListener('animationend', hideAfterFade);
   }
 
-  // Trying a rhyme on the sample makes it the writer's own, which takes the
-  // "Start your own" button away, so the steps are counted again each move.
+  // A step's target can go away mid-tour, so the steps are counted again each
+  // move.
   function refreshSteps() {
     const current = steps[stepIndex];
     steps = TOURS[tourName].filter((step) => step === current || hasVisibleTarget(step));
@@ -533,6 +533,7 @@
     if (event.target.closest('#sample-clear')) endTour('finished');
   });
 
+  window.isCoachTourOpen = () => !tourEl.hidden;
   window.startCoachTour = startCoachTour;
   window.replayCoachTour = replayCoachTour;
 })();

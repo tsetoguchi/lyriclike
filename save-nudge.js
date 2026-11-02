@@ -20,7 +20,8 @@ const TRIGGER = { LINES: 'lines', RHYME: 'rhyme', RETURN: 'return' };
 
 const lyricsEl = document.getElementById('lyrics');
 const noticeEl = document.getElementById('page-notice');
-const keepButtonEl = document.getElementById('save-keep');
+const sampleClearEl = document.getElementById('sample-clear');
+const keepButtonEl =document.getElementById('save-keep');
 
 // Storage that cannot be read counts as asked out, so nobody is asked on
 // every keystroke.
@@ -56,6 +57,8 @@ function countWrittenLines(text) {
 // when it says nobody is signed in. Another notice is left alone.
 function isNudgeDue(minLines) {
   if (window.currentUser !== null || !keepButtonEl.hidden) return false;
+  // "Start your own" can outlast the edited sample; the nudge never replaces it.
+  if (!sampleClearEl.hidden) return false;
   if (timesShown() >= MAX_SHOWS || wasShownThisVisit()) return false;
   if (!noticeEl.hidden || window.OpenPage.isSampleShowing()) return false;
   return countWrittenLines(lyricsEl.value) >= minLines;

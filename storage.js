@@ -1656,6 +1656,12 @@ function showSample() {
   }
 }
 
+// Trying a rhyme on the sample during the tour must not take "Start your
+// own" away: the tour points at it, and it stays until the next edit.
+function isCoachTourOpen() {
+  return Boolean(window.isCoachTourOpen && window.isCoachTourOpen());
+}
+
 // Clearing it and writing over it both make the pad the visitor's own, so
 // the sample does not come back after either.
 function endSample() {
@@ -1687,7 +1693,7 @@ function clearSample() {
 // editor's own input handlers, so the button is gone by the time they measure
 // the page, and before the draft handler below decides whether to save.
 document.querySelector('.lyrics-area').addEventListener('input', (event) => {
-  if (sampleShowing && !isSampleShowing()) endSample();
+  if (sampleShowing && !isSampleShowing() && !isCoachTourOpen()) endSample();
   if (event.isTrusted) trackFirstWrite();
 }, true);
 document.getElementById('sample-clear').addEventListener('click', clearSample);
