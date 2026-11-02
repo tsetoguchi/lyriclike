@@ -42,6 +42,7 @@ function loadPage({ local = fakeStorage(), text = '', isSample = false } = {}) {
     lyrics: new FakeTarget({ value: text }),
     'page-notice': new FakeTarget({ hidden: true }),
     'save-keep': new FakeTarget({ hidden: true }),
+    'sample-clear': new FakeTarget({ hidden: true }),
   };
   const document = new FakeTarget({ getElementById: (id) => elements[id] });
   const events = [];
@@ -59,6 +60,7 @@ function loadPage({ local = fakeStorage(), text = '', isSample = false } = {}) {
   const page = {
     local, events, signIns, document,
     button: elements['save-keep'],
+    startOwnButton: elements['sample-clear'],
     signOut: () => { context.currentUser = null; document.fire('auth-checked'); },
     signIn: () => { context.currentUser = { id: 'u' }; document.fire('auth-checked'); },
     type: (value) => {
@@ -113,6 +115,15 @@ describe('save nudge', () => {
     const page = loadPage({ isSample: true });
     page.signOut();
     page.type(TWO_LINES);
+    assert.equal(page.button.hidden, true);
+  });
+
+  it('never takes the place of "Start your own"', () => {
+    const page = loadPage();
+    page.signOut();
+    page.startOwnButton.hidden = false;
+    page.type(TWO_LINES);
+    page.document.fire('rhyme-inserted');
     assert.equal(page.button.hidden, true);
   });
 
