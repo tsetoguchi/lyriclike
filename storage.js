@@ -1685,6 +1685,8 @@ function clearSample() {
   const textarea = document.getElementById('lyrics');
   textarea.value = '';
   textarea.dispatchEvent(new Event('input'));
+  // An open tour holds the input handler back, so the click ends it here.
+  if (sampleShowing) endSample();
   if (window.resetRhymesPanel) window.resetRhymesPanel();
   textarea.focus();
 }
