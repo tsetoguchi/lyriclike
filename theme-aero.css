@@ -273,24 +273,28 @@
   pointer-events: none;
 }
 
+/* One soap skin for every bubble: the rising ones and the word pop. */
+.aero-soap {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95) 0, rgba(255, 255, 255, 0.6) 7%, rgba(255, 255, 255, 0) 16%),
+    radial-gradient(circle at 68% 76%, rgba(255, 255, 255, 0.45) 0, rgba(255, 255, 255, 0) 12%),
+    radial-gradient(circle, rgba(206, 214, 255, 0.18) 0, rgba(196, 206, 255, 0.3) 58%, rgba(255, 255, 255, 1) 68%, rgba(255, 255, 255, 0) 71%);
+}
+
 .aero-bubble {
   position: absolute;
   left: var(--bubble-left);
   bottom: calc(-1 * var(--bubble-size));
   width: var(--bubble-size);
   height: var(--bubble-size);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95) 0, rgba(255, 255, 255, 0.6) 7%, rgba(255, 255, 255, 0) 16%),
-    radial-gradient(circle at 68% 76%, rgba(255, 255, 255, 0.45) 0, rgba(255, 255, 255, 0) 12%),
-    radial-gradient(circle, rgba(206, 214, 255, 0.18) 0, rgba(196, 206, 255, 0.3) 58%, rgba(255, 255, 255, 1) 68%, rgba(255, 255, 255, 0) 71%);
   animation:
     aero-bubble-rise var(--bubble-rise) linear var(--bubble-delay) infinite,
     aero-bubble-sway calc(var(--bubble-rise) / 6) ease-in-out var(--bubble-delay) infinite alternate;
 }
 
 /* The rainbow film, kept to a thin band just inside the rim. */
-.aero-bubble::before {
+.aero-soap::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -329,4 +333,75 @@
   .aero-bubble {
     animation-play-state: paused;
   }
+}
+
+/* ── Picking a word ──
+   The picked word sits in a glossy bubble pill instead of a flat wash: a
+   white shine on the top half, pale lime below, and a thin rim that
+   catches blue and pink like soap film. */
+:root[data-theme="aero"] #lyrics-highlight .lyric-word::before {
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.45) 48%,
+    rgba(214, 255, 150, 0.6) 52%,
+    rgba(196, 245, 90, 0.7) 100%
+  );
+  box-shadow:
+    inset 0 0 0 var(--hairline) rgba(255, 255, 255, 0.95),
+    0 0 0 1.5px rgba(150, 200, 255, 0.65),
+    1px 1px 0 1.5px rgba(255, 150, 220, 0.35),
+    0 2px 6px rgba(6, 82, 190, 0.2);
+}
+
+/* theme-word-pop.js puts one of these over the word just picked: a bubble
+   that swells, wobbles and pops, and the drops it bursts into, side by side
+   so the bubble's fade does not hide the drops. Removed once they land. */
+.aero-word-pop {
+  position: fixed;
+  left: var(--pop-x);
+  top: var(--pop-y);
+  z-index: var(--z-bar);
+  width: var(--pop-size);
+  height: var(--pop-size);
+  margin: calc(var(--pop-size) / -2) 0 0 calc(var(--pop-size) / -2);
+  pointer-events: none;
+}
+
+.aero-word-pop-bubble {
+  position: absolute;
+  inset: 0;
+  animation: aero-word-pop 0.55s ease-out both;
+}
+
+@keyframes aero-word-pop {
+  0% { transform: scale(0.15); opacity: 0; }
+  12% { opacity: 1; }
+  40% { transform: scale(1); }
+  52% { transform: scale(1.06, 0.94); }
+  64% { transform: scale(0.96, 1.04); }
+  74% { transform: scale(1); opacity: 1; }
+  86% { transform: scale(1.22); opacity: 0; }
+  100% { transform: scale(1.22); opacity: 0; }
+}
+
+/* The drops fly out from the rim the moment the bubble bursts. */
+.aero-word-drop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff, rgba(160, 205, 255, 0.9));
+  transform: rotate(var(--drop-angle)) translateX(calc(var(--pop-size) / 2));
+  opacity: 0;
+  animation: aero-word-drop 0.35s ease-out 0.42s forwards;
+}
+
+@keyframes aero-word-drop {
+  0% { opacity: 1; transform: rotate(var(--drop-angle)) translateX(calc(var(--pop-size) / 2)) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--drop-angle)) translateX(calc(var(--pop-size) / 2 + 18px)) scale(0.4); }
 }

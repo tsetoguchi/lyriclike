@@ -3,7 +3,7 @@
 // The layer is always built; theme-aero.css only shows it under Aero, and a
 // hidden layer runs no animation.
 const LAYER_CLASS = 'aero-bubbles';
-const BUBBLE_CLASS = 'aero-bubble';
+const BUBBLE_CLASS = 'aero-soap aero-bubble';
 // Few on purpose: each one moving under the frosted glass makes it re-blur.
 // [left in vw, size in px, seconds to rise, sway in px, delay as a 0..1 share
 // of the rise, so the bubbles start spread up the screen]
