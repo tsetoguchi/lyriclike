@@ -175,6 +175,13 @@
   --aero-glass-shine: inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --aero-blur: blur(5px) saturate(160%);
   --aero-sheet-gap: var(--space-3);
+
+  /* Every corner in the app comes from these four steps, so raising each
+     one a notch rounds the whole interface without changing any shape. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --aero-gel-shine: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.75) 0%,
@@ -201,6 +208,42 @@
   border-radius: var(--radius-xl);
   box-shadow: 0 6px 24px rgba(6, 82, 190, 0.18);
   overflow: hidden;
+}
+
+/* The rhymes panel (and the side panel in its place) floats beside the
+   sheet as a rounded glass card. The resize handle between them is the gap;
+   so the sheet gives up its right margin there and the gaps stay even. */
+:root[data-theme="aero"] .rhymes-panel,
+:root[data-theme="aero"] .side-panel {
+  margin: var(--aero-sheet-gap) var(--aero-sheet-gap) var(--aero-sheet-gap) 0;
+  border: var(--hairline) solid var(--aero-glass-edge);
+  border-radius: var(--radius-xl);
+}
+
+@media (min-width: 769px) {
+  :root[data-theme="aero"] .lyrics-panel {
+    margin-right: 0;
+  }
+}
+
+/* The handle's line only shows while it is in use: at rest it would hang
+   alone in the gap between two cards. */
+:root[data-theme="aero"] .resize-handle::after {
+  background: transparent;
+}
+
+:root[data-theme="aero"] .resize-handle:hover::after,
+:root[data-theme="aero"] .resize-handle.active::after {
+  background: var(--accent);
+}
+
+/* On a phone each panel fills the screen as its tab, inset like the sheet. */
+@media (max-width: 768px) {
+  :root[data-theme="aero"] .rhymes-panel,
+  :root[data-theme="aero"] .side-panel {
+    width: auto !important;
+    margin-left: var(--aero-sheet-gap);
+  }
 }
 
 /* The big panes are clear glass with no blur. A blur under them would be
