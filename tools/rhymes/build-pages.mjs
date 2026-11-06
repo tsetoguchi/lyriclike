@@ -114,9 +114,12 @@ async function writeRhymePages(pages, index, data) {
 
 // Hand-written, so it is listed here and not generated like the pages around it.
 const GUIDE_PATH = '/guide/';
+// Served by the other worker, so no file in this repo backs it.
+const PLANS_PATH = '/pricing'; // word-check: allow
 
 async function writeSitemap(pages) {
-  const paths = ['/', GUIDE_PATH, RHYMES_PATH, ...pages.map((page) => rhymePagePath(page.word))];
+  const rhymePaths = pages.map((page) => rhymePagePath(page.word));
+  const paths = ['/', GUIDE_PATH, PLANS_PATH, RHYMES_PATH, ...rhymePaths];
   await writeFile(new URL('sitemap.xml', REPO_ROOT), renderSitemap(paths));
 }
 
