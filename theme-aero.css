@@ -234,6 +234,17 @@
   background-color: var(--aero-glass-strong);
 }
 
+/* Each group's row is a rounded glass card, inset from the panel's edges.
+   The inset comes out of the padding, so the labels stay over the chips. */
+:root[data-theme="aero"] .rhyme-group-header {
+  width: calc(100% - 2 * var(--space-3));
+  margin-inline: var(--space-3);
+  padding-inline: var(--space-2);
+  border: var(--hairline) solid var(--aero-glass-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--aero-glass-shine), 0 1px 4px rgba(6, 82, 190, 0.1);
+}
+
 :root[data-theme="aero"] .account-menu-popover,
 :root[data-theme="aero"] .rhyme-sort-menu,
 :root[data-theme="aero"] .rhymes-menu-popover,
