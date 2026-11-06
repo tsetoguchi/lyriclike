@@ -177,17 +177,10 @@
   );
 }
 
-/* Sun glow top left, soft clouds, and a sky that pales to
-   white toward the bottom. Fixed, so it holds still while panels scroll. */
+/* The page's own color under the sky layer, for the moment before it is
+   built. */
 :root[data-theme="aero"] body {
-  background:
-    radial-gradient(circle at 12% 6%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 22%),
-    radial-gradient(ellipse 30% 9% at 30% 30%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0)),
-    radial-gradient(ellipse 26% 8% at 78% 22%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
-    radial-gradient(ellipse 34% 10% at 62% 70%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
-    radial-gradient(ellipse 120% 40% at 50% 115%, rgba(150, 226, 90, 0.45), rgba(150, 226, 90, 0) 70%),
-    linear-gradient(180deg, #3fa6f5 0%, #86cdfc 45%, #d6f1ff 100%);
-  background-attachment: fixed;
+  background: #86cdfc;
 }
 
 :root[data-theme="aero"] .main {
@@ -204,6 +197,10 @@
   overflow: hidden;
 }
 
+/* The big panes are clear glass with no blur. A blur under them would be
+   worked out again every frame a bubble moves behind, which made the page
+   lag; the sky is soft already, so they look nearly the same. Only the
+   small menus below, open for a moment, are frosted. */
 :root[data-theme="aero"] #sidebar,
 :root[data-theme="aero"] #sidebar-rail,
 :root[data-theme="aero"] .rhymes-panel,
@@ -212,17 +209,23 @@
 :root[data-theme="aero"] .mobile-tabs,
 :root[data-theme="aero"] .selected-word-bar {
   background: var(--aero-glass);
-  -webkit-backdrop-filter: var(--aero-blur);
-  backdrop-filter: var(--aero-blur);
   box-shadow: var(--aero-glass-shine);
 }
 
-/* Sticky group titles stay glass too, so they hide what scrolls under them
-   without turning into solid blocks. */
+/* Sticky group titles are a stronger pane, so they hide what scrolls under
+   them without turning into solid blocks. */
+/* The sidebar can slide over the page, so its pane is thicker, and the
+   icon rail it covers is hidden rather than showing through. */
+:root[data-theme="aero"] #sidebar {
+  background: var(--aero-glass-strong);
+}
+
+:root[data-theme="aero"] body.sidebar-open #sidebar-rail {
+  visibility: hidden;
+}
+
 :root[data-theme="aero"] .rhyme-group-header {
   background-color: var(--aero-glass-strong);
-  -webkit-backdrop-filter: var(--aero-blur);
-  backdrop-filter: var(--aero-blur);
 }
 
 :root[data-theme="aero"] .account-menu-popover,
@@ -256,10 +259,11 @@
   box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px rgba(35, 102, 0, 0.25);
 }
 
-/* ── Bubbles ──
-   Soap bubbles rise slowly behind everything (theme-bubbles.js builds
-   them): a pale lilac body, a bright rim with a rainbow film, and a white
-   shine. Hidden outside Aero, so they cost nothing there. */
+/* ── Sky and bubbles ──
+   One fixed layer behind everything holds the sky and the soap bubbles
+   (theme-bubbles.js builds it and moves the bubbles). Being fixed, it never
+   repaints when a panel scrolls. Sun glow top left, soft clouds, and a sky
+   that pales to white toward the bottom. Hidden outside Aero. */
 .aero-bubbles {
   display: none;
 }
@@ -270,7 +274,15 @@
   inset: 0;
   z-index: -1;
   overflow: hidden;
+  contain: strict;
   pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 6%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 22%),
+    radial-gradient(ellipse 30% 9% at 30% 30%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0)),
+    radial-gradient(ellipse 26% 8% at 78% 22%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
+    radial-gradient(ellipse 34% 10% at 62% 70%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
+    radial-gradient(ellipse 120% 40% at 50% 115%, rgba(150, 226, 90, 0.45), rgba(150, 226, 90, 0) 70%),
+    linear-gradient(180deg, #3fa6f5 0%, #86cdfc 45%, #d6f1ff 100%);
 }
 
 /* One soap skin for every bubble: the rising ones and the word pop. */
@@ -288,9 +300,7 @@
   bottom: calc(-1 * var(--bubble-size));
   width: var(--bubble-size);
   height: var(--bubble-size);
-  animation:
-    aero-bubble-rise var(--bubble-rise) linear var(--bubble-delay) infinite,
-    aero-bubble-sway calc(var(--bubble-rise) / 6) ease-in-out var(--bubble-delay) infinite alternate;
+  will-change: transform, translate;
 }
 
 /* The rainbow film, kept to a thin band just inside the rim. */
@@ -311,27 +321,10 @@
   mask: radial-gradient(circle, transparent 58%, #000 66%, #000 69%, transparent 71%);
 }
 
-@keyframes aero-bubble-rise {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(-100vh - 2 * var(--bubble-size))); }
-}
-
-@keyframes aero-bubble-sway {
-  from { translate: calc(-1 * var(--bubble-sway)) 0; }
-  to { translate: var(--bubble-sway) 0; }
-}
-
-/* Phones blur the glass over fewer bubbles. */
+/* Phones get fewer bubbles to move. */
 @media (max-width: 768px) {
   .aero-bubble:nth-child(n + 7) {
     display: none;
-  }
-}
-
-/* Still, but left where they are, so the sky keeps its bubbles. */
-@media (prefers-reduced-motion: reduce) {
-  .aero-bubble {
-    animation-play-state: paused;
   }
 }
 
