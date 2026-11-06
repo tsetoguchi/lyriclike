@@ -11,7 +11,11 @@ const POP_CLASS = 'aero-word-pop';
 const BUBBLE_CLASSES = ['aero-soap', 'aero-word-pop-bubble'];
 const DROP_CLASS = 'aero-word-drop';
 const RING_CLASS = 'aero-word-ring';
-const FRAMES_PER_SECOND = 60;
+// The bubble's wobble needs every frame. The drops and the ring follow
+// smooth curves, so the browser drawing straight lines between fewer points
+// is off by under a tenth of a pixel, and a pick builds far fewer frames.
+const WOBBLE_FRAMES_PER_SECOND = 60;
+const PATH_FRAMES_PER_SECOND = 20;
 const MS_PER_SECOND = 1000;
 // The bubble is a little wider than the word, so it reads as around it.
 const BUBBLE_MARGIN_PX = 14;
@@ -54,8 +58,8 @@ function smoothstep(edge, value) {
   return share * share * (3 - 2 * share);
 }
 
-function frameTimes(seconds) {
-  const count = Math.ceil(seconds * FRAMES_PER_SECOND);
+function frameTimes(seconds, framesPerSecond) {
+  const count = Math.ceil(seconds * framesPerSecond);
   return Array.from({ length: count + 1 }, (_, index) => (index / count) * seconds);
 }
 
@@ -69,7 +73,8 @@ function bubbleFrameAt(age) {
 // No fill: when it ends the bubble drops back to its resting scale of zero,
 // so it is there up to the pop and then simply gone, as a bubble is.
 function animateBubble(bubble) {
-  return bubble.animate(frameTimes(POP_SECONDS).map(bubbleFrameAt), {
+  const frames = frameTimes(POP_SECONDS, WOBBLE_FRAMES_PER_SECOND).map(bubbleFrameAt);
+  return bubble.animate(frames, {
     duration: POP_SECONDS * MS_PER_SECOND, easing: 'linear',
   });
 }
@@ -98,7 +103,8 @@ function dropFrameAt(flight, unitPx, age) {
 
 function animateDrop(drop, flight, unitPx) {
   drop.style.setProperty('--drop-size', `${flight.sizePx}px`);
-  const frames = frameTimes(flight.life).map((age) => dropFrameAt(flight, unitPx, age));
+  const frames = frameTimes(flight.life, PATH_FRAMES_PER_SECOND)
+    .map((age) => dropFrameAt(flight, unitPx, age));
   return drop.animate(frames, {
     duration: flight.life * MS_PER_SECOND, delay: POP_SECONDS * MS_PER_SECOND,
     easing: 'linear', fill: 'forwards',
@@ -112,7 +118,8 @@ function ringFrameAt(age) {
 }
 
 function animateRing(ring) {
-  return ring.animate(frameTimes(RING_SECONDS).map(ringFrameAt), {
+  const frames = frameTimes(RING_SECONDS, PATH_FRAMES_PER_SECOND).map(ringFrameAt);
+  return ring.animate(frames, {
     duration: RING_SECONDS * MS_PER_SECOND, delay: POP_SECONDS * MS_PER_SECOND,
     easing: 'linear', fill: 'forwards',
   });
