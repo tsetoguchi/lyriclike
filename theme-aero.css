@@ -141,6 +141,12 @@
   color: var(--brand-like);
 }
 
+/* The logo mark (splash, folded rail, phone start screen) keeps the amber
+   frame too; its "L" takes the page's ink, as "Lyric" does. */
+:root[data-theme="aero"] .rail-logo-frame {
+  fill: var(--brand-like);
+}
+
 /* Rhyme chips are white glass: a bright top shine over a pale sky fill. */
 :root[data-theme="aero"] .rhyme-word {
   background: linear-gradient(
