@@ -167,7 +167,7 @@
   --aero-glass-strong: rgba(255, 255, 255, 0.86);
   --aero-glass-edge: rgba(255, 255, 255, 0.85);
   --aero-glass-shine: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --aero-blur: blur(18px) saturate(170%);
+  --aero-blur: blur(5px) saturate(160%);
   --aero-sheet-gap: var(--space-3);
   --aero-gel-shine: linear-gradient(
     180deg,
@@ -177,7 +177,7 @@
   );
 }
 
-/* Sun glow top left, soft clouds, a few bubbles, and a sky that pales to
+/* Sun glow top left, soft clouds, and a sky that pales to
    white toward the bottom. Fixed, so it holds still while panels scroll. */
 :root[data-theme="aero"] body {
   background:
@@ -185,8 +185,6 @@
     radial-gradient(ellipse 30% 9% at 30% 30%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0)),
     radial-gradient(ellipse 26% 8% at 78% 22%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
     radial-gradient(ellipse 34% 10% at 62% 70%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
-    radial-gradient(circle at 88% 58%, rgba(255, 255, 255, 0) 2.2%, rgba(255, 255, 255, 0.55) 2.6%, rgba(255, 255, 255, 0) 3%),
-    radial-gradient(circle at 8% 78%, rgba(255, 255, 255, 0) 1.6%, rgba(255, 255, 255, 0.5) 2%, rgba(255, 255, 255, 0) 2.4%),
     radial-gradient(ellipse 120% 40% at 50% 115%, rgba(150, 226, 90, 0.45), rgba(150, 226, 90, 0) 70%),
     linear-gradient(180deg, #3fa6f5 0%, #86cdfc 45%, #d6f1ff 100%);
   background-attachment: fixed;
@@ -256,4 +254,79 @@
 :root[data-theme="aero"] .coach-next {
   background-image: var(--aero-gel-shine);
   box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px rgba(35, 102, 0, 0.25);
+}
+
+/* ── Bubbles ──
+   Soap bubbles rise slowly behind everything (theme-bubbles.js builds
+   them): a pale lilac body, a bright rim with a rainbow film, and a white
+   shine. Hidden outside Aero, so they cost nothing there. */
+.aero-bubbles {
+  display: none;
+}
+
+:root[data-theme="aero"] .aero-bubbles {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aero-bubble {
+  position: absolute;
+  left: var(--bubble-left);
+  bottom: calc(-1 * var(--bubble-size));
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95) 0, rgba(255, 255, 255, 0.6) 7%, rgba(255, 255, 255, 0) 16%),
+    radial-gradient(circle at 68% 76%, rgba(255, 255, 255, 0.45) 0, rgba(255, 255, 255, 0) 12%),
+    radial-gradient(circle, rgba(206, 214, 255, 0.18) 0, rgba(196, 206, 255, 0.3) 58%, rgba(255, 255, 255, 1) 68%, rgba(255, 255, 255, 0) 71%);
+  animation:
+    aero-bubble-rise var(--bubble-rise) linear var(--bubble-delay) infinite,
+    aero-bubble-sway calc(var(--bubble-rise) / 6) ease-in-out var(--bubble-delay) infinite alternate;
+}
+
+/* The rainbow film, kept to a thin band just inside the rim. */
+.aero-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 210deg,
+    rgba(255, 120, 210, 0.85),
+    rgba(120, 190, 255, 0.85),
+    rgba(120, 255, 190, 0.85),
+    rgba(255, 235, 120, 0.85),
+    rgba(255, 120, 210, 0.85)
+  );
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 66%, #000 69%, transparent 71%);
+  mask: radial-gradient(circle, transparent 58%, #000 66%, #000 69%, transparent 71%);
+}
+
+@keyframes aero-bubble-rise {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100vh - 2 * var(--bubble-size))); }
+}
+
+@keyframes aero-bubble-sway {
+  from { translate: calc(-1 * var(--bubble-sway)) 0; }
+  to { translate: var(--bubble-sway) 0; }
+}
+
+/* Phones blur the glass over fewer bubbles. */
+@media (max-width: 768px) {
+  .aero-bubble:nth-child(n + 7) {
+    display: none;
+  }
+}
+
+/* Still, but left where they are, so the sky keeps its bubbles. */
+@media (prefers-reduced-motion: reduce) {
+  .aero-bubble {
+    animation-play-state: paused;
+  }
 }
