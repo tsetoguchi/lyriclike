@@ -334,7 +334,7 @@
 
 /* ── Sky and bubbles ──
    One fixed layer behind everything holds the sky and the soap bubbles
-   (theme-bubbles.js builds it and moves the bubbles). Being fixed, it never
+   (theme-bubbles.js builds it, and fills it with bubbles only under Aero). Being fixed, it never
    repaints when a panel scrolls. Sun glow top left, soft clouds, and a sky
    that pales to white toward the bottom. Hidden outside Aero. */
 .aero-bubbles {
@@ -392,13 +392,6 @@
   );
   -webkit-mask: radial-gradient(circle, transparent 58%, #000 66%, #000 69%, transparent 71%);
   mask: radial-gradient(circle, transparent 58%, #000 66%, #000 69%, transparent 71%);
-}
-
-/* Phones get fewer bubbles to move. */
-@media (max-width: 768px) {
-  .aero-bubble:nth-child(n + 7) {
-    display: none;
-  }
 }
 
 /* ── Picking a word ── */
