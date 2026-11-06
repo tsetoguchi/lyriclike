@@ -13,11 +13,15 @@ import { describe, it } from 'node:test';
 const REPO_ROOT = new URL('../', import.meta.url);
 const SITE = 'https://lyriclike.com/';
 const LOC_PATTERN = /<loc>([^<]+)<\/loc>/g;
+// The other worker serves these, so no file in this repo backs them.
+const WORKER_PAGES = new Set([`${SITE}pricing`]); // word-check: allow
 
 function listSitemapFiles() {
   const xml = readFileSync(new URL('sitemap.xml', REPO_ROOT), 'utf8');
   return [...xml.matchAll(LOC_PATTERN)]
-    .map(([, url]) => url.slice(SITE.length) + 'index.html');
+    .map(([, url]) => url)
+    .filter((url) => !WORKER_PAGES.has(url))
+    .map((url) => url.slice(SITE.length) + 'index.html');
 }
 
 function listTrackedFiles() {
