@@ -1,0 +1,146 @@
+/* The Aero theme: sky-blue glass, white paper and leaf green. It only
+   re-inks the tokens in tokens.css, so the layout stays the same. It is
+   switched on by data-theme="aero" on <html> (theme-boot.js); without it
+   the page keeps the Blue Hour look. Every text color passes 4.5:1 on the
+   surface it sits on (test/theme-aero.test.mjs checks the main pairs). */
+
+:root[data-theme="aero"] {
+  color-scheme: light;
+
+  /* Paper. Solid, not glass: menus and bars sit over writing. */
+  --desk: #e9f6ff;
+  --paper: #fbfdff;
+  --paper-panel: #f6fbff;
+  --paper-card: #ffffff;
+  --rule: #cfe7f6;
+  --margin-line: #a8d3ee;
+  --desk-dim: rgba(233, 246, 255, 0.82);
+  --lamp-glow: rgba(184, 240, 42, 0.10);
+
+  /* Accent: leaf green for text, lime only behind dark text */
+  --accent: #2a7a00;
+  --accent-wash: rgba(176, 236, 46, 0.34);
+  --accent-wash-strong: rgba(176, 236, 46, 0.48);
+  --accent-border: rgba(42, 122, 0, 0.45);
+  --hover-dim: brightness(0.92);
+  --on-accent: #163600;
+
+  /* Ink */
+  --ink: #0b2e4f;
+  --ink-faded: #3f6a8c;
+  --ink-wash: rgba(11, 46, 79, 0.06);
+  --ink-wash-strong: rgba(11, 46, 79, 0.12);
+  --field-fill: rgba(255, 255, 255, 0.6);
+  --ink-border: rgba(11, 46, 79, 0.22);
+  --border-focus: #3f6a8c;
+
+  /* States: a deeper red, so it still reads on white */
+  --danger: #c0392b;
+  --danger-hover: #a32f23;
+  --danger-border: rgba(192, 57, 43, 0.45);
+  --danger-border-hover: #c0392b;
+  --danger-bg: rgba(192, 57, 43, 0.10);
+  --danger-tint: rgba(192, 57, 43, 0.10);
+  --danger-tint-hover: rgba(192, 57, 43, 0.16);
+  --danger-text: #b0302a;
+
+  /* Panels: a white card with pale sky fields and buttons */
+  --panel-card: #ffffff;
+  --panel-fill: #eaf4fc;
+  --panel-fill-hover: #dcecf9;
+  --panel-fill-strong: #cfe5f7;
+  --panel-fill-strong-hover: #bfdcf3;
+  --panel-button-ink: #0b2e4f;
+  --panel-shadow: 0 20px 50px rgba(6, 82, 190, 0.25);
+
+  /* Rhyme categories */
+  --rhyme-perfect: #1a7f4b;
+  --rhyme-family: #1f63c7;
+  --rhyme-additive: #7a6a00;
+  --rhyme-subtractive: #b34a0e;
+  --rhyme-assonance: #b0306e;
+  --rhyme-consonance: #6646c9;
+
+  /* Scheme letters */
+  --scheme-0: #1a7f4b;
+  --scheme-1: #1f63c7;
+  --scheme-2: #7a6a00;
+  --scheme-3: #b34a0e;
+  --scheme-4: #b0306e;
+  --scheme-5: #6646c9;
+  --scheme-6: #0b7a72;
+  --scheme-7: #c0392b;
+  --scheme-8: #0a6fa8;
+  --scheme-9: #8a3fb8;
+
+  /* Effects */
+  --selection: rgba(58, 157, 241, 0.24);
+  --flash: rgba(184, 240, 42, 0.30);
+  --scrim: rgba(11, 46, 79, 0.40);
+  --scrim-light: rgba(11, 46, 79, 0.32);
+  --shadow-popup: 0 8px 32px rgba(6, 82, 190, 0.25);
+  --shadow-bottom-nav: 0 -2px 12px rgba(6, 82, 190, 0.18);
+  --sheet-handle: rgba(11, 46, 79, 0.28);
+  --scrollbar-thumb: rgba(11, 46, 79, 0.24);
+  --scrollbar-thumb-rest: rgba(11, 46, 79, 0.10);
+  --scrollbar-thumb-hover: rgba(11, 46, 79, 0.40);
+
+  /* Google's light sign-in button and Apple's black one, as their rules
+     give them for a light page. */
+  --google-fill: #ffffff;
+  --google-border: #747775;
+  --google-text: #1f1f1f;
+  --apple-fill: #000000;
+  --apple-text: #ffffff;
+}
+
+/* The header is a glossy sky-blue bar, so its ink turns white. */
+:root[data-theme="aero"] header {
+  --ink: #ffffff;
+  --ink-faded: #e6f3ff;
+  --ink-border: rgba(255, 255, 255, 0.55);
+  --ink-wash: rgba(255, 255, 255, 0.16);
+  /* Green buttons on the blue bar turn solid lime with dark green text. */
+  --accent: #163600;
+  --accent-wash: #c6f53a;
+  --accent-wash-strong: #b6e82c;
+  --accent-border: rgba(22, 54, 0, 0.35);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 48%),
+    linear-gradient(180deg, #3a9df1 0%, #1477dc 52%, #0652be 100%);
+  border-bottom-color: #0652be;
+}
+
+/* The account menu opens from the header but is a white card, so it takes
+   the page's ink back. */
+:root[data-theme="aero"] header .account-menu-popover {
+  --ink: #0b2e4f;
+  --ink-faded: #3f6a8c;
+  --ink-border: rgba(11, 46, 79, 0.22);
+  --ink-wash: rgba(11, 46, 79, 0.06);
+  --accent: #2a7a00;
+  --accent-wash: rgba(176, 236, 46, 0.34);
+  --accent-wash-strong: rgba(176, 236, 46, 0.48);
+  --accent-border: rgba(42, 122, 0, 0.45);
+}
+
+/* Lime reads on the blue bar only; elsewhere the wordmark keeps leaf green. */
+:root[data-theme="aero"] header .wordmark-text span {
+  color: #d4ff4a;
+}
+
+/* Rhyme chips are white glass: a bright top shine over a pale sky fill. */
+:root[data-theme="aero"] .rhyme-word {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(214, 238, 255, 0.7) 100%
+  );
+  border: 1px solid rgba(58, 157, 241, 0.32);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(6, 82, 190, 0.16);
+}
+
+:root[data-theme="aero"] .rhyme-word:hover {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(214, 238, 255, 0.9) 100%);
+}

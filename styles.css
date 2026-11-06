@@ -2929,9 +2929,10 @@ body:not(.signed-in) .invite-btn {
   display: none;
 }
 
-/* The menu's two pages. Only the shown one takes room; the other lies over
-   it, slid a little to its side and faded, so switching reads as turning
-   a page: the account page leaves left, Legal comes in from the right. */
+/* The menu's pages. Only the shown one takes room; the others lie over
+   it, slid a little to their side and faded, so switching reads as turning
+   a page: the account page leaves left, Theme or Legal comes in from the
+   right. */
 .account-menu-views {
   position: relative;
   overflow: hidden;
@@ -2963,6 +2964,7 @@ body:not(.signed-in) .invite-btn {
   transform: translateX(-30%);
 }
 
+#account-menu-theme:not(.is-current),
 #account-menu-legal:not(.is-current) {
   transform: translateX(30%);
 }
@@ -2980,6 +2982,7 @@ body:not(.signed-in) .invite-btn {
   }
 
   #account-menu-main:not(.is-current),
+  #account-menu-theme:not(.is-current),
   #account-menu-legal:not(.is-current) {
     transform: none;
   }
@@ -2998,7 +3001,23 @@ body:not(.signed-in) .invite-btn {
   stroke-linejoin: round;
 }
 
-/* The second page's title doubles as the way back. */
+/* A chosen theme is ticked like a chosen rhyme order. The rows line up
+   with the back row's label, past where its icon sits. */
+.theme-option {
+  padding-left: calc(var(--space-4) * 2 + var(--space-3));
+}
+
+.theme-option[aria-checked="true"]::after {
+  content: "";
+  width: var(--check-size);
+  height: var(--check-size);
+  margin-left: auto;
+  background: currentColor;
+  -webkit-mask: var(--check-mask) center / contain no-repeat;
+  mask: var(--check-mask) center / contain no-repeat;
+}
+
+/* An inner page's title doubles as the way back. */
 .account-menu-back {
   font-weight: var(--weight-bold);
 }
