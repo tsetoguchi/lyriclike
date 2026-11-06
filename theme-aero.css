@@ -1,7 +1,7 @@
 /* The Aero theme: sky-blue glass, white paper and leaf green. It only
    re-inks the tokens in tokens.css, so the layout stays the same. It is
    switched on by data-theme="aero" on <html> (theme-boot.js); without it
-   the page keeps the Blue Hour look. Every text color passes 4.5:1 on the
+   the page keeps the default look. Every text color passes 4.5:1 on the
    surface it sits on (test/theme-aero.test.mjs checks the main pairs). */
 
 :root[data-theme="aero"] {
@@ -18,21 +18,21 @@
   --lamp-glow: rgba(184, 240, 42, 0.10);
 
   /* Accent: leaf green for text, lime only behind dark text */
-  --accent: #2a7a00;
+  --accent: #236600;
   --accent-wash: rgba(176, 236, 46, 0.34);
   --accent-wash-strong: rgba(176, 236, 46, 0.48);
-  --accent-border: rgba(42, 122, 0, 0.45);
+  --accent-border: rgba(35, 102, 0, 0.45);
   --hover-dim: brightness(0.92);
   --on-accent: #163600;
 
   /* Ink */
   --ink: #0b2e4f;
-  --ink-faded: #3f6a8c;
+  --ink-faded: #335a7a;
   --ink-wash: rgba(11, 46, 79, 0.06);
   --ink-wash-strong: rgba(11, 46, 79, 0.12);
   --field-fill: rgba(255, 255, 255, 0.6);
   --ink-border: rgba(11, 46, 79, 0.22);
-  --border-focus: #3f6a8c;
+  --border-focus: #335a7a;
 
   /* States: a deeper red, so it still reads on white */
   --danger: #c0392b;
@@ -111,22 +111,34 @@
   border-bottom-color: #0652be;
 }
 
-/* The account menu opens from the header but is a white card, so it takes
-   the page's ink back. */
-:root[data-theme="aero"] header .account-menu-popover {
+/* The account menu and the switches' names open from the header but are
+   white cards, so they take the page's ink back. */
+:root[data-theme="aero"] header .account-menu-popover,
+:root[data-theme="aero"] header .nav-label {
   --ink: #0b2e4f;
-  --ink-faded: #3f6a8c;
+  --ink-faded: #335a7a;
   --ink-border: rgba(11, 46, 79, 0.22);
   --ink-wash: rgba(11, 46, 79, 0.06);
-  --accent: #2a7a00;
+  --accent: #236600;
   --accent-wash: rgba(176, 236, 46, 0.34);
   --accent-wash-strong: rgba(176, 236, 46, 0.48);
-  --accent-border: rgba(42, 122, 0, 0.45);
+  --accent-border: rgba(35, 102, 0, 0.45);
 }
 
-/* Lime reads on the blue bar only; elsewhere the wordmark keeps leaf green. */
-:root[data-theme="aero"] header .wordmark-text span {
-  color: #d4ff4a;
+/* The wordmark keeps the brand's own colors in every theme: off-white
+   "Lyric" and amber "Like". Off-white would vanish on the white sidebar,
+   so "Lyric" takes the page's ink there. */
+:root[data-theme="aero"] {
+  --brand-lyric: #e2e7ef;
+  --brand-like: #e9b45f;
+}
+
+:root[data-theme="aero"] header .wordmark-text {
+  color: var(--brand-lyric);
+}
+
+:root[data-theme="aero"] .wordmark-text span {
+  color: var(--brand-like);
 }
 
 /* Rhyme chips are white glass: a bright top shine over a pale sky fill. */
@@ -143,4 +155,105 @@
 
 :root[data-theme="aero"] .rhyme-word:hover {
   background: linear-gradient(180deg, #ffffff 0%, rgba(214, 238, 255, 0.9) 100%);
+}
+
+/* ── Glass ──
+   A bright sky sits behind the whole page. The chrome around the writing
+   (sidebar, rhymes panel, bars and menus) is frosted glass over it, with a
+   white shine along the top edge. The lyrics sheet stays solid white, so
+   nothing busy ever sits behind the words. */
+:root[data-theme="aero"] {
+  --aero-glass: rgba(255, 255, 255, 0.66);
+  --aero-glass-strong: rgba(255, 255, 255, 0.86);
+  --aero-glass-edge: rgba(255, 255, 255, 0.85);
+  --aero-glass-shine: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --aero-blur: blur(18px) saturate(170%);
+  --aero-sheet-gap: var(--space-3);
+  --aero-gel-shine: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.25) 49%,
+    rgba(255, 255, 255, 0) 50%
+  );
+}
+
+/* Sun glow top left, soft clouds, a few bubbles, and a sky that pales to
+   white toward the bottom. Fixed, so it holds still while panels scroll. */
+:root[data-theme="aero"] body {
+  background:
+    radial-gradient(circle at 12% 6%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 22%),
+    radial-gradient(ellipse 30% 9% at 30% 30%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0)),
+    radial-gradient(ellipse 26% 8% at 78% 22%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
+    radial-gradient(ellipse 34% 10% at 62% 70%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
+    radial-gradient(circle at 88% 58%, rgba(255, 255, 255, 0) 2.2%, rgba(255, 255, 255, 0.55) 2.6%, rgba(255, 255, 255, 0) 3%),
+    radial-gradient(circle at 8% 78%, rgba(255, 255, 255, 0) 1.6%, rgba(255, 255, 255, 0.5) 2%, rgba(255, 255, 255, 0) 2.4%),
+    radial-gradient(ellipse 120% 40% at 50% 115%, rgba(150, 226, 90, 0.45), rgba(150, 226, 90, 0) 70%),
+    linear-gradient(180deg, #3fa6f5 0%, #86cdfc 45%, #d6f1ff 100%);
+  background-attachment: fixed;
+}
+
+:root[data-theme="aero"] .main {
+  background: transparent;
+}
+
+/* The lyrics sheet floats on the sky as a white card. */
+:root[data-theme="aero"] .lyrics-panel {
+  margin: var(--aero-sheet-gap);
+  background: #ffffff;
+  border: var(--hairline) solid var(--aero-glass-edge);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 6px 24px rgba(6, 82, 190, 0.18);
+  overflow: hidden;
+}
+
+:root[data-theme="aero"] #sidebar,
+:root[data-theme="aero"] #sidebar-rail,
+:root[data-theme="aero"] .rhymes-panel,
+:root[data-theme="aero"] .side-panel,
+:root[data-theme="aero"] .bottom-nav,
+:root[data-theme="aero"] .mobile-tabs,
+:root[data-theme="aero"] .selected-word-bar {
+  background: var(--aero-glass);
+  -webkit-backdrop-filter: var(--aero-blur);
+  backdrop-filter: var(--aero-blur);
+  box-shadow: var(--aero-glass-shine);
+}
+
+/* Sticky group titles stay glass too, so they hide what scrolls under them
+   without turning into solid blocks. */
+:root[data-theme="aero"] .rhyme-group-header {
+  background-color: var(--aero-glass-strong);
+  -webkit-backdrop-filter: var(--aero-blur);
+  backdrop-filter: var(--aero-blur);
+}
+
+:root[data-theme="aero"] .account-menu-popover,
+:root[data-theme="aero"] .rhyme-sort-menu,
+:root[data-theme="aero"] .rhymes-menu-popover,
+:root[data-theme="aero"] .def-popup,
+:root[data-theme="aero"] .hover-tip,
+:root[data-theme="aero"] header .nav-label,
+:root[data-theme="aero"] .modal-panel,
+:root[data-theme="aero"] .coach-card,
+:root[data-theme="aero"] .whats-new {
+  background: var(--aero-glass-strong);
+  -webkit-backdrop-filter: var(--aero-blur);
+  backdrop-filter: var(--aero-blur);
+  border-color: var(--aero-glass-edge);
+  box-shadow: var(--aero-glass-shine), var(--shadow-popup);
+}
+
+/* The header's switches sit in a clear glass pill. */
+:root[data-theme="aero"] header .switch-group {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 4px rgba(3, 50, 130, 0.3);
+}
+
+/* Green buttons are lime gel: a hard shine on the top half. */
+:root[data-theme="aero"] .toggle-btn.primary-btn,
+:root[data-theme="aero"] .sample-clear,
+:root[data-theme="aero"] .coach-next {
+  background-image: var(--aero-gel-shine);
+  box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px rgba(35, 102, 0, 0.25);
 }

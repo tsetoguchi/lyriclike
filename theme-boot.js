@@ -6,10 +6,10 @@
 
   const THEME_STORAGE_KEY = 'theme';
   const THEME_ATTRIBUTE = 'data-theme';
-  const DEFAULT_THEME = 'blue-hour';
+  const DEFAULT_THEME = 'default';
   // The browser bar's color for each theme: the header's top edge.
   const THEME_BAR_COLORS = Object.freeze({
-    'blue-hour': '#0a0d13',
+    default: '#0a0d13',
     aero: '#3a9df1',
   });
 

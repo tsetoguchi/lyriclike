@@ -44,6 +44,24 @@ function contrast(foreground, background) {
   return (light + 0.05) / (dark + 0.05);
 }
 
+// The darkest sky the glass panels can sit over: the top of the gradient.
+const SKY_TOP = '#3fa6f5';
+
+function hexOf(red, green, blue) {
+  return `#${[red, green, blue].map(part => Math.round(part).toString(16).padStart(2, '0')).join('')}`;
+}
+
+// White glass at `alpha` laid over a solid color.
+function glassOver(hex, alpha) {
+  const [red, green, blue] = [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16));
+  const mix = part => 255 * alpha + part * (1 - alpha);
+  return hexOf(mix(red), mix(green), mix(blue));
+}
+
+function alphaOf(rgba) {
+  return Number(rgba.match(/,\s*([\d.]+)\)\s*$/)[1]);
+}
+
 const defaultTokens = tokensOf(TOKENS_CSS);
 const aeroTokens = tokensOf(AERO_CSS.match(AERO_ROOT_BLOCK)[1]);
 
@@ -90,11 +108,23 @@ function bootIn(savedTheme) {
   return { attributes, bar, store, appTheme: window.appTheme };
 }
 
+describe('theme-aero.css glass', () => {
+  const glassTokens = tokensOf(AERO_CSS.match(/:root\[data-theme="aero"\]\s*\{([^}]*--aero-glass[^}]*)\}/)[1]);
+
+  it('keeps the panel text readable on glass over the darkest sky', () => {
+    const glass = glassOver(SKY_TOP, alphaOf(glassTokens.get('aero-glass')));
+    for (const ink of ['ink', 'ink-faded', 'accent']) {
+      const ratio = contrast(aeroTokens.get(ink), glass);
+      assert.ok(ratio >= MIN_TEXT_CONTRAST, `--${ink} on glass: ${ratio.toFixed(2)}`);
+    }
+  });
+});
+
 describe('theme-boot.js', () => {
   it('leaves the default look alone when nothing is saved', () => {
     const page = bootIn(undefined);
     assert.equal(page.attributes.has('data-theme'), false);
-    assert.equal(page.appTheme.current(), 'blue-hour');
+    assert.equal(page.appTheme.current(), 'default');
   });
 
   it('puts the saved theme on the page and the browser bar', () => {
@@ -110,10 +140,10 @@ describe('theme-boot.js', () => {
 
   it('switches back to the default and remembers it', () => {
     const page = bootIn('aero');
-    assert.equal(page.appTheme.set('blue-hour'), true);
+    assert.equal(page.appTheme.set('default'), true);
     assert.equal(page.attributes.has('data-theme'), false);
-    assert.equal(page.store.get('theme'), 'blue-hour');
+    assert.equal(page.store.get('theme'), 'default');
     assert.equal(page.appTheme.set('neon'), false);
-    assert.equal(page.appTheme.current(), 'blue-hour');
+    assert.equal(page.appTheme.current(), 'default');
   });
 });
