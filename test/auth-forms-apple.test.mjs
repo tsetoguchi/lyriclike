@@ -63,6 +63,13 @@ async function failedMethods() {
   throw new TypeError('Failed to fetch');
 }
 
+async function serverError() {
+  return { ok: false, json: async () => null };
+}
+
+const APPLE_ON = methodsAnswer({ password: true, apple: true });
+const APPLE_OFF = methodsAnswer({ password: true, apple: false });
+
 // Loads the modal on one platform, opens it, and returns the page.
 async function openModal({ platform, fetch }) {
   const document = fakeDocument();
@@ -90,14 +97,15 @@ function isShown(document, id) {
 
 const CASES = [
   ['the methods call fails', failedMethods, true],
-  ['the server answers an error', async () => ({ ok: false, json: async () => null }), true],
-  ['the server answers apple: true', methodsAnswer({ password: true, apple: true }), true],
-  ['the server answers apple: false', methodsAnswer({ password: true, apple: false }), false],
+  ['the server answers an error', serverError, true],
+  ['the server answers apple: true', APPLE_ON, true],
+  ['the server answers apple: false', APPLE_OFF, false],
 ];
 
 describe('the Sign in with Apple button', () => {
   for (const [situation, fetch, isAppleExpected] of CASES) {
-    it(`is ${isAppleExpected ? 'shown' : 'hidden'} on iOS when ${situation}`, async () => {
+    const expected = isAppleExpected ? 'shown' : 'hidden';
+    it(`is ${expected} on iOS when ${situation}`, async () => {
       const document = await openModal({ platform: 'ios', fetch });
       assert.equal(isShown(document, APPLE_BUTTON_ID), isAppleExpected);
       assert.equal(isShown(document, GOOGLE_BUTTON_ID), true);
