@@ -31,6 +31,61 @@ Run `npm run sync` after any change to the site's files. `www/` and
 `android/app/src/main/assets/public` are rebuilt each time and are not
 tracked.
 
+### Release build for Google Play
+
+Play takes a signed `.aab`. You sign it with your own upload key, and Google
+re-signs it for phones (Play App Signing).
+
+1. Make the upload key once, with the JDK 21 `keytool`
+   (`C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot\bin\keytool.exe`):
+
+   ```
+   keytool -genkeypair -v -keystore lyriclike-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   It asks for a password and a name. Keep the `.jks` file and the password
+   outside the repo and outside Dropbox, with a backup copy somewhere safe
+   (a password manager is fine). If you lose it, you have to ask Google to
+   reset the upload key, which takes days.
+
+2. Tell Gradle where the key is. Add these four lines to
+   `C:\Users\<you>\.gradle\gradle.properties` (not the one in this repo), or
+   set them as environment variables with the same names:
+
+   ```
+   LYRICLIKE_UPLOAD_STORE_FILE=C:/keys/lyriclike-upload.jks
+   LYRICLIKE_UPLOAD_STORE_PASSWORD=...
+   LYRICLIKE_UPLOAD_KEY_ALIAS=upload
+   LYRICLIKE_UPLOAD_KEY_PASSWORD=...
+   ```
+
+   Without them, debug builds work as before and a release build stops
+   with a message naming the missing values.
+
+3. Build, with `JAVA_HOME` set to the JDK 21 (Gradle can't run on Android
+   Studio's bundled JDK 25):
+
+   ```
+   cd mobile
+   npm run copy
+   npx cap sync android
+   cd android
+   gradlew.bat bundleRelease -PLYRICLIKE_VERSION_CODE=2 -PLYRICLIKE_VERSION_NAME=1.1
+   ```
+
+   On a Mac or Linux it is `./gradlew`. The file lands in
+   `android/app/build/outputs/bundle/release/app-release.aab`.
+
+4. Every upload needs a higher version code than the last one, or Play
+   rejects it. Pass it with `-PLYRICLIKE_VERSION_CODE` as above (or the
+   environment variable of the same name). The version name is what people
+   see in the store. Without them the build uses code 1 and name 1.0.
+
+In Play Console, turn on Play App Signing when you create the app and upload
+the first `.aab`. A new personal developer account must run a closed test
+with at least 12 testers for 14 days in a row before it can publish to
+everyone.
+
 What was set up by hand in `android/`:
 - `AndroidManifest.xml`: the `lyriclike://auth` filter that Google sign-in
   returns through, and `allowBackup="false"` so the session token is not
