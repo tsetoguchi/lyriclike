@@ -27,6 +27,8 @@
   <link rel="preload" href="fonts/iAWriterQuattroS-Bold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme-aero.css">
+  <script src="theme-boot.js"></script>
   <script src="native-socket.js"></script>
   <script src="native-shell.js"></script>
   <script src="splash.js"></script>
@@ -121,6 +123,9 @@
             </div>
             <div id="account-menu-slot" class="account-menu-group"></div>
             <div class="account-menu-group">
+              <button id="account-theme-btn" class="account-menu-item" type="button"
+                      aria-controls="account-menu-theme">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z"/></svg>Theme<svg class="account-menu-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               <button id="account-legal-btn" class="account-menu-item" type="button"
                       aria-controls="account-menu-legal">
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM9 7h6M9 10.5h6M9 16.5c.8-1.4 1.6-1.4 2 0s1.3-1.4 2-.6.9.8 2 .4"/></svg>Legal<svg class="account-menu-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -131,6 +136,17 @@
               <button id="settings-delete-account-btn" class="account-menu-item is-danger" type="button">
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Delete account</button>
             </div>
+            </div>
+            <div id="account-menu-theme" class="account-menu-view" inert>
+              <button id="account-theme-back" class="account-menu-item account-menu-back" type="button"
+                      aria-label="Back to account">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Theme</button>
+              <div class="account-menu-group" role="radiogroup" aria-label="Theme">
+                <button class="account-menu-item theme-option" type="button" role="radio"
+                        data-theme-name="default" aria-checked="true">Default</button>
+                <button class="account-menu-item theme-option" type="button" role="radio"
+                        data-theme-name="aero" aria-checked="false">Aero</button>
+              </div>
             </div>
             <div id="account-menu-legal" class="account-menu-view" inert>
               <button id="account-legal-back" class="account-menu-item account-menu-back" type="button"
@@ -518,6 +534,9 @@
   <script type="module" src="extensions.js"></script>
   <script type="module" src="in-app-browser.js"></script>
   <script type="module" src="account-menu-views.js"></script>
+  <script type="module" src="theme-switch.js"></script>
+  <script type="module" src="theme-bubbles.js"></script>
+  <script type="module" src="theme-word-pop.js"></script>
   <script type="module" src="sample-start.js"></script>
   <script type="module" src="save-nudge.js"></script>
   <script type="module" src="whats-new.js"></script>
