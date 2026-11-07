@@ -200,3 +200,6 @@
 
 /privacy/*
   Cache-Control: no-cache
+
+/delete-account/*
+  Cache-Control: no-cache

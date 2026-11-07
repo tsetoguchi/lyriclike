@@ -40,6 +40,8 @@
 <tr><th scope="row">A working copy of a shared page while it is open</th><td>Cloudflare's servers</td><td>Deleted 10 minutes after everyone leaves</td></tr>
 <tr><th scope="row">Email, name and hashed password</th><td>Our database</td><td>Until you delete your account</td></tr>
 <tr><th scope="row">Sign-in cookie</th><td>This browser</td><td>30 days from your last visit, 90 days at most</td></tr>
+<tr><th scope="row">Sign-in token in the apps</th><td>Your phone, in the app's own storage</td><td>30 days from your last visit, 90 days at most, or until you sign out</td></tr>
+<tr><th scope="row">Apple sign-in token</th><td>Our database, encrypted</td><td>Until you delete your account</td></tr>
 <tr><th scope="row">Account log, with a shortened IP address</th><td>Our database</td><td>90 days</td></tr>
 <tr><th scope="row">Emails you share a page with</th><td>Our database</td><td>Until the page is deleted or that person is taken off it</td></tr>
 <tr><th scope="row">Addresses that asked for no invite emails, scrambled</th><td>Our database</td><td>Kept, so they are never emailed again</td></tr>
@@ -58,6 +60,12 @@
 <section>
 <h2>Your account</h2>
 <p>We store your password only in hashed form, so we can't read it. The account log records events such as sign-ins, password changes, and the first time you open the app each day. Its IP addresses are cut short, so they point to a network, not a person.</p>
+<p>In the iOS app you can use Sign in with Apple. Apple then gives us an ID for your Apple account and an email address, and your name the first time if you choose to share it. If you pick Hide My Email, the address is a relay from Apple that forwards to your real inbox, and we only ever see the relay. Apple also gives us a token, which we keep encrypted. We use it for one thing: when you delete your account, we send it back to Apple to revoke LyricLike's access, so LyricLike no longer shows in your Apple ID settings.</p>
+</section>
+
+<section>
+<h2>The apps</h2>
+<p>LyricLike is also an app for iOS and Android. The apps keep the same data as the website, as the table above shows. Instead of a cookie, they keep a sign-in token in the app's own storage on your phone. It is removed when you sign out, delete your account or remove the app.</p>
 </section>
 
 <section>
@@ -72,14 +80,15 @@
 
 <section>
 <h2>How the app is used</h2>
-<p>Google Analytics counts visits and which features get used: that a rhyme was tapped, say, or a page was created. When a tapped word has no rhymes, that word is sent so the dictionary can be fixed. Nothing you write is ever sent. Google Analytics sets cookies to tell visits apart. Cloudflare Web Analytics counts visits and page speed without cookies.</p>
+<p>On the website and in the apps, Google Analytics counts visits and which features get used: that a rhyme was tapped, say, or a page was created. When a tapped word has no rhymes, that word is sent so the dictionary can be fixed. Nothing you write is ever sent. Google Analytics sets cookies to tell visits apart. Cloudflare Web Analytics counts visits to the website and page speed without cookies.</p>
 </section>
 
 <section>
 <h2>Services we use</h2>
 <ul>
 <li><strong>Cloudflare</strong> hosts the site and the database, and runs Turnstile, which checks that a sign-up comes from a person.</li>
-<li><strong>Google</strong> runs "Continue with Google" and Google Analytics.</li>
+<li><strong>Google</strong> runs "Continue with Google" and Google Analytics, on the website and in the apps.</li>
+<li><strong>Apple</strong> runs Sign in with Apple in the iOS app. If you use Hide My Email, our emails reach you through Apple's relay.</li>
 <li><strong>Resend</strong> sends confirmation, password-reset and invite emails.</li>
 </ul>
 <p>If you buy anything on LyricLike, the reseller named when you buy, and in our <a href="/terms">terms</a>, takes your card details and address under its own privacy notice. We only learn what you bought and whether it's still active, never your card.</p>
@@ -87,7 +96,7 @@
 
 <section>
 <h2>Seeing and deleting your data</h2>
-<p>Every page you've saved is in <strong>My Notebook</strong>, where you can read, edit, rename or delete it. To delete everything, open the account menu (the circle with your first letter, top right) and choose <strong>Delete account</strong>. Your account, every saved page, who you shared them with, and your access to pages others shared with you are removed at once, along with your account log. To remove writing kept only in this browser, clear this site's data in your browser settings.</p>
+<p>Every page you've saved is in <strong>My Notebook</strong>, where you can read, edit, rename or delete it. To delete everything, open the account menu (the circle with your first letter, top right) and choose <strong>Delete account</strong>. This works the same on the website and in the iOS and Android apps. Your account, every saved page, who you shared them with, and your access to pages others shared with you are removed at once, along with your account log. If you used Sign in with Apple, we also ask Apple to revoke LyricLike's access. <a href="/delete-account/">Deleting your account</a> has the steps, and what to do if you can't sign in. To remove writing kept only in this browser, clear this site's data in your browser settings.</p>
 <p>Deleting a page also deletes its earlier versions. Deleting your account deletes the earlier versions of every page you own. Either way they are gone within a day. Words you wrote on someone else's page stay in that page and its earlier versions, without your name.</p>
 </section>
 
@@ -98,7 +107,7 @@
 
 <section>
 <h2>Where your data is processed</h2>
-<p>Cloudflare, Google and Resend run servers in the United States and other countries, so your data may be processed outside the country you live in.</p>
+<p>Cloudflare, Google, Apple and Resend run servers in the United States and other countries, so your data may be processed outside the country you live in.</p>
 </section>
 
 <section>
@@ -111,7 +120,7 @@
 <p>When this page changes, the date below changes with it.</p>
 </section>
 
-<p class="updated">Last updated October 30, 2026</p>
+<p class="updated">Last updated November 8, 2026</p>
 </main>
 <footer class="site-footer">
 <p><a href="/">LyricLike</a> · <a href="/rhymes/">Rhyming dictionary</a></p>
