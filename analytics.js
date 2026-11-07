@@ -64,8 +64,17 @@
   }
   window.gtag = gtag;
 
+  // Off in code, not just in the GA property, so the app's privacy manifest
+  // can say "no tracking" whatever the property's settings become.
+  const PRIVACY_CONFIG = Object.freeze({
+    allow_google_signals: false,
+    allow_ad_personalization_signals: false,
+  });
+
   gtag('js', new Date());
-  gtag('config', MEASUREMENT_ID, isInternalBrowser() ? { traffic_type: 'internal' } : {});
+  gtag('config', MEASUREMENT_ID, isInternalBrowser()
+    ? { ...PRIVACY_CONFIG, traffic_type: 'internal' }
+    : { ...PRIVACY_CONFIG });
 
   // A yes/no flag only, so reports can split signed-in visitors from the rest
   // without GA ever holding an account id or an address.
