@@ -19,7 +19,7 @@ const HEAD = /<head>([\s\S]*?)<\/head>/;
 const FOOTER = /<footer[\s\S]*?<\/footer>/;
 // Lines in the head that name this page rather than the site.
 const PAGE_SPECIFIC_HEAD = /<title>|name="description"|rel="canonical"/;
-// A Windows checkout has CRLF line ends; the tests compare text, not line ends.
+// Git on Windows may write CRLF line ends; the tests compare text, not line ends.
 const LINE_END = /\r?\n/;
 const HEADERS_RULE = /^\/delete-account\/\*\r?\n {2}Cache-Control: no-cache\r?$/m;
 
