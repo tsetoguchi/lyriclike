@@ -9,12 +9,13 @@
 // are in. It may also set what the Invite button offers, and ask whether the
 // phone start screen is up, hearing 'hub-shown' and 'hub-hidden' on document
 // as it comes and goes. On a phone it may also fill the bottom bar with its
-// own buttons. With no script set, nothing is fetched and the
+// own buttons. It may also add a line of text to the account delete
+// dialog. With no script set, nothing is fetched and the
 // neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 8;
+  const HOOK_VERSION = 9;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -330,6 +331,20 @@
     if (setNote) setNote(note);
   }
 
+  // A line in the account delete dialog, above its confirm field. null takes
+  // it away. Deleting works the same either way.
+  function setDeleteNotice(text) {
+    const reader = root.SlotInputs;
+    const notice = text === null || !reader ? null : reader.readNote(text);
+    if (text !== null && notice === null) {
+      console.warn('Extension hook: setDeleteNotice needs a string of 200 characters'
+        + ' or fewer, or null.');
+      return;
+    }
+    const setNotice = pageFunction('setDeleteNotice');
+    if (setNotice) setNotice(notice);
+  }
+
   // Only the known words, each a string or a function that returns one; a
   // missing one keeps the page-based words.
   function readInviteText(text) {
@@ -385,6 +400,7 @@
     addNotebookRowAction,
     notebookRowActions,
     addShareNote,
+    setDeleteNotice,
     setInviteOffer,
     isHubShowing,
     holdSplash,

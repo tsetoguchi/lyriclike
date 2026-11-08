@@ -19,6 +19,7 @@
   const confirm = document.getElementById('dialog-confirm');
   const cancel = document.getElementById('dialog-cancel');
   const messageEl = document.getElementById('dialog-message');
+  const noticeEl = document.getElementById('dialog-notice');
   const fieldEl = document.getElementById('dialog-field');
   const closeButton = document.getElementById('dialog-close');
 
@@ -37,8 +38,18 @@
     input.autocomplete = field.type === 'password' ? 'current-password' : 'off';
   }
 
+  // A second line under the message, for text an extension script sets. It is
+  // set as text only, since the page did not write it.
+  function showNotice(notice) {
+    // A cached page from before the notice has no element: show nothing.
+    if (!noticeEl) return;
+    noticeEl.textContent = notice || '';
+    noticeEl.hidden = !notice;
+  }
+
   function open({
     heading, message, confirmLabel, danger, field, noCancel = false, cancelLabel = 'Cancel',
+    notice,
   }) {
     document.getElementById('dialog-title').textContent = heading;
     // A dialog that only tells something has nothing to cancel, so the X
@@ -51,6 +62,7 @@
 
     messageEl.textContent = message || '';
     messageEl.hidden = !message;
+    showNotice(notice);
 
     showField(field);
     updateConfirmState();
