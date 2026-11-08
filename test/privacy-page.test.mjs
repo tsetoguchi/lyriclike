@@ -59,13 +59,14 @@ describe('privacy page', () => {
     assert.ok(section, 'no services section');
     assert.match(section, /Sign in with Apple/);
     assert.match(section, /Hide My Email/);
+    assert.match(section, /only see Apple's relay address/);
   });
 
-  it('says the Apple token is kept encrypted and revoked on deletion', () => {
+  it('says the Apple token is kept encrypted and Apple is asked to revoke it', () => {
     const row = findRow(html, APPLE_ROW_HEADER);
     assert.ok(row, 'no row for the Apple token');
     assert.match(row, /encrypted/);
-    assert.match(findSection(html, DELETING_HEADING), /revoke/);
+    assert.match(findSection(html, DELETING_HEADING), /ask Apple to revoke/);
   });
 
   it('says the apps keep a sign-in token on the device', () => {

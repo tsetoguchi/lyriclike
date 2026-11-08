@@ -66,9 +66,11 @@ describe('delete account page', () => {
     assert.match(html, /Android/);
   });
 
-  it('says Sign in with Apple access is revoked', () => {
+  // The revoke runs in the background and can fail, so the page only says
+  // it is asked for.
+  it('says Apple is asked to revoke access', () => {
     assert.match(html, /Sign in with Apple/);
-    assert.match(html, /revoke/i);
+    assert.match(html, /asks Apple to revoke/);
   });
 
   it('gives an email for people who cannot sign in', () => {
