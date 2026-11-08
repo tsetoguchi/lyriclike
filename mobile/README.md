@@ -36,8 +36,9 @@ tracked.
 Play takes a signed `.aab`. You sign it with your own upload key, and Google
 re-signs it for phones (Play App Signing).
 
-1. Make the upload key once, with the JDK 21 `keytool`
-   (`C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot\bin\keytool.exe`):
+1. Make the upload key once, with the `keytool` in your JDK 21 `bin` folder
+   (for example
+   `C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot\bin\keytool.exe`):
 
    ```
    keytool -genkeypair -v -keystore lyriclike-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
@@ -50,7 +51,8 @@ re-signs it for phones (Play App Signing).
 
 2. Tell Gradle where the key is. Add these four lines to
    `C:\Users\<you>\.gradle\gradle.properties` (not the one in this repo), or
-   set them as environment variables with the same names:
+   set them as environment variables with the same names. The key password
+   is the same as the store password unless you chose a different one.
 
    ```
    LYRICLIKE_UPLOAD_STORE_FILE=C:/keys/lyriclike-upload.jks
@@ -63,28 +65,37 @@ re-signs it for phones (Play App Signing).
    with a message naming the missing values.
 
 3. Build, with `JAVA_HOME` set to the JDK 21 (Gradle can't run on Android
-   Studio's bundled JDK 25):
+   Studio's bundled JDK 25). `npm run sync` copies the site and syncs it
+   into the app.
 
    ```
    cd mobile
-   npm run copy
-   npx cap sync android
+   npm run sync
    cd android
-   gradlew.bat bundleRelease -PLYRICLIKE_VERSION_CODE=2 -PLYRICLIKE_VERSION_NAME=1.1
+   gradlew.bat bundleRelease
    ```
 
    On a Mac or Linux it is `./gradlew`. The file lands in
    `android/app/build/outputs/bundle/release/app-release.aab`.
 
-4. Every upload needs a higher version code than the last one, or Play
-   rejects it. Pass it with `-PLYRICLIKE_VERSION_CODE` as above (or the
-   environment variable of the same name). The version name is what people
-   see in the store. Without them the build uses code 1 and name 1.0.
+   Use `gradlew bundleRelease`, not `npx cap build android`. `cap build`
+   expects Gradle to make an unsigned bundle and signs it afterwards with a
+   key passed on the command line, so it doesn't fit this setup.
 
-In Play Console, turn on Play App Signing when you create the app and upload
-the first `.aab`. A new personal developer account must run a closed test
-with at least 12 testers for 14 days in a row before it can publish to
-everyone.
+4. The first upload can leave out the version flags (it gets code 1, name
+   1.0). Each later upload needs the code one higher than the last, or Play
+   rejects it:
+
+   ```
+   gradlew.bat bundleRelease -PLYRICLIKE_VERSION_CODE=2 -PLYRICLIKE_VERSION_NAME=1.1
+   ```
+
+   The version name is what people see in the store. Environment variables
+   with the same names work too.
+
+In Play Console, accept Play App Signing when you upload the first `.aab`.
+A new personal developer account must run a closed test with at least 12
+testers for 14 days in a row before it can publish to everyone.
 
 What was set up by hand in `android/`:
 - `AndroidManifest.xml`: the `lyriclike://auth` filter that Google sign-in

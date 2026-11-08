@@ -59,3 +59,8 @@ node_modules/
 !mobile/assets/*.png
 !mobile/android/**/*.png
 !mobile/ios/**/*.png
+
+# Android signing keys and release bundles
+*.jks
+*.keystore
+*.aab
