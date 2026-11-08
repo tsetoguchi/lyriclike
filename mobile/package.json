@@ -15,6 +15,7 @@
     "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",
     "@capacitor/preferences": "^8.0.1",
+    "lyriclike-app-store": "file:plugins/app-store",
     "lyriclike-apple-sign-in": "file:plugins/apple-sign-in"
   },
   "devDependencies": {

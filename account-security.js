@@ -43,6 +43,7 @@
   const statusEl = document.getElementById('security-status');
 
   let busy = false;
+  let deleteNotice = null;
 
   // ── Server ──
 
@@ -228,11 +229,17 @@
     return Array.isArray(user.providers) && user.providers.includes('apple');
   }
 
+  // Set through the extension hook (extensions.js), which checks the text.
+  function setDeleteNotice(text) {
+    deleteNotice = text;
+  }
+
   function askToDelete(user, note) {
     if (user.has_password) {
       return Dialog.open({
         heading: 'Delete account',
         message: note ? `${note} ${TEXT.DELETE_WITH_PASSWORD}` : TEXT.DELETE_WITH_PASSWORD,
+        notice: deleteNotice,
         confirmLabel: 'Delete account',
         danger: true,
         field: { label: 'Password', value: '', type: 'password' },
@@ -244,6 +251,7 @@
     return Dialog.open({
       heading: 'Delete account',
       message: `This deletes your account and every page saved to it. It cannot be undone. Type ${typed.word} to confirm.`,
+      notice: deleteNotice,
       confirmLabel: 'Delete account',
       danger: true,
       field: { label: typed.label, value: '', mustMatch: typed.word },
@@ -291,4 +299,5 @@
 
   window.showAccountSecurity = showAccountSecurity;
   window.closePasswordBox = closePasswordBox;
+  window.setDeleteNotice = setDeleteNotice;
 })();

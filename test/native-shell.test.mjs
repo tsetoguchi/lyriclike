@@ -623,4 +623,86 @@ describe('the shell a page is given', () => {
     assert.deepEqual(codes, [ABNORMAL_CLOSE]);
     assert.equal(socket.readyState, CLOSED);
   });
+
+  // Stands in for the StoreKit plugin: records each call and keeps the
+  // transaction listeners so a test can fire the event and see them removed.
+  function fakeAppStore() {
+    const store = { calls: [], listeners: new Map() };
+    store.buy = async options => { store.calls.push(['buy', options]); return {}; };
+    store.addListener = async (name, callback) => {
+      store.listeners.set(callback, name);
+      return { remove: async () => { store.listeners.delete(callback); } };
+    };
+    store.fire = (name, data) => {
+      for (const [callback, listened] of store.listeners) {
+        if (listened === name) callback(data);
+      }
+    };
+    return store;
+  }
+
+  function runIosWithStore(store) {
+    const plugins = { ...allPlugins(), AppStore: store };
+    return runPage({ href: IOS_PAGE.href, Capacitor: fakeCapacitor('ios', plugins) });
+  }
+
+  it('gives the website no app store', () => {
+    const { page } = runPage({ href: `${WEB_ORIGIN}/` });
+    assert.equal(page.NativeShell.appStore, null);
+  });
+
+  it('gives Android no app store', () => {
+    const plugins = { ...allPlugins(), AppStore: fakeAppStore() };
+    const { page } = runPage({
+      href: ANDROID_PAGE.href, Capacitor: fakeCapacitor('android', plugins),
+    });
+    assert.equal(page.NativeShell.appStore, null);
+  });
+
+  it('gives iOS no app store when the plugin is missing, and still sets up', () => {
+    const { page, errors } = runPage({
+      href: IOS_PAGE.href, Capacitor: fakeCapacitor('ios', allPlugins()),
+    });
+    assert.equal(page.NativeShell.appStore, null);
+    assert.equal(typeof page.NativeShell.startAppleSignIn, 'function');
+    assert.deepEqual(errors, []);
+  });
+
+  it('passes the item id and the account token to the plugin on buy', async () => {
+    const store = fakeAppStore();
+    const { page } = runIosWithStore(store);
+    await page.NativeShell.appStore.buy('item-a', 'token-b');
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(store.calls)),
+      [['buy', { id: 'item-a', accountToken: 'token-b' }]],
+    );
+  });
+
+  it('forwards the transaction event, and its unsubscribe removes the listener', async () => {
+    const store = fakeAppStore();
+    const { page } = runIosWithStore(store);
+    const received = [];
+    const unsubscribe = page.NativeShell.appStore.onTransaction(data => received.push(data));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const event = { signedTransaction: 'signed', transactionId: '7' };
+    store.fire('transaction', event);
+    assert.deepEqual(received, [event]);
+
+    unsubscribe();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(store.listeners.size, 0);
+    store.fire('transaction', event);
+    assert.equal(received.length, 1);
+  });
+
+  it('gives the early shell no app store when setup breaks', () => {
+    const plugins = { ...allPlugins(), AppStore: fakeAppStore() };
+    delete plugins.Preferences;
+    const { page, errors } = runPage({
+      href: IOS_PAGE.href, Capacitor: fakeCapacitor('ios', plugins),
+    });
+    assert.equal(page.NativeShell.isNative, true);
+    assert.equal(page.NativeShell.appStore, null);
+    assert.equal(errors.length, 1);
+  });
 });
