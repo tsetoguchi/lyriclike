@@ -1,5 +1,61 @@
 apply plugin: 'com.android.application'
 
+// Each value comes from a Gradle property (-P or ~/.gradle/gradle.properties)
+// or an environment variable of the same name, so no secret lives in the repo.
+def STORE_FILE_KEY = 'LYRICLIKE_UPLOAD_STORE_FILE'
+def STORE_PASSWORD_KEY = 'LYRICLIKE_UPLOAD_STORE_PASSWORD'
+def KEY_ALIAS_KEY = 'LYRICLIKE_UPLOAD_KEY_ALIAS'
+def KEY_PASSWORD_KEY = 'LYRICLIKE_UPLOAD_KEY_PASSWORD'
+def VERSION_CODE_KEY = 'LYRICLIKE_VERSION_CODE'
+def VERSION_NAME_KEY = 'LYRICLIKE_VERSION_NAME'
+def DEFAULT_VERSION_CODE = '1'
+def DEFAULT_VERSION_NAME = '1.0'
+def SIGNING_KEYS = [STORE_FILE_KEY, STORE_PASSWORD_KEY, KEY_ALIAS_KEY, KEY_PASSWORD_KEY]
+// Android Studio's "Generate Signed Bundle" passes its own key this way.
+def INJECTED_STORE_FILE_KEY = 'android.injected.signing.store.file'
+def RELEASE_PACKAGING_TASK = /^(bundle|assemble|package)Release$/
+def WHOLE_NUMBER = /\d+/
+def MIN_VERSION_CODE = 1
+// Google Play's ceiling for versionCode.
+def MAX_VERSION_CODE = 2100000000
+
+def readSetting = { String name ->
+    def value = project.findProperty(name) ?: System.getenv(name)
+    return value ? value.toString().trim() : null
+}
+
+// Play rejects a reused or zero version code, so a typo should stop the build.
+def readVersionCode = {
+    def value = readSetting(VERSION_CODE_KEY) ?: DEFAULT_VERSION_CODE
+    def isValid = value ==~ WHOLE_NUMBER &&
+        value.toBigInteger() in MIN_VERSION_CODE..MAX_VERSION_CODE
+    if (!isValid) {
+        throw new GradleException(
+            "${VERSION_CODE_KEY} must be a whole number from ${MIN_VERSION_CODE} " +
+            "to ${MAX_VERSION_CODE}, got '${value}'")
+    }
+    return value.toInteger()
+}
+
+def missingSigningKeys = SIGNING_KEYS.findAll { !readSetting(it) }
+def hasUploadKey = missingSigningKeys.isEmpty()
+
+// Returns why a release can't be signed, or null when it can.
+def findSigningProblem = {
+    if (project.hasProperty(INJECTED_STORE_FILE_KEY)) {
+        return null
+    }
+    if (!hasUploadKey) {
+        return "Release builds must be signed with the upload key. Missing: " +
+            missingSigningKeys.join(', ') + ". See mobile/README.md."
+    }
+    def storePath = readSetting(STORE_FILE_KEY)
+    if (!file(storePath).isFile()) {
+        return "${STORE_FILE_KEY} points at '${storePath}', but no file is there."
+    }
+    return null
+}
+
 android {
     namespace = "com.lyriclike.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +63,8 @@ android {
         applicationId "com.lyriclike.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode readVersionCode()
+        versionName(readSetting(VERSION_NAME_KEY) ?: DEFAULT_VERSION_NAME)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +72,36 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasUploadKey) {
+            upload {
+                storeFile file(readSetting(STORE_FILE_KEY))
+                storePassword readSetting(STORE_PASSWORD_KEY)
+                keyAlias readSetting(KEY_ALIAS_KEY)
+                keyPassword readSetting(KEY_PASSWORD_KEY)
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasUploadKey) {
+                signingConfig signingConfigs.upload
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+// Checked only when a release package is requested, so debug builds and
+// Capacitor's sync never need the key.
+gradle.taskGraph.whenReady { graph ->
+    def wantsRelease = graph.allTasks.any {
+        it.project == project && it.name ==~ RELEASE_PACKAGING_TASK
+    }
+    def signingProblem = wantsRelease ? findSigningProblem() : null
+    if (signingProblem) {
+        throw new GradleException(signingProblem)
     }
 }
 
