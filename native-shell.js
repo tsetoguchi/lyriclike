@@ -275,10 +275,13 @@
     };
   }
 
+  // Runs before the shell exists, so it must never throw.
   function detectPlatform() {
-    const { Capacitor } = globalThis;
-    const platform = typeof Capacitor.getPlatform === 'function' && Capacitor.getPlatform();
-    return platform || UNKNOWN_PLATFORM;
+    try {
+      return globalThis.Capacitor.getPlatform() || UNKNOWN_PLATFORM;
+    } catch (error) {
+      return UNKNOWN_PLATFORM;
+    }
   }
 
   // Stands in for the live socket when setup broke, so the editor goes
@@ -309,6 +312,8 @@
     try {
       install();
     } catch (error) {
+      // A partial setup may already have swapped in fetch and the link handler.
+      // That is fine: API calls still carry the token and sign-in fails closed.
       globalThis.console.error('The app shell did not finish setting up:', error);
     }
   }

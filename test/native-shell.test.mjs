@@ -526,7 +526,9 @@ describe('openLiveSocket', () => {
 // The file run the way a page runs it, so the shell it leaves on the page can
 // be checked: the website's, the app's, and the app's when setup breaks.
 describe('the shell a page is given', () => {
-  const SHELL_SOURCE = readFileSync(new URL('../native-shell.js', import.meta.url), 'utf8');
+  const SHELL_URL = new URL('../native-shell.js', import.meta.url);
+  const SHELL_SOURCE = readFileSync(SHELL_URL, 'utf8');
+  const SIGN_IN_FAILED = 'native-sign-in-failed';
   const WEB_ORIGIN = 'https://lyriclike.com';
 
   function fakeDocument() {
@@ -539,7 +541,9 @@ describe('the shell a page is given', () => {
   }
 
   function fakeCapacitor(platform, plugins) {
-    return { isNativePlatform: () => true, getPlatform: () => platform, Plugins: plugins };
+    return {
+      isNativePlatform: () => true, getPlatform: () => platform, Plugins: plugins,
+    };
   }
 
   function allPlugins() {
@@ -555,7 +559,8 @@ describe('the shell a page is given', () => {
       URL, CustomEvent: class { constructor(type) { this.type = type; } },
       location: new URL(href), document: fakeDocument(), Capacitor,
       fetch: async () => Response.json({}), WebSocket: class {},
-      NativeSocket: { TicketSocket }, console: { error: (...args) => errors.push(args) },
+      NativeSocket: { TicketSocket },
+      console: { error: (...args) => errors.push(args) },
       setTimeout, crypto: globalThis.crypto,
     };
     vm.runInNewContext(SHELL_SOURCE, page);
@@ -592,6 +597,15 @@ describe('the shell a page is given', () => {
     assert.equal(errors.length, 1);
   });
 
+  it('still says it is the app when the platform cannot be read', () => {
+    const Capacitor = fakeCapacitor('ios', allPlugins());
+    Capacitor.getPlatform = () => { throw new Error('no platform'); };
+    const { page } = runPage({ href: IOS_PAGE.href, Capacitor });
+    assert.equal(page.NativeShell.isNative, true);
+    assert.equal(page.NativeShell.platform, 'unknown');
+    assert.equal(page.NativeShell.siteOrigin, API_ORIGIN);
+  });
+
   it('fails sign-in and live sockets safely when setup broke', async () => {
     const plugins = allPlugins();
     delete plugins.Preferences;
@@ -600,7 +614,7 @@ describe('the shell a page is given', () => {
     });
     await page.NativeShell.startGoogleSignIn();
     await page.NativeShell.startAppleSignIn();
-    assert.deepEqual(page.document.events, ['native-sign-in-failed', 'native-sign-in-failed']);
+    assert.deepEqual(page.document.events, [SIGN_IN_FAILED, SIGN_IN_FAILED]);
 
     const socket = page.NativeShell.openLiveSocket('/api/lyrics/p/live?protocol=1');
     const codes = [];
