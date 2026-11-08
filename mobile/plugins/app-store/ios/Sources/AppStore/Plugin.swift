@@ -47,8 +47,8 @@ public class AppStore: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise),
     ]
 
-    // The buy call waiting on the system sheet. Only one sheet shows at a time.
-    private var pendingBuyCallId: String?
+    // True while a purchase sheet is open. Read and written on the main actor.
+    private var isBuying = false
     private let unfinished = UnfinishedTransactions()
     private var updatesTask: Task<Void, Never>?
 
@@ -141,21 +141,22 @@ public class AppStore: CAPPlugin, CAPBridgedPlugin {
 
 extension AppStore {
     // A second tap while the sheet is opening would start a second purchase.
+    // The call is held here rather than in the bridge, so it is answered once
+    // even if the bridge is gone.
     @MainActor
     private func startBuy(_ call: CAPPluginCall, id: String, token: UUID) async {
-        guard pendingBuyCallId == nil else {
+        guard !isBuying else {
             call.reject("A purchase is already open.", ERROR_BUSY)
             return
         }
-        pendingBuyCallId = call.callbackId
-        bridge?.saveCall(call)
+        isBuying = true
+        defer { isBuying = false }
         do {
-            let answer = try await purchase(id: id, token: token)
-            takePendingBuyCall()?.resolve(answer)
+            call.resolve(try await purchase(id: id, token: token))
         } catch let error as StoreError {
-            takePendingBuyCall()?.reject(error.message, error.code)
+            call.reject(error.message, error.code)
         } catch {
-            takePendingBuyCall()?.reject(error.localizedDescription, ERROR_STORE, error)
+            call.reject(error.localizedDescription, ERROR_STORE, error)
         }
     }
 
@@ -164,7 +165,13 @@ extension AppStore {
             throw StoreError(
                 message: "The store has no such item.", code: ERROR_UNKNOWN_ITEM)
         }
-        switch try await product.purchase(options: [.appAccountToken(token)]) {
+        let outcome: Product.PurchaseResult
+        do {
+            outcome = try await product.purchase(options: [.appAccountToken(token)])
+        } catch StoreKitError.userCancelled {
+            return ["result": RESULT_CANCELLED]
+        }
+        switch outcome {
         case .success(let result):
             let transaction = try verifiedTransaction(result)
             await unfinished.keep(transaction)
@@ -176,20 +183,9 @@ extension AppStore {
         case .userCancelled:
             return ["result": RESULT_CANCELLED]
         @unknown default:
-            return ["result": RESULT_CANCELLED]
+            throw StoreError(
+                message: "The store gave an unknown answer.", code: ERROR_STORE)
         }
-    }
-
-    // The saved call, taken out of the bridge so it is answered once.
-    @MainActor
-    private func takePendingBuyCall() -> CAPPluginCall? {
-        guard let id = pendingBuyCallId, let call = bridge?.savedCall(withID: id) else {
-            pendingBuyCallId = nil
-            return nil
-        }
-        pendingBuyCallId = nil
-        bridge?.releaseCall(call)
-        return call
     }
 }
 
@@ -243,11 +239,15 @@ extension AppStore {
     private func deliver(_ result: VerificationResult<Transaction>) async {
         guard case .verified(let transaction) = result else { return }
         await unfinished.keep(transaction)
-        // Kept until the page listens, since launch deliveries can come first.
-        notifyListeners(
-            TRANSACTION_EVENT,
-            data: transactionData(result, transaction),
-            retainUntilConsumed: true)
+        let data = transactionData(result, transaction)
+        // addListener runs on the bridge's serial queue and the listener tables
+        // have no lock, so the event goes through that same queue. Retained until
+        // the page listens, since launch deliveries can come first.
+        let queue = (bridge as? CapacitorBridge)?.dispatchQueue ?? DispatchQueue.main
+        queue.async {
+            self.notifyListeners(
+                TRANSACTION_EVENT, data: data, retainUntilConsumed: true)
+        }
     }
 
     private func unfinishedTransaction(_ id: UInt64) async -> Transaction? {
