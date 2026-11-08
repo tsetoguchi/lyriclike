@@ -137,7 +137,7 @@
   const linkButtons = Array.from(document.querySelectorAll('[data-auth-link]'));
 
   let methodsPromise = null;
-  let methods = { password: false, apple: false, turnstileSiteKey: null };
+  let methods = { password: false, apple: true, turnstileSiteKey: null };
   let currentView = VIEW.START;
   let linkToken = null;
   let pendingSignup = null;
@@ -152,7 +152,8 @@
   // ── Server ──
 
   // Asked once per page. A failure reads as "passwords off", which still
-  // leaves Google working.
+  // leaves Google working. Apple stays on unless the server says it is off:
+  // where the iOS app offers Google it must offer Apple too (App Review 4.8).
   function loadMethods() {
     if (methodsPromise) return methodsPromise;
     methodsPromise = fetch(METHODS_URL)
@@ -161,7 +162,7 @@
       .then(body => {
         methods = {
           password: Boolean(body && body.password === true),
-          apple: Boolean(body && body.apple === true),
+          apple: !(body && body.apple === false),
           turnstileSiteKey: body && typeof body.turnstileSiteKey === 'string' ? body.turnstileSiteKey : null,
         };
         return methods;
@@ -310,8 +311,8 @@
     return { ...VIEWS[VIEW.START], email: false, submit: null };
   }
 
-  // Sign in with Apple is for the iOS app: the server has it set up, and the
-  // view is one that offers it.
+  // Sign in with Apple is for the iOS app: the server has not said it is off,
+  // and the view is one that offers it.
   function isAppleOffered(view) {
     const shell = window.NativeShell;
     return Boolean(view.apple && methods.apple && shell && shell.platform === 'ios');
