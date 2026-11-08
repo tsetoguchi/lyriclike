@@ -5,8 +5,10 @@
 //   node --test "test/*.test.mjs"
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { afterEach, beforeEach, describe, it } from 'node:test';
+import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const shell = require('../native-shell.js');
@@ -518,5 +520,107 @@ describe('openLiveSocket', () => {
     socket.onclose = event => codes.push(event.code);
     await tick();
     assert.deepEqual(codes, [ABNORMAL_CLOSE]);
+  });
+});
+
+// The file run the way a page runs it, so the shell it leaves on the page can
+// be checked: the website's, the app's, and the app's when setup breaks.
+describe('the shell a page is given', () => {
+  const SHELL_URL = new URL('../native-shell.js', import.meta.url);
+  const SHELL_SOURCE = readFileSync(SHELL_URL, 'utf8');
+  const SIGN_IN_FAILED = 'native-sign-in-failed';
+  const WEB_ORIGIN = 'https://lyriclike.com';
+
+  function fakeDocument() {
+    const events = [];
+    return {
+      events,
+      addEventListener: () => {},
+      dispatchEvent: event => { events.push(event.type); },
+    };
+  }
+
+  function fakeCapacitor(platform, plugins) {
+    return {
+      isNativePlatform: () => true, getPlatform: () => platform, Plugins: plugins,
+    };
+  }
+
+  function allPlugins() {
+    return {
+      Preferences: fakePreferences(), Browser: { open: async () => {} },
+      App: { addListener: () => {} }, AppleSignIn: {},
+    };
+  }
+
+  function runPage({ href, Capacitor }) {
+    const errors = [];
+    const page = {
+      URL, CustomEvent: class { constructor(type) { this.type = type; } },
+      location: new URL(href), document: fakeDocument(), Capacitor,
+      fetch: async () => Response.json({}), WebSocket: class {},
+      NativeSocket: { TicketSocket },
+      console: { error: (...args) => errors.push(args) },
+      setTimeout, crypto: globalThis.crypto,
+    };
+    vm.runInNewContext(SHELL_SOURCE, page);
+    return { page, errors };
+  }
+
+  it('says it is the website when there is no app', () => {
+    const { page } = runPage({ href: `${WEB_ORIGIN}/` });
+    assert.equal(page.NativeShell.isNative, false);
+    assert.equal(page.NativeShell.platform, 'web');
+    assert.equal(page.NativeShell.siteOrigin, WEB_ORIGIN);
+  });
+
+  it('gives the app the full shell when setup works', () => {
+    const { page, errors } = runPage({
+      href: IOS_PAGE.href, Capacitor: fakeCapacitor('ios', allPlugins()),
+    });
+    assert.equal(page.NativeShell.isNative, true);
+    assert.equal(page.NativeShell.platform, 'ios');
+    assert.equal(page.NativeShell.siteOrigin, API_ORIGIN);
+    assert.equal(typeof page.NativeShell.openLiveSocket, 'function');
+    assert.deepEqual(errors, []);
+  });
+
+  it('still says it is the app when a plugin is missing', () => {
+    const plugins = allPlugins();
+    delete plugins.App;
+    const { page, errors } = runPage({
+      href: ANDROID_PAGE.href, Capacitor: fakeCapacitor('android', plugins),
+    });
+    assert.equal(page.NativeShell.isNative, true);
+    assert.equal(page.NativeShell.platform, 'android');
+    assert.equal(page.NativeShell.siteOrigin, API_ORIGIN);
+    assert.equal(errors.length, 1);
+  });
+
+  it('still says it is the app when the platform cannot be read', () => {
+    const Capacitor = fakeCapacitor('ios', allPlugins());
+    Capacitor.getPlatform = () => { throw new Error('no platform'); };
+    const { page } = runPage({ href: IOS_PAGE.href, Capacitor });
+    assert.equal(page.NativeShell.isNative, true);
+    assert.equal(page.NativeShell.platform, 'unknown');
+    assert.equal(page.NativeShell.siteOrigin, API_ORIGIN);
+  });
+
+  it('fails sign-in and live sockets safely when setup broke', async () => {
+    const plugins = allPlugins();
+    delete plugins.Preferences;
+    const { page } = runPage({
+      href: IOS_PAGE.href, Capacitor: fakeCapacitor('ios', plugins),
+    });
+    await page.NativeShell.startGoogleSignIn();
+    await page.NativeShell.startAppleSignIn();
+    assert.deepEqual(page.document.events, [SIGN_IN_FAILED, SIGN_IN_FAILED]);
+
+    const socket = page.NativeShell.openLiveSocket('/api/lyrics/p/live?protocol=1');
+    const codes = [];
+    socket.onclose = event => codes.push(event.code);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.deepEqual(codes, [ABNORMAL_CLOSE]);
+    assert.equal(socket.readyState, CLOSED);
   });
 });
