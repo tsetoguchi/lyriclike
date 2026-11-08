@@ -389,15 +389,21 @@ a.rhyme-word:focus-visible {
 }
 
 .privacy section p,
-.privacy section ul {
+.privacy section ul,
+.privacy section ol {
   max-width: 64ch;
 }
 
-.privacy section p + p {
+.privacy section p + p,
+.privacy section p + ul,
+.privacy section p + ol,
+.privacy section ul + p,
+.privacy section ol + p {
   margin-top: var(--space-3);
 }
 
-.privacy ul {
+.privacy ul,
+.privacy ol {
   padding-left: var(--space-6);
 }
 
