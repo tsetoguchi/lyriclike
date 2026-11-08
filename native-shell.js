@@ -35,6 +35,8 @@
   const UNKNOWN_PLATFORM = 'unknown';
   const SOCKET_CLOSED = 3;
   const ABNORMAL_CLOSE = 1006;
+  const APP_STORE_PLATFORM = 'ios';
+  const TRANSACTION_EVENT = 'transaction';
 
   function isSameSite(url, pageUrl) {
     return url.protocol === pageUrl.protocol && url.host === pageUrl.host;
@@ -244,6 +246,30 @@
     });
   }
 
+  // Stops the plugin's listener once it exists. Capacitor hands the handle back
+  // later, but the page wants its unsubscribe at once.
+  function listenForTransactions(plugin, callback) {
+    const handle = plugin.addListener(TRANSACTION_EVENT, callback);
+    return () => {
+      Promise.resolve(handle).then(listener => listener.remove()).catch(() => {});
+    };
+  }
+
+  // The App Store calls for the page, or null where there is no App Store to
+  // ask: the website, Android, and an iOS build without the plugin.
+  function makeAppStore(plugin, platform) {
+    if (!plugin || platform !== APP_STORE_PLATFORM) return null;
+    return {
+      listItems: ids => plugin.listItems({ ids }),
+      buy: (id, accountToken) => plugin.buy({ id, accountToken }),
+      ownedItems: () => plugin.ownedItems(),
+      restore: () => plugin.restore(),
+      manage: () => plugin.manage(),
+      finish: transactionId => plugin.finish({ transactionId }),
+      onTransaction: callback => listenForTransactions(plugin, callback),
+    };
+  }
+
   function isNativeApp() {
     const { Capacitor } = globalThis;
     return Boolean(Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
@@ -265,13 +291,15 @@
     globalThis.fetch = apiFetch;
     openLinksInSystemBrowser({ document: globalThis.document, pageUrl, browser });
     app.addListener('appUrlOpen', event => finishGoogleSignIn(event.url, context));
+    const platform = globalThis.Capacitor.getPlatform();
     root.NativeShell = {
       isNative: true,
-      platform: globalThis.Capacitor.getPlatform(),
+      platform,
       siteOrigin: API_ORIGIN,
       startGoogleSignIn: () => startGoogleSignIn(context),
       startAppleSignIn: () => startAppleSignIn(context),
       openLiveSocket: path => openLiveSocket(path, context),
+      appStore: makeAppStore(globalThis.Capacitor.Plugins.AppStore, platform),
     };
   }
 
@@ -304,6 +332,7 @@
       startGoogleSignIn: async () => failSignIn(),
       startAppleSignIn: async () => failSignIn(),
       openLiveSocket: () => closedSocket(),
+      appStore: null,
     };
   }
 
@@ -327,5 +356,10 @@
     return;
   }
   if (isNativeApp()) installOrKeepSetupShell();
-  else root.NativeShell = { isNative: false, platform: 'web', siteOrigin: globalThis.location.origin };
+  else {
+    root.NativeShell = {
+      isNative: false, platform: 'web', siteOrigin: globalThis.location.origin,
+      appStore: null,
+    };
+  }
 })(this);
