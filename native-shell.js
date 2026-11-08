@@ -32,6 +32,9 @@
   // rhyme pages, the legal pages) lives on the real site and opens there.
   const APP_PAGE_PATHS = Object.freeze(['/', '/index.html']);
   const WEB_PROTOCOLS = Object.freeze(['http:', 'https:']);
+  const UNKNOWN_PLATFORM = 'unknown';
+  const SOCKET_CLOSED = 3;
+  const ABNORMAL_CLOSE = 1006;
 
   function isSameSite(url, pageUrl) {
     return url.protocol === pageUrl.protocol && url.host === pageUrl.host;
@@ -272,6 +275,44 @@
     };
   }
 
+  function detectPlatform() {
+    const { Capacitor } = globalThis;
+    const platform = typeof Capacitor.getPlatform === 'function' && Capacitor.getPlatform();
+    return platform || UNKNOWN_PLATFORM;
+  }
+
+  // Stands in for the live socket when setup broke, so the editor goes
+  // offline the usual way instead of throwing.
+  function closedSocket() {
+    const socket = { readyState: SOCKET_CLOSED, send() {}, close() {} };
+    globalThis.setTimeout(() => {
+      if (socket.onclose) socket.onclose({ code: ABNORMAL_CLOSE });
+    }, 0);
+    return socket;
+  }
+
+  // Set before setup so that, if setup breaks, the page still knows it is the
+  // app. Without it, scripts read a missing shell as the website.
+  function setupShell() {
+    return {
+      isNative: true,
+      platform: detectPlatform(),
+      siteOrigin: API_ORIGIN,
+      startGoogleSignIn: async () => failSignIn(),
+      startAppleSignIn: async () => failSignIn(),
+      openLiveSocket: () => closedSocket(),
+    };
+  }
+
+  function installOrKeepSetupShell() {
+    root.NativeShell = setupShell();
+    try {
+      install();
+    } catch (error) {
+      globalThis.console.error('The app shell did not finish setting up:', error);
+    }
+  }
+
   const NativeShell = {
     API_ORIGIN, toApiUrl, externalTargetFor, createTokenStore, createApiFetch, rememberSession,
     startGoogleSignIn, finishGoogleSignIn, startAppleSignIn, openLiveSocket,
@@ -280,6 +321,6 @@
     module.exports = NativeShell;
     return;
   }
-  if (isNativeApp()) install();
+  if (isNativeApp()) installOrKeepSetupShell();
   else root.NativeShell = { isNative: false, platform: 'web', siteOrigin: globalThis.location.origin };
 })(this);
