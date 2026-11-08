@@ -22,7 +22,8 @@ private let ERROR_UNKNOWN_ITEM = "unknown-item"
 private let ERROR_NO_WINDOW = "no-window"
 private let ERROR_STORE = "store-error"
 
-private typealias GroupStatus = Product.SubscriptionInfo.Status // word-check: allow
+private typealias GroupInfo = Product.SubscriptionInfo // word-check: allow
+private typealias GroupStatus = GroupInfo.Status
 private typealias PeriodUnit = Product.SubscriptionPeriod.Unit // word-check: allow
 
 private struct StoreError: Error {
@@ -219,11 +220,15 @@ extension AppStore {
     private func groupStatuses() async throws -> [GroupStatus] {
         var statuses: [GroupStatus] = []
         for product in try await Product.products(for: PRODUCT_IDS) {
-            let info = product.subscription // word-check: allow
-            guard let info, info.subscriptionGroupID == GROUP_ID else { continue }
+            guard let info = groupInfo(product) else { continue }
             statuses.append(contentsOf: try await info.status)
         }
         return statuses
+    }
+
+    private func groupInfo(_ product: Product) -> GroupInfo? {
+        let info = product.subscription // word-check: allow
+        return info?.subscriptionGroupID == GROUP_ID ? info : nil // word-check: allow
     }
 
     // Also carries unfinished transactions StoreKit hands back once at launch.
