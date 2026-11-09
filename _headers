@@ -215,3 +215,9 @@
 
 /rhymezone-alternative/*
   Cache-Control: no-cache
+
+/masterwriter-alternative/*
+  Cache-Control: no-cache
+
+/rhymebrain-alternative/*
+  Cache-Control: no-cache
