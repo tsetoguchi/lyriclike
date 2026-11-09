@@ -3870,6 +3870,13 @@ body.sidebar-animate #app-content {
   transition: margin-left var(--duration-slow) ease;
 }
 
+/* While a finger drags it (sidebar-swipe.js) the sidebar follows at once;
+   the transitions come back to carry it the rest of the way. */
+body.sidebar-dragging #sidebar,
+body.sidebar-dragging #sidebar-scrim {
+  transition: none;
+}
+
 #sidebar-scrim {
   position: fixed;
   inset: 0;
