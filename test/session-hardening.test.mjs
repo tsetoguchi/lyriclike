@@ -367,6 +367,14 @@ describe('Google sign-in start', () => {
     assert.equal(location.searchParams.get('state'), cookies.oauth_state.value);
   });
 
+  it('asks Google to show the account chooser every time', async () => {
+    const response = await start.onRequestGet({
+      request: new Request(BASE_URL + '/api/auth/google/start'), env,
+    });
+    const location = new URL(response.headers.get('Location'));
+    assert.equal(location.searchParams.get('prompt'), 'select_account');
+  });
+
   it('keeps both cookies HttpOnly, Lax and Secure', async () => {
     const response = await start.onRequestGet({
       request: new Request(BASE_URL + '/api/auth/google/start'), env,

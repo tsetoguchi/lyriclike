@@ -6,6 +6,9 @@ const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
 const PKCE_VERIFIER_BYTES = 32;
 const APP_CLIENT = 'app';
 const APP_CHALLENGE_PATTERN = /^[0-9a-f]{64}$/;
+// Without it Google signs straight back into the last account used in this
+// browser, so someone who signed out could never pick a different one.
+const ACCOUNT_PROMPT = 'select_account';
 
 // The app starts Google sign-in in the system browser and sends the hash of a
 // secret it keeps. The callback ties its one-time code to that hash, so only
@@ -35,6 +38,7 @@ export async function onRequestGet({ request, env }) {
     state,
     code_challenge: challenge,
     code_challenge_method: 'S256',
+    prompt: ACCOUNT_PROMPT,
   });
 
   const headers = new Headers({
