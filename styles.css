@@ -4047,6 +4047,8 @@ body.sidebar-open #sidebar-scrim {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5);
+  /* Clears the iPhone's status bar, as the phone header does; zero elsewhere. */
+  padding-top: calc(var(--space-2) + env(safe-area-inset-top));
   flex-shrink: 0;
 }
 
