@@ -23,6 +23,14 @@ Lyrics are private. LyricLike never reads, sells or trains on them.
 - [How it works](https://lyriclike.com/guide/): how to find and swap in rhymes, read the syllable counts and rhyme letters, save pages, and write with others
 - [Rhyming dictionary](https://lyriclike.com/rhymes/): rhymes for 5,000 common words, from perfect rhymes to near rhymes, sorted by syllable count
 
+## Comparisons
+
+How LyricLike compares with other rhyme and lyric writing tools:
+
+- [LyricLike vs RhymeZone](https://lyriclike.com/rhymezone-alternative/): a lyric editor with rhymes built in, compared with a rhyming dictionary
+- [LyricLike vs MasterWriter](https://lyriclike.com/masterwriter-alternative/): a free lyric editor with no sign-up, compared with a licensed word reference
+- [LyricLike vs RhymeBrain](https://lyriclike.com/rhymebrain-alternative/): click a rhyme to put it in your line, with syllable counts and rhyme scheme marks
+
 ## Rhyme pages
 
 Each word has its own page at https://lyriclike.com/rhymes/WORD/ (lowercase). Some popular ones:
