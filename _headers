@@ -108,6 +108,9 @@
 /sidebar-swipe.js
   Cache-Control: no-cache
 
+/tab-swipe.js
+  Cache-Control: no-cache
+
 /notebook-list.js
   Cache-Control: no-cache
 
