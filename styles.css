@@ -4885,8 +4885,10 @@ body.signed-in .sidebar-links {
     margin-top: 0;
   }
 
-  /* Who is here, the sharing line and Share share one row above the words. */
+  /* Who is here, the sharing line and Share share one row, above the title
+     so the page's buttons show first. */
   .page-meta {
+    order: -1;
     display: flex;
     align-items: center;
     gap: var(--space-3);
@@ -4900,6 +4902,13 @@ body.signed-in .sidebar-links {
 
   .page-meta:not(:has(> :not([hidden]))) {
     display: none;
+  }
+
+  /* Under the row, the title takes the gap the row used to keep above the
+     words. */
+  .lyrics-panel:has(> .page-meta > :not([hidden])) .panel-header {
+    padding-top: 0;
+    padding-bottom: var(--space-2);
   }
 
   .page-meta:has(> :not([hidden])) + .page-notice {
@@ -4929,6 +4938,16 @@ body.signed-in .sidebar-links {
 
   .share-btn-phone span {
     display: none;
+  }
+
+  /* Share, the page's own buttons and Invite stand one tap target tall, so
+     the row reads as one set. */
+  .page-meta .toggle-btn:not([hidden]) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--tap-target);
   }
 
   .page-actions-phone:not([hidden]) {
