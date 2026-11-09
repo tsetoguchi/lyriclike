@@ -4657,6 +4657,14 @@ body.sidebar-open #sidebar-scrim {
   margin-left: auto;
 }
 
+/* On phones the foot holds the envelope and the account, so both step in
+   from the sidebar's edges to sit with the rows above. */
+@media (max-width: 768px) {
+  .sidebar-foot {
+    padding-inline: var(--space-4);
+  }
+}
+
 .sidebar-account-slot .account-menu-popover {
   top: auto;
   bottom: calc(100% + var(--space-2));
