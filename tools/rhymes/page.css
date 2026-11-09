@@ -668,3 +668,82 @@ a.rhyme-word:focus-visible {
     --text-pledge: 14px;
   }
 }
+
+/* ── /rhymezone-alternative/ ── */
+
+/* Unlike .ledger, the rows never stack on a phone: a stacked row hides the
+   column heads, and "Yes" means nothing without knowing whose column it is. */
+.versus {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-subhead);
+  line-height: 1.45;
+}
+
+.versus th,
+.versus td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: var(--hairline) solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.versus thead th {
+  padding-top: 0;
+  color: var(--ink-faded);
+  font-size: var(--text-footnote);
+  font-weight: 400;
+}
+
+.versus tbody th {
+  width: 44%;
+  font-weight: 700;
+}
+
+.versus td {
+  color: var(--ink-faded);
+}
+
+.versus td.is-win {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.versus tr > :last-child {
+  padding-right: 0;
+}
+
+.versus tbody tr:last-child > * {
+  border-bottom: none;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+.guide .steps h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.guide .steps ol {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.steps .is-one-step {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .steps {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .versus {
+    font-size: var(--text-footnote);
+  }
+}
