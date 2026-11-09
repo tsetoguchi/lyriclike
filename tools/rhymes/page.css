@@ -737,6 +737,12 @@ a.rhyme-word:focus-visible {
   font-weight: 700;
 }
 
+.also {
+  margin-top: var(--space-6);
+  color: var(--ink-faded);
+  font-size: var(--text-footnote);
+}
+
 @media (max-width: 560px) {
   .steps {
     grid-template-columns: 1fr;
