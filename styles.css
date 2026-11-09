@@ -781,11 +781,13 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
 }
 
 /* Between steps the light and the card glide: easing in and out, so the move
-   neither leaps nor crawls to a stop. The blocks are unseen and just jump. */
+   neither leaps nor crawls to a stop. Position and size glide together on
+   the main thread (see moveTo in coach-tour.js). The blocks are unseen and
+   just jump. */
 .coach-spot,
 .coach-card {
-  will-change: translate;
-  transition: translate var(--duration-glide) var(--ease-glide),
+  transition: left var(--duration-glide) var(--ease-glide),
+    top var(--duration-glide) var(--ease-glide),
     width var(--duration-glide) var(--ease-glide),
     height var(--duration-glide) var(--ease-glide);
 }

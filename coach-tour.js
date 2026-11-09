@@ -257,11 +257,14 @@
     el.style.height = Math.max(0, height) + 'px';
   }
 
-  // The light and the card move by `translate`, which the compositor glides
-  // without laying the page out again each frame. It is its own property, so
-  // the card's opening grow (a `transform`) does not fight it.
+  // The light and the card move by `left` and `top`, glided on the main
+  // thread with the light's width and height. On an iPhone a compositor
+  // `translate` ran apart from the size change and threw the light off
+  // screen mid-glide. Neither is a `transform`, so the card's opening grow
+  // does not fight it.
   function moveTo(el, left, top) {
-    el.style.translate = left + 'px ' + top + 'px';
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
   }
 
   // The four blocks frame the light: above, below, left and right of it.
