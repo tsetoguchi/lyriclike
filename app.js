@@ -2039,10 +2039,12 @@ function isKeyboardUp() {
 
 // A keyboard only comes up for a field, so a short window with nothing typed
 // into is not one. Without this, dragging a narrow desktop window shorter
-// would hide the bar.
+// would hide the bar. The page title is a field too: Create puts the caret
+// there, and the bar must go under the keyboard as it does for the words.
 function isTextFieldFocused() {
   const { activeElement } = document;
-  return Boolean(activeElement) && activeElement.matches('textarea, input');
+  if (!activeElement) return false;
+  return activeElement.matches('textarea, input') || activeElement.isContentEditable;
 }
 
 // The keyboard covers the tool bar instead of pushing it up above itself, so
