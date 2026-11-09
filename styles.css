@@ -134,11 +134,11 @@ header .header-tools .toggle-btn:has(> .nav-icon) {
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon):hover {
-  background: var(--ink-wash);
+  background: var(--panel-fill-hover);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
-  background: var(--ink-wash-strong);
+  background: var(--panel-fill-strong);
 }
 
 /* The name hides until the cursor rests on the switch, then eases in below
@@ -1136,12 +1136,14 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
    lighter fill inside it, and a hairline divides two that are off. A switch
    may hold an icon, a word, or both. Here, after .tip-btn, so a tip button
    in a group takes the group's shape. */
+/* The panels' slate fills, not a see-through wash, so the switches match the
+   dialogs' buttons: the track is Done's fill, the picked one Copy's. */
 .switch-group {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1);
-  background: var(--ink-wash);
+  background: var(--panel-fill);
   border-radius: var(--radius-pill);
 }
 
@@ -1160,11 +1162,11 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
 }
 
 .switch-group > .toggle-btn:hover {
-  background: var(--ink-wash);
+  background: var(--panel-fill-hover);
 }
 
 .switch-group > .toggle-btn.active {
-  background: var(--ink-wash-strong);
+  background: var(--panel-fill-strong);
   border-color: transparent;
   color: var(--ink);
 }
