@@ -212,3 +212,6 @@
 
 /delete-account/*
   Cache-Control: no-cache
+
+/rhymezone-alternative/*
+  Cache-Control: no-cache
