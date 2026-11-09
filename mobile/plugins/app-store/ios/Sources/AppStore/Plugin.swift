@@ -7,7 +7,7 @@ private let PRODUCT_IDS = [
     "com.lyriclike.app.pro.monthly",
     "com.lyriclike.app.pro.yearly",
 ]
-private let GROUP_ID = "22555679"
+private let GROUP_ID = "22555704"
 private let TRANSACTION_EVENT = "transaction"
 
 private let RESULT_PURCHASED = "purchased"
@@ -93,12 +93,15 @@ public class AppStore: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    // sync() can fail even when the phone already holds the purchase (seen in
+    // TestFlight as "Unable to Complete Request"), so what StoreKit already
+    // has is still answered. Only an empty list keeps the sync error.
     @objc func restore(_ call: CAPPluginCall) {
         Task {
             do {
                 try await StoreKit.AppStore.sync()
             } catch {
-                call.reject(error.localizedDescription, ERROR_STORE, error)
+                await self.resolveKnownItems(call, syncError: error)
                 return
             }
             await self.resolveOwnedItems(call)
@@ -198,6 +201,14 @@ extension AppStore {
         } catch {
             call.reject(error.localizedDescription, ERROR_STORE, error)
         }
+    }
+
+    private func resolveKnownItems(_ call: CAPPluginCall, syncError: Error) async {
+        guard let items = try? await ownedItemData(), !items.isEmpty else {
+            call.reject(syncError.localizedDescription, ERROR_STORE, syncError)
+            return
+        }
+        call.resolve(["items": items])
     }
 
     // Both items share one group, so their statuses repeat; originalID keeps
