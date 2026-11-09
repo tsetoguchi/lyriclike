@@ -26,7 +26,7 @@ const LYRIC_TITLE_LABEL = 'Title';
 const DELETE_LYRIC_HEADING = 'Delete page';
 const LEAVE_LYRIC_HEADING = 'Leave page';
 const RENAME_HEADING = 'Rename page';
-const PLACEHOLDER_TITLE = 'Untitled page';
+const PLACEHOLDER_TITLE = 'Untitled';
 const CREATE_ACCOUNT_MESSAGE =
   'Your notebook saves every page you write, so you can pick it up again on '
   + 'any device.';
