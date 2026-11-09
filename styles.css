@@ -2814,6 +2814,17 @@ body:not(.signed-in) .invite-btn {
     display: none;
   }
 
+  /* Share, the page's own buttons and Invite stand as tall as an icon
+     button (the icon and its padding), so the title row reads as one set. */
+  .panel-header .toggle-btn:not([hidden]),
+  .invite-btn-panel:not([hidden]) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(var(--header-icon-size) + var(--space-2) * 2);
+  }
+
   /* On a narrow window the title row reaches the corner, so it stops short
      of the button instead of running under it. Three of --space-8 clears the
      button's width. */
