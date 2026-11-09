@@ -385,6 +385,12 @@ header .nav-icon circle {
    instead of script trying to keep them in step a frame late. align-items is
    flex-start so each column is its own content height rather than being
    stretched to the viewport. */
+/* The title, the page's buttons and any notice. Wider screens lay them out
+   in the panel as before; phones float them over the words (below). */
+.page-head {
+  display: contents;
+}
+
 .lyrics-area {
   flex: 1;
   display: flex;
@@ -2833,21 +2839,59 @@ body:not(.signed-in) .invite-btn {
   }
 }
 
-/* Phones have no title row, so it sits beside Share in the row above the
-   words, and stretches to the row so it stands as tall as the icon buttons. */
+/* Phones: the title, its buttons and any notice scroll away with the words
+   (page-head.js moves them), and Invite stays in the panel's top corner,
+   level with the button row, as tall as its buttons. */
 @media (max-width: 768px) {
-  .invite-btn-panel {
+  .lyrics-panel {
+    overflow: hidden;
+  }
+
+  .page-head {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper-panel);
+  }
+
+  /* The words start under the head, which page-head.js measures. */
+  .lyrics-area,
+  .page-preview {
+    padding-top: var(--page-head-height, 0px);
+  }
+
+  .lyrics-area:has(> .sample-bar:not([hidden])),
+  body.expects-sample .lyrics-area {
+    padding-top: calc(var(--page-head-height, 0px) + var(--space-8));
+  }
+
+  .sample-bar {
+    top: var(--page-head-height, 0px);
+  }
+
+  .page-meta .toggle-btn.invite-btn-phone {
     display: none;
   }
 
-  .page-meta .toggle-btn.invite-btn {
-    align-self: stretch;
-    height: auto;
-    padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
-    background: transparent;
+  /* The row stops short of the corner Invite stands in. Three of
+     --space-8 clears its width, as on wider screens. */
+  .page-meta {
+    padding-right: calc(var(--space-5) + var(--space-8) * 3);
   }
 
-  .page-meta .toggle-btn.invite-btn:hover {
+  .invite-btn-panel:not([hidden]) {
+    top: var(--space-3);
+    box-sizing: border-box;
+    height: var(--tap-target);
+    padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+    background: var(--paper-panel);
+  }
+
+  .invite-btn-panel:not([hidden]):hover {
     background: var(--ink-wash);
   }
 }
@@ -4934,7 +4978,7 @@ body.signed-in .sidebar-links {
 
   /* Under the row, the title takes the gap the row used to keep above the
      words. */
-  .lyrics-panel:has(> .page-meta > :not([hidden])) .panel-header {
+  .page-head:has(> .page-meta > :not([hidden])) .panel-header {
     padding-top: 0;
     padding-bottom: var(--space-2);
   }

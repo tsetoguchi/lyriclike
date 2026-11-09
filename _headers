@@ -105,6 +105,9 @@
 /sidebar.js
   Cache-Control: no-cache
 
+/page-head.js
+  Cache-Control: no-cache
+
 /sidebar-swipe.js
   Cache-Control: no-cache
 
