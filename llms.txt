@@ -1,0 +1,43 @@
+# LyricLike
+
+> LyricLike is a free web app for writing song lyrics. As you type, it counts the syllables in each line, labels the rhyme scheme (A, B, C), and marks internal rhymes. Click any word to find rhymes that match by sound, near rhymes included, not just words with the same spelling at the end. It works in the browser with no sign-up.
+
+LyricLike is made for songwriters, rappers and poets. Rhymes come from the CMU Pronouncing Dictionary, so they match how words sound. The rhyme list is grouped into six kinds, from closest to loosest (examples rhyme with "light"):
+
+- Perfect: same vowel, same ending (night)
+- Family: same vowel, an ending that sounds close, like t and d (ride)
+- Additive: same vowel, extra sounds on the end (lights)
+- Subtractive: same vowel, fewer sounds on the end (why)
+- Assonance: same vowel, a different ending (time)
+- Consonance: a different vowel, the same ending (not)
+
+Common words come first. Names, rare words and crude words come last.
+
+Accounts are optional. Signing in with Google or with an email and password saves pages and syncs them across devices. With a free account you can share a page and write it with someone else at the same time, with live cursors.
+
+Lyrics are private. LyricLike never reads, sells or trains on them.
+
+## Main pages
+
+- [LyricLike app](https://lyriclike.com/): the lyric editor with syllable counts, rhyme-scheme labels and the rhyme finder
+- [How it works](https://lyriclike.com/guide/): how to find and swap in rhymes, read the syllable counts and rhyme letters, save pages, and write with others
+- [Rhyming dictionary](https://lyriclike.com/rhymes/): rhymes for 5,000 common words, from perfect rhymes to near rhymes, sorted by syllable count
+
+## Rhyme pages
+
+Each word has its own page at https://lyriclike.com/rhymes/WORD/ (lowercase). Some popular ones:
+
+- [Words that rhyme with love](https://lyriclike.com/rhymes/love/)
+- [Words that rhyme with time](https://lyriclike.com/rhymes/time/)
+- [Words that rhyme with life](https://lyriclike.com/rhymes/life/)
+- [Words that rhyme with day](https://lyriclike.com/rhymes/day/)
+- [Words that rhyme with you](https://lyriclike.com/rhymes/you/)
+- [Words that rhyme with mind](https://lyriclike.com/rhymes/mind/)
+- [Words that rhyme with eyes](https://lyriclike.com/rhymes/eyes/)
+- [Words that rhyme with blue](https://lyriclike.com/rhymes/blue/)
+
+## Optional
+
+- [Privacy](https://lyriclike.com/privacy/): what LyricLike keeps, where, and for how long
+- [Delete your account](https://lyriclike.com/delete-account/): how to delete an account and its pages
+- [Source code](https://github.com/tsetoguchi/lyriclike): the open source app (MIT)

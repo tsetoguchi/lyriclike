@@ -20,7 +20,7 @@ describe('isBundledRootFile', () => {
   });
 
   it('leaves out what only the website host reads', () => {
-    for (const name of ['404.html', '_headers', '_redirects', 'wrangler.toml', 'sitemap.xml', 'robots.txt', 'README.md']) {
+    for (const name of ['404.html', '_headers', '_redirects', 'wrangler.toml', 'sitemap.xml', 'robots.txt', 'llms.txt', 'README.md']) {
       assert.equal(isBundledRootFile(name), false, name);
     }
   });
