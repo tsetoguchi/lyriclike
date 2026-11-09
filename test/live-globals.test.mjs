@@ -44,6 +44,36 @@ describe('global names', () => {
   }
 });
 
+// Every name any app script sets on window, by the script that sets it.
+function windowNamesBySetter() {
+  const setters = new Map();
+  for (const script of SCRIPTS) {
+    const source = readFileSync(new URL(`../${script}`, import.meta.url), 'utf8');
+    for (const [, name] of source.matchAll(/\bwindow\.(\w+)\s*=(?!=)/g)) {
+      if (!setters.has(name)) setters.set(name, new Set());
+      setters.get(name).add(script);
+    }
+  }
+  return setters;
+}
+
+// The same trap for every name, not just the live ones: storage.js once had a
+// top-level isCoachTourOpen that replaced coach-tour.js's and called itself.
+describe('top-level functions and other scripts\' window names', () => {
+  const setters = windowNamesBySetter();
+  for (const script of SCRIPTS) {
+    it(`${script} declares no top-level function another script sets on window`, () => {
+      const source = readFileSync(new URL(`../${script}`, import.meta.url), 'utf8');
+      const declared = [...source.matchAll(/^(?:async\s+)?function\s+(\w+)/gm)].map(match => match[1]);
+      const clashes = declared.filter((name) => {
+        const others = [...(setters.get(name) ?? [])].filter(setter => setter !== script);
+        return others.length > 0;
+      });
+      assert.deepEqual(clashes, []);
+    });
+  }
+});
+
 describe('short names outside the presence scripts', () => {
   for (const script of ['notebook-list.js', 'sharing.js']) {
     it(`${script} shortens names through window.LivePresence, guarded`, () => {
