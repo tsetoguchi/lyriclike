@@ -36,6 +36,14 @@
     // A password field also tells password managers what to fill.
     input.type = field.type || 'text';
     input.autocomplete = field.type === 'password' ? 'current-password' : 'off';
+    // Phones capitalise the first letter, which an email address never needs.
+    if (requiredAnswer !== null) input.setAttribute('autocapitalize', 'off');
+    else input.removeAttribute('autocapitalize');
+  }
+
+  // Case doesn't count: email addresses ignore it, and so does typing DELETE.
+  function isAnswerMatching(text) {
+    return text.trim().toLowerCase() === requiredAnswer.toLowerCase();
   }
 
   // A second line under the message, for text an extension script sets. It is
@@ -80,7 +88,7 @@
 
   // Only a field that has to match can hold the button shut.
   function updateConfirmState() {
-    confirm.disabled = requiredAnswer !== null && input.value.trim() !== requiredAnswer;
+    confirm.disabled = requiredAnswer !== null && !isAnswerMatching(input.value);
   }
 
   function close(answer) {
