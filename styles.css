@@ -70,6 +70,11 @@ body {
   flex-direction: column;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
+  /* The iPhone Duo's status bar is a column down one side, reported as a
+     side inset; so is the notch on an iPhone held sideways. Each side is
+     its own value, since they differ. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 #app-content {
@@ -3896,6 +3901,8 @@ a.account-menu-item {
    with transform and visibility, never display, which cannot animate. */
 
 #sidebar {
+  /* Its items stay clear of a notch on the left when held sideways. */
+  padding-left: env(safe-area-inset-left);
   position: fixed;
   inset: 0 auto 0 0;
   width: var(--sidebar-width);
@@ -5522,6 +5529,9 @@ body.signed-in .sidebar-links {
     inset: 0;
     z-index: var(--z-hub);
     background: var(--desk);
+    /* Clear of a side inset, as body is. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   /* Leaving, the start screen and its top bar fade together at the

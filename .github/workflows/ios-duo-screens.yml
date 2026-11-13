@@ -29,6 +29,10 @@ jobs:
       SHOTS_DIR: ${{ github.workspace }}/duo-screens
       # The page needs time to load its words and draw before a screenshot.
       SETTLE_SECONDS: 12
+      # The simulator's screen IDs: 1 is the outer display (1398x2034),
+      # 3 the inner one (2007x2853), from `simctl io enumerate`.
+      OUTER_DISPLAY: 1
+      INNER_DISPLAY: 3
     steps:
       - uses: actions/checkout@v4
 
@@ -77,16 +81,17 @@ jobs:
           device=$(xcrun simctl create "LyricLike Duo" "$DEVICE_TYPE" "$runtime")
           xcrun simctl boot "$device"
           xcrun simctl bootstatus "$device" -b
-          xcrun simctl io "$device" enumerate
           xcrun simctl install "$device" "$RUNNER_TEMP/derived/Build/Products/Debug-iphonesimulator/App.app"
           xcrun simctl launch "$device" "$BUNDLE_ID"
           sleep "$SETTLE_SECONDS"
           mkdir -p "$SHOTS_DIR"
-          # Each display the Duo has gets its own shot; one that is off fails.
-          for display in internal external 1 2; do
-            xcrun simctl io "$device" screenshot --display="$display" \
-              "$SHOTS_DIR/start-$display.png" || echo "No shot for display $display"
-          done
+          # Folded, the outer display is on.
+          xcrun simctl io "$device" screenshot --display="$OUTER_DISPLAY" "$SHOTS_DIR/outer.png"
+          # Unfolded: the inner display on, the outer one off.
+          xcrun simctl io "$device" screenConfig --display="$INNER_DISPLAY" power on
+          xcrun simctl io "$device" screenConfig --display="$OUTER_DISPLAY" power off
+          sleep "$SETTLE_SECONDS"
+          xcrun simctl io "$device" screenshot --display="$INNER_DISPLAY" "$SHOTS_DIR/inner.png"
           for shot in "$SHOTS_DIR"/*.png; do sips -g pixelWidth -g pixelHeight "$shot"; done
 
       - name: Keep the screenshots
