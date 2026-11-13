@@ -138,6 +138,19 @@
   }
 
   // The keyboard may shrink the page, so that scene allows a new size.
+  // Closing may need a button scrolled out of view, as Log in's X is once the
+  // keyboard pushes the form up; a person scrolls to it.
+  function clickFirstPresent(selectors) {
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el && el.getClientRects().length > 0) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
   async function showScene(name, allowsResize = false) {
     await wait(STEP_MS);
     if (!allowsResize && sizeKey() !== roundSize) throw new Error('size changed');
@@ -154,7 +167,7 @@
     }
     const failures = await showScene(name, allowsResize);
     document.activeElement?.blur();
-    clickFirstShown(closeSelectors);
+    clickFirstPresent(closeSelectors);
     await wait(STEP_MS);
     return failures;
   }
