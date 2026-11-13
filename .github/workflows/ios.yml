@@ -73,7 +73,6 @@ jobs:
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
-          xcrun simctl list devicetypes | grep -i 'iphone' || true
 
       - name: Compile without signing
         if: ${{ !inputs.upload && !inputs.simulator }}

@@ -8,9 +8,6 @@ name: iPhone Duo screenshots
 
 on:
   workflow_dispatch:
-  # TEMP: lets the branch run it before the file reaches main. Remove before merging.
-  push:
-    branches: [xcode-27-build]
 
 concurrency:
   group: ios-duo-screens
