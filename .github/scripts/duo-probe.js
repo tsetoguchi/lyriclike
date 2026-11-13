@@ -6,6 +6,7 @@
   const RUNNER_URL = 'http://127.0.0.1:8723/event';
   const SETTLE_MS = 4000;
   const STEP_MS = 1500;
+  const ANSWER_WAIT_MS = 30000;
   const FOCUS_WAIT_MS = 15000;
   const KEYBOARD_MS = 2000;
   const EDGE_SLACK_PX = 1;
@@ -31,7 +32,7 @@
     const line = ['DUO', roundNumber, roundSize, ...parts].join('|');
     console.log(line);
     try {
-      await fetch(RUNNER_URL, { method: 'POST', body: line });
+      await fetch(RUNNER_URL, { method: 'POST', body: line, signal: AbortSignal.timeout(ANSWER_WAIT_MS) });
     } catch {
       // No runner listening.
     }
@@ -146,6 +147,7 @@
   }
 
   async function tryScene(name, openSelectors, closeSelectors, allowsResize = false) {
+    await log('step', `opening ${name}`);
     if (!clickFirstShown(openSelectors)) {
       await log('skip', name, 'nothing to open it with');
       return 0;
@@ -170,6 +172,14 @@
     return null;
   }
 
+  function describeCover(editor) {
+    const box = editor.getBoundingClientRect();
+    const x = box.left + box.width * TAP_ACROSS;
+    const y = (Math.max(box.top, 0) + Math.min(box.bottom, innerHeight)) / 2;
+    const hit = document.elementFromPoint(x, y);
+    return `editor ${Math.round(box.top)}..${Math.round(box.bottom)}, ${hit ? describe(hit) : 'nothing'} on top`;
+  }
+
   function waitForFocus(el) {
     return new Promise(resolve => {
       const timer = setTimeout(() => resolve(false), FOCUS_WAIT_MS);
@@ -190,7 +200,7 @@
     }
     const point = findEditorTapPoint(editor);
     if (!point) {
-      await log('check', 'FAIL', 'keyboard', 'no open spot of the editor to tap');
+      await log('check', 'FAIL', 'keyboard', `no open spot of the editor to tap; ${describeCover(editor)}`);
       return 1;
     }
     const focused = waitForFocus(editor);
@@ -258,6 +268,8 @@
     }, SETTLE_MS);
   }
 
+  addEventListener('error', event => log('error', event.message));
+  addEventListener('unhandledrejection', event => log('error', String(event.reason)));
   addEventListener('resize', scheduleRound);
   addEventListener('load', scheduleRound);
 })();

@@ -131,6 +131,8 @@ def carry_out(udid, shots_dir, pose, parts, report):
         print(f"  {parts[1]} {parts[2]}: {parts[3]}")
     elif kind == "skip":
         print(f"  skipped {parts[1]}: {parts[2]}")
+    else:
+        print(f"  {kind}: {' '.join(parts[1:])}")
 
 
 def follow_round(udid, steps, round_number, shots_dir, pose, report):
