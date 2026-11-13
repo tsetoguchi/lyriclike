@@ -1,0 +1,248 @@
+// Goes into the app only in the iPhone Duo test build, never the shipped app.
+// After each fold or turn it walks through the main screens and checks the
+// layout of each. Every step goes to duo-run.py's local server, which answers
+// once it has taken the screenshot, so the two stay in step.
+(() => {
+  const RUNNER_URL = 'http://127.0.0.1:8723/event';
+  const SETTLE_MS = 4000;
+  const STEP_MS = 1500;
+  const ANSWER_WAIT_MS = 30000;
+  const KEYBOARD_MS = 2000;
+  const EDGE_SLACK_PX = 1;
+  const MIN_TARGET_PX = 44;
+  const INTERACTIVE = 'button, a[href], input, textarea, select, [role="tab"], '
+    + '[contenteditable="true"]';
+
+  let roundNumber = 0;
+  let roundSize = '';
+  let isRunning = false;
+  let settleTimer = 0;
+
+  function sizeKey() {
+    return `${innerWidth}x${innerHeight}`;
+  }
+
+  // Waits for the runner's answer. Without a runner, as in a desktop browser,
+  // the line still goes to the console.
+  async function log(...parts) {
+    const line = ['DUO', roundNumber, roundSize, ...parts].join('|');
+    console.log(line);
+    try {
+      await fetch(RUNNER_URL, { method: 'POST', body: line, signal: AbortSignal.timeout(ANSWER_WAIT_MS) });
+    } catch {
+      // No runner listening.
+    }
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function readInsets() {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;'
+      + 'padding:env(safe-area-inset-top) env(safe-area-inset-right) '
+      + 'env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(probe);
+    const style = getComputedStyle(probe);
+    const insets = {
+      top: parseFloat(style.paddingTop), right: parseFloat(style.paddingRight),
+      bottom: parseFloat(style.paddingBottom), left: parseFloat(style.paddingLeft),
+    };
+    probe.remove();
+    return insets;
+  }
+
+  function isShown(el) {
+    const box = el.getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) return false;
+    const x = Math.min(Math.max(box.left + box.width / 2, 0), innerWidth - 1);
+    const y = Math.min(Math.max(box.top + box.height / 2, 0), innerHeight - 1);
+    const hit = document.elementFromPoint(x, y);
+    return Boolean(hit) && (hit === el || el.contains(hit));
+  }
+
+  function describe(el) {
+    const name = el.id ? `#${el.id}` : el.tagName.toLowerCase();
+    const label = (el.getAttribute('aria-label') || el.textContent || '').trim();
+    return `${name} "${label.slice(0, 24)}"`;
+  }
+
+  // A control scrolled partly out of a scrolling box is only out of view; the
+  // reader scrolls back to it. Only a fixed one under the top bar is stuck.
+  function isInScroller(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const { overflowY } = getComputedStyle(node);
+      const canScroll = overflowY === 'auto' || overflowY === 'scroll';
+      if (canScroll && node.scrollHeight > node.clientHeight) return true;
+    }
+    return false;
+  }
+
+  function findEdgeProblem(el, box, insets) {
+    if (box.left < insets.left - EDGE_SLACK_PX) return 'left side bar or edge';
+    if (box.right > innerWidth - insets.right + EDGE_SLACK_PX) return 'right side bar or edge';
+    if (box.top < insets.top - EDGE_SLACK_PX && !isInScroller(el)) return 'top bar';
+    return '';
+  }
+
+  // Links inside a sentence are as tall as the text, which is fine.
+  function isSmallTarget(el, box) {
+    if (el.tagName === 'A' && getComputedStyle(el).display === 'inline') return false;
+    return box.width < MIN_TARGET_PX && box.height < MIN_TARGET_PX;
+  }
+
+  async function checkControls(scene, insets) {
+    let failures = 0;
+    for (const el of document.querySelectorAll(INTERACTIVE)) {
+      if (!isShown(el)) continue;
+      const box = el.getBoundingClientRect();
+      const problem = findEdgeProblem(el, box, insets);
+      if (problem) {
+        failures += 1;
+        await log('check', 'FAIL', scene, `${describe(el)} is under the ${problem}`);
+      }
+      if (isSmallTarget(el, box)) {
+        await log('check', 'WARN', scene,
+          `${describe(el)} is small (${Math.round(box.width)}x${Math.round(box.height)})`);
+      }
+    }
+    return failures;
+  }
+
+  async function checkSideScroll(scene) {
+    const width = document.documentElement.scrollWidth;
+    if (width <= innerWidth + EDGE_SLACK_PX) return 0;
+    await log('check', 'FAIL', scene, `page scrolls sideways (${width} wide in ${innerWidth})`);
+    return 1;
+  }
+
+  async function checkScene(scene) {
+    const insets = readInsets();
+    return (await checkControls(scene, insets)) + (await checkSideScroll(scene));
+  }
+
+  function clickFirstShown(selectors) {
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el && isShown(el)) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // The keyboard may shrink the page, so that scene allows a new size.
+  // Closing may need a button scrolled out of view, as Log in's X is once the
+  // keyboard pushes the form up; a person scrolls to it.
+  function clickFirstPresent(selectors) {
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el && el.getClientRects().length > 0) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function showScene(name, allowsResize = false) {
+    await wait(STEP_MS);
+    if (!allowsResize && sizeKey() !== roundSize) throw new Error('size changed');
+    const failures = await checkScene(name);
+    await log('scene', name, failures);
+    return failures;
+  }
+
+  async function tryScene(name, openSelectors, closeSelectors, allowsResize = false) {
+    await log('step', `opening ${name}`);
+    if (!clickFirstShown(openSelectors)) {
+      await log('skip', name, 'nothing to open it with');
+      return 0;
+    }
+    const failures = await showScene(name, allowsResize);
+    document.activeElement?.blur();
+    clickFirstPresent(closeSelectors);
+    await wait(STEP_MS);
+    return failures;
+  }
+
+  // The app raises the keyboard for a field it puts the cursor in itself, as
+  // Log in does, so this needs no tap. Simulated taps on the inner display
+  // landed in the wrong place and picked words of the sample verse.
+  async function keyboardScene() {
+    const editor = document.getElementById('lyrics');
+    if (!editor || editor.getClientRects().length === 0) {
+      await log('skip', 'keyboard', 'editor not on screen');
+      return 0;
+    }
+    editor.focus();
+    await wait(KEYBOARD_MS);
+    if (document.activeElement !== editor) {
+      await log('check', 'FAIL', 'keyboard', 'the editor did not take the cursor');
+      return 1;
+    }
+    const failures = await showScene('keyboard', true);
+    editor.blur();
+    await wait(STEP_MS);
+    return failures;
+  }
+
+  async function phoneTabScenes() {
+    const failures = await tryScene('rhymes-tab',
+      ['.mobile-tab[data-tab="rhymes"]'], ['.mobile-tab[data-tab="lyrics"]']);
+    return failures;
+  }
+
+  // A round cut short by a fold can leave a popup or the keyboard open.
+  async function clearScreen() {
+    document.activeElement?.blur();
+    clickFirstShown(['#auth-close', '#sidebar-close-btn', '.modal-overlay.open .modal-close']);
+    await wait(STEP_MS);
+  }
+
+  async function walkScenes() {
+    await clearScreen();
+    let failures = await showScene('start');
+    clickFirstShown(['#coach-skip']);
+    failures += await showScene('page');
+    failures += await phoneTabScenes();
+    failures += await tryScene('notebook',
+      ['#notebook-btn', '#rail-open-btn'], ['#sidebar-close-btn', '#sidebar-scrim']);
+    failures += await tryScene('highlights', ['#rhymes-menu-btn'], ['#rhymes-menu-btn']);
+    // Log in puts the cursor in the email field, so the keyboard may open.
+    failures += await tryScene('log-in', ['#sign-in-btn'], ['#auth-close'], true);
+    failures += await keyboardScene();
+    return failures;
+  }
+
+  async function runRound() {
+    isRunning = true;
+    roundNumber += 1;
+    roundSize = sizeKey();
+    const insets = readInsets();
+    await log('round-start', `insets ${insets.top},${insets.right},${insets.bottom},${insets.left}`);
+    try {
+      await log('round-done', await walkScenes());
+    } catch (error) {
+      await log('round-abort', error.message);
+      // The screen may settle back to the same size; it still needs a full round.
+      roundSize = '';
+    }
+    isRunning = false;
+    if (sizeKey() !== roundSize) scheduleRound();
+  }
+
+  function scheduleRound() {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      if (!isRunning && sizeKey() !== roundSize) runRound();
+    }, SETTLE_MS);
+  }
+
+  addEventListener('error', event => log('error', event.message));
+  addEventListener('unhandledrejection', event => log('error', String(event.reason)));
+  addEventListener('resize', scheduleRound);
+  addEventListener('load', scheduleRound);
+})();

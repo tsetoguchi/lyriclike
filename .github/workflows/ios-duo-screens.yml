@@ -1,0 +1,102 @@
+name: iPhone Duo screenshots
+
+# Runs the app in Xcode 27.1's iPhone Duo simulator in four poses: folded,
+# unfolded, unfolded in portrait, and tent. In each it opens the main screens,
+# checks that no control sits under the status bar or off the edge, and keeps
+# a screenshot of each. Run by hand from the Actions tab; it needs no secrets
+# and signs nothing.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-duo-screens
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  duo:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      PROJECT_DIR: mobile/ios/App
+      BUNDLE_ID: com.lyriclike.app
+      DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-Duo
+      SHOTS_DIR: ${{ github.workspace }}/duo-screens
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install the app's dependencies
+        working-directory: mobile
+        run: npm ci
+
+      # The probe walks the screens and checks the layout. It goes into this
+      # test build only; the shipped app never carries it.
+      - name: Copy the site into the app, with the test probe
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          npm run copy
+          cp "$GITHUB_WORKSPACE/.github/scripts/duo-probe.js" www/duo-probe.js
+          sed -i '' 's#</body>#<script src="duo-probe.js"></script></body>#' www/index.html
+          grep -q 'duo-probe.js' www/index.html
+          npx cap sync ios
+
+      - name: Pick Xcode 27.1
+        run: sudo xcode-select -s /Applications/Xcode_27.1.app
+
+      - name: Build for the simulator
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          xcodebuild build             -project App.xcodeproj -scheme App -configuration Debug             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'             -derivedDataPath "$RUNNER_TEMP/derived"             ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      # simctl can't fold the Duo; duoctl can, through private parts of
+      # Apple's tools. It also screenshots whichever screen is on.
+      - name: Install duoctl, the tool that folds the Duo
+        run: |
+          set -euo pipefail
+          git clone https://github.com/skarol/duoctl.git "$RUNNER_TEMP/duoctl"
+          git -C "$RUNNER_TEMP/duoctl" switch --detach "$DUOCTL_COMMIT"
+          sudo ln -s "$RUNNER_TEMP/duoctl/skills/duoctl/scripts/duoctl" /usr/local/bin/duoctl
+          duoctl --version
+        env:
+          # v0.2.1, pinned so a new release can't change what runs here.
+          DUOCTL_COMMIT: c6ff3e961a9858fb061907448e702d7d1617dc4a
+
+      - name: Start an iPhone Duo
+        run: |
+          set -euo pipefail
+          # Only some iOS runtimes support the Duo; take the newest that does.
+          runtime=$(xcrun simctl list runtimes -j             | python3 "$GITHUB_WORKSPACE/.github/scripts/duo-runtime.py" "$DEVICE_TYPE")
+          echo "Runtime: $runtime"
+          device=$(xcrun simctl create "LyricLike Duo" "$DEVICE_TYPE" "$runtime")
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" "$RUNNER_TEMP/derived/Build/Products/Debug-iphonesimulator/App.app"
+          echo "DUO_UDID=$device" >> "$GITHUB_ENV"
+
+      - name: Test every pose
+        run: |
+          python3 "$GITHUB_WORKSPACE/.github/scripts/duo-run.py"             --udid "$DUO_UDID" --bundle-id "$BUNDLE_ID" --shots "$SHOTS_DIR"
+
+      - name: Show the report
+        if: always()
+        run: cat "$SHOTS_DIR/report.md" >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duo-screens
+          path: ${{ env.SHOTS_DIR }}
+          retention-days: 7
+          if-no-files-found: warn
