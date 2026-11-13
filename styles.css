@@ -2873,7 +2873,9 @@ body:not(.signed-in) .invite-btn {
     top: var(--page-head-height, 0px);
   }
 
-  .page-meta .toggle-btn.invite-btn-phone {
+  /* :not([hidden]) so this outranks the row's own button rule further down,
+     which would otherwise show it as a second Invite under the corner one. */
+  .page-meta .toggle-btn.invite-btn-phone:not([hidden]) {
     display: none;
   }
 
