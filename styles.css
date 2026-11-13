@@ -3819,6 +3819,19 @@ a.account-menu-item {
   color: var(--ink-faded);
 }
 
+/* The iOS app's security check (turnstile-frame.js). It takes no room until
+   the challenge needs a tap; Turnstile's widget is 65px tall. */
+.auth-turnstile-frame {
+  display: block;
+  width: 100%;
+  height: 0;
+  border: 0;
+}
+
+.auth-turnstile-frame.is-shown {
+  height: 65px;
+}
+
 /* Read by screen readers, not shown. */
 .visually-hidden {
   position: absolute;

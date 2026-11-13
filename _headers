@@ -221,3 +221,12 @@
 
 /rhymebrain-alternative/*
   Cache-Control: no-cache
+
+/turnstile-frame.js
+  Cache-Control: no-cache
+
+# The iOS app shows this page in a frame to run the security check (Turnstile
+# needs an https page). Only the iOS app's origin is sent the token.
+/app-check/*
+  ! X-Frame-Options
+  Cache-Control: no-cache
