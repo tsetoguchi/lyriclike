@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """Walk the app through the iPhone Duo's poses and screenshot every screen.
 
-The test build carries duo-probe.js, which logs a DUO line when a screen is
-ready or needs a real tap. This script launches the app, puts the Duo in each
-pose, and answers those lines, so each screenshot matches what the probe
-checked. It writes a report and exits 1 if any check failed.
+The test build carries duo-probe.js, which posts each step to a small server
+here and waits for the answer. The server answers only after it has taken the
+screenshot or made the tap the step asks for, so each screenshot shows what the
+probe checked. This script puts the Duo in each pose, writes a report, and
+exits 1 if any check failed.
 
   duo-run.py --udid <udid> --bundle-id <id> --shots <dir>
 """
 
 import argparse
-import os
-import pty
+import http.server
 import queue
-import re
 import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
 
-PROBE_LINE = re.compile(r"DUO\|(\d+)\|([0-9x]*)\|(.*)$")
+RUNNER_ADDRESS = ("127.0.0.1", 8723)
+ANSWER_TIMEOUT_SECONDS = 60
 ROUND_START_TIMEOUT_SECONDS = 90
 ROUND_TIMEOUT_SECONDS = 240
 TAP_SETTLE_SECONDS = 0.5
@@ -34,6 +34,46 @@ POSES = (
 )
 
 
+class ProbeStep:
+    """One step the probe posted; it waits until answer() is called."""
+
+    def __init__(self, line):
+        _, number, size, *parts = line.strip().split("|")
+        self.round_number = int(number)
+        self.size = size
+        self.parts = parts
+        self._answered = threading.Event()
+
+    def answer(self):
+        self._answered.set()
+
+    def wait_for_answer(self):
+        return self._answered.wait(ANSWER_TIMEOUT_SECONDS)
+
+
+def make_handler(steps):
+    class StepHandler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            step = ProbeStep(self.rfile.read(length).decode("utf-8"))
+            steps.put(step)
+            step.wait_for_answer()
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    return StepHandler
+
+
+def start_server(steps):
+    server = http.server.ThreadingHTTPServer(RUNNER_ADDRESS, make_handler(steps))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
 def run_duoctl(udid, *args):
     result = subprocess.run(["duoctl", "-d", udid, *args], capture_output=True, text=True)
     if result.returncode != 0:
@@ -41,64 +81,30 @@ def run_duoctl(udid, *args):
     return result.stdout
 
 
-def start_app(udid, bundle_id, log_path):
-    """Launch the app and follow its console.
-
-    simctl holds back output written to a pipe until it has a full block, which
-    made every screenshot late. A pty makes it pass each line on as it prints.
-    """
-    reader_fd, writer_fd = pty.openpty()
-    app = subprocess.Popen(
-        ["xcrun", "simctl", "launch", "--console-pty", "--terminate-running-process",
-         udid, bundle_id],
-        stdin=subprocess.DEVNULL, stdout=writer_fd, stderr=writer_fd)
-    os.close(writer_fd)
-    stream = os.fdopen(reader_fd, "r", encoding="utf-8", errors="replace")
-    lines = queue.Queue()
-    threading.Thread(target=pump_lines, args=(stream, lines, log_path), daemon=True).start()
-    return app, lines
+def launch_app(udid, bundle_id, log_path):
+    subprocess.run(
+        ["xcrun", "simctl", "launch", "--terminate-running-process",
+         f"--stdout={log_path}", f"--stderr={log_path}", udid, bundle_id],
+        check=True)
 
 
-def pump_lines(stream, lines, log_path):
-    with open(log_path, "a", encoding="utf-8") as log:
-        for line in iter_lines(stream):
-            log.write(line)
-            log.flush()
-            match = PROBE_LINE.search(line)
-            if match:
-                lines.put((int(match.group(1)), match.group(2), match.group(3).split("|")))
-
-
-def iter_lines(stream):
-    """Yield lines until the app's console closes; a closed pty raises EIO."""
-    while True:
-        try:
-            line = stream.readline()
-        except OSError:
-            return
-        if not line:
-            return
-        yield line
-
-
-def next_line(lines, deadline):
+def next_step(steps, deadline):
     remaining = deadline - time.time()
-    if remaining <= 0:
-        raise TimeoutError("the app stopped answering")
     try:
-        return lines.get(timeout=remaining)
+        return steps.get(timeout=max(remaining, 0.1))
     except queue.Empty as error:
-        raise TimeoutError("the app stopped answering") from error
+        raise TimeoutError("the app stopped sending steps") from error
 
 
-def wait_for_round(lines, after_round):
-    """Return the number and size of the first round newer than after_round."""
+def wait_for_round(steps, after_round):
+    """Return the number of the first round newer than after_round."""
     deadline = time.time() + ROUND_START_TIMEOUT_SECONDS
     while True:
-        number, size, parts = next_line(lines, deadline)
-        if number > after_round and parts[0] == "round-start":
-            print(f"  round {number} at {size}: {parts[1]}")
-            return number, size
+        step = next_step(steps, deadline)
+        step.answer()
+        if step.round_number > after_round and step.parts[0] == "round-start":
+            print(f"  round {step.round_number} at {step.size}: {step.parts[1]}")
+            return step.round_number
 
 
 def tap_screen(udid, pose, x, y, report):
@@ -112,7 +118,7 @@ def tap_screen(udid, pose, x, y, report):
     time.sleep(TAP_SETTLE_SECONDS)
 
 
-def answer_line(udid, shots_dir, pose, parts, report):
+def carry_out(udid, shots_dir, pose, parts, report):
     kind = parts[0]
     if kind == "scene":
         shot = shots_dir / f"{pose}-{parts[1]}.png"
@@ -127,27 +133,30 @@ def answer_line(udid, shots_dir, pose, parts, report):
         print(f"  skipped {parts[1]}: {parts[2]}")
 
 
-def follow_round(udid, lines, round_number, shots_dir, pose, report):
-    """Answer one round's lines until it ends; return True if it finished."""
+def follow_round(udid, steps, round_number, shots_dir, pose, report):
+    """Carry out one round's steps until it ends; return True if it finished."""
     deadline = time.time() + ROUND_TIMEOUT_SECONDS
     while True:
-        number, _, parts = next_line(lines, deadline)
-        if number != round_number:
-            continue
-        if parts[0] in ("round-done", "round-abort"):
-            print(f"  {parts[0]}: {parts[1]}")
-            return parts[0] == "round-done"
-        answer_line(udid, shots_dir, pose, parts, report)
+        step = next_step(steps, deadline)
+        try:
+            if step.round_number != round_number:
+                continue
+            if step.parts[0] in ("round-done", "round-abort"):
+                print(f"  {step.parts[0]}: {step.parts[1]}")
+                return step.parts[0] == "round-done"
+            carry_out(udid, shots_dir, pose, step.parts, report)
+        finally:
+            step.answer()
 
 
-def run_pose(udid, lines, last_round, shots_dir, pose, steps, report):
+def run_pose(udid, steps, last_round, shots_dir, pose, moves, report):
     print(f"== {pose}")
-    for step in steps:
-        run_duoctl(udid, *step)
+    for move in moves:
+        run_duoctl(udid, *move)
     print(run_duoctl(udid, "state").strip())
     while True:
-        round_number, _ = wait_for_round(lines, last_round)
-        if follow_round(udid, lines, round_number, shots_dir, pose, report):
+        round_number = wait_for_round(steps, last_round)
+        if follow_round(udid, steps, round_number, shots_dir, pose, report):
             return round_number
         last_round = round_number
 
@@ -175,14 +184,19 @@ def main():
     parser.add_argument("--shots", required=True, type=Path)
     args = parser.parse_args()
     args.shots.mkdir(parents=True, exist_ok=True)
-    app, lines = start_app(args.udid, args.bundle_id, args.shots / "app-console.log")
+    steps = queue.Queue()
+    server = start_server(steps)
+    launch_app(args.udid, args.bundle_id, args.shots / "app-console.log")
     report = []
     last_round = 0
     try:
-        for pose, steps in POSES:
-            last_round = run_pose(args.udid, lines, last_round, args.shots, pose, steps, report)
+        for pose, moves in POSES:
+            last_round = run_pose(args.udid, steps, last_round, args.shots, pose, moves, report)
+    except (TimeoutError, RuntimeError) as error:
+        report.append(("-", "FAIL", "runner", str(error)))
+        print(f"FAIL runner: {error}")
     finally:
-        app.terminate()
+        server.shutdown()
     failures = write_report(report, args.shots / "report.md")
     print(f"{failures} failed checks")
     return 1 if failures else 0

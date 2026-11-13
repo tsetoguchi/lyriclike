@@ -1,11 +1,11 @@
 // Goes into the app only in the iPhone Duo test build, never the shipped app.
-// After each fold or turn it walks through the main screens, checks the layout
-// of each, and logs "DUO|..." lines. duo-run.py reads them to know when to
-// take a screenshot or tap the screen.
+// After each fold or turn it walks through the main screens and checks the
+// layout of each. Every step goes to duo-run.py's local server, which answers
+// once it has taken the screenshot or made the tap, so the two stay in step.
 (() => {
+  const RUNNER_URL = 'http://127.0.0.1:8723/event';
   const SETTLE_MS = 4000;
   const STEP_MS = 1500;
-  const SCENE_HOLD_MS = 3500;
   const FOCUS_WAIT_MS = 15000;
   const KEYBOARD_MS = 2000;
   const EDGE_SLACK_PX = 1;
@@ -22,8 +22,16 @@
     return `${innerWidth}x${innerHeight}`;
   }
 
-  function log(...parts) {
-    console.log(['DUO', roundNumber, roundSize, ...parts].join('|'));
+  // Waits for the runner's answer. Without a runner, as in a desktop browser,
+  // the line still goes to the console.
+  async function log(...parts) {
+    const line = ['DUO', roundNumber, roundSize, ...parts].join('|');
+    console.log(line);
+    try {
+      await fetch(RUNNER_URL, { method: 'POST', body: line });
+    } catch {
+      // No runner listening.
+    }
   }
 
   function wait(ms) {
@@ -73,7 +81,7 @@
     return box.width < MIN_TARGET_PX && box.height < MIN_TARGET_PX;
   }
 
-  function checkControls(scene, insets) {
+  async function checkControls(scene, insets) {
     let failures = 0;
     for (const el of document.querySelectorAll(INTERACTIVE)) {
       if (!isShown(el)) continue;
@@ -81,25 +89,26 @@
       const problem = findEdgeProblem(box, insets);
       if (problem) {
         failures += 1;
-        log('check', 'FAIL', scene, `${describe(el)} is under the ${problem}`);
+        await log('check', 'FAIL', scene, `${describe(el)} is under the ${problem}`);
       }
       if (isSmallTarget(el, box)) {
-        log('check', 'WARN', scene, `${describe(el)} is small (${Math.round(box.width)}x${Math.round(box.height)})`);
+        await log('check', 'WARN', scene,
+          `${describe(el)} is small (${Math.round(box.width)}x${Math.round(box.height)})`);
       }
     }
     return failures;
   }
 
-  function checkSideScroll(scene) {
+  async function checkSideScroll(scene) {
     const width = document.documentElement.scrollWidth;
     if (width <= innerWidth + EDGE_SLACK_PX) return 0;
-    log('check', 'FAIL', scene, `page scrolls sideways (${width} wide in ${innerWidth})`);
+    await log('check', 'FAIL', scene, `page scrolls sideways (${width} wide in ${innerWidth})`);
     return 1;
   }
 
-  function checkScene(scene) {
+  async function checkScene(scene) {
     const insets = readInsets();
-    return checkControls(scene, insets) + checkSideScroll(scene);
+    return (await checkControls(scene, insets)) + (await checkSideScroll(scene));
   }
 
   function clickFirstShown(selectors) {
@@ -117,15 +126,14 @@
   async function showScene(name, allowsResize = false) {
     await wait(STEP_MS);
     if (!allowsResize && sizeKey() !== roundSize) throw new Error('size changed');
-    const failures = checkScene(name);
-    log('scene', name, failures);
-    await wait(SCENE_HOLD_MS);
+    const failures = await checkScene(name);
+    await log('scene', name, failures);
     return failures;
   }
 
   async function tryScene(name, openSelectors, closeSelectors, allowsResize = false) {
     if (!clickFirstShown(openSelectors)) {
-      log('skip', name, 'nothing to open it with');
+      await log('skip', name, 'nothing to open it with');
       return 0;
     }
     const failures = await showScene(name, allowsResize);
@@ -150,14 +158,14 @@
     // hit test; a tap on the verse still lands in it.
     const editor = document.getElementById('lyrics');
     if (!editor || editor.getBoundingClientRect().height < 1) {
-      log('skip', 'keyboard', 'editor not on screen');
+      await log('skip', 'keyboard', 'editor not on screen');
       return 0;
     }
     const box = editor.getBoundingClientRect();
     const focused = waitForFocus(editor);
-    log('tap', Math.round(box.left + box.width / 2), Math.round(box.top + 24));
+    await log('tap', Math.round(box.left + box.width / 2), Math.round(box.top + 24));
     if (!(await focused)) {
-      log('check', 'FAIL', 'keyboard', 'tapping the editor did not focus it');
+      await log('check', 'FAIL', 'keyboard', 'tapping the editor did not focus it');
       return 1;
     }
     await wait(KEYBOARD_MS);
@@ -200,11 +208,13 @@
     roundNumber += 1;
     roundSize = sizeKey();
     const insets = readInsets();
-    log('round-start', `insets ${insets.top},${insets.right},${insets.bottom},${insets.left}`);
+    await log('round-start', `insets ${insets.top},${insets.right},${insets.bottom},${insets.left}`);
     try {
-      log('round-done', await walkScenes());
+      await log('round-done', await walkScenes());
     } catch (error) {
-      log('round-abort', error.message);
+      await log('round-abort', error.message);
+      // The screen may settle back to the same size; it still needs a full round.
+      roundSize = '';
     }
     isRunning = false;
     if (sizeKey() !== roundSize) scheduleRound();
