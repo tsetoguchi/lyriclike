@@ -31,6 +31,8 @@
   const HTTP_CONFLICT = 409;
   const HTTP_CAPTCHA_REQUIRED = 428;
   const NETWORK_FAILURE = 0;
+  // The request never went out because the security check failed first.
+  const CHECK_FAILURE = -1;
 
   const TEXT = Object.freeze({
     FAILED: 'Something went wrong. Try again.',
@@ -205,6 +207,8 @@
   let turnstileScript = null;
   let widgetId = null;
   let tokenWaiter = null;
+  let checkFrame = null;
+  let checkAction = null;
 
   function loadTurnstileScript() {
     if (turnstileScript) return turnstileScript;
@@ -229,16 +233,47 @@
     tokenWaiter = waiter;
   }
 
-  async function prepareTurnstile(action) {
-    removeTurnstile();
-    if (!action || !methods.turnstileSiteKey) return;
-    armTokenWaiter();
+  function checkError(code) {
+    const error = new Error('turnstile');
+    error.code = code ? String(code) : null;
+    return error;
+  }
+
+  function rejectToken(code) {
+    if (tokenWaiter) tokenWaiter.reject(checkError(code));
+  }
+
+  function resolveToken(token) {
+    if (tokenWaiter) tokenWaiter.resolve(token);
+  }
+
+  // Turnstile runs only on http(s) pages, and the iOS app's pages are
+  // capacitor://, so there the check runs in a frame from the website.
+  function isFramedCheck() {
+    const shell = window.NativeShell;
+    return Boolean(shell && shell.isNative && shell.platform === 'ios' && window.TurnstileFrame);
+  }
+
+  function mountCheckFrame(action) {
+    checkFrame = window.TurnstileFrame.mount({
+      window,
+      container: turnstileEl,
+      siteOrigin: window.NativeShell.siteOrigin,
+      siteKey: methods.turnstileSiteKey,
+      action,
+      onToken: resolveToken,
+      onError: rejectToken,
+      onExpired: armTokenWaiter,
+    });
+  }
+
+  async function renderWidget(action) {
     const waiter = tokenWaiter;
     let api;
     try {
       api = await loadTurnstileScript();
     } catch {
-      waiter.reject(new Error('turnstile'));
+      waiter.reject(checkError(null));
       return;
     }
     if (tokenWaiter !== waiter || !api) return;
@@ -248,10 +283,22 @@
       appearance: 'interaction-only',
       theme: 'dark',
       size: 'flexible',
-      callback: token => { if (tokenWaiter) tokenWaiter.resolve(token); },
-      'error-callback': () => { if (tokenWaiter) tokenWaiter.reject(new Error('turnstile')); },
+      callback: resolveToken,
+      'error-callback': rejectToken,
       'expired-callback': armTokenWaiter,
     });
+  }
+
+  async function prepareTurnstile(action) {
+    removeTurnstile();
+    if (!action || !methods.turnstileSiteKey) return;
+    armTokenWaiter();
+    checkAction = action;
+    if (isFramedCheck()) {
+      mountCheckFrame(action);
+      return;
+    }
+    await renderWidget(action);
   }
 
   // Waits for the widget's token. Null when nothing is armed (no site key);
@@ -264,7 +311,16 @@
     return Promise.race([tokenWaiter.promise, timeout]);
   }
 
+  // A token is good for one request. A fresh frame is a fresh widget.
   function resetTurnstile() {
+    if (checkFrame) {
+      const action = checkAction;
+      removeTurnstile();
+      armTokenWaiter();
+      checkAction = action;
+      mountCheckFrame(action);
+      return;
+    }
     if (widgetId === null || !window.turnstile) return;
     armTokenWaiter();
     window.turnstile.reset(widgetId);
@@ -272,6 +328,9 @@
 
   function removeTurnstile() {
     tokenWaiter = null;
+    checkAction = null;
+    if (checkFrame) checkFrame.remove();
+    checkFrame = null;
     if (widgetId !== null && window.turnstile) window.turnstile.remove(widgetId);
     widgetId = null;
     turnstileEl.textContent = '';
@@ -419,14 +478,20 @@
     submitButton.setAttribute('aria-busy', String(isBusy));
   }
 
+  // The code is Turnstile's own, so a report of this message says what broke.
+  function checkFailedText(error) {
+    const code = error && error.code;
+    return code ? `${TEXT.CHECK_FAILED} (Code ${code}.)` : TEXT.CHECK_FAILED;
+  }
+
   // Runs one request with the Turnstile token when the view has a widget.
   async function postWithCheck(url, payload) {
     let token = null;
     try {
       token = await takeTurnstileToken();
-    } catch {
+    } catch (error) {
       resetTurnstile();
-      return { status: NETWORK_FAILURE, data: { error: { message: TEXT.CHECK_FAILED } } };
+      return { status: CHECK_FAILURE, data: { error: { message: checkFailedText(error) } } };
     }
     const result = await postJson(url, token ? { ...payload, turnstile: token } : payload);
     if (token) resetTurnstile();
