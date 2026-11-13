@@ -70,18 +70,23 @@ jobs:
       - name: Open the app on an iPhone Duo and take screenshots
         run: |
           set -euo pipefail
+          # Only some iOS runtimes support the Duo; take the newest that does.
           runtime=$(xcrun simctl list runtimes -j \
-            | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin)["runtimes"] if x["isAvailable"] and x["platform"]=="iOS"]; print(r[-1]["identifier"])')
+            | python3 "$GITHUB_WORKSPACE/.github/scripts/duo-runtime.py" "$DEVICE_TYPE")
+          echo "Runtime: $runtime"
           device=$(xcrun simctl create "LyricLike Duo" "$DEVICE_TYPE" "$runtime")
           xcrun simctl boot "$device"
           xcrun simctl bootstatus "$device" -b
+          xcrun simctl io "$device" enumerate
           xcrun simctl install "$device" "$RUNNER_TEMP/derived/Build/Products/Debug-iphonesimulator/App.app"
           xcrun simctl launch "$device" "$BUNDLE_ID"
           sleep "$SETTLE_SECONDS"
           mkdir -p "$SHOTS_DIR"
-          xcrun simctl io "$device" screenshot "$SHOTS_DIR/start.png"
-          # A second display, if the simulator names one, gets its own shot.
-          xcrun simctl io "$device" screenshot --display=external "$SHOTS_DIR/start-external.png" || true
+          # Each display the Duo has gets its own shot; one that is off fails.
+          for display in internal external 1 2; do
+            xcrun simctl io "$device" screenshot --display="$display" \
+              "$SHOTS_DIR/start-$display.png" || echo "No shot for display $display"
+          done
           for shot in "$SHOTS_DIR"/*.png; do sips -g pixelWidth -g pixelHeight "$shot"; done
 
       - name: Keep the screenshots
