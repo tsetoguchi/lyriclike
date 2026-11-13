@@ -726,14 +726,14 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   display: none;
 }
 
-/* The one-time "Write together" card: a note in the middle of the page, where
-   it gets seen, that still leaves the page usable. Styled like the share
-   dialog it points to. */
+/* The one-time "Write together" card: a note where the popups open, where it
+   gets seen, that still leaves the page usable. Styled like the share dialog
+   it points to. */
 .whats-new {
   position: fixed;
   left: 50%;
-  top: 50%;
-  translate: -50% -50%;
+  top: var(--popup-top);
+  translate: -50% 0;
   z-index: var(--z-overlay);
   width: 320px;
   max-width: calc(100vw - 2 * var(--space-4));
@@ -3144,8 +3144,13 @@ a.account-menu-item {
    panel keeps clear of each edge's inset: on the iPhone Duo that is the
    status column down one side. It also stops above the keyboard
    (keyboard-inset.js) and scrolls when the panel is taller than what is
-   left; "safe" keeps the panel's top reachable then. */
+   left.
+
+   Every popup opens at the same spot near the top, not centered, so one
+   doesn't sit higher than the next, and a popup whose steps change height
+   (Log in) keeps its title still. */
 :root {
+  --popup-top: max(min(18vh, 160px), env(safe-area-inset-top));
   --overlay-edge-top: max(var(--space-4), env(safe-area-inset-top));
   --overlay-edge-right: max(var(--space-4), env(safe-area-inset-right));
   --overlay-edge-bottom: max(var(--space-4), env(safe-area-inset-bottom));
@@ -3160,10 +3165,9 @@ a.account-menu-item {
   overflow-y: auto;
   background: var(--scrim);
   z-index: var(--z-overlay);
-  align-items: center;
-  align-items: safe center;
+  align-items: flex-start;
   justify-content: center;
-  padding: var(--overlay-edge-top) var(--overlay-edge-right)
+  padding: var(--popup-top) var(--overlay-edge-right)
     var(--overlay-edge-bottom) var(--overlay-edge-left);
   opacity: 0;
   visibility: hidden;
@@ -3214,10 +3218,9 @@ a.account-menu-item {
   overflow-y: auto;
   background: var(--scrim);
   z-index: var(--z-overlay-raised);
-  align-items: center;
-  align-items: safe center;
+  align-items: flex-start;
   justify-content: center;
-  padding: var(--overlay-edge-top) var(--overlay-edge-right)
+  padding: var(--popup-top) var(--overlay-edge-right)
     var(--overlay-edge-bottom) var(--overlay-edge-left);
   opacity: 0;
   visibility: hidden;
@@ -3619,13 +3622,6 @@ a.account-menu-item {
    display of their own would otherwise outrank. */
 #auth-panel [hidden] {
   display: none;
-}
-
-/* Pinned near the top rather than centered, so the title stays put when a
-   shorter step follows a taller one. */
-#auth-overlay {
-  align-items: flex-start;
-  padding-top: max(min(18vh, 160px), var(--overlay-edge-top));
 }
 
 .auth-heading {
