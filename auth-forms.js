@@ -113,10 +113,10 @@
       submit: null, links: ['back'], turnstile: null,
     },
     [VIEW.CONFIRM]: {
-      title: 'Confirm your email', google: false, email: false, password: 'current-password',
+      title: 'Almost done', google: false, email: false, password: 'current-password',
       passwordLabel: 'Password', hint: false,
-      message: 'Enter the password you chose when you signed up.',
-      submit: 'Confirm email', links: [], turnstile: null,
+      message: 'Enter your password to finish signing up.',
+      submit: 'Finish signing up', links: [], turnstile: null,
     },
     [VIEW.RESET]: {
       title: 'Set a new password', google: false, email: false, password: 'new-password',
@@ -129,7 +129,8 @@
   const form = document.getElementById('auth-form');
   const emailInput = document.getElementById('auth-email');
   const emailShown = document.getElementById('auth-email-shown');
-  const editEmailButton = emailShown.querySelector('[data-auth-link="edit-email"]');
+  const editEmailButton = document.querySelector(
+    '#auth-email-shown [data-auth-link="edit-email"]');
   const passwordInput = document.getElementById('auth-password');
   const passwordToggle = document.getElementById('auth-password-toggle');
   const passwordHint = document.getElementById('auth-password-hint');
