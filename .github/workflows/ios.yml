@@ -39,7 +39,9 @@ permissions:
 
 jobs:
   ios:
-    runs-on: macos-26
+    # Xcode 27.1 builds with the iOS 27.1 SDK, which lets the app fill the
+    # iPhone Duo's displays and earns its App Store badge.
+    runs-on: xcode-27
     timeout-minutes: 45
     env:
       PROJECT_DIR: mobile/ios/App
@@ -62,10 +64,16 @@ jobs:
           npm run copy
           npx cap sync ios
 
+      - name: Pick Xcode 27.1
+        run: sudo xcode-select -s "$XCODE_APP"
+        env:
+          XCODE_APP: /Applications/Xcode_27.1.app
+
       - name: Show the tools
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+          xcrun simctl list devicetypes | grep -i 'iphone' || true
 
       - name: Compile without signing
         if: ${{ !inputs.upload && !inputs.simulator }}
