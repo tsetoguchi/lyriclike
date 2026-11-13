@@ -45,13 +45,15 @@ const PAGE_BACKGROUND = '#f4f1ea';
 // and Outlook ignore @font-face and use the fallbacks.
 const FONT_BODY = "'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Arial, sans-serif";
 
-// Same-size box as the wordmark's 295x84 file, drawn for a light background:
-// the header wordmark's pale lettering would vanish on it. Gmail's image proxy
-// keeps a picture under its URL for good, so bump the version whenever the
-// file changes or old inboxes keep the old logo.
-const LOGO_PATH = 'assets/wordmark-light.png?v=2';
-const LOGO_WIDTH = 112;
-const LOGO_HEIGHT = 32;
+// The app's wordmark on a plate of the app's own dark, 375x140 drawn at
+// about 2.6x. Gmail's dark mode darkens the email but leaves pictures alone,
+// so a logo with see-through ground vanishes on one theme or the other; on
+// its own plate it reads on both. Gmail's image proxy keeps a picture under
+// its URL for good, so bump the version whenever the file changes or old
+// inboxes keep the old logo.
+const LOGO_PATH = 'assets/wordmark-email.png?v=1';
+const LOGO_WIDTH = 144;
+const LOGO_HEIGHT = 54;
 
 const FONT_FACES = [
   ['iA Writer Quattro', 400, 'normal', 'iAWriterQuattroS-Regular'],
