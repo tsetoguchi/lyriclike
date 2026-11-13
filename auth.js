@@ -40,6 +40,26 @@ async function initAuth() {
   }
 }
 
+// Asked again after something on the server changed the account, such as a
+// purchase in the iOS app. Only the account's numbers and the page count are
+// redrawn; the page being written is left alone. The same object is kept, so
+// code waiting on a check of this account still matches it. Any failure, or
+// a different account by now, changes nothing.
+async function refreshCurrentUser() {
+  const user = window.currentUser;
+  if (!user) return;
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) return;
+    const fresh = await res.json();
+    if (window.currentUser !== user || fresh.email !== user.email) return;
+    Object.assign(user, fresh);
+    if (window.NotebookList) window.NotebookList.refreshPageCount();
+  } catch {
+    // Offline: the next sign-in check catches up.
+  }
+}
+
 function showUser(user) {
   window.currentUser = user;
   if (window.rememberSignedIn) window.rememberSignedIn(true);
@@ -184,5 +204,6 @@ window.handleSessionExpired = showSignIn;
 window.closeAccountMenu = closeAccountMenu;
 window.startSignIn = startSignIn;
 window.startAppleSignIn = startAppleSignIn;
+window.refreshCurrentUser = refreshCurrentUser;
 
 initAuth();
