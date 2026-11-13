@@ -3,8 +3,7 @@
 
 The test build carries duo-probe.js, which posts each step to a small server
 here and waits for the answer. The server answers only after it has taken the
-screenshot or made the tap the step asks for, so each screenshot shows what the
-probe checked. This script puts the Duo in each pose, writes a report, and
+screenshot the step asks for, so each screenshot shows what the probe checked. This script puts the Duo in each pose, writes a report, and
 exits 1 if any check failed.
 
   duo-run.py --udid <udid> --bundle-id <id> --shots <dir>
@@ -23,7 +22,6 @@ RUNNER_ADDRESS = ("127.0.0.1", 8723)
 ANSWER_TIMEOUT_SECONDS = 60
 ROUND_START_TIMEOUT_SECONDS = 90
 ROUND_TIMEOUT_SECONDS = 240
-TAP_SETTLE_SECONDS = 0.5
 # Each pose, and the duoctl commands that move the Duo into it from the last.
 POSES = (
     ("folded", ()),
@@ -107,25 +105,12 @@ def wait_for_round(steps, after_round):
             return step.round_number
 
 
-def tap_screen(udid, pose, x, y, report):
-    """Tap where the probe asks; a point off the screen is a failed check."""
-    try:
-        run_duoctl(udid, "tap", x, y)
-    except RuntimeError as error:
-        report.append((pose, "FAIL", "tap", str(error)))
-        print(f"  FAIL tap: {error}")
-        return
-    time.sleep(TAP_SETTLE_SECONDS)
-
-
 def carry_out(udid, shots_dir, pose, parts, report):
     kind = parts[0]
     if kind == "scene":
         shot = shots_dir / f"{pose}-{parts[1]}.png"
         run_duoctl(udid, "screenshot", str(shot))
         print(f"  {parts[1]}: {parts[2]} failed checks -> {shot.name}")
-    elif kind == "tap":
-        tap_screen(udid, pose, parts[1], parts[2], report)
     elif kind == "check":
         report.append((pose, *parts[1:]))
         print(f"  {parts[1]} {parts[2]}: {parts[3]}")

@@ -63,7 +63,7 @@ jobs:
           xcodebuild build             -project App.xcodeproj -scheme App -configuration Debug             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'             -derivedDataPath "$RUNNER_TEMP/derived"             ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
       # simctl can't fold the Duo; duoctl can, through private parts of
-      # Apple's tools. It also taps and screenshots whichever screen is on.
+      # Apple's tools. It also screenshots whichever screen is on.
       - name: Install duoctl, the tool that folds the Duo
         run: |
           set -euo pipefail

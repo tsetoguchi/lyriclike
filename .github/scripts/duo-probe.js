@@ -1,19 +1,15 @@
 // Goes into the app only in the iPhone Duo test build, never the shipped app.
 // After each fold or turn it walks through the main screens and checks the
 // layout of each. Every step goes to duo-run.py's local server, which answers
-// once it has taken the screenshot or made the tap, so the two stay in step.
+// once it has taken the screenshot, so the two stay in step.
 (() => {
   const RUNNER_URL = 'http://127.0.0.1:8723/event';
   const SETTLE_MS = 4000;
   const STEP_MS = 1500;
   const ANSWER_WAIT_MS = 30000;
-  const FOCUS_WAIT_MS = 15000;
   const KEYBOARD_MS = 2000;
   const EDGE_SLACK_PX = 1;
   const MIN_TARGET_PX = 44;
-  const TAP_INSET_PX = 12;
-  const TAP_SCAN_STEP_PX = 8;
-  const TAP_ACROSS = 0.6;
   const INTERACTIVE = 'button, a[href], input, textarea, select, [role="tab"], '
     + '[contenteditable="true"]';
 
@@ -172,57 +168,21 @@
     return failures;
   }
 
-  // The lowest spot where the editor itself is on top: below the words, since
-  // a tap on a word of the sample verse shows its rhymes instead of typing,
-  // and above the bar the editor runs under.
-  function findEditorTapPoint(editor) {
-    const box = editor.getBoundingClientRect();
-    const x = Math.round(box.left + box.width * TAP_ACROSS);
-    const top = Math.max(box.top, 0);
-    for (let y = Math.min(box.bottom, innerHeight) - TAP_INSET_PX; y > top; y -= TAP_SCAN_STEP_PX) {
-      if (document.elementFromPoint(x, y) === editor) return { x, y: Math.round(y) };
-    }
-    return null;
-  }
-
-  function describeCover(editor) {
-    const box = editor.getBoundingClientRect();
-    const x = box.left + box.width * TAP_ACROSS;
-    const y = (Math.max(box.top, 0) + Math.min(box.bottom, innerHeight)) / 2;
-    const hit = document.elementFromPoint(x, y);
-    return `editor ${Math.round(box.top)}..${Math.round(box.bottom)}, ${hit ? describe(hit) : 'nothing'} on top`;
-  }
-
-  function waitForFocus(el) {
-    return new Promise(resolve => {
-      const timer = setTimeout(() => resolve(false), FOCUS_WAIT_MS);
-      el.addEventListener('focus', () => {
-        clearTimeout(timer);
-        resolve(true);
-      }, { once: true });
-    });
-  }
-
+  // The app raises the keyboard for a field it puts the cursor in itself, as
+  // Log in does, so this needs no tap. Simulated taps on the inner display
+  // landed in the wrong place and picked words of the sample verse.
   async function keyboardScene() {
-    // The sample verse sits over the editor, so the editor itself never wins the
-    // hit test; a tap on the verse still lands in it.
     const editor = document.getElementById('lyrics');
-    if (!editor || editor.getBoundingClientRect().height < 1) {
+    if (!editor || editor.getClientRects().length === 0) {
       await log('skip', 'keyboard', 'editor not on screen');
       return 0;
     }
-    const point = findEditorTapPoint(editor);
-    if (!point) {
-      await log('check', 'FAIL', 'keyboard', `no open spot of the editor to tap; ${describeCover(editor)}`);
-      return 1;
-    }
-    const focused = waitForFocus(editor);
-    await log('tap', point.x, point.y);
-    if (!(await focused)) {
-      await log('check', 'FAIL', 'keyboard', 'tapping the editor did not focus it');
-      return 1;
-    }
+    editor.focus();
     await wait(KEYBOARD_MS);
+    if (document.activeElement !== editor) {
+      await log('check', 'FAIL', 'keyboard', 'the editor did not take the cursor');
+      return 1;
+    }
     const failures = await showScene('keyboard', true);
     editor.blur();
     await wait(STEP_MS);
