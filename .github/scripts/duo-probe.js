@@ -51,7 +51,7 @@
     const x = Math.min(Math.max(box.left + box.width / 2, 0), innerWidth - 1);
     const y = Math.min(Math.max(box.top + box.height / 2, 0), innerHeight - 1);
     const hit = document.elementFromPoint(x, y);
-    return Boolean(hit) && (hit === el || el.contains(hit) || hit.contains(el));
+    return Boolean(hit) && (hit === el || el.contains(hit));
   }
 
   function describe(el) {
@@ -123,12 +123,13 @@
     return failures;
   }
 
-  async function tryScene(name, openSelectors, closeSelectors) {
+  async function tryScene(name, openSelectors, closeSelectors, allowsResize = false) {
     if (!clickFirstShown(openSelectors)) {
       log('skip', name, 'nothing to open it with');
       return 0;
     }
-    const failures = await showScene(name);
+    const failures = await showScene(name, allowsResize);
+    document.activeElement?.blur();
     clickFirstShown(closeSelectors);
     await wait(STEP_MS);
     return failures;
@@ -172,7 +173,15 @@
     return failures;
   }
 
+  // A round cut short by a fold can leave a popup or the keyboard open.
+  async function clearScreen() {
+    document.activeElement?.blur();
+    clickFirstShown(['#auth-close', '#sidebar-close-btn', '.modal-overlay.open .modal-close']);
+    await wait(STEP_MS);
+  }
+
   async function walkScenes() {
+    await clearScreen();
     let failures = await showScene('start');
     clickFirstShown(['#coach-skip']);
     failures += await showScene('page');
@@ -180,7 +189,8 @@
     failures += await tryScene('notebook',
       ['#notebook-btn', '#rail-open-btn'], ['#sidebar-close-btn', '#sidebar-scrim']);
     failures += await tryScene('highlights', ['#rhymes-menu-btn'], ['#rhymes-menu-btn']);
-    failures += await tryScene('log-in', ['#sign-in-btn'], ['#auth-close']);
+    // Log in puts the cursor in the email field, so the keyboard may open.
+    failures += await tryScene('log-in', ['#sign-in-btn'], ['#auth-close'], true);
     failures += await keyboardScene();
     return failures;
   }

@@ -3140,6 +3140,16 @@ a.account-menu-item {
    The shared panel below, on an overlay of its own that fades out rather
    than being hidden. */
 
+/* A popup's overlay covers the whole screen, under the status bar too, so its
+   panel keeps clear of each edge's inset: on the iPhone Duo that is the
+   status column down one side. */
+:root {
+  --overlay-edge-top: max(var(--space-4), env(safe-area-inset-top));
+  --overlay-edge-right: max(var(--space-4), env(safe-area-inset-right));
+  --overlay-edge-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  --overlay-edge-left: max(var(--space-4), env(safe-area-inset-left));
+}
+
 #password-overlay {
   display: flex;
   position: fixed;
@@ -3148,7 +3158,8 @@ a.account-menu-item {
   z-index: var(--z-overlay);
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
+  padding: var(--overlay-edge-top) var(--overlay-edge-right)
+    var(--overlay-edge-bottom) var(--overlay-edge-left);
   opacity: 0;
   visibility: hidden;
   transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
@@ -3198,7 +3209,8 @@ a.account-menu-item {
   z-index: var(--z-overlay-raised);
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
+  padding: var(--overlay-edge-top) var(--overlay-edge-right)
+    var(--overlay-edge-bottom) var(--overlay-edge-left);
   opacity: 0;
   visibility: hidden;
   transition: opacity var(--duration-base) ease, visibility 0s linear var(--duration-base);
@@ -3426,8 +3438,9 @@ a.account-menu-item {
   transition: background var(--duration-base), box-shadow var(--duration-base);
 }
 
-/* Callout size on phones, because a smaller field makes iOS zoom the page. */
-@media (max-width: 768px) {
+/* Callout size on touch screens, because a smaller field makes iOS zoom the
+   page. Wide ones count too: an unfolded iPhone Duo is over 768px. */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
   .modal-input {
     font-size: var(--text-callout);
   }
@@ -3604,7 +3617,7 @@ a.account-menu-item {
    shorter step follows a taller one. */
 #auth-overlay {
   align-items: flex-start;
-  padding-top: min(18vh, 160px);
+  padding-top: max(min(18vh, 160px), var(--overlay-edge-top));
 }
 
 .auth-heading {

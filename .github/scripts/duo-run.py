@@ -10,6 +10,8 @@ checked. It writes a report and exits 1 if any check failed.
 """
 
 import argparse
+import os
+import pty
 import queue
 import re
 import subprocess
@@ -40,24 +42,43 @@ def run_duoctl(udid, *args):
 
 
 def start_app(udid, bundle_id, log_path):
-    """Launch the app with its console on a pty, so lines arrive as they print."""
+    """Launch the app and follow its console.
+
+    simctl holds back output written to a pipe until it has a full block, which
+    made every screenshot late. A pty makes it pass each line on as it prints.
+    """
+    reader_fd, writer_fd = pty.openpty()
     app = subprocess.Popen(
         ["xcrun", "simctl", "launch", "--console-pty", "--terminate-running-process",
          udid, bundle_id],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+        stdin=subprocess.DEVNULL, stdout=writer_fd, stderr=writer_fd)
+    os.close(writer_fd)
+    stream = os.fdopen(reader_fd, "r", encoding="utf-8", errors="replace")
     lines = queue.Queue()
-    threading.Thread(target=pump_lines, args=(app.stdout, lines, log_path), daemon=True).start()
+    threading.Thread(target=pump_lines, args=(stream, lines, log_path), daemon=True).start()
     return app, lines
 
 
 def pump_lines(stream, lines, log_path):
     with open(log_path, "a", encoding="utf-8") as log:
-        for line in stream:
+        for line in iter_lines(stream):
             log.write(line)
             log.flush()
             match = PROBE_LINE.search(line)
             if match:
                 lines.put((int(match.group(1)), match.group(2), match.group(3).split("|")))
+
+
+def iter_lines(stream):
+    """Yield lines until the app's console closes; a closed pty raises EIO."""
+    while True:
+        try:
+            line = stream.readline()
+        except OSError:
+            return
+        if not line:
+            return
+        yield line
 
 
 def next_line(lines, deadline):
@@ -80,6 +101,17 @@ def wait_for_round(lines, after_round):
             return number, size
 
 
+def tap_screen(udid, pose, x, y, report):
+    """Tap where the probe asks; a point off the screen is a failed check."""
+    try:
+        run_duoctl(udid, "tap", x, y)
+    except RuntimeError as error:
+        report.append((pose, "FAIL", "tap", str(error)))
+        print(f"  FAIL tap: {error}")
+        return
+    time.sleep(TAP_SETTLE_SECONDS)
+
+
 def answer_line(udid, shots_dir, pose, parts, report):
     kind = parts[0]
     if kind == "scene":
@@ -87,8 +119,7 @@ def answer_line(udid, shots_dir, pose, parts, report):
         run_duoctl(udid, "screenshot", str(shot))
         print(f"  {parts[1]}: {parts[2]} failed checks -> {shot.name}")
     elif kind == "tap":
-        run_duoctl(udid, "tap", parts[1], parts[2])
-        time.sleep(TAP_SETTLE_SECONDS)
+        tap_screen(udid, pose, parts[1], parts[2], report)
     elif kind == "check":
         report.append((pose, *parts[1:]))
         print(f"  {parts[1]} {parts[2]}: {parts[3]}")
