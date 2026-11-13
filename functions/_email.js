@@ -45,11 +45,13 @@ const PAGE_BACKGROUND = '#f4f1ea';
 // and Outlook ignore @font-face and use the fallbacks.
 const FONT_BODY = "'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Arial, sans-serif";
 
-// Same-size box as the wordmark's 295x84 file, drawn for a light background:
-// the header wordmark's pale lettering would vanish on it. Gmail's image proxy
-// keeps a picture under its URL for good, so bump the version whenever the
-// file changes or old inboxes keep the old logo.
-const LOGO_PATH = 'assets/wordmark-light.png?v=2';
+// Same-size box as the wordmark's 295x84 file. "Lyric" is a mid slate that
+// reads on the light page and on the dark one Gmail's dark mode puts behind
+// it, which leaves pictures alone: the app's pale lettering vanishes on
+// light, dark lettering on dark. Gmail's image proxy keeps a picture under
+// its URL for good, so bump the version whenever the file changes or old
+// inboxes keep the old logo.
+const LOGO_PATH = 'assets/wordmark-light.png?v=3';
 const LOGO_WIDTH = 112;
 const LOGO_HEIGHT = 32;
 
