@@ -15,6 +15,11 @@ migrations_dir = "migrations"
 [vars]
 TURNSTILE_SITE_KEY = "0x4AAAAAAFCbadlyB2I-_tMz"
 FEEDBACK_EMAIL = "tao@lyriclike.com"
+# Sign in with Apple. The key itself, APPLE_PRIVATE_KEY, is a secret set on
+# the Pages project; it also locks the stored Apple tokens, so never replace it.
+APPLE_CLIENT_ID = "com.lyriclike.app"
+APPLE_TEAM_ID = "484VZ7RM5N"
+APPLE_KEY_ID = "9VBGRANU3Q"
 
 [env.preview.vars]
 TURNSTILE_SITE_KEY = "0x4AAAAAAFCbfbMHBxSFR0Yk"
