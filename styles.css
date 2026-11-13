@@ -3142,7 +3142,9 @@ a.account-menu-item {
 
 /* A popup's overlay covers the whole screen, under the status bar too, so its
    panel keeps clear of each edge's inset: on the iPhone Duo that is the
-   status column down one side. */
+   status column down one side. It also stops above the keyboard
+   (keyboard-inset.js) and scrolls when the panel is taller than what is
+   left; "safe" keeps the panel's top reachable then. */
 :root {
   --overlay-edge-top: max(var(--space-4), env(safe-area-inset-top));
   --overlay-edge-right: max(var(--space-4), env(safe-area-inset-right));
@@ -3154,9 +3156,12 @@ a.account-menu-item {
   display: flex;
   position: fixed;
   inset: 0;
+  bottom: var(--keyboard-inset, 0px);
+  overflow-y: auto;
   background: var(--scrim);
   z-index: var(--z-overlay);
   align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: var(--overlay-edge-top) var(--overlay-edge-right)
     var(--overlay-edge-bottom) var(--overlay-edge-left);
@@ -3205,9 +3210,12 @@ a.account-menu-item {
   display: flex;
   position: fixed;
   inset: 0;
+  bottom: var(--keyboard-inset, 0px);
+  overflow-y: auto;
   background: var(--scrim);
   z-index: var(--z-overlay-raised);
   align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: var(--overlay-edge-top) var(--overlay-edge-right)
     var(--overlay-edge-bottom) var(--overlay-edge-left);

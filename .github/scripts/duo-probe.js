@@ -10,6 +10,7 @@
   const KEYBOARD_MS = 2000;
   const EDGE_SLACK_PX = 1;
   const MIN_TARGET_PX = 44;
+  const TAP_INSET_PX = 12;
   const INTERACTIVE = 'button, a[href], input, textarea, select, [role="tab"], '
     + '[contenteditable="true"]';
 
@@ -163,7 +164,11 @@
     }
     const box = editor.getBoundingClientRect();
     const focused = waitForFocus(editor);
-    await log('tap', Math.round(box.left + box.width / 2), Math.round(box.top + 24));
+    // The bottom-right corner is past the end of the words: a tap on a word
+    // of the sample verse shows its rhymes instead of starting to type.
+    const tapX = Math.min(box.right, innerWidth) - TAP_INSET_PX;
+    const tapY = Math.min(box.bottom, innerHeight) - TAP_INSET_PX;
+    await log('tap', Math.round(tapX), Math.round(tapY));
     if (!(await focused)) {
       await log('check', 'FAIL', 'keyboard', 'tapping the editor did not focus it');
       return 1;

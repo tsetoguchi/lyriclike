@@ -60,6 +60,9 @@
 /dialog.js
   Cache-Control: no-cache
 
+/keyboard-inset.js
+  Cache-Control: no-cache
+
 /page-notice.js
   Cache-Control: no-cache
 
