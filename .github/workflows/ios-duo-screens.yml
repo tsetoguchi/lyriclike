@@ -67,7 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           git clone https://github.com/artemnovichkov/hinge.git "$RUNNER_TEMP/hinge"
-          git -C "$RUNNER_TEMP/hinge" checkout --detach "$HINGE_COMMIT"
+          git -C "$RUNNER_TEMP/hinge" switch --detach "$HINGE_COMMIT"
           sudo ln -s "$RUNNER_TEMP/hinge/bin/hinge" /usr/local/bin/hinge
         env:
           # v0.3.1, pinned so a new release can't change what runs here.
