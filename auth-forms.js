@@ -46,12 +46,11 @@
     HAS_EMAIL: "Don't use your email address in your password.",
     SENT: 'Sent',
     LINK_USED_SIGNED_IN: "That link was already used. You're signed in.",
-    SIGNUP_LINK_LIFETIME: 'The link works for 24 hours.',
     RESET_LINK_LIFETIME: 'The link works for 30 minutes.',
     // The sending domain is new, and some inboxes (Outlook first) file its
     // mail as junk until it has a reputation.
     CHECK_JUNK: 'Not there? Check your junk folder.',
-    SIGNS_IN_HERE: 'Keep this page open. Once you confirm, it signs you in here too.',
+    OPEN_SIGNUP_LINK: 'Open the link we sent to finish signing up.',
   });
 
   const VIEW = Object.freeze({
@@ -68,7 +67,8 @@
   });
 
   // What each view shows. `email` is 'field' for the input, 'shown' for the
-  // address as text with Edit beside it, or false; `password` is the field's
+  // address as text with Edit beside it, 'text' for the address alone, or
+  // false; `password` is the field's
   // autocomplete value, or null for no password field; `turnstile` is the
   // action the widget runs for.
   const VIEWS = Object.freeze({
@@ -100,8 +100,8 @@
       submit: null, links: ['forgot'], turnstile: null,
     },
     [VIEW.CHECK_EMAIL]: {
-      title: 'Check your email', google: false, email: false, password: null,
-      submit: null, links: ['resend', 'different-email'], turnstile: 'signup',
+      title: 'Check your email', google: false, email: 'text', password: null,
+      submit: null, links: ['resend'], turnstile: 'signup',
     },
     [VIEW.FORGOT]: {
       title: 'Reset password', google: false, email: 'field', password: null,
@@ -113,10 +113,10 @@
       submit: null, links: ['back'], turnstile: null,
     },
     [VIEW.CONFIRM]: {
-      title: 'Confirm your email', google: false, email: false, password: 'current-password',
+      title: 'Almost done', google: false, email: false, password: 'current-password',
       passwordLabel: 'Password', hint: false,
-      message: 'Enter the password you chose when you signed up.',
-      submit: 'Confirm email', links: [], turnstile: null,
+      message: 'Enter your password to finish signing up.',
+      submit: 'Finish signing up', links: [], turnstile: null,
     },
     [VIEW.RESET]: {
       title: 'Set a new password', google: false, email: false, password: 'new-password',
@@ -129,6 +129,8 @@
   const form = document.getElementById('auth-form');
   const emailInput = document.getElementById('auth-email');
   const emailShown = document.getElementById('auth-email-shown');
+  const editEmailButton = document.querySelector(
+    '#auth-email-shown [data-auth-link="edit-email"]');
   const passwordInput = document.getElementById('auth-password');
   const passwordToggle = document.getElementById('auth-password-toggle');
   const passwordHint = document.getElementById('auth-password-hint');
@@ -390,7 +392,8 @@
     setShown(form, Boolean(view.submit));
     setShown(document.getElementById('auth-email-field'), view.email === 'field');
     document.getElementById('auth-email-text').textContent = emailInput.value.trim();
-    setShown(emailShown, view.email === 'shown');
+    setShown(emailShown, view.email === 'shown' || view.email === 'text');
+    setShown(editEmailButton, view.email === 'shown');
     setShown(document.getElementById('auth-password-field'), Boolean(view.password));
     if (view.password) {
       passwordInput.setAttribute('autocomplete', view.password);
@@ -574,7 +577,7 @@
     }
     pendingSignup = { email, password };
     trackEvent('signup_email_sent');
-    showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME} ${TEXT.CHECK_JUNK} ${TEXT.SIGNS_IN_HERE}`);
+    showView(VIEW.CHECK_EMAIL, `${TEXT.OPEN_SIGNUP_LINK}\n${TEXT.CHECK_JUNK}`);
     watchForConfirm();
     return null;
   }
@@ -801,7 +804,6 @@
     'forgot': () => showView(VIEW.FORGOT),
     'sign-up-again': () => showView(VIEW.START),
     'new-reset-link': () => showView(VIEW.FORGOT),
-    'different-email': () => { pendingSignup = null; showView(VIEW.START); },
     'resend': button => resendSignup(button),
   });
 
