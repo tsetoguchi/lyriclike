@@ -33,10 +33,13 @@ const POOL_FULL_MESSAGE = Object.freeze({
   account: "We can't send any more account emails today. Try again tomorrow.",
 });
 
+// The app's own colors (tokens.css): the desk, its ink and pencil, and the
+// amber accent with the tint it lays behind the app's outlined buttons.
 const AMBER = '#e9b45f';
-const INK = '#141922';
-const FADED_INK = '#5b6270';
-const PAGE_BACKGROUND = '#f4f1ea';
+const AMBER_TINT = '#201e1b';
+const INK = '#e2e7ef';
+const FADED_INK = '#8b96a6';
+const PAGE_BACKGROUND = '#0a0d13';
 
 // The app's own type: iA Writer Quattro throughout, bold for headings, with
 // the same fallbacks as --font-editor (minus system-ui, which mail clients do
@@ -54,6 +57,9 @@ const FONT_BODY = "'iA Writer Quattro', -apple-system, 'SF Pro Text', 'Helvetica
 const LOGO_PATH = 'assets/wordmark-email.png?v=1';
 const LOGO_WIDTH = 144;
 const LOGO_HEIGHT = 54;
+// The plate's side padding as shown, pulled back so the lettering lines up
+// with the text below.
+const LOGO_PLATE_INSET = 15;
 
 const FONT_FACES = [
   ['iA Writer Quattro', 400, 'normal', 'iAWriterQuattroS-Regular'],
@@ -83,9 +89,12 @@ function fontFaceRules(env) {
     `src:url('${baseUrl(env)}/fonts/${file}.woff2') format('woff2');}`).join('\n');
 }
 
-// A light template, since many mail clients invert or strip dark styles. One
-// button, in amber with dark text because white on amber fails contrast. An
-// optional footer link (the invite's stop link) goes in both parts.
+// Dark, in the app's own colors. A light email gets repainted by dark-mode
+// inboxes (Gmail turned the amber button brown); one that is dark already is
+// left close to as sent, and color-scheme says so to the clients that ask.
+// The page color sits on a full-width table too, since Gmail drops <body>
+// styles. One button, the app's outlined amber pill. An optional footer link
+// (the invite's stop link) goes in both parts.
 function renderEmail(env, { heading, paragraphs, button, footer, footerLink }) {
   const footerText = footerLink ? `${footer} ${footerLink.label}: ${footerLink.url}` : footer;
   const footerHtml = escapeHtml(footer) + (footerLink
@@ -95,17 +104,21 @@ function renderEmail(env, { heading, paragraphs, button, footer, footerLink }) {
     .join('\n');
   const html = `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
 <style>
+:root{color-scheme:dark;}
 ${fontFaceRules(env)}
 </style></head>
-<body style="margin:0;background:${PAGE_BACKGROUND};">
+<body style="margin:0;background:${PAGE_BACKGROUND};" bgcolor="${PAGE_BACKGROUND}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE_BACKGROUND}" style="background:${PAGE_BACKGROUND};"><tr><td>
 <div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:${FONT_BODY};color:${INK};">
-<p style="margin:0 0 28px;"><a href="${escapeHtml(baseUrl(env))}/" style="text-decoration:none;"><img src="${escapeHtml(baseUrl(env))}/${LOGO_PATH}" alt="LyricLike" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" style="display:block;border:0;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;font-family:${FONT_BODY};font-weight:700;font-size:20px;color:${INK};"></a></p>
-<h1 style="font-family:${FONT_BODY};font-weight:700;font-size:20px;line-height:1.3;margin:0 0 16px;">${escapeHtml(heading)}</h1>
-${paragraphs.map(p => `<p style="font-size:15px;line-height:1.5;margin:0 0 12px;">${escapeHtml(p)}</p>`).join('\n')}
-<p style="margin:24px 0;"><a href="${escapeHtml(button.url)}" style="display:inline-block;padding:12px 20px;background:${AMBER};color:${INK};text-decoration:none;border-radius:6px;font-family:${FONT_BODY};font-weight:700;font-size:15px;">${escapeHtml(button.label)}</a></p>
+<p style="margin:0 0 20px -${LOGO_PLATE_INSET}px;"><a href="${escapeHtml(baseUrl(env))}/" style="text-decoration:none;"><img src="${escapeHtml(baseUrl(env))}/${LOGO_PATH}" alt="LyricLike" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" style="display:block;border:0;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;font-family:${FONT_BODY};font-weight:700;font-size:20px;color:${INK};"></a></p>
+<h1 style="font-family:${FONT_BODY};font-weight:700;font-size:20px;line-height:1.3;margin:0 0 16px;color:${INK};">${escapeHtml(heading)}</h1>
+${paragraphs.map(p => `<p style="font-size:15px;line-height:1.5;margin:0 0 12px;color:${INK};">${escapeHtml(p)}</p>`).join('\n')}
+<p style="margin:24px 0;"><a href="${escapeHtml(button.url)}" style="display:inline-block;padding:12px 24px;background:${AMBER_TINT};border:1px solid ${AMBER};color:${AMBER};text-decoration:none;border-radius:999px;font-family:${FONT_BODY};font-weight:700;font-size:15px;">${escapeHtml(button.label)}</a></p>
 <p style="font-family:${FONT_BODY};font-style:italic;font-size:13px;line-height:1.5;color:${FADED_INK};margin:0;">${footerHtml}</p>
-</div></body></html>`;
+</div></td></tr></table></body></html>`;
   return { text, html };
 }
 
