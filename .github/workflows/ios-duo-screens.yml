@@ -1,0 +1,91 @@
+name: iPhone Duo screenshots
+
+# Runs the app in Xcode 27.1's iPhone Duo simulator and keeps screenshots of
+# what it shows, to check the layout on the Duo's displays and to have
+# screenshots in the Duo's App Store sizes. Run by hand from the Actions tab;
+# it needs no secrets and signs nothing.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-duo-screens
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  duo:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      PROJECT_DIR: mobile/ios/App
+      BUNDLE_ID: com.lyriclike.app
+      DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-Duo
+      SHOTS_DIR: ${{ github.workspace }}/duo-screens
+      # The page needs time to load its words and draw before a screenshot.
+      SETTLE_SECONDS: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install the app's dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Copy the site into the app
+        working-directory: mobile
+        run: |
+          npm run copy
+          npx cap sync ios
+
+      - name: Pick Xcode 27.1
+        run: sudo xcode-select -s /Applications/Xcode_27.1.app
+
+      - name: Build for the simulator
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/derived" \
+            ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Show how the simulator handles two displays
+        run: |
+          xcrun simctl help io || true
+          xcrun simctl help ui || true
+          xcrun simctl list runtimes
+
+      - name: Open the app on an iPhone Duo and take screenshots
+        run: |
+          set -euo pipefail
+          runtime=$(xcrun simctl list runtimes -j \
+            | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin)["runtimes"] if x["isAvailable"] and x["platform"]=="iOS"]; print(r[-1]["identifier"])')
+          device=$(xcrun simctl create "LyricLike Duo" "$DEVICE_TYPE" "$runtime")
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" "$RUNNER_TEMP/derived/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$device" "$BUNDLE_ID"
+          sleep "$SETTLE_SECONDS"
+          mkdir -p "$SHOTS_DIR"
+          xcrun simctl io "$device" screenshot "$SHOTS_DIR/start.png"
+          # A second display, if the simulator names one, gets its own shot.
+          xcrun simctl io "$device" screenshot --display=external "$SHOTS_DIR/start-external.png" || true
+          for shot in "$SHOTS_DIR"/*.png; do sips -g pixelWidth -g pixelHeight "$shot"; done
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duo-screens
+          path: ${{ env.SHOTS_DIR }}
+          retention-days: 7
+          if-no-files-found: warn
