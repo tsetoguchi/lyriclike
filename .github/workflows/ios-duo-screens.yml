@@ -29,10 +29,8 @@ jobs:
       SHOTS_DIR: ${{ github.workspace }}/duo-screens
       # The page needs time to load its words and draw before a screenshot.
       SETTLE_SECONDS: 12
-      # The simulator's screen IDs: 1 is the outer display (1398x2034),
-      # 3 the inner one (2007x2853), from `simctl io enumerate`.
+      # The outer display's ID (1398x2034), from `simctl io enumerate`.
       OUTER_DISPLAY: 1
-      INNER_DISPLAY: 3
     steps:
       - uses: actions/checkout@v4
 
@@ -65,6 +63,16 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/derived" \
             ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
+      - name: Install hinge, the tool that folds the Duo
+        run: |
+          set -euo pipefail
+          git clone https://github.com/artemnovichkov/hinge.git "$RUNNER_TEMP/hinge"
+          git -C "$RUNNER_TEMP/hinge" checkout --detach "$HINGE_COMMIT"
+          sudo ln -s "$RUNNER_TEMP/hinge/bin/hinge" /usr/local/bin/hinge
+        env:
+          # v0.3.1, pinned so a new release can't change what runs here.
+          HINGE_COMMIT: 06cb720276281da7f1aadd3874acb0d0ae5eb2b5
+
       - name: Show how the simulator handles two displays
         run: |
           xcrun simctl help io || true
@@ -87,11 +95,12 @@ jobs:
           mkdir -p "$SHOTS_DIR"
           # Folded, the outer display is on.
           xcrun simctl io "$device" screenshot --display="$OUTER_DISPLAY" "$SHOTS_DIR/outer.png"
-          # Unfolded: the inner display on, the outer one off.
-          xcrun simctl io "$device" screenConfig --display="$INNER_DISPLAY" power on
-          xcrun simctl io "$device" screenConfig --display="$OUTER_DISPLAY" power off
+          xcrun simctl io "$device" enumerate || true
+          # simctl can't unfold the Duo; hinge can, through private parts of Apple's tools.
+          hinge -d "$device" open
           sleep "$SETTLE_SECONDS"
-          xcrun simctl io "$device" screenshot --display="$INNER_DISPLAY" "$SHOTS_DIR/inner.png"
+          # hinge names whichever display shows the app, so the inner one now.
+          hinge -d "$device" screenshot "$SHOTS_DIR/inner.png"
           for shot in "$SHOTS_DIR"/*.png; do sips -g pixelWidth -g pixelHeight "$shot"; done
 
       - name: Keep the screenshots
