@@ -2880,8 +2880,9 @@ body:not(.signed-in) .invite-btn {
   }
 
   /* The row stops short of the corner Invite stands in. Three of
-     --space-8 clears its width, as on wider screens. */
-  .page-meta {
+     --space-8 clears its width, as on wider screens. The selector has to
+     outweigh the row's padding shorthand further down. */
+  body.signed-in .lyrics-panel:has(.invite-btn-panel:not([hidden])) .page-meta {
     padding-right: calc(var(--space-5) + var(--space-8) * 3);
   }
 
