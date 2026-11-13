@@ -46,12 +46,11 @@
     HAS_EMAIL: "Don't use your email address in your password.",
     SENT: 'Sent',
     LINK_USED_SIGNED_IN: "That link was already used. You're signed in.",
-    SIGNUP_LINK_LIFETIME: 'The link works for 24 hours.',
     RESET_LINK_LIFETIME: 'The link works for 30 minutes.',
     // The sending domain is new, and some inboxes (Outlook first) file its
     // mail as junk until it has a reputation.
     CHECK_JUNK: 'Not there? Check your junk folder.',
-    SIGNS_IN_HERE: 'Keep this page open. Once you confirm, it signs you in here too.',
+    OPEN_SIGNUP_LINK: 'Open the link we sent to finish signing up.',
   });
 
   const VIEW = Object.freeze({
@@ -100,8 +99,8 @@
       submit: null, links: ['forgot'], turnstile: null,
     },
     [VIEW.CHECK_EMAIL]: {
-      title: 'Check your email', google: false, email: false, password: null,
-      submit: null, links: ['resend', 'different-email'], turnstile: 'signup',
+      title: 'Check your email', google: false, email: 'shown', password: null,
+      submit: null, links: ['resend'], turnstile: 'signup',
     },
     [VIEW.FORGOT]: {
       title: 'Reset password', google: false, email: 'field', password: null,
@@ -574,7 +573,7 @@
     }
     pendingSignup = { email, password };
     trackEvent('signup_email_sent');
-    showView(VIEW.CHECK_EMAIL, `We sent a link to ${email} to finish signing up. ${TEXT.SIGNUP_LINK_LIFETIME} ${TEXT.CHECK_JUNK} ${TEXT.SIGNS_IN_HERE}`);
+    showView(VIEW.CHECK_EMAIL, `${TEXT.OPEN_SIGNUP_LINK}\n${TEXT.CHECK_JUNK}`);
     watchForConfirm();
     return null;
   }
@@ -796,12 +795,12 @@
   // ── Wiring ──
 
   const LINK_ACTIONS = Object.freeze({
-    'edit-email': () => showView(VIEW.START),
+    // From Check your email, Edit gives up the signup that was waiting.
+    'edit-email': () => { pendingSignup = null; showView(VIEW.START); },
     'back': () => showView(VIEW.START),
     'forgot': () => showView(VIEW.FORGOT),
     'sign-up-again': () => showView(VIEW.START),
     'new-reset-link': () => showView(VIEW.FORGOT),
-    'different-email': () => { pendingSignup = null; showView(VIEW.START); },
     'resend': button => resendSignup(button),
   });
 

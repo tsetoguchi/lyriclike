@@ -3635,8 +3635,10 @@ a.account-menu-item {
   gap: var(--space-2);
 }
 
+/* pre-line, so a tip can start its own line. */
 .auth-message {
   margin: 0;
+  white-space: pre-line;
   font-family: var(--font-ui);
   font-size: var(--text-subhead);
   line-height: 1.5;
@@ -3904,6 +3906,26 @@ a.account-menu-item {
 
 .auth-link:disabled {
   cursor: default;
+}
+
+/* An action, not a way out, so it looks like the app's other buttons
+   rather than a line of text. */
+.auth-link.auth-link-button {
+  width: 100%;
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+.auth-link.auth-link-button:hover:not(:disabled) {
+  background: var(--ink-wash);
+  text-decoration: none;
+}
+
+.auth-link.auth-link-button:disabled {
+  color: var(--ink-faded);
 }
 
 .auth-fine-print {
