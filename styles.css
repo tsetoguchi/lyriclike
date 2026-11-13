@@ -3935,6 +3935,11 @@ a.account-menu-item {
   text-align: center;
 }
 
+/* Empty unless a site extension puts its agreement line in the slot. */
+.auth-fine-print:has(#auth-fine-print-slot:empty) {
+  display: none;
+}
+
 /* ── Sidebar: the notebook ──
 
    The notebook as a sidebar, as in Gemini or ChatGPT: the wordmark, New

@@ -67,7 +67,8 @@
   });
 
   // What each view shows. `email` is 'field' for the input, 'shown' for the
-  // address as text with Edit beside it, or false; `password` is the field's
+  // address as text with Edit beside it, 'text' for the address alone, or
+  // false; `password` is the field's
   // autocomplete value, or null for no password field; `turnstile` is the
   // action the widget runs for.
   const VIEWS = Object.freeze({
@@ -99,7 +100,7 @@
       submit: null, links: ['forgot'], turnstile: null,
     },
     [VIEW.CHECK_EMAIL]: {
-      title: 'Check your email', google: false, email: 'shown', password: null,
+      title: 'Check your email', google: false, email: 'text', password: null,
       submit: null, links: ['resend'], turnstile: 'signup',
     },
     [VIEW.FORGOT]: {
@@ -128,6 +129,7 @@
   const form = document.getElementById('auth-form');
   const emailInput = document.getElementById('auth-email');
   const emailShown = document.getElementById('auth-email-shown');
+  const editEmailButton = emailShown.querySelector('[data-auth-link="edit-email"]');
   const passwordInput = document.getElementById('auth-password');
   const passwordToggle = document.getElementById('auth-password-toggle');
   const passwordHint = document.getElementById('auth-password-hint');
@@ -389,7 +391,8 @@
     setShown(form, Boolean(view.submit));
     setShown(document.getElementById('auth-email-field'), view.email === 'field');
     document.getElementById('auth-email-text').textContent = emailInput.value.trim();
-    setShown(emailShown, view.email === 'shown');
+    setShown(emailShown, view.email === 'shown' || view.email === 'text');
+    setShown(editEmailButton, view.email === 'shown');
     setShown(document.getElementById('auth-password-field'), Boolean(view.password));
     if (view.password) {
       passwordInput.setAttribute('autocomplete', view.password);
@@ -795,8 +798,7 @@
   // ── Wiring ──
 
   const LINK_ACTIONS = Object.freeze({
-    // From Check your email, Edit gives up the signup that was waiting.
-    'edit-email': () => { pendingSignup = null; showView(VIEW.START); },
+    'edit-email': () => showView(VIEW.START),
     'back': () => showView(VIEW.START),
     'forgot': () => showView(VIEW.FORGOT),
     'sign-up-again': () => showView(VIEW.START),
