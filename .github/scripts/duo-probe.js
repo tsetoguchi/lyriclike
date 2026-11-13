@@ -11,6 +11,8 @@
   const EDGE_SLACK_PX = 1;
   const MIN_TARGET_PX = 44;
   const TAP_INSET_PX = 12;
+  const TAP_SCAN_STEP_PX = 8;
+  const TAP_ACROSS = 0.6;
   const INTERACTIVE = 'button, a[href], input, textarea, select, [role="tab"], '
     + '[contenteditable="true"]';
 
@@ -69,10 +71,21 @@
     return `${name} "${label.slice(0, 24)}"`;
   }
 
-  function findEdgeProblem(box, insets) {
+  // A control scrolled partly out of a scrolling box is only out of view; the
+  // reader scrolls back to it. Only a fixed one under the top bar is stuck.
+  function isInScroller(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const { overflowY } = getComputedStyle(node);
+      const canScroll = overflowY === 'auto' || overflowY === 'scroll';
+      if (canScroll && node.scrollHeight > node.clientHeight) return true;
+    }
+    return false;
+  }
+
+  function findEdgeProblem(el, box, insets) {
     if (box.left < insets.left - EDGE_SLACK_PX) return 'left side bar or edge';
     if (box.right > innerWidth - insets.right + EDGE_SLACK_PX) return 'right side bar or edge';
-    if (box.top < insets.top - EDGE_SLACK_PX) return 'top bar';
+    if (box.top < insets.top - EDGE_SLACK_PX && !isInScroller(el)) return 'top bar';
     return '';
   }
 
@@ -87,7 +100,7 @@
     for (const el of document.querySelectorAll(INTERACTIVE)) {
       if (!isShown(el)) continue;
       const box = el.getBoundingClientRect();
-      const problem = findEdgeProblem(box, insets);
+      const problem = findEdgeProblem(el, box, insets);
       if (problem) {
         failures += 1;
         await log('check', 'FAIL', scene, `${describe(el)} is under the ${problem}`);
@@ -144,6 +157,19 @@
     return failures;
   }
 
+  // The lowest spot where the editor itself is on top: below the words, since
+  // a tap on a word of the sample verse shows its rhymes instead of typing,
+  // and above the bar the editor runs under.
+  function findEditorTapPoint(editor) {
+    const box = editor.getBoundingClientRect();
+    const x = Math.round(box.left + box.width * TAP_ACROSS);
+    const top = Math.max(box.top, 0);
+    for (let y = Math.min(box.bottom, innerHeight) - TAP_INSET_PX; y > top; y -= TAP_SCAN_STEP_PX) {
+      if (document.elementFromPoint(x, y) === editor) return { x, y: Math.round(y) };
+    }
+    return null;
+  }
+
   function waitForFocus(el) {
     return new Promise(resolve => {
       const timer = setTimeout(() => resolve(false), FOCUS_WAIT_MS);
@@ -162,13 +188,13 @@
       await log('skip', 'keyboard', 'editor not on screen');
       return 0;
     }
-    const box = editor.getBoundingClientRect();
+    const point = findEditorTapPoint(editor);
+    if (!point) {
+      await log('check', 'FAIL', 'keyboard', 'no open spot of the editor to tap');
+      return 1;
+    }
     const focused = waitForFocus(editor);
-    // The bottom-right corner is past the end of the words: a tap on a word
-    // of the sample verse shows its rhymes instead of starting to type.
-    const tapX = Math.min(box.right, innerWidth) - TAP_INSET_PX;
-    const tapY = Math.min(box.bottom, innerHeight) - TAP_INSET_PX;
-    await log('tap', Math.round(tapX), Math.round(tapY));
+    await log('tap', point.x, point.y);
     if (!(await focused)) {
       await log('check', 'FAIL', 'keyboard', 'tapping the editor did not focus it');
       return 1;
