@@ -1,9 +1,10 @@
 name: iPhone Duo screenshots
 
-# Runs the app in Xcode 27.1's iPhone Duo simulator and keeps screenshots of
-# what it shows, to check the layout on the Duo's displays and to have
-# screenshots in the Duo's App Store sizes. Run by hand from the Actions tab;
-# it needs no secrets and signs nothing.
+# Runs the app in Xcode 27.1's iPhone Duo simulator in four poses: folded,
+# unfolded, unfolded in portrait, and tent. In each it opens the main screens,
+# checks that no control sits under the status bar or off the edge, and keeps
+# a screenshot of each. Run by hand from the Actions tab; it needs no secrets
+# and signs nothing.
 
 on:
   workflow_dispatch:
@@ -27,10 +28,6 @@ jobs:
       BUNDLE_ID: com.lyriclike.app
       DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-Duo
       SHOTS_DIR: ${{ github.workspace }}/duo-screens
-      # The page needs time to load its words and draw before a screenshot.
-      SETTLE_SECONDS: 12
-      # The outer display's ID (1398x2034), from `simctl io enumerate`.
-      OUTER_DISPLAY: 1
     steps:
       - uses: actions/checkout@v4
 
@@ -44,10 +41,16 @@ jobs:
         working-directory: mobile
         run: npm ci
 
-      - name: Copy the site into the app
+      # The probe walks the screens and checks the layout. It goes into this
+      # test build only; the shipped app never carries it.
+      - name: Copy the site into the app, with the test probe
         working-directory: mobile
         run: |
+          set -euo pipefail
           npm run copy
+          cp "$GITHUB_WORKSPACE/.github/scripts/duo-probe.js" www/duo-probe.js
+          sed -i '' 's#</body>#<script src="duo-probe.js"></script></body>#' www/index.html
+          grep -q 'duo-probe.js' www/index.html
           npx cap sync ios
 
       - name: Pick Xcode 27.1
@@ -57,51 +60,40 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           set -euo pipefail
-          xcodebuild build \
-            -project App.xcodeproj -scheme App -configuration Debug \
-            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/derived" \
-            ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          xcodebuild build             -project App.xcodeproj -scheme App -configuration Debug             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'             -derivedDataPath "$RUNNER_TEMP/derived"             ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
-      - name: Install hinge, the tool that folds the Duo
+      # simctl can't fold the Duo; duoctl can, through private parts of
+      # Apple's tools. It also taps and screenshots whichever screen is on.
+      - name: Install duoctl, the tool that folds the Duo
         run: |
           set -euo pipefail
-          git clone https://github.com/artemnovichkov/hinge.git "$RUNNER_TEMP/hinge"
-          git -C "$RUNNER_TEMP/hinge" switch --detach "$HINGE_COMMIT"
-          sudo ln -s "$RUNNER_TEMP/hinge/bin/hinge" /usr/local/bin/hinge
+          git clone https://github.com/skarol/duoctl.git "$RUNNER_TEMP/duoctl"
+          git -C "$RUNNER_TEMP/duoctl" switch --detach "$DUOCTL_COMMIT"
+          sudo ln -s "$RUNNER_TEMP/duoctl/skills/duoctl/scripts/duoctl" /usr/local/bin/duoctl
+          duoctl --version
         env:
-          # v0.3.1, pinned so a new release can't change what runs here.
-          HINGE_COMMIT: 06cb720276281da7f1aadd3874acb0d0ae5eb2b5
+          # v0.2.1, pinned so a new release can't change what runs here.
+          DUOCTL_COMMIT: c6ff3e961a9858fb061907448e702d7d1617dc4a
 
-      - name: Show how the simulator handles two displays
-        run: |
-          xcrun simctl help io || true
-          xcrun simctl help ui || true
-          xcrun simctl list runtimes
-
-      - name: Open the app on an iPhone Duo and take screenshots
+      - name: Start an iPhone Duo
         run: |
           set -euo pipefail
           # Only some iOS runtimes support the Duo; take the newest that does.
-          runtime=$(xcrun simctl list runtimes -j \
-            | python3 "$GITHUB_WORKSPACE/.github/scripts/duo-runtime.py" "$DEVICE_TYPE")
+          runtime=$(xcrun simctl list runtimes -j             | python3 "$GITHUB_WORKSPACE/.github/scripts/duo-runtime.py" "$DEVICE_TYPE")
           echo "Runtime: $runtime"
           device=$(xcrun simctl create "LyricLike Duo" "$DEVICE_TYPE" "$runtime")
           xcrun simctl boot "$device"
           xcrun simctl bootstatus "$device" -b
           xcrun simctl install "$device" "$RUNNER_TEMP/derived/Build/Products/Debug-iphonesimulator/App.app"
-          xcrun simctl launch "$device" "$BUNDLE_ID"
-          sleep "$SETTLE_SECONDS"
-          mkdir -p "$SHOTS_DIR"
-          # Folded, the outer display is on.
-          xcrun simctl io "$device" screenshot --display="$OUTER_DISPLAY" "$SHOTS_DIR/outer.png"
-          xcrun simctl io "$device" enumerate || true
-          # simctl can't unfold the Duo; hinge can, through private parts of Apple's tools.
-          hinge -d "$device" open
-          sleep "$SETTLE_SECONDS"
-          # hinge names whichever display shows the app, so the inner one now.
-          hinge -d "$device" screenshot "$SHOTS_DIR/inner.png"
-          for shot in "$SHOTS_DIR"/*.png; do sips -g pixelWidth -g pixelHeight "$shot"; done
+          echo "DUO_UDID=$device" >> "$GITHUB_ENV"
+
+      - name: Test every pose
+        run: |
+          python3 "$GITHUB_WORKSPACE/.github/scripts/duo-run.py"             --udid "$DUO_UDID" --bundle-id "$BUNDLE_ID" --shots "$SHOTS_DIR"
+
+      - name: Show the report
+        if: always()
+        run: cat "$SHOTS_DIR/report.md" >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Keep the screenshots
         if: always()
