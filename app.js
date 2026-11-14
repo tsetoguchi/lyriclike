@@ -497,7 +497,6 @@ function describeLookupResult(results) {
 const RHYMES_PICKED_EVENT = 'rhymes-picked';
 
 const lookupTrigger = RhymeLookupCount.createLookupCounter();
-const LINE_ABOVE_TRIGGER = RhymeLookupCount.TRIGGER.LINE_ABOVE;
 
 // The word goes along only when it came up empty: those are the dictionary's
 // gaps. A tapped word that did rhyme stays on the device.
@@ -980,27 +979,9 @@ function getWordContext(text, cursorPos) {
   return text.substring(lineStart, lineEnd).trim();
 }
 
-function flashWordBar() {
-  wordBarEl.classList.remove('flash');
-  void wordBarEl.offsetWidth;
-  wordBarEl.classList.add('flash');
-}
-
-// On a phone the rhymes are on the other tab, so a tap would otherwise show
-// nothing: the tab answers it. Keyed to the tab layout, not the pointer, so a
-// mouse in a narrow window gets it too.
-function flashRhymesTab() {
-  if (!isMobileView()) return;
-  const tab = mobileTabsEl.querySelector('[data-tab="rhymes"]');
-  tab.classList.remove('flash');
-  void tab.offsetWidth;
-  tab.classList.add('flash');
-}
-
 // storage.js listens, so the sample's hint can retire without the two files
 // reaching into each other's elements.
 function announcePointerPick() {
-  flashRhymesTab();
   document.dispatchEvent(new CustomEvent('rhyme-pick'));
 }
 
@@ -1067,7 +1048,6 @@ function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   pickHighlightWord(word, bounds, isPointerPick);
   selectedContextEl.textContent = getWordContext(textareaEl.value, bounds ? bounds.start : 0);
   updateChipHint();
-  flashWordBar();
   if (isPointerPick) {
     announcePointerPick();
     document.dispatchEvent(new CustomEvent(RHYMES_PICKED_EVENT));
@@ -1087,9 +1067,6 @@ function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   const trigger = lookupTrigger({ isPointerPick, isLineAbove, word, start });
   if (!trigger) return;
   trackRhymeLookup(word, results, trigger);
-  // On a phone these rhymes land on the other tab, so a new line would fill
-  // it unseen. The trigger is set once per line, so the tab flashes once too.
-  if (trigger === LINE_ABOVE_TRIGGER) flashRhymesTab();
 }
 
 // ── Syllable counting ──
