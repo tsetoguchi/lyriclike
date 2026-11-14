@@ -21,6 +21,9 @@ private let ERROR_UNVERIFIED = "unverified"
 private let ERROR_UNKNOWN_ITEM = "unknown-item"
 private let ERROR_NO_WINDOW = "no-window"
 private let ERROR_STORE = "store-error"
+private let ERROR_CANNOT_OPEN = "cannot-open"
+
+private let REVIEW_URL_FORMAT = "https://apps.apple.com/app/id%@?action=write-review"
 
 private typealias GroupInfo = Product.SubscriptionInfo // word-check: allow
 private typealias GroupStatus = GroupInfo.Status
@@ -45,6 +48,8 @@ public class AppStore: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "manage", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "writeReview", returnType: CAPPluginReturnPromise),
     ]
 
     // True while a purchase sheet is open. Read and written on the main actor.
@@ -136,6 +141,46 @@ public class AppStore: CAPPlugin, CAPBridgedPlugin {
             }
             await transaction.finish()
             call.resolve(["finished": true])
+        }
+    }
+}
+
+// MARK: - Reviews
+
+extension AppStore {
+    // Apple decides whether the sheet shows (at most three times a year) and
+    // never says, so this resolves either way.
+    @objc func requestReview(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            guard let scene = self.activeWindowScene() else {
+                call.reject("No window is open.", ERROR_NO_WINDOW)
+                return
+            }
+            if #available(iOS 16.0, *) {
+                StoreKit.AppStore.requestReview(in: scene)
+            } else {
+                SKStoreReviewController.requestReview(in: scene)
+            }
+            call.resolve()
+        }
+    }
+
+    // Opens the App Store app on the write-a-review page. Not limited by
+    // Apple, so it suits a button the person taps.
+    @objc func writeReview(_ call: CAPPluginCall) {
+        let appId = call.getString("appId") ?? ""
+        guard !appId.isEmpty, appId.allSatisfy(\.isNumber),
+              let url = URL(string: String(format: REVIEW_URL_FORMAT, appId)) else {
+            call.reject("The App Store id is not a number.", ERROR_BAD_ID)
+            return
+        }
+        Task { @MainActor in
+            let isOpened = await UIApplication.shared.open(url)
+            if isOpened {
+                call.resolve()
+            } else {
+                call.reject("The App Store could not be opened.", ERROR_CANNOT_OPEN)
+            }
         }
     }
 }
