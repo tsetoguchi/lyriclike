@@ -1873,6 +1873,9 @@ function switchMobileTab(tab) {
   incoming.style.opacity = '0';
   void incoming.offsetWidth;
   incoming.style.opacity = '1';
+  // A rhyme swapped in from the Rhymes tab changed the text while the editor
+  // had no layout, so its margins could not be measured until now.
+  if (tab === LYRICS_TAB) updateGutters();
 }
 
 mobileTabsEl.addEventListener('click', function handleTabClick(event) {
