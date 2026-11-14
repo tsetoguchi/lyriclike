@@ -678,6 +678,19 @@ describe('the shell a page is given', () => {
     );
   });
 
+  it('passes the review calls to the plugin', async () => {
+    const store = fakeAppStore();
+    store.requestReview = async () => { store.calls.push(['requestReview']); };
+    store.writeReview = async options => { store.calls.push(['writeReview', options]); };
+    const { page } = runIosWithStore(store);
+    await page.NativeShell.appStore.requestReview();
+    await page.NativeShell.appStore.writeReview('123');
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(store.calls)),
+      [['requestReview'], ['writeReview', { appId: '123' }]],
+    );
+  });
+
   it('forwards the transaction event, and its unsubscribe removes the listener', async () => {
     const store = fakeAppStore();
     const { page } = runIosWithStore(store);

@@ -267,6 +267,8 @@
       manage: () => plugin.manage(),
       finish: transactionId => plugin.finish({ transactionId }),
       onTransaction: callback => listenForTransactions(plugin, callback),
+      requestReview: () => plugin.requestReview(),
+      writeReview: appId => plugin.writeReview({ appId }),
     };
   }
 

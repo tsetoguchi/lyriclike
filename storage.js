@@ -821,6 +821,7 @@ function savedAs(body, revision) {
   saveDraft();
   showSaved();
   refreshSharingUi();
+  ReviewPrompt.afterSave(body);
 }
 
 function showSaved() {
