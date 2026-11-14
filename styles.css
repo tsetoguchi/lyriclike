@@ -4750,6 +4750,11 @@ body.sidebar-open #sidebar-scrim {
   transition: color var(--duration-fast);
 }
 
+/* The dots between them already set the links apart. */
+.sidebar-links a {
+  text-decoration: none;
+}
+
 .sidebar-links a:hover,
 .auth-fine-print a:hover {
   color: var(--ink);
