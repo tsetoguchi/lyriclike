@@ -12,8 +12,8 @@
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const DAY_PART_WIDTH = 2;
   // The app's number in App Store Connect (App Information > Apple ID), for
-  // the "Rate LyricLike" row. While it is empty the row stays hidden.
-  const APP_STORE_ID = '';
+  // the "Rate LyricLike" row. Empty hides the row.
+  const APP_STORE_ID = '6831974243';
   const RATE_ROW_ID = 'account-rate-app';
   const ASKED_EVENT = 'review_prompt_requested';
   const RATE_EVENT = 'review_page_opened';
