@@ -2229,20 +2229,6 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   content: none;
 }
 
-@keyframes word-flash {
-  0% { background: var(--flash); }
-  100% { background: transparent; }
-}
-
-.selected-word-bar.flash {
-  animation: word-flash var(--duration-flash) ease-out;
-}
-
-/* Answers a tap on a word when the rhymes are behind this tab. */
-.mobile-tab.flash {
-  animation: word-flash var(--duration-flash) ease-out;
-}
-
 /* The same amber as the picked word in the lyrics, so the two read as one. */
 .selected-word-bar .word {
   font-family: var(--font-ui);
@@ -4776,10 +4762,13 @@ body.sidebar-open #sidebar-scrim {
 }
 
 /* On phones the foot holds the envelope and the account, so both step in
-   from the sidebar's edges to sit with the rows above. */
+   from the sidebar's edges to sit with the rows above. Its top line meets
+   the bottom bar's beside it, and it clears the home indicator the same way. */
 @media (max-width: 768px) {
   .sidebar-foot {
+    min-height: var(--bottom-nav-height);
     padding-inline: var(--space-4);
+    padding-bottom: max(var(--space-1), env(safe-area-inset-bottom));
   }
 }
 
@@ -5731,15 +5720,8 @@ body.signed-in .sidebar-links {
 @media (prefers-reduced-motion: reduce) {
   .lyrics-panel,
   .rhymes-panel,
-  .selected-word-bar.flash,
   #rhyme-results.is-resorted .rhyme-group.open .rhyme-group-body {
     animation: none;
-  }
-
-  /* The tab is the only answer to a tap on a phone, so it still changes
-     colour: held, then snapped back, with nothing moving. */
-  .mobile-tab.flash {
-    animation: word-flash var(--duration-flash) steps(1, end);
   }
 
   *, *::before, *::after {
