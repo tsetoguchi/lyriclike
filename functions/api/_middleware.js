@@ -83,9 +83,18 @@ function isOneClickStop(request) {
   return request.method === 'POST' && new URL(request.url).pathname === ONE_CLICK_STOP_PATH;
 }
 
+// The other exception: Apple sends a person back from its sign-in page with a
+// cross-site form POST. The route only acts on a one-time code from Apple that
+// matches the state cookie this browser was given when the sign-in started.
+const APPLE_RETURN_PATH = '/api/auth/apple/callback';
+
+function isAppleReturn(request) {
+  return request.method === 'POST' && new URL(request.url).pathname === APPLE_RETURN_PATH;
+}
+
 function rejectForgedRequest(request) {
   if (SAFE_METHODS.has(request.method)) return null;
-  if (isOneClickStop(request)) return null;
+  if (isOneClickStop(request) || isAppleReturn(request)) return null;
   if (!isAppRequest(request) && !isSameOrigin(request)) {
     return new Response(null, { status: HTTP_FORBIDDEN });
   }

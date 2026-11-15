@@ -1,6 +1,7 @@
 // auth-forms.js shows Sign in with Apple in the iOS app whenever it shows
 // Google (App Review rule 4.8). Only the server saying `apple: false` hides it;
-// a methods call that fails still shows it. The web and Android never show it.
+// a methods call that fails still shows it. The website shows it only when the
+// server says `appleWeb: true`. The Android app never shows it.
 //
 //   node --test "test/*.test.mjs"
 
@@ -68,6 +69,7 @@ async function serverError() {
 }
 
 const APPLE_ON = methodsAnswer({ password: true, apple: true });
+const APPLE_ON_WEB_TOO = methodsAnswer({ password: true, apple: true, appleWeb: true });
 const APPLE_OFF = methodsAnswer({ password: true, apple: false });
 
 // Loads the modal on one platform, opens it, and returns the page.
@@ -119,6 +121,17 @@ describe('the Sign in with Apple button', () => {
       });
     }
   }
+
+  it('is shown on the website once the server says it is set up there', async () => {
+    const document = await openModal({ platform: 'web', fetch: APPLE_ON_WEB_TOO });
+    assert.equal(isShown(document, APPLE_BUTTON_ID), true);
+    assert.equal(isShown(document, GOOGLE_BUTTON_ID), true);
+  });
+
+  it('stays hidden in the Android app even then', async () => {
+    const document = await openModal({ platform: 'android', fetch: APPLE_ON_WEB_TOO });
+    assert.equal(isShown(document, APPLE_BUTTON_ID), false);
+  });
 
   it('keeps the password form hidden when the methods call fails', async () => {
     const document = await openModal({ platform: 'ios', fetch: failedMethods });
