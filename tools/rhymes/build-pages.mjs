@@ -123,6 +123,12 @@ async function writeSitemap(pages) {
   await writeFile(new URL('sitemap.xml', REPO_ROOT), renderSitemap(paths));
 }
 
+// A featured word that lost its page would be a dead link on the hub.
+function featuredPageWords(featuredWords, pageWords) {
+  const hasPage = new Set(pageWords);
+  return featuredWords.filter((word) => hasPage.has(word));
+}
+
 async function main() {
   const data = await loadBuildData();
   const index = buildRhymeIndex(data.dictionary);
@@ -130,7 +136,8 @@ async function main() {
 
   await resetOutputDir();
   await writeRhymePages(pages, index, data);
-  await writePage(RHYMES_PATH, renderHubPage(pages.map((page) => page.word)));
+  const pageWords = pages.map((page) => page.word);
+  await writePage(RHYMES_PATH, renderHubPage(pageWords, featuredPageWords(data.featuredWords, pageWords)));
   await copyFile(STYLESHEET_SOURCE, new URL('rhymes.css', OUTPUT_DIR));
   await writeSitemap(pages);
   console.log(`Wrote ${pages.length} rhyme pages, the hub page and sitemap.xml`);

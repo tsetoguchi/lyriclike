@@ -20,6 +20,7 @@ const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seven
 // Bing flags meta descriptions longer than this; Google truncates near it.
 const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_DESCRIPTION_EXAMPLES = 4;
+const FEATURED_HEADING = 'Rhymes people search for';
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -287,7 +288,18 @@ function renderInitialSection([initial, words]) {
 </section>`;
 }
 
-export function renderHubPage(pageWordList) {
+// These words go first so a crawler meets them before the 5,000-word list.
+function renderFeatured(featuredWords) {
+  if (featuredWords.length === 0) return '';
+  const links = featuredWords.map((word) => `<li><a href="${rhymePagePath(word)}">${escapeHtml(word)}</a></li>`);
+  return `<section class="related">
+<h2>${FEATURED_HEADING}</h2>
+<ul class="related-list">${links.join('')}</ul>
+</section>
+`;
+}
+
+export function renderHubPage(pageWordList, featuredWords = []) {
   const groups = groupByInitial(pageWordList);
   const jumpLinks = groups.map(([initial]) => `<a href="#letter-${initial}">${initial.toUpperCase()}</a>`);
   const head = {
@@ -298,7 +310,7 @@ export function renderHubPage(pageWordList) {
   const main = `<h1>Rhyming dictionary</h1>
 <p class="answer">Rhymes for common words and the ones people look up most, matched by sound rather than spelling: perfect rhymes, near rhymes and slant rhymes, with syllable counts.</p>
 ${renderCallToAction()}
-<nav class="letter-jump">${jumpLinks.join(' ')}</nav>
+${renderFeatured(featuredWords)}<nav class="letter-jump">${jumpLinks.join(' ')}</nav>
 ${groups.map(renderInitialSection).join('\n')}`;
   return renderDocument(head, main);
 }
