@@ -5,6 +5,11 @@ const FIRST_SIGN_IN_KEY = 'first_sign_in_tracked';
 // How long the account menu waits for its password item before showing
 // anyway, so a slow connection still answers the click.
 const ACCOUNT_OPEN_WAIT_MS = 600;
+// Hide My Email gives the site a made-up address the person never saw, so it
+// is not shown back to them as who they are.
+const APPLE_RELAY_DOMAIN = '@privaterelay.appleid.com';
+const CAPTION_SIGNED_IN_AS = 'Signed in as';
+const CAPTION_SIGNED_IN_WITH_APPLE = 'Signed in with Apple';
 
 const accountButton = document.getElementById('account-settings-btn');
 const accountMenu = document.getElementById('account-menu');
@@ -70,7 +75,7 @@ function showUser(user) {
   document.body.classList.add('signed-in');
   document.getElementById('signed-out-actions').style.display = 'none';
   document.getElementById('user-info').style.display = '';
-  document.getElementById('account-initial').textContent = accountInitial(user);
+  drawAccountInitial(user);
   // The sidebar shows the notebook's pages once it knows whose they are.
   if (window.openNotebook) window.openNotebook();
 }
@@ -88,10 +93,33 @@ function showSignIn(signedOut = null) {
   if (window.NotebookList) window.NotebookList.load();
 }
 
-// The first letter of the address stands for the account in the header.
-function accountInitial(user) {
+function hasHiddenAppleEmail(user) {
   const email = (user && user.email) || '';
-  return email.charAt(0).toUpperCase();
+  return email.toLowerCase().endsWith(APPLE_RELAY_DOMAIN);
+}
+
+// What the menu says the account is: the address, or for a hidden Apple one,
+// the person's name (empty when Apple did not share it).
+function accountWho(user) {
+  if (hasHiddenAppleEmail(user)) {
+    return { caption: CAPTION_SIGNED_IN_WITH_APPLE, line: (user.name || '').trim() };
+  }
+  return { caption: CAPTION_SIGNED_IN_AS, line: (user && user.email) || '' };
+}
+
+// The first letter of what the menu shows stands for the account in the
+// header. Empty for a hidden Apple address with no name.
+function accountInitial(user) {
+  return accountWho(user).line.charAt(0).toUpperCase();
+}
+
+// With no letter to show, the Apple logo from the sign-in button stands in.
+function drawAccountInitial(user) {
+  const slot = document.getElementById('account-initial');
+  slot.textContent = accountInitial(user);
+  if (slot.textContent || !hasHiddenAppleEmail(user)) return;
+  const logo = document.querySelector('#auth-apple svg');
+  if (logo) slot.appendChild(logo.cloneNode(true));
 }
 
 function isAccountMenuOpen() {
@@ -101,7 +129,11 @@ function isAccountMenuOpen() {
 // Shows once the password item is settled, so the menu opens at its full
 // size instead of growing under the reader.
 async function openAccountMenu() {
-  document.getElementById('settings-user-email').textContent = window.currentUser?.email || '';
+  const who = accountWho(window.currentUser);
+  const line = document.getElementById('settings-user-email');
+  document.getElementById('settings-user-caption').textContent = who.caption;
+  line.textContent = who.line;
+  line.hidden = !who.line;
   if (window.showAccountSecurity) {
     const settled = window.showAccountSecurity(window.currentUser);
     await Promise.race([settled, new Promise(done => setTimeout(done, ACCOUNT_OPEN_WAIT_MS))]);
