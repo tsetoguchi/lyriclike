@@ -150,6 +150,42 @@ describe('the tour start', () => {
   });
 });
 
+// The pad had focus before the tour, and the tour's card takes it.
+async function openTourOverFocusedPad() {
+  const page = loadTour();
+  const pad = new FakeElement();
+  pad.isConnected = true;
+  pad.focusCount = 0;
+  pad.focus = () => { pad.focusCount += 1; };
+  page.document.body = new FakeElement();
+  page.document.activeElement = pad;
+  page.els['coach-tour'].contains = (el) => el === page.parts['.coach-card'];
+  page.sandbox.window.startCoachTour('word', 'love');
+  await finishLoading(page);
+  page.document.activeElement = page.parts['.coach-card'];
+  return { page, pad };
+}
+
+function skipTour(page) {
+  page.els['coach-skip'].fire('click');
+  page.els['coach-tour'].fire('animationend', { target: page.els['coach-tour'] });
+}
+
+describe('focus around the tour', () => {
+  it('goes back to the pad once the tour ends', async () => {
+    const { page, pad } = await openTourOverFocusedPad();
+    skipTour(page);
+    assert.equal(pad.focusCount, 1);
+  });
+
+  it('stays where the writer put it during the tour', async () => {
+    const { page, pad } = await openTourOverFocusedPad();
+    page.document.activeElement = new FakeElement();
+    skipTour(page);
+    assert.equal(pad.focusCount, 0);
+  });
+});
+
 describe('the sample tour rhyme step', () => {
   it('asks for a click and hides Next until it is done', async () => {
     const page = loadTour();

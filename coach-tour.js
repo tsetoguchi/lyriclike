@@ -177,6 +177,8 @@
   let steps = [];
   let stepIndex = 0;
   let placeFrame = null;
+  // What had focus when the tour opened, handed back when it ends.
+  let focusBeforeTour = null;
 
   // Storage that throws can't remember the tour, and one that comes back on
   // every visit is worse than none, so it counts as seen.
@@ -392,9 +394,22 @@
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  // The card takes focus for the tour. After it, focus goes back where it
+  // was, so a word left selected on the pad can be typed over, unless the
+  // writer has since put it somewhere of their own.
+  function returnFocus() {
+    const target = focusBeforeTour;
+    focusBeforeTour = null;
+    const active = document.activeElement;
+    const isFocusLost = !active || active === document.body || tourEl.contains(active);
+    if (!isFocusLost || !target || target === document.body || !target.isConnected) return;
+    target.focus({ preventScroll: true });
+  }
+
   function hideTour() {
     tourEl.hidden = true;
     tourEl.classList.remove(OPEN_CLASS, CLOSING_CLASS);
+    returnFocus();
   }
 
   // The card's own animations bubble up here too; only the fade ends it.
@@ -479,6 +494,7 @@
     tourEl.hidden = false;
     document.addEventListener('keydown', handleTourKey);
     trackEvent('tour_started', { tour: tourName, steps: steps.length });
+    focusBeforeTour = document.activeElement;
     showStep(0);
     // Laid out once without glides, so the light starts on the first part.
     void tourEl.offsetWidth;
