@@ -92,8 +92,9 @@ function onAuthChecked() {
 
 // Only typing counts: loading a page or the sample fires input too, and
 // either one means the button no longer belongs to the lines under it.
+// An emptied pad has nothing left to keep.
 lyricsEl.addEventListener('input', (event) => {
-  if (!event.isTrusted) hideSaveNudge();
+  if (!event.isTrusted || countWrittenLines(lyricsEl.value) === 0) hideSaveNudge();
   else showIfDue(LINES_BEFORE_NUDGE, TRIGGER.LINES);
 });
 document.addEventListener('rhyme-inserted', () => {

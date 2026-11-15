@@ -4077,6 +4077,13 @@ body.sidebar-open #sidebar-scrim {
     margin-left: var(--rail-width);
   }
 
+  /* Under the open sidebar its buttons still took Tab and showed their names
+     over the sidebar's own. It goes once the sidebar has slid over it. */
+  body.sidebar-open #sidebar-rail {
+    visibility: hidden;
+    transition: visibility 0s linear var(--duration-slow);
+  }
+
   /* The rail's logo stands in for the name while the sidebar is folded. */
   body:not(.sidebar-open) header h1 {
     display: none;
