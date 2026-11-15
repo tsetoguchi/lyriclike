@@ -111,6 +111,14 @@ describe('save nudge', () => {
     assert.equal(page.button.hidden, true);
   });
 
+  it('goes away when every line is deleted', () => {
+    const page = loadPage();
+    page.signOut();
+    page.type(TWO_LINES);
+    page.type('');
+    assert.equal(page.button.hidden, true);
+  });
+
   it('leaves the sample alone', () => {
     const page = loadPage({ isSample: true });
     page.signOut();
