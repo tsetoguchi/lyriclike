@@ -1473,7 +1473,7 @@ function remeasureIfWidthChanged() {
   invalidateLineHeightCache();
   updateGutters();
 }
-textareaEl.addEventListener('input', function handleInput() {
+textareaEl.addEventListener('input', function handleInput(event) {
   // Writing is the other signal that the rhyme data is wanted. It arrives in
   // the background while the writer keeps typing.
   ensureRhymeData();
@@ -1483,6 +1483,11 @@ textareaEl.addEventListener('input', function handleInput() {
   renderHighlight();
   // An edit can take away the word a chip would swap.
   updateChipHint();
+  // With every word deleted, the panel would go on naming one that is gone.
+  // A page that loads empty keeps a word linked from a rhyme page.
+  if (event.isTrusted && currentHighlightWord && textareaEl.value.trim() === '') {
+    resetRhymesPanel();
+  }
 });
 textareaEl.addEventListener('mousemove', handleEditorPointerMove);
 textareaEl.addEventListener('mouseleave', clearHoveredWord);
