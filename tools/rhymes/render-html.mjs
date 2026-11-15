@@ -21,6 +21,11 @@ const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seven
 const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_DESCRIPTION_EXAMPLES = 4;
 const FEATURED_HEADING = 'Rhymes people search for';
+// The editor takes one word of letters and apostrophes (storage.js) and
+// trims it, so spaces around the word are let through here too.
+const SEARCH_WORD_PATTERN = "\\s*[A-Za-z][A-Za-z']*\\s*";
+const SEARCH_WORD_MAX_LENGTH = 40;
+const SEARCH_LABEL = 'Find rhymes for any word';
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -95,6 +100,15 @@ function renderCallToAction() {
 <p>Writing a verse? LyricLike counts syllables and labels your rhyme scheme as you type. Free, no sign-up.</p>
 <a class="cta-button" href="/">Open the lyric editor</a>
 </aside>`;
+}
+
+// A plain form, since the pages carry no script: it opens the editor on the
+// typed word, where every word has rhymes, not only the ones with a page.
+export function renderWordSearch() {
+  return `<form class="word-search" action="/" method="get" role="search">
+<input class="word-search-input" type="search" name="${EDITOR_WORD_PARAM}" aria-label="${SEARCH_LABEL}" placeholder="${SEARCH_LABEL}" required pattern="${SEARCH_WORD_PATTERN}" title="One word, letters only" maxlength="${SEARCH_WORD_MAX_LENGTH}" autocomplete="off" autocapitalize="none" spellcheck="false">
+<button class="cta-button" type="submit">Find rhymes</button>
+</form>`;
 }
 
 // Opens the editor with this word's rhymes already beside a blank page, so
@@ -256,7 +270,8 @@ export function renderRhymePage(model, pageWords) {
     path: rhymePagePath(model.word),
     structuredData: rhymeBreadcrumb(model.word)
   };
-  const main = `<nav class="breadcrumb"><a href="${RHYMES_PATH}">Rhyming dictionary</a> › ${escapeHtml(model.word)}</nav>
+  const main = `${renderWordSearch()}
+<nav class="breadcrumb"><a href="${RHYMES_PATH}">Rhyming dictionary</a> › ${escapeHtml(model.word)}</nav>
 <h1>Words that rhyme with ${escapeHtml(model.word)}</h1>
 <p class="answer">${renderSummarySentence(model)}</p>
 <p class="fact">${renderSyllableFact(model)}</p>
@@ -309,6 +324,7 @@ export function renderHubPage(pageWordList, featuredWords = []) {
   };
   const main = `<h1>Rhyming dictionary</h1>
 <p class="answer">Rhymes for common words and the ones people look up most, matched by sound rather than spelling: perfect rhymes, near rhymes and slant rhymes, with syllable counts.</p>
+${renderWordSearch()}
 ${renderCallToAction()}
 ${renderFeatured(featuredWords)}<nav class="letter-jump">${jumpLinks.join(' ')}</nav>
 ${groups.map(renderInitialSection).join('\n')}`;

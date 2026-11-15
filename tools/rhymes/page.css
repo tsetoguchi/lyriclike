@@ -222,6 +222,48 @@ h1 {
 
 .cta-button:hover { filter: var(--hover-dim); }
 
+/* The same pill as a button: it takes the page's font and a hand cursor. */
+button.cta-button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* One row: the box takes the room the button leaves. */
+.word-search {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+/* Tall enough for a thumb. */
+.word-search > * {
+  min-height: var(--tap-target);
+}
+
+/* The hub page's search sits between its answer and the card. */
+.answer + .word-search {
+  margin-top: var(--space-6);
+}
+
+.word-search + .cta {
+  margin-top: 0;
+}
+
+/* 16px and up, or iOS zooms the page in when the box is tapped. */
+.word-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--ink-wash);
+  border: var(--hairline) solid var(--margin-line);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-callout);
+}
+
+.word-search-input::placeholder { color: var(--ink-faded); }
+
 /* Sections stack like the panel's groups: no cards, a line between each. */
 .rhyme-section,
 .related,

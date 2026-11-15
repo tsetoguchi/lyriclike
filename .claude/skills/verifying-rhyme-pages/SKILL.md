@@ -25,7 +25,8 @@ step. Check the served pages in the browser; check the files with git.
      "What night means", and groups Perfect (72), Family, Additive,
      Subtractive, Assonance, Consonance, each split by syllable count
    - two "Write with these rhymes" links to `/?rhymes=night`. Following
-     one opens the editor on a blank page with night's rhymes showing, and
+     one opens the editor with "night" on the page, picked and selected,
+     and night's rhymes showing (a returning draft is kept as it was), and
      the address goes back to `/`
 2. **Missing word.** `/rhymes/zzqqx/` answers a real 404 with title "Page
    not found | LyricLike", not the app.

@@ -19,6 +19,10 @@
 <main class="page">
 <h1>Page not found</h1>
 <p class="answer">There is no page at this address. If you were looking for rhymes, try the rhyming dictionary, or open the editor to find rhymes for any word.</p>
+<form class="word-search" action="/" method="get" role="search">
+<input class="word-search-input" type="search" name="rhymes" aria-label="Find rhymes for any word" placeholder="Find rhymes for any word" required pattern="\s*[A-Za-z][A-Za-z']*\s*" title="One word, letters only" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false">
+<button class="cta-button" type="submit">Find rhymes</button>
+</form>
 <aside class="cta">
 <p>Writing a verse? LyricLike counts syllables and labels your rhyme scheme as you type. Free, no sign-up.</p>
 <a class="cta-button" href="/">Open the lyric editor</a>

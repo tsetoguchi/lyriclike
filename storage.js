@@ -1762,7 +1762,25 @@ function takeLinkedWord() {
   return LINKED_WORD_PATTERN.test(word) ? word : null;
 }
 
-// Someone who came for one word's rhymes gets a blank pad beside them, not
+// The word starts their page, picked so a rhyme click swaps it, and
+// selected so typing replaces it. A draft of theirs is never written over:
+// its rhymes show beside it instead. On phones the pad sits behind the
+// Rhymes tab, and focusing it would raise the keyboard, so it is not focused.
+function openOnLinkedWord(word) {
+  const textarea = document.getElementById('lyrics');
+  if (textarea.value !== '') {
+    window.showRhymesForWord(word, null);
+    return;
+  }
+  textarea.value = word;
+  textarea.dispatchEvent(new Event('input'));
+  window.showRhymesForWord(word, { start: 0, end: word.length });
+  if (window.isMobileView && window.isMobileView()) return;
+  textarea.focus();
+  textarea.setSelectionRange(0, word.length);
+}
+
+// Someone who came for one word's rhymes gets their own pad beside them, not
 // the sample with its own word picked. A draft of theirs still comes back.
 function startEditor() {
   const linkedWord = takeLinkedWord();
@@ -1772,7 +1790,7 @@ function startEditor() {
   // The strip was held open from the first paint; the sample bar owns it now.
   document.body.classList.remove('expects-sample');
   if (linkedWord === null || !window.showRhymesForWord) return;
-  window.showRhymesForWord(linkedWord, null);
+  openOnLinkedWord(linkedWord);
   trackEvent('linked_word_opened', { word: linkedWord });
   // The sample's tour never runs for them, so they get one of their own.
   if (isNewVisitor && window.startCoachTour) window.startCoachTour('word', linkedWord);
