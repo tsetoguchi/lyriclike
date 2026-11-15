@@ -2962,6 +2962,15 @@ body:not(.signed-in) .invite-btn {
   overflow-wrap: anywhere; /* a long address wraps instead of widening the menu */
 }
 
+.account-menu-email[hidden] {
+  display: none;
+}
+
+#account-initial svg {
+  display: block;
+  fill: currentColor;
+}
+
 .account-menu-group {
   display: flex;
   flex-direction: column;
