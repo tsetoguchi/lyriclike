@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { REPO_ROOT, loadBuildData } from './build-data.mjs';
 import { buildPageModel, countListedRhymes } from './page-content.mjs';
-import { RHYMES_PATH, renderHubPage, renderRhymePage, renderSitemap, rhymePagePath } from './render-html.mjs';
+import { RHYMES_PATH, renderHubPage, renderRhymePage, renderSitemap, rhymePagePath, sitemapPaths } from './render-html.mjs';
 import rhymeCore from '../../rhyme-core.js';
 
 const { buildRhymeIndex, findRhymes, hasRhymeEntry } = rhymeCore;
@@ -112,15 +112,9 @@ async function writeRhymePages(pages, index, data) {
   }
 }
 
-// Hand-written, so it is listed here and not generated like the pages around it.
-const GUIDE_PATH = '/guide/';
-// Served by the other worker, so no file in this repo backs it.
-const PLANS_PATH = '/pricing'; // word-check: allow
-
 async function writeSitemap(pages) {
   const rhymePaths = pages.map((page) => rhymePagePath(page.word));
-  const paths = ['/', GUIDE_PATH, PLANS_PATH, RHYMES_PATH, ...rhymePaths];
-  await writeFile(new URL('sitemap.xml', REPO_ROOT), renderSitemap(paths));
+  await writeFile(new URL('sitemap.xml', REPO_ROOT), renderSitemap(sitemapPaths(rhymePaths)));
 }
 
 // A featured word that lost its page would be a dead link on the hub.
