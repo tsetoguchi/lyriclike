@@ -49,8 +49,14 @@ async function loadPopularWords() {
   return firstColumn(await readText(TOOLS_DIR, 'popular-words.tsv'));
 }
 
+// Words whose pages reached Google's first page, most shown first. Picked by
+// hand from Search Console, so the file is edited, not generated.
+async function loadFeaturedWords() {
+  return JSON.parse(await readText(TOOLS_DIR, 'featured-words.json'));
+}
+
 export async function loadBuildData() {
-  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords, pageExcluded, definitions] = await Promise.all([
+  const [dictionary, englishWords, blocklist, names, crude, frequentWords, popularWords, pageExcluded, definitions, featuredWords] = await Promise.all([
     readRepoJson('cmudict.json'),
     readRepoJson('english-words.json').then((words) => new Set(words)),
     readRepoJson('blocklist.json').then((words) => new Set(words)),
@@ -59,8 +65,9 @@ export async function loadBuildData() {
     loadFrequentWords(),
     loadPopularWords(),
     loadPageExcludedWords(),
-    loadDefinitions()
+    loadDefinitions(),
+    loadFeaturedWords()
   ]);
   const ranks = rankWords(frequentWords);
-  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords, pageExcluded, definitions };
+  return { dictionary, filters: { englishWords, blocklist }, names, crude, ranks, popularWords, frequentWords, pageExcluded, definitions, featuredWords };
 }
