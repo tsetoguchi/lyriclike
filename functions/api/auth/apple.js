@@ -7,12 +7,13 @@
 
 import { signedInResponse } from '../../_accounts.js';
 import {
-  exchangeAuthorizationCode, isAppleConfigured, isTrue, sealRefreshToken, verifyIdentityToken,
+  appleProfile, exchangeAuthorizationCode, isAppleConfigured, verifyIdentityToken,
 } from '../../_apple.js';
+import { saveAppleGrant } from '../../_apple-grants.js';
 import { resolveOauthUser } from '../../_oauth-accounts.js';
 import { MINUTE_MS, checkRateLimit, clientIpKey, rateLimitedResponse } from '../../_ratelimit.js';
 import { readJsonBody, runInBackground } from '../../_request.js';
-import { jsonError, normalizeEmail, sha256Hex, writeLog } from '../../_shared.js';
+import { jsonError, sha256Hex, writeLog } from '../../_shared.js';
 
 const PROVIDER = 'apple';
 const HTTP_BAD_REQUEST = 400;
@@ -48,18 +49,6 @@ function readSignIn(body) {
   };
 }
 
-// Apple's relay addresses are private to this app and say nothing about the
-// address on an account made another way, so they are not compared with it.
-function profileFrom(claims, name) {
-  const email = typeof claims.email === 'string' ? claims.email : null;
-  const emailNormalized = email ? normalizeEmail(email) : null;
-  return {
-    email, name, emailNormalized,
-    emailVerified: isTrue(claims.email_verified),
-    canCompareEmail: Boolean(emailNormalized) && !isTrue(claims.is_private_email),
-  };
-}
-
 // Remembers the token so it cannot be used a second time. False if it has been.
 async function claimTokenUse(env, identityToken, expiresAtSeconds) {
   const result = await env.lyricalmiracle_db.prepare(
@@ -76,9 +65,7 @@ async function storeGrant(env, request, userId, code) {
     await writeLog(env, request, { userId, event: 'apple_code_exchange_failed' });
     return;
   }
-  await env.lyricalmiracle_db.prepare(
-    'INSERT OR REPLACE INTO apple_grants (user_id, refresh_token, created_at) VALUES (?, ?, ?)'
-  ).bind(userId, await sealRefreshToken(env, refreshToken), Date.now()).run();
+  await saveAppleGrant(env, userId, refreshToken, env.APPLE_CLIENT_ID);
 }
 
 function refuseToken(env, request) {
@@ -103,7 +90,7 @@ export async function onRequestPost(context) {
     return refuseToken(env, request);
   }
 
-  const profile = profileFrom(claims, signIn.name);
+  const profile = appleProfile(claims, signIn.name);
   const userId = await resolveOauthUser(context, PROVIDER, profile, claims.sub);
   if (!userId) {
     return jsonError(HTTP_FORBIDDEN, 'no_email',

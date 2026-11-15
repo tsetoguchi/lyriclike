@@ -1,4 +1,5 @@
 const GOOGLE_SIGN_IN_URL = '/api/auth/google/start';
+const APPLE_SIGN_IN_URL = '/api/auth/apple/start';
 // Set once this device has reported a signed-in visit to analytics.
 const FIRST_SIGN_IN_KEY = 'first_sign_in_tracked';
 // How long the account menu waits for its password item before showing
@@ -148,10 +149,15 @@ function startSignIn() {
   window.location.href = GOOGLE_SIGN_IN_URL;
 }
 
-// Sign in with Apple, offered by the iOS app only (auth-forms.js).
+// Sign in with Apple. The iOS app shows the system sheet; the website goes to
+// Apple's page. auth-forms.js decides where the button is offered.
 function startAppleSignIn() {
   trackEvent('apple_sign_in_started');
-  window.NativeShell.startAppleSignIn();
+  if (window.NativeShell.isNative) {
+    window.NativeShell.startAppleSignIn();
+    return;
+  }
+  window.location.href = APPLE_SIGN_IN_URL;
 }
 
 // The modal (auth-forms.js) offers Google and, when it is switched on, email

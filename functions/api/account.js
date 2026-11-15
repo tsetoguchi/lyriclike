@@ -2,7 +2,8 @@
 // load makes (GET /api/me) stays simple.
 
 import { checkCurrentPassword } from '../_accounts.js';
-import { isAppleConfigured, openRefreshToken, revokeRefreshToken } from '../_apple.js';
+import { isAppleConfigured, revokeRefreshToken } from '../_apple.js';
+import { readAppleGrant } from '../_apple-grants.js';
 import { isEventHookSet } from '../_event-hook.js';
 import { closeRoom, evictFromRoom } from '../_live.js';
 import { queueAccountDeleted } from '../_page-events.js';
@@ -46,20 +47,11 @@ async function ownedPageIds(env, user) {
   return owned.results.map(row => row.id);
 }
 
-// The Apple refresh token this account holds, if any. Read before the rows go,
-// since revoking it needs it.
-async function readAppleGrant(env, userId) {
-  const row = await env.lyricalmiracle_db.prepare(
-    'SELECT refresh_token FROM apple_grants WHERE user_id = ?'
-  ).bind(userId).first();
-  return row ? openRefreshToken(env, row.refresh_token) : null;
-}
-
 // Apple wants the app's grant revoked when the account goes, so the app leaves
 // the person's Apple ID settings. A failure is logged with no user, since the
 // user is gone, and does not undo the deletion.
-async function revokeAppleGrant(env, request, refreshToken) {
-  if (await revokeRefreshToken(env, refreshToken)) return;
+async function revokeAppleGrant(env, request, { refreshToken, clientId }) {
+  if (await revokeRefreshToken(env, refreshToken, clientId)) return;
   await writeLog(env, request, { userId: null, event: 'apple_revoke_failed' });
 }
 
@@ -73,6 +65,7 @@ export async function onRequestDelete(context) {
 
   await writeLog(env, request, { userId: user.id, event: 'delete_account' });
 
+  // Read before the rows go, since revoking the grant needs it.
   const appleGrant = isAppleConfigured(env) ? await readAppleGrant(env, user.id) : null;
   const rooms = await roomsToLeave(env, user);
   const pageIds = await ownedPageIds(env, user);

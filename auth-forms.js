@@ -23,6 +23,8 @@
   const CONFIRM_CHECK_MIN_GAP_MS = 15000;
   const MAX_CONFIRM_CHECKS = 20;
   const NEXT_PASSWORD = 'password';
+  const IOS_PLATFORM = 'ios';
+  const WEB_PLATFORM = 'web';
 
   const HTTP_OK = 200;
   const HTTP_CREATED = 201;
@@ -141,7 +143,7 @@
   const linkButtons = Array.from(document.querySelectorAll('[data-auth-link]'));
 
   let methodsPromise = null;
-  let methods = { password: false, apple: true, turnstileSiteKey: null };
+  let methods = { password: false, apple: true, appleWeb: false, turnstileSiteKey: null };
   let currentView = VIEW.START;
   let linkToken = null;
   let pendingSignup = null;
@@ -158,6 +160,7 @@
   // Asked once per page. A failure reads as "passwords off", which still
   // leaves Google working. Apple stays on unless the server says it is off:
   // where the iOS app offers Google it must offer Apple too (App Review 4.8).
+  // The website offers Apple only once the server says it is set up there.
   function loadMethods() {
     if (methodsPromise) return methodsPromise;
     methodsPromise = fetch(METHODS_URL)
@@ -167,6 +170,7 @@
         methods = {
           password: Boolean(body && body.password === true),
           apple: !(body && body.apple === false),
+          appleWeb: Boolean(body && body.appleWeb === true),
           turnstileSiteKey: body && typeof body.turnstileSiteKey === 'string' ? body.turnstileSiteKey : null,
         };
         return methods;
@@ -372,11 +376,14 @@
     return { ...VIEWS[VIEW.START], email: false, submit: null };
   }
 
-  // Sign in with Apple is for the iOS app: the server has not said it is off,
-  // and the view is one that offers it.
+  // Sign in with Apple is for the iOS app, unless the server has said it is
+  // off, and for the website once the server says it is on. The Android app's
+  // webview has no way to show it. The view must also be one that offers it.
   function isAppleOffered(view) {
     const shell = window.NativeShell;
-    return Boolean(view.apple && methods.apple && shell && shell.platform === 'ios');
+    if (!view.apple || !shell) return false;
+    if (shell.platform === IOS_PLATFORM) return methods.apple;
+    return shell.platform === WEB_PLATFORM && methods.appleWeb;
   }
 
   function showView(name, message) {

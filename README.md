@@ -83,6 +83,12 @@ identity token to `POST /api/auth/apple`. The server keeps the refresh token
 Apple returns so it can revoke the grant when an account is deleted, which Apple
 requires.
 
+The website offers Apple too once `APPLE_WEB_CLIENT_ID` is set as well. It is a
+Services ID from the same developer account, grouped under the app's ID so a
+person gets the same account in both places. Give it the site's domain and the
+Return URL `https://your-domain/api/auth/apple/callback`. The button goes to
+`GET /api/auth/apple/start`, and Apple posts the person back to the Return URL.
+
 You can also set `ALERT_EMAIL` to an address that should get a heads up when a
 day's signup or account email reaches 70% of its cap in `functions/_email.js`.
 Once a cap is reached, the signup, forgot-password and set-password requests

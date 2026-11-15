@@ -34,6 +34,12 @@ export function cookieHeader(name, value, url, { maxAge }) {
     `Max-Age=${maxAge}; Path=/`;
 }
 
+// For a cookie that must come back on a form another site posts here, which
+// Lax does not allow. Browsers only take SameSite=None with Secure.
+export function crossSiteCookieHeader(name, value, { maxAge }) {
+  return `${name}=${value}; HttpOnly; Secure; SameSite=None; Max-Age=${maxAge}; Path=/`;
+}
+
 export function sessionCookie(value, url, { maxAge }) {
   return cookieHeader(SESSION_COOKIE, value, url, { maxAge });
 }
