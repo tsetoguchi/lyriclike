@@ -317,6 +317,23 @@ ${groups.map(renderInitialSection).join('\n')}`;
 
 // ── Sitemap ──
 
+// Hand-written pages. The build rewrites sitemap.xml from scratch, so a page
+// added to that file by hand and not here is dropped on the next build.
+const HAND_WRITTEN_PATHS = [
+  '/guide/',
+  '/rhymezone-alternative/',
+  '/masterwriter-alternative/',
+  '/rhymebrain-alternative/',
+  '/privacy/',
+  '/delete-account/'
+];
+// Served by the other worker, so no file in this repo backs it.
+const PLANS_PATH = '/pricing'; // word-check: allow
+
+export function sitemapPaths(rhymePaths) {
+  return ['/', ...HAND_WRITTEN_PATHS, PLANS_PATH, RHYMES_PATH, ...rhymePaths];
+}
+
 export function renderSitemap(paths) {
   const entries = paths.map((path) => `  <url>\n    <loc>${SITE_ORIGIN}${path}</loc>\n  </url>`);
   return `<?xml version="1.0" encoding="UTF-8"?>
