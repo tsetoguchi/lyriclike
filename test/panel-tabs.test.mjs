@@ -27,7 +27,8 @@ describe('createTabList', () => {
     const first = list.add(tab('More'));
     const second = list.add(tab('More'));
     assert.notEqual(first, second);
-    assert.deepEqual(list.added(), [{ id: first, label: 'More' }, { id: second, label: 'More' }]);
+    assert.deepEqual(list.added(),
+      [{ id: first, label: 'More' }, { id: second, label: 'More' }]);
   });
 
   it('select reports what closed and what opened', () => {

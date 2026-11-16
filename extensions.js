@@ -339,7 +339,8 @@
   // inPlaceOf is optional. Left out, or given as nothing, it reads as null.
   function readInPlaceOf(options) {
     const inPlaceOf = options ? options.inPlaceOf : undefined;
-    if (inPlaceOf === undefined || inPlaceOf === null) return { isValid: true, word: null };
+    const isLeftOut = inPlaceOf === undefined || inPlaceOf === null;
+    if (isLeftOut) return { isValid: true, word: null };
     const word = root.SlotInputs ? root.SlotInputs.readPlacedWord(inPlaceOf) : null;
     return { isValid: word !== null, word };
   }
@@ -350,7 +351,7 @@
     const placed = root.SlotInputs ? root.SlotInputs.readPlacedWord(word) : null;
     const inPlaceOf = readInPlaceOf(options);
     if (placed === null || !inPlaceOf.isValid) {
-      console.warn('Extension hook: placeWord needs one word of 64 characters or fewer.');
+      console.warn('Extension hook: placeWord needs one short word on one line.');
       return false;
     }
     const place = pageFunction('placePanelWord');

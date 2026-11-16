@@ -57,7 +57,8 @@ class FakeElement {
 
 // A page with the word panel, and the app's own word placer stood in.
 function loadPage({ hasPlacer = true, placerAnswer = true } = {}) {
-  const elements = new Map([PANEL_ID, STRIP_ID, BODY_ID].map(id => [id, new FakeElement()]));
+  const ids = [PANEL_ID, STRIP_ID, BODY_ID];
+  const elements = new Map(ids.map(id => [id, new FakeElement()]));
   const document = new FakeElement();
   document.getElementById = (id) => elements.get(id) || null;
   document.createElement = () => new FakeElement();
@@ -65,7 +66,8 @@ function loadPage({ hasPlacer = true, placerAnswer = true } = {}) {
   elements.get(STRIP_ID).hidden = true;
   elements.get(BODY_ID).hidden = true;
   const page = { warnings: [], placed: [] };
-  const context = { document, console: { warn: (...args) => page.warnings.push(args) } };
+  const warn = (...args) => page.warnings.push(args);
+  const context = { document, console: { warn } };
   if (hasPlacer) {
     context.placePanelWord = (word, inPlaceOf) => {
       page.placed.push([word, inPlaceOf]);
@@ -92,7 +94,11 @@ function recordingTab(label = 'More') {
   const calls = [];
   return {
     calls,
-    tab: { label, onOpen: (body) => calls.push(['open', body]), onClose: () => calls.push(['close']) },
+    tab: {
+      label,
+      onOpen: (body) => calls.push(['open', body]),
+      onClose: () => calls.push(['close']),
+    },
   };
 }
 

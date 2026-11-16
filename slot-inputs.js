@@ -93,7 +93,8 @@
   function readPanelTab(tab) {
     if (!isObject(tab)) return null;
     const { label, onOpen } = tab;
-    const onClose = tab.onClose === undefined || tab.onClose === null ? null : tab.onClose;
+    const hasOnClose = tab.onClose !== undefined && tab.onClose !== null;
+    const onClose = hasOnClose ? tab.onClose : null;
     if (!isLabel(label) || typeof onOpen !== 'function') return null;
     if (onClose !== null && typeof onClose !== 'function') return null;
     return { label, onOpen, onClose };
