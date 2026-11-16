@@ -94,8 +94,8 @@ function loadPage() {
 }
 
 describe('the delete notice extension hook', () => {
-  it('hooks report version 9', () => {
-    assert.equal(loadPage().hooks.version, 9);
+  it('hooks report version 10', () => {
+    assert.equal(loadPage().hooks.version, 10);
   });
 
   it('the delete dialog shows the notice an extension set', () => {
