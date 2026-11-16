@@ -9,3 +9,19 @@
 
 # Browsers ask for this on every page that names no icon, rhyme pages too.
 /favicon.ico  /assets/icons/icon-v3-192.png  301
+
+# Pages publishes the whole repo, and Pages has no ignore file. These are the
+# repo's own files, not the site's, so send anyone who asks for them home.
+# (_redirects can't return a 404; a 301 home is the closest.)
+/README.md       /  301
+/wrangler.toml   /  301
+/.gitignore      /  301
+/.gitattributes  /  301
+/test/*          /  301
+/tools/*         /  301
+/migrations/*    /  301
+/collab/*        /  301
+/mobile/*        /  301
+/.github/*       /  301
+/.githooks/*     /  301
+/.claude/*       /  301
