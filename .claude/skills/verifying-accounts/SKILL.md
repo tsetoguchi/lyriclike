@@ -15,6 +15,14 @@ with known tokens. Then the browser tests everything after the email.
 **REQUIRED:** follow `running-lyriclike-locally` first, but start the server
 with password accounts on (below).
 
+
+## Feature map
+
+`features/README.md` lists every feature this guide covers, one file each:
+how a user reaches it, how to drive it, and what proves it works. Use it to
+cover every entry point, not just the handy one. Keep it in step with the
+app.
+
 ## Set up
 
 1. Write and load the test accounts. Put the SQL in your scratchpad:

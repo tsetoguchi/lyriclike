@@ -14,6 +14,14 @@ with separate cookies play Ann (owner) and Bo (co-writer) on `smoke-page`.
 **REQUIRED:** read `running-lyriclike-locally` first. Its sign-in seed makes
 Ann, Bo and the shared page.
 
+
+## Feature map
+
+`features/README.md` lists every feature this guide covers, one file each:
+how a user reaches it, how to drive it, and what proves it works. Use it to
+cover every entry point, not just the handy one. Keep it in step with the
+app.
+
 ## Set up
 
 1. Start the room first, in the background. Starting both at once gives

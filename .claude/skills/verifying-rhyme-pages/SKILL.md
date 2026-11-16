@@ -13,12 +13,20 @@ step. Check the served pages in the browser; check the files with git.
 
 **REQUIRED:** follow `running-lyriclike-locally` to start the site.
 
+
+## Feature map
+
+`features/README.md` lists every feature this guide covers, one file each:
+how a user reaches it, how to drive it, and what proves it works. Use it to
+cover every entry point, not just the handy one. Keep it in step with the
+app.
+
 ## Run through
 
 1. **A word page.** `page.goto('/rhymes/night/')` answers 200 with:
    - title "Words That Rhyme With Night | LyricLike"
-   - a meta description under 160 characters, starting "3,787 words
-     that rhyme with night"
+   - a meta description under 160 characters, starting "What rhymes
+     with night? Right, might, quite and fight."
    - canonical `https://lyriclike.com/rhymes/night/`
    - one JSON-LD block of `@type` BreadcrumbList that parses
    - h1 "Words that rhyme with night", then the pronunciation `/naɪt/`,
