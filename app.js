@@ -1593,15 +1593,40 @@ function updateChipHint() {
 }
 
 function placeChipWord(word) {
-  return insertCaret === null ? replacePickedWord(word) : addWordAtCaret(word);
+  return insertCaret === null ? replacePickedWord(word) : addWordAt(insertCaret, word);
+}
+
+function isPickedWord(word) {
+  if (!pickedBounds || !word) return false;
+  const picked = textareaEl.value.slice(pickedBounds.start, pickedBounds.end);
+  return RhymeCore.normalizeWord(picked) === RhymeCore.normalizeWord(word);
+}
+
+// Where a word from the panel goes when it swaps nothing: the caret the
+// writer left, moved past any word it sits in so that word is not split.
+function panelWordCaret() {
+  const text = textareaEl.value;
+  const left = insertCaret !== null ? insertCaret : textareaEl.selectionStart;
+  const caret = Math.min(left, text.length);
+  const restOfWord = text.slice(caret).match(new RegExp('^' + WORD_CHAR.source + '+'));
+  return caret + (restOfWord ? restOfWord[0].length : 0);
+}
+
+// A word an extension's tab offers. Unlike a rhyme chip it may have nothing
+// to do with the picked word, so it swaps that word only when told which
+// word it stands in for, and is otherwise added at the caret.
+function placePanelWord(word, inPlaceOf) {
+  if (!canEditLyrics()) return false;
+  if (isPickedWord(inPlaceOf)) return replacePickedWord(word);
+  return addWordAt(panelWordCaret(), word);
 }
 
 // Once added, the word is picked like a swapped one, so a second chip swaps
 // it rather than adding another word beside it.
-function addWordAtCaret(word) {
+function addWordAt(position, word) {
   if (word === '' || !canEditLyrics()) return false;
   const text = textareaEl.value;
-  const caret = Math.min(insertCaret, text.length);
+  const caret = Math.min(position, text.length);
   const before = caret > 0 && !/\s/.test(text[caret - 1]) ? ' ' : '';
   const after = WORD_CHAR.test(text[caret] || '') ? ' ' : '';
   insertIntoEditor(before + word + after, caret, caret);

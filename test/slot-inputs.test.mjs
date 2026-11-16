@@ -13,12 +13,15 @@ const {
   readWords,
   readPreview,
   readNote,
+  readPanelTab,
+  readPlacedWord,
   previewLines,
   MAX_LABEL_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_BODY_LENGTH,
   MAX_TAG_LENGTH,
   MAX_NOTE_LENGTH,
+  MAX_WORD_LENGTH,
   LINE_MARKS,
 } = slotInputs;
 
@@ -164,5 +167,61 @@ describe('readNote', () => {
 
   it('refuses null', () => {
     assert.equal(readNote(null), null);
+  });
+});
+
+describe('readPanelTab', () => {
+  const onOpen = () => {};
+
+  it('takes a label and an onOpen', () => {
+    assert.deepEqual(readPanelTab({ label: 'More', onOpen }),
+      { label: 'More', onOpen, onClose: null });
+  });
+
+  it('keeps an onClose that is a function', () => {
+    const onClose = () => {};
+    assert.equal(readPanelTab({ label: 'More', onOpen, onClose }).onClose, onClose);
+  });
+
+  it('refuses a blank label', () => {
+    assert.equal(readPanelTab({ label: ' ', onOpen }), null);
+  });
+
+  it('refuses a label one character too long', () => {
+    const label = 'x'.repeat(MAX_LABEL_LENGTH + 1);
+    assert.equal(readPanelTab({ label, onOpen }), null);
+  });
+
+  it('refuses a tab with no onOpen', () => {
+    assert.equal(readPanelTab({ label: 'More' }), null);
+  });
+
+  it('refuses an onClose that is not a function', () => {
+    assert.equal(readPanelTab({ label: 'More', onOpen, onClose: 'no' }), null);
+  });
+
+  it('refuses null', () => {
+    assert.equal(readPanelTab(null), null);
+  });
+});
+
+describe('readPlacedWord', () => {
+  it('has the agreed limit', () => {
+    assert.equal(MAX_WORD_LENGTH, 64);
+  });
+
+  it('trims and returns a word', () => {
+    assert.equal(readPlacedWord(' gloomy '), 'gloomy');
+  });
+
+  it('accepts a word of the longest length', () => {
+    assert.equal(readPlacedWord('x'.repeat(MAX_WORD_LENGTH)).length, MAX_WORD_LENGTH);
+  });
+
+  it('refuses what is not one short word', () => {
+    const tooLong = 'x'.repeat(MAX_WORD_LENGTH + 1);
+    for (const bad of [null, 7, '', '   ', 'two\nlines', tooLong]) {
+      assert.equal(readPlacedWord(bad), null, String(bad));
+    }
   });
 });

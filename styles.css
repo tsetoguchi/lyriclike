@@ -1970,6 +1970,106 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   display: none;
 }
 
+/* Tabs across the top of the word panel: Rhymes, and any an extension adds.
+   Hidden until one is added. They look like the phone's Lyrics and Rhymes
+   tabs, since they do the same job one level down. */
+.panel-tabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: var(--hairline) solid var(--margin-line);
+}
+
+.panel-tabs[hidden] {
+  display: none;
+}
+
+.panel-tab {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-bottom: var(--tab-indicator-width) solid transparent;
+  color: var(--ink-faded);
+  cursor: pointer;
+  transition: color var(--duration-base), border-color var(--duration-base);
+  min-height: var(--tap-target);
+}
+
+.panel-tab:hover {
+  color: var(--ink);
+}
+
+.panel-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* An added tab's own content, in the rhymes' place. */
+.panel-tab-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  color: var(--ink);
+}
+
+.panel-tab-body[hidden] {
+  display: none;
+}
+
+.rhymes-panel.shows-added-tab > :not(.panel-tabs):not(.panel-tab-body) {
+  display: none;
+}
+
+/* Looks an added tab may use for its own pieces: a text box and a word. */
+.panel-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-subhead);
+  color: var(--ink);
+  background: var(--field-fill);
+  border: var(--hairline) solid var(--ink-border);
+  border-radius: var(--field-radius);
+}
+
+.panel-field::placeholder {
+  color: var(--ink-faded);
+}
+
+.panel-field:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+/* Shaped like a rhyme chip, with no category colour. */
+.word-chip {
+  font-family: var(--font-ui);
+  font-size: var(--text-footnote);
+  padding: var(--space-1) var(--space-3);
+  color: var(--ink);
+  background: var(--ink-wash);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.word-chip:hover {
+  background: var(--ink-wash-strong);
+}
+
 /* The preview: an extension's text, read-only, in the editor's place. Its
    rows are the editor's lines, with the open gutters' widths beside them. */
 .lyrics-area[hidden],
