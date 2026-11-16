@@ -10,6 +10,8 @@
   const MAX_BODY_LENGTH = 500000;
   const MAX_TAG_LENGTH = 64;
   const MAX_NOTE_LENGTH = 200;
+  const MAX_WORD_LENGTH = 64;
+  const LINE_BREAK = /[\r\n]/;
   const LINE_MARKS = ['added', 'removed'];
   const MARK_REMOVED = 'removed';
   const ICON_PREFIX = '<svg';
@@ -86,17 +88,41 @@
     return isTextWithin(text, MAX_NOTE_LENGTH) ? text : null;
   }
 
+  // A tab beside the rhymes. onClose is optional: a tab with nothing to
+  // tidy up leaves it out.
+  function readPanelTab(tab) {
+    if (!isObject(tab)) return null;
+    const { label, onOpen } = tab;
+    const onClose = tab.onClose === undefined || tab.onClose === null ? null : tab.onClose;
+    if (!isLabel(label) || typeof onOpen !== 'function') return null;
+    if (onClose !== null && typeof onClose !== 'function') return null;
+    return { label, onOpen, onClose };
+  }
+
+  // One word bound for the lyrics: a line break would split the line it
+  // lands in.
+  function readPlacedWord(word) {
+    if (typeof word !== 'string') return null;
+    const trimmed = word.trim();
+    const isOneLine = !LINE_BREAK.test(trimmed);
+    const isSized = trimmed.length > 0 && trimmed.length <= MAX_WORD_LENGTH;
+    return isOneLine && isSized ? trimmed : null;
+  }
+
   const SlotInputs = {
     readAction,
     readNote,
     readWords,
     readPreview,
+    readPanelTab,
+    readPlacedWord,
     previewLines,
     MAX_LABEL_LENGTH,
     MAX_TITLE_LENGTH,
     MAX_BODY_LENGTH,
     MAX_TAG_LENGTH,
     MAX_NOTE_LENGTH,
+    MAX_WORD_LENGTH,
     LINE_MARKS,
   };
 
