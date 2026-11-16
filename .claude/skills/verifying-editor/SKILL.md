@@ -1,6 +1,6 @@
 ---
 name: verifying-editor
-description: Use when a change touches the LyricLike lyrics editor or rhyme panel - typing, syllable counts, rhyme scheme letters, internal rhyme marks, picking a word, rhyme chips, the sort menu, the sample verse, or the phone layout - and needs checking in a real browser before a PR
+description: Use when a change touches the LyricLike lyrics editor or rhyme panel - typing, syllable counts, rhyme scheme letters, internal rhyme marks, picking a word, rhyme chips, the sort menu, the sample verse, the page's title and buttons (Share, Invite), or the phone layout - and needs checking in a real browser before a PR
 ---
 
 # Verifying the editor
@@ -82,6 +82,13 @@ Start signed out with `localStorage` cleared.
    changes to that word, but the view stays on Lyrics. That is on purpose.
 3. Click `#tab-rhyme-word`. The rhymes panel shows 30 chips.
 4. `#bottom-nav` is visible.
+
+## Doubled buttons
+
+After both run-throughs, run the doubled-button check from
+`running-lyriclike-locally` at both widths, signed in and signed out, on a
+long page at the top and after scrolling. `features/phone-page-head.md`
+has the full phone recipe.
 
 ## Show the user
 

@@ -25,3 +25,5 @@ mistakes live in `../SKILL.md`.
   swapping a chip in.
 - [Draft saving](./draft-saving.md): signed-out text survives a reload.
 - [Phone layout](./phone-layout.md): Lyrics and Rhymes tabs at 393px.
+- [Phone page head](./phone-page-head.md): title and buttons scroll away,
+  one Invite stays in the corner.

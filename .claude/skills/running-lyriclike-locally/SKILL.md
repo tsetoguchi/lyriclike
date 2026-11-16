@@ -73,6 +73,42 @@ Email and password sign-up need extra bindings. See `verifying-accounts`.
 - One console error is normal on every load: `401` for `/api/me` when
   signed out. Anything else is worth a look.
 
+## Check for doubled buttons
+
+Screenshots miss a button that shows twice when the two copies sit on top
+of each other or side by side in a crowded row. `check-duplicates.js`
+measures instead: it fails when two buttons or links with the same visible
+text are on screen at once.
+
+Playwright only reads files under `C:\Users\tao\Dropbox\Apps\lyriclike`.
+From a worktree, copy it into `.playwright-mcp/` first:
+
+```bash
+cp .claude/skills/running-lyriclike-locally/check-duplicates.js \
+  C:/Users/tao/Dropbox/Apps/lyriclike/.playwright-mcp/
+```
+
+Then call `browser_run_code_unsafe` with
+`filename: ".playwright-mcp/check-duplicates.js"`. It returns `ok`, the
+width, and any `duplicates` with each copy's id and position.
+
+Run it for every change to layout, CSS or which buttons show:
+
+- at 1440 and 393 wide
+- signed in and signed out (some buttons, like Invite, only show signed in)
+- on a long page, at the top, after a small scroll (30px) and after a
+  long one: `document.querySelector('.lyrics-area').scrollTop = <px>`
+
+Rules:
+
+- When a change hides one copy of a button and shows another, prove the
+  hidden one is hidden: its `getComputedStyle(el).display` is `none`.
+  "The new one shows" is not proof.
+- Wait about a second after `goto` or a resize. A sidebar still sliding
+  shut shows its items next to the page's and gives a false alarm.
+- Close drawers and menus first. With one open, an item in it and the
+  same item behind it can both count.
+
 ## Stop
 
 Stopping the background task leaves wrangler's `node.exe` and `workerd.exe`
