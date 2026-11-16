@@ -13,6 +13,14 @@ compare against the expected results below.
 **REQUIRED:** follow `running-lyriclike-locally` to start the site and set
 up the browser.
 
+
+## Feature map
+
+`features/README.md` lists every feature this guide covers, one file each:
+how a user reaches it, how to drive it, and what proves it works. Use it to
+cover every entry point, not just the handy one. Keep it in step with the
+app.
+
 ## Pick a word
 
 A word is picked on `mouseup` (desktop) or `touchend` (phone). A Playwright
