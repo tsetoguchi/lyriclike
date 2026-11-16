@@ -19,7 +19,7 @@ import { describe, it } from 'node:test';
 import { APP_SCRIPTS, MODULE_SCRIPTS } from './support/app-scripts.mjs';
 
 const CONVERTED = [
-  'limits.js', 'friend-invite.js', 'slot-inputs.js', 'extensions.js',
+  'limits.js', 'friend-invite.js', 'slot-inputs.js', 'panel-tabs.js', 'extensions.js',
   'in-app-browser.js', 'account-menu-views.js', 'sample-start.js', 'save-nudge.js',
   'whats-new.js', 'live-core.js', 'live-binding.js', 'live-store.js',
   'live-presence-view.js', 'live.js', 'feedback-box.js', 'back-button.js', 'rail-tips.js',
@@ -32,6 +32,7 @@ const WINDOW_SETTERS = {
   'limits.js': ['SiteLimits'],
   'friend-invite.js': ['isTourHeld', 'setInviteOffer'],
   'slot-inputs.js': ['SlotInputs'],
+  'panel-tabs.js': ['PanelTabs'],
   'extensions.js': ['siteExtensions'],
   'live-core.js': ['LiveCore'],
   'live-binding.js': ['LiveBinding'],
