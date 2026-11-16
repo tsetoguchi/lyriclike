@@ -188,7 +188,8 @@ describe('readPanelTab', () => {
   });
 
   it('refuses a label one character too long', () => {
-    assert.equal(readPanelTab({ label: 'x'.repeat(MAX_LABEL_LENGTH + 1), onOpen }), null);
+    const label = 'x'.repeat(MAX_LABEL_LENGTH + 1);
+    assert.equal(readPanelTab({ label, onOpen }), null);
   });
 
   it('refuses a tab with no onOpen', () => {
@@ -218,7 +219,8 @@ describe('readPlacedWord', () => {
   });
 
   it('refuses what is not one short word', () => {
-    for (const bad of [null, 7, '', '   ', 'two\nlines', 'x'.repeat(MAX_WORD_LENGTH + 1)]) {
+    const tooLong = 'x'.repeat(MAX_WORD_LENGTH + 1);
+    for (const bad of [null, 7, '', '   ', 'two\nlines', tooLong]) {
       assert.equal(readPlacedWord(bad), null, String(bad));
     }
   });
