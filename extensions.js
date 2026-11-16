@@ -10,12 +10,13 @@
 // phone start screen is up, hearing 'hub-shown' and 'hub-hidden' on document
 // as it comes and goes. On a phone it may also fill the bottom bar with its
 // own buttons. It may also add a line of text to the account delete
-// dialog. With no script set, nothing is fetched and the
+// dialog. It may also add a tab beside the rhymes in the word panel, and
+// place a word in the lyrics. With no script set, nothing is fetched and the
 // neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 9;
+  const HOOK_VERSION = 10;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -320,6 +321,42 @@
     loadScript(user ? user.extension_script_url : root.signedOutScriptUrl);
   }
 
+  // A tab beside the rhymes, filled by the script. Returns the function that
+  // removes it, or null when the tab was refused.
+  function addWordPanelTab(tab) {
+    const read = root.SlotInputs ? root.SlotInputs.readPanelTab(tab) : null;
+    if (!read) {
+      console.warn('Extension hook: addWordPanelTab needs a label and an onOpen.');
+      return null;
+    }
+    if (!root.PanelTabs) {
+      console.warn('Extension hook: the word panel tabs are not available here.');
+      return null;
+    }
+    return root.PanelTabs.add(read);
+  }
+
+  // inPlaceOf is optional. Left out, or given as nothing, it reads as null.
+  function readInPlaceOf(options) {
+    const inPlaceOf = options ? options.inPlaceOf : undefined;
+    if (inPlaceOf === undefined || inPlaceOf === null) return { isValid: true, word: null };
+    const word = root.SlotInputs ? root.SlotInputs.readPlacedWord(inPlaceOf) : null;
+    return { isValid: word !== null, word };
+  }
+
+  // Adds a word at the caret, or swaps it for the picked word when that word
+  // is the one named in inPlaceOf. False when the page took nothing.
+  function placeWord(word, options) {
+    const placed = root.SlotInputs ? root.SlotInputs.readPlacedWord(word) : null;
+    const inPlaceOf = readInPlaceOf(options);
+    if (placed === null || !inPlaceOf.isValid) {
+      console.warn('Extension hook: placeWord needs one word of 64 characters or fewer.');
+      return false;
+    }
+    const place = pageFunction('placePanelWord');
+    return place ? place(placed, inPlaceOf.word) === true : false;
+  }
+
   // The note sits above the invite field, so the share dialog owns when it
   // shows; this only checks the text and passes it on.
   function addShareNote(text) {
@@ -400,6 +437,8 @@
     addPageAction,
     addNotebookRowAction,
     notebookRowActions,
+    addWordPanelTab,
+    placeWord,
     addShareNote,
     setDeleteNotice,
     setInviteOffer,
