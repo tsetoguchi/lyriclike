@@ -3,14 +3,16 @@
 (function defineSampleVerse(root) {
   'use strict';
 
-  // ABAB, so the letters show the pattern.
+  // ABAB, so the letters show the pattern. The first line is in brackets,
+  // which shows the visitor that bracketed words get no count or letter.
   const SAMPLE_VERSE = [
+    '(This is a sample verse.)',
     'I left the porch light on for you',
     'The way I did the year before',
     'The tea is cold, the sky is blue',
     'And still I listen for the door',
   ].join('\n');
-  // The word the rhymes panel opens on: the first line's last word.
+  // The word the rhymes panel opens on: the first sung line's last word.
   const SAMPLE_PICKED_WORD = 'you';
   // The word the tour asks the visitor to click: the last line's, so the
   // rhymes it brings up differ from the ones already showing.

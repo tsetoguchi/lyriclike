@@ -61,7 +61,7 @@
     return { from, to, wordRect, bow: CURVE_BOW_PX, isTab: false };
   }
 
-  // Bows right, away from the sample note at the start of the strip above.
+  // Bows right, away from the bracketed line at the start of the verse.
   function arrowToTab(wordRect) {
     const tab = rhymesTabEl.getBoundingClientRect();
     const from = { x: wordRect.left + wordRect.width / 2, y: wordRect.top - END_GAP_PX };

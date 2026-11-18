@@ -406,78 +406,6 @@ header .nav-icon circle {
   position: relative;
 }
 
-/* While the sample verse is showing, its note sits in a strip across
-   the top of the scroller. The strip is padding on the scroller itself, so
-   the gutters and the text move down together and every mark stays beside
-   its line. */
-.lyrics-area:has(> .sample-bar:not([hidden])),
-body.expects-sample .lyrics-area {
-  padding-top: var(--space-8);
-}
-
-/* A full-height column under the strip would always overflow by its height.
-   The editor's measured floor already fills the pad (see
-   resizeEditorToContent), so these can be their content's height. */
-.lyrics-area:has(> .sample-bar:not([hidden])) > .lyrics-wrapper,
-.lyrics-area:has(> .sample-bar:not([hidden])) > .rhyme-scheme-gutter,
-body.expects-sample .lyrics-area > .lyrics-wrapper,
-body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
-  min-height: 0;
-}
-
-/* Spans the scroller, so the sheet's centring margin is worked into its
-   padding to start the note where the lyrics start, as the title does. The
-   copy is chosen by the bar's own width, not the viewport's: the lyrics
-   column narrows beside the rhymes panel and when its handle is dragged. */
-.sample-bar {
-  container-type: inline-size;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--space-8);
-  padding: 0 var(--editor-pad) 0
-    calc(max(0px, (100% - var(--sheet-width)) / 2) + var(--sheet-syllables)
-      + var(--editor-pad));
-}
-
-.sample-bar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  height: 100%;
-}
-
-.sample-note {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: var(--font-ui);
-  font-size: var(--text-footnote);
-  color: var(--ink-faded);
-  white-space: nowrap;
-}
-
-/* The compact tier is the default, so a browser without container queries
-   gets the version that always fits. */
-.sample-note-long {
-  display: none;
-}
-
-@container (min-width: 500px) {
-  .sample-note-long {
-    display: inline;
-  }
-
-  .sample-note-short {
-    display: none;
-  }
-}
-
-.sample-bar[hidden] {
-  display: none;
-}
-
 /* The way out of the sample, there from the start: under the verse and
    lined up with where its lines start, finger-sized. sample-start.js sets
    its top and left. It keeps the outlined amber of a switch that is on;
@@ -2989,15 +2917,6 @@ body:not(.signed-in) .invite-btn {
   .lyrics-area,
   .page-preview {
     padding-top: var(--page-head-height, 0px);
-  }
-
-  .lyrics-area:has(> .sample-bar:not([hidden])),
-  body.expects-sample .lyrics-area {
-    padding-top: calc(var(--page-head-height, 0px) + var(--space-8));
-  }
-
-  .sample-bar {
-    top: var(--page-head-height, 0px);
   }
 
   /* :not([hidden]) so this outranks the row's own button rule further down,
