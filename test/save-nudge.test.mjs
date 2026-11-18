@@ -86,15 +86,6 @@ describe('save nudge', () => {
     assert.deepEqual(page.events, [{ name: 'save_nudge_shown', trigger: 'lines' }]);
   });
 
-  it('asks after one line once a rhyme is picked', () => {
-    const page = loadPage();
-    page.signOut();
-    page.type('one line with a rhyme');
-    page.document.fire('rhyme-inserted');
-    assert.equal(page.button.hidden, false);
-    assert.equal(page.events[0].trigger, 'rhyme');
-  });
-
   it('waits for the sign-in check before asking', () => {
     const page = loadPage();
     page.type(TWO_LINES);
@@ -131,7 +122,6 @@ describe('save nudge', () => {
     page.signOut();
     page.startOwnButton.hidden = false;
     page.type(TWO_LINES);
-    page.document.fire('rhyme-inserted');
     assert.equal(page.button.hidden, true);
   });
 

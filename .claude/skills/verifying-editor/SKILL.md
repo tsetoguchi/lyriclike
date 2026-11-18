@@ -45,8 +45,8 @@ async function pickWord(page, word, eventType = 'mouseup') {
 
 Start signed out with `localStorage` cleared.
 
-1. **Sample verse.** First load shows "Nobody Home" with "This is a sample
-   verse.", the dashed "Click a word to explore rhymes" pointer, and rhymes
+1. **Sample verse.** First load shows "Nobody Home" with "(This is a sample
+   verse.)" as the first line, no count or letter beside it, the dashed "Click a word to explore rhymes" pointer, and rhymes
    for "you" already showing.
 2. **Blank the page.** Click `#lyrics`, press `Control+A`, then `Delete`.
    Don't use "Create page" while signed out: it opens the sign-up box

@@ -197,13 +197,15 @@ describe('focus around the tour', () => {
 });
 
 describe('the sample tour rhyme step', () => {
-  it('asks for a click and hides Next until it is done', async () => {
+  it('asks for a click and still offers Next', async () => {
     const page = loadTour();
     await openSampleTour(page);
     pressNextUntilTitle(page, 'Try a rhyme');
     assert.equal(page.els['coach-title'].textContent, 'Try a rhyme');
     assert.match(page.els['coach-text'].textContent, /^Click "door" to see what rhymes/);
-    assert.equal(page.els['coach-next'].hidden, true);
+    assert.equal(page.els['coach-next'].hidden, false);
+    page.els['coach-next'].fire('click');
+    assert.equal(page.els['coach-title'].textContent, 'Rhymes');
   });
 
   it('says tap on a touch screen', async () => {
@@ -230,12 +232,12 @@ describe('the sample tour rhyme step', () => {
     assert.equal(page.els['coach-title'].textContent, firstTitle);
   });
 
-  it('is not skipped by the right arrow key', async () => {
+  it('moves on with the right arrow key like any step', async () => {
     const page = loadTour();
     await openSampleTour(page);
     pressNextUntilTitle(page, 'Try a rhyme');
     page.document.fire('keydown', { key: 'ArrowRight', target: {} });
-    assert.equal(page.els['coach-title'].textContent, 'Try a rhyme');
+    assert.equal(page.els['coach-title'].textContent, 'Rhymes');
   });
 
   it('takes one step for the numbers and letters, not three', async () => {

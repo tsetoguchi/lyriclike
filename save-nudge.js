@@ -13,10 +13,8 @@ const NUDGE_THIS_VISIT_KEY = 'save_nudge_this_visit';
 const MAX_SHOWS = 2;
 // Enough to be writing something, not just trying the editor out.
 const LINES_BEFORE_NUDGE = 2;
-// Picking a rhyme for a line is already writing with intent.
-const LINES_AFTER_RHYME = 1;
 const SIGN_IN_ENTRY = 'save_nudge';
-const TRIGGER = { LINES: 'lines', RHYME: 'rhyme', RETURN: 'return' };
+const TRIGGER = { LINES: 'lines', RETURN: 'return' };
 
 const lyricsEl = document.getElementById('lyrics');
 const noticeEl = document.getElementById('page-notice');
@@ -96,9 +94,6 @@ function onAuthChecked() {
 lyricsEl.addEventListener('input', (event) => {
   if (!event.isTrusted || countWrittenLines(lyricsEl.value) === 0) hideSaveNudge();
   else showIfDue(LINES_BEFORE_NUDGE, TRIGGER.LINES);
-});
-document.addEventListener('rhyme-inserted', () => {
-  showIfDue(LINES_AFTER_RHYME, TRIGGER.RHYME);
 });
 keepButtonEl.addEventListener('click', keepPage);
 document.addEventListener('auth-checked', onAuthChecked);

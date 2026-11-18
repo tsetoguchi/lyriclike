@@ -5,7 +5,8 @@ hint pointing at a word and rhymes already showing.
 
 ## Sub-features
 
-- `sample-show` shows "Nobody Home" and "This is a sample verse.".
+- `sample-show` shows "Nobody Home" and the first line "(This is a sample verse.)",
+  with no count or letter beside it.
 - `sample-pointer` shows the dashed "Click a word to explore rhymes" hint.
 - `sample-rhymes` shows rhymes for "you" before any click.
 
@@ -20,7 +21,9 @@ Preconditions:
 - Fresh first visit: `page.evaluate(() => localStorage.clear())`, then
   `page.goto('http://localhost:8788/')`.
 
-- **Load.** The editor shows "Nobody Home" and "This is a sample verse.".
+- **Load.** The editor shows "Nobody Home" and "(This is a sample verse.)" as
+  the first line. `#syllable-gutter` and `#rhyme-scheme-gutter` show nothing
+  beside it.
 - **Pointer.** The dashed pointer text "Click a word to explore rhymes" is
   visible.
 - **Rhymes.** `#selected-word` reads `you` and chips are showing.

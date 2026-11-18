@@ -406,78 +406,6 @@ header .nav-icon circle {
   position: relative;
 }
 
-/* While the sample verse is showing, its note sits in a strip across
-   the top of the scroller. The strip is padding on the scroller itself, so
-   the gutters and the text move down together and every mark stays beside
-   its line. */
-.lyrics-area:has(> .sample-bar:not([hidden])),
-body.expects-sample .lyrics-area {
-  padding-top: var(--space-8);
-}
-
-/* A full-height column under the strip would always overflow by its height.
-   The editor's measured floor already fills the pad (see
-   resizeEditorToContent), so these can be their content's height. */
-.lyrics-area:has(> .sample-bar:not([hidden])) > .lyrics-wrapper,
-.lyrics-area:has(> .sample-bar:not([hidden])) > .rhyme-scheme-gutter,
-body.expects-sample .lyrics-area > .lyrics-wrapper,
-body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
-  min-height: 0;
-}
-
-/* Spans the scroller, so the sheet's centring margin is worked into its
-   padding to start the note where the lyrics start, as the title does. The
-   copy is chosen by the bar's own width, not the viewport's: the lyrics
-   column narrows beside the rhymes panel and when its handle is dragged. */
-.sample-bar {
-  container-type: inline-size;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--space-8);
-  padding: 0 var(--editor-pad) 0
-    calc(max(0px, (100% - var(--sheet-width)) / 2) + var(--sheet-syllables)
-      + var(--editor-pad));
-}
-
-.sample-bar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  height: 100%;
-}
-
-.sample-note {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: var(--font-ui);
-  font-size: var(--text-footnote);
-  color: var(--ink-faded);
-  white-space: nowrap;
-}
-
-/* The compact tier is the default, so a browser without container queries
-   gets the version that always fits. */
-.sample-note-long {
-  display: none;
-}
-
-@container (min-width: 500px) {
-  .sample-note-long {
-    display: inline;
-  }
-
-  .sample-note-short {
-    display: none;
-  }
-}
-
-.sample-bar[hidden] {
-  display: none;
-}
-
 /* The way out of the sample, there from the start: under the verse and
    lined up with where its lines start, finger-sized. sample-start.js sets
    its top and left. It keeps the outlined amber of a switch that is on;
@@ -814,7 +742,7 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
 }
 
 .coach-tour.is-open .coach-card {
-  animation: modal-blow-up var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-blow-up var(--duration-flash) var(--ease-pop);
 }
 
 @keyframes coach-fade-out {
@@ -2482,10 +2410,30 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   box-shadow: var(--shadow-popup);
 }
 
-/* A hover peek must not catch the pointer, or moving on to the next chip
-   could land on the popup instead. */
-.def-popup.def-peek {
-  pointer-events: none;
+/* The popup grows out of the rhyme it belongs to: down from under it, or up
+   from over it when there was no room below. */
+@keyframes def-pop-in {
+  from { opacity: 0; transform: translateY(var(--def-pop-shift)) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.def-popup {
+  --def-pop-shift: calc(-1 * var(--space-2));
+  transform-origin: top left;
+  animation: def-pop-in var(--duration-slow) var(--ease-pop);
+}
+
+.def-popup.is-above {
+  --def-pop-shift: var(--space-2);
+  transform-origin: bottom left;
+}
+
+body:has(.coach-tour:not([hidden])) .def-overlay {
+  z-index: var(--z-over-tour);
+}
+
+body:has(.coach-tour:not([hidden])) .def-popup {
+  z-index: var(--z-over-tour-raised);
 }
 
 .def-popup::-webkit-scrollbar {
@@ -2554,9 +2502,16 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
 
 /* ── Definition bottom sheet (mobile) ── */
 
+/* The sheet slides up from the bottom edge while its scrim fades in. */
+@keyframes def-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
 @media (max-width: 768px) {
   .def-overlay {
     background: var(--scrim-light);
+    animation: modal-fade-in var(--duration-base) ease-out;
   }
 
   .def-popup {
@@ -2571,6 +2526,7 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
     border-top: var(--hairline) solid var(--rule);
     padding: var(--space-5) var(--space-4);
     padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+    animation: def-sheet-up var(--duration-flash) var(--ease-pop);
   }
 
   .def-popup::before {
@@ -2581,6 +2537,14 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
     background: var(--sheet-handle);
     border-radius: var(--radius-sm);
     margin: 0 auto var(--space-4);
+  }
+}
+
+/* Last, so it wins over the phone sheet's slide as well. */
+@media (prefers-reduced-motion: reduce) {
+  .def-overlay,
+  .def-popup {
+    animation: none;
   }
 }
 
@@ -2955,15 +2919,6 @@ body:not(.signed-in) .invite-btn {
     padding-top: var(--page-head-height, 0px);
   }
 
-  .lyrics-area:has(> .sample-bar:not([hidden])),
-  body.expects-sample .lyrics-area {
-    padding-top: calc(var(--page-head-height, 0px) + var(--space-8));
-  }
-
-  .sample-bar {
-    top: var(--page-head-height, 0px);
-  }
-
   /* :not([hidden]) so this outranks the row's own button rule further down,
      which would otherwise show it as a second Invite under the corner one. */
   .page-meta .toggle-btn.invite-btn-phone:not([hidden]) {
@@ -3020,7 +2975,7 @@ body:not(.signed-in) .invite-btn {
   transform-origin: top right;
   transition:
     opacity var(--duration-base) ease-out,
-    transform var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--duration-flash) var(--ease-pop),
     visibility 0s;
 }
 
@@ -3434,7 +3389,7 @@ a.account-menu-item {
 
 .modal-overlay.open .modal-panel,
 #password-overlay.open #password-panel {
-  animation: modal-blow-up var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-blow-up var(--duration-flash) var(--ease-pop);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5520,7 +5475,7 @@ body.signed-in .sidebar-links {
     transform-origin: bottom center;
     transition:
       opacity var(--duration-base) ease-out,
-      transform var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+      transform var(--duration-flash) var(--ease-pop),
       visibility 0s;
   }
 

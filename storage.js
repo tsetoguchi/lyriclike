@@ -1642,7 +1642,6 @@ function showSample() {
   isSampleShownUnreported = true;
   reportSampleShown();
   document.getElementById('sample-clear').hidden = false;
-  document.getElementById('sample-bar').hidden = false;
   showPlaceholderTitle();
   textarea.value = SAMPLE_VERSE;
   textarea.dispatchEvent(new Event('input'));
@@ -1669,7 +1668,6 @@ function isTourHoldingSample() {
 // the sample does not come back after either.
 function endSample() {
   sampleShowing = false;
-  document.getElementById('sample-bar').hidden = true;
   document.getElementById('sample-clear').hidden = true;
   if (window.hideSamplePointer) window.hideSamplePointer();
   showPlaceholderTitle();
@@ -1762,7 +1760,7 @@ function takeLinkedWord() {
   return LINKED_WORD_PATTERN.test(word) ? word : null;
 }
 
-// The word starts their page, picked so a rhyme click swaps it, and
+// The word starts their page, picked so its rhymes show, and
 // selected so typing replaces it. A draft of theirs is never written over:
 // its rhymes show beside it instead. On phones the pad sits behind the
 // Rhymes tab, and focusing it would raise the keyboard, so it is not focused.
@@ -1787,8 +1785,6 @@ function startEditor() {
   const isNewVisitor = isFirstVisit();
   if (linkedWord === null && isNewVisitor) showSample();
   else restoreDraft();
-  // The strip was held open from the first paint; the sample bar owns it now.
-  document.body.classList.remove('expects-sample');
   if (linkedWord === null || !window.showRhymesForWord) return;
   openOnLinkedWord(linkedWord);
   trackEvent('linked_word_opened', { word: linkedWord });

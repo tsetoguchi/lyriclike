@@ -51,6 +51,8 @@
      enough to follow, eased at both ends so it neither leaps nor crawls. */
   --duration-glide: 0.45s;
   --ease-glide: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Races out and then settles, for things that pop open. */
+  --ease-pop: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Stacking. Only two things ever lift off the page: the bar above the
      lyrics, and a panel over everything. */
@@ -64,6 +66,10 @@
   /* The small question dialog can open over another panel (the people
      limit over Share), so it sits above them. */
   --z-dialog: 102;
+  /* A rhyme's meaning opened from a lit part of the first-visit tour sits
+     over the tour's dark, or it would open unseen. */
+  --z-over-tour: 103;
+  --z-over-tour-raised: 104;
   /* The signed-in splash covers all of it while the page gets ready. */
   --z-splash: 200;
 
