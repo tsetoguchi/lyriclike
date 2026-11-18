@@ -814,7 +814,7 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
 }
 
 .coach-tour.is-open .coach-card {
-  animation: modal-blow-up var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-blow-up var(--duration-flash) var(--ease-pop);
 }
 
 @keyframes coach-fade-out {
@@ -2482,6 +2482,24 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   box-shadow: var(--shadow-popup);
 }
 
+/* The popup grows out of the rhyme it belongs to: down from under it, or up
+   from over it when there was no room below. */
+@keyframes def-pop-in {
+  from { opacity: 0; transform: translateY(var(--def-pop-shift)) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.def-popup {
+  --def-pop-shift: calc(-1 * var(--space-2));
+  transform-origin: top left;
+  animation: def-pop-in var(--duration-slow) var(--ease-pop);
+}
+
+.def-popup.is-above {
+  --def-pop-shift: var(--space-2);
+  transform-origin: bottom left;
+}
+
 body:has(.coach-tour:not([hidden])) .def-overlay {
   z-index: var(--z-over-tour);
 }
@@ -2556,9 +2574,16 @@ body:has(.coach-tour:not([hidden])) .def-popup {
 
 /* ── Definition bottom sheet (mobile) ── */
 
+/* The sheet slides up from the bottom edge while its scrim fades in. */
+@keyframes def-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
 @media (max-width: 768px) {
   .def-overlay {
     background: var(--scrim-light);
+    animation: modal-fade-in var(--duration-base) ease-out;
   }
 
   .def-popup {
@@ -2573,6 +2598,7 @@ body:has(.coach-tour:not([hidden])) .def-popup {
     border-top: var(--hairline) solid var(--rule);
     padding: var(--space-5) var(--space-4);
     padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+    animation: def-sheet-up var(--duration-flash) var(--ease-pop);
   }
 
   .def-popup::before {
@@ -2583,6 +2609,14 @@ body:has(.coach-tour:not([hidden])) .def-popup {
     background: var(--sheet-handle);
     border-radius: var(--radius-sm);
     margin: 0 auto var(--space-4);
+  }
+}
+
+/* Last, so it wins over the phone sheet's slide as well. */
+@media (prefers-reduced-motion: reduce) {
+  .def-overlay,
+  .def-popup {
+    animation: none;
   }
 }
 
@@ -3022,7 +3056,7 @@ body:not(.signed-in) .invite-btn {
   transform-origin: top right;
   transition:
     opacity var(--duration-base) ease-out,
-    transform var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--duration-flash) var(--ease-pop),
     visibility 0s;
 }
 
@@ -3436,7 +3470,7 @@ a.account-menu-item {
 
 .modal-overlay.open .modal-panel,
 #password-overlay.open #password-panel {
-  animation: modal-blow-up var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-blow-up var(--duration-flash) var(--ease-pop);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5522,7 +5556,7 @@ body.signed-in .sidebar-links {
     transform-origin: bottom center;
     transition:
       opacity var(--duration-base) ease-out,
-      transform var(--duration-flash) cubic-bezier(0.16, 1, 0.3, 1),
+      transform var(--duration-flash) var(--ease-pop),
       visibility 0s;
   }
 

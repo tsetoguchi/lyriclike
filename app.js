@@ -1642,6 +1642,9 @@ const DEFINITION_TIMEOUT_MS = 8000;
 const DEFINITION_UNAVAILABLE_TEXT = 'Definitions are unavailable right now. Try again in a moment.';
 const MAX_DEFINITIONS_SHOWN = 3;
 const HTTP_NOT_FOUND = 404;
+// Set when the popup opens over its chip rather than under it, so it grows
+// from the chip's side.
+const DEFINITION_ABOVE_CLASS = 'is-above';
 
 function closeDefinition() {
   var overlay = document.querySelector('.def-overlay');
@@ -1674,6 +1677,7 @@ function showDefinition(word, anchorEl) {
     }
     if (top + 280 > window.innerHeight - 16) {
       top = rect.top - 288;
+      popup.classList.add(DEFINITION_ABOVE_CLASS);
     }
     popup.style.left = Math.max(8, left) + 'px';
     popup.style.top = Math.max(8, top) + 'px';
