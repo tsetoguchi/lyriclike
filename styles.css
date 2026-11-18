@@ -2482,12 +2482,6 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   box-shadow: var(--shadow-popup);
 }
 
-/* A hover peek must not catch the pointer, or moving on to the next chip
-   could land on the popup instead. */
-.def-popup.def-peek {
-  pointer-events: none;
-}
-
 body:has(.coach-tour:not([hidden])) .def-overlay {
   z-index: var(--z-over-tour);
 }

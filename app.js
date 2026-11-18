@@ -1533,7 +1533,7 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   // writer: a rhyme answers a line, so the writer types it where it goes.
   const wordEl = clicked.closest('.rhyme-word');
   if (!wordEl) return;
-  showDefinition(wordEl.textContent.trim(), wordEl, false);
+  showDefinition(wordEl.textContent.trim(), wordEl);
   trackEvent('definition_opened', { trigger: 'tap' });
 });
 
@@ -1635,47 +1635,6 @@ function insertIntoEditor(text, start, end) {
   textareaEl.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-// ── Peeking at a rhyme's meaning ──
-
-// Hovering a chip shows its meaning after a short pause, so sweeping the
-// pointer across the list does not fire a lookup for every word it crosses.
-const DEFINITION_HOVER_DELAY_MS = 350;
-
-let definitionHoverTimer = null;
-let hoveredChipEl = null;
-
-function canHover() {
-  return window.matchMedia('(hover: hover)').matches;
-}
-
-function handleChipPointerOver(event) {
-  if (!canHover()) return;
-  const chip = event.target.closest('.rhyme-word');
-  if (!chip || chip === hoveredChipEl) return;
-  hoveredChipEl = chip;
-  clearTimeout(definitionHoverTimer);
-  closeDefinition();
-  definitionHoverTimer = setTimeout(function peekAtDefinition() {
-    showDefinition(chip.textContent.trim(), chip, true);
-  }, DEFINITION_HOVER_DELAY_MS);
-}
-
-function handleChipPointerOut(event) {
-  if (!hoveredChipEl) return;
-  if (hoveredChipEl.contains(event.relatedTarget)) return;
-  hoveredChipEl = null;
-  clearTimeout(definitionHoverTimer);
-  closeDefinition();
-}
-
-resultsEl.addEventListener('pointerover', handleChipPointerOver);
-resultsEl.addEventListener('pointerout', handleChipPointerOut);
-// A peek is pinned to where its chip was; once the list scrolls it points
-// at nothing, so it goes.
-resultsEl.addEventListener('scroll', function closePeekOnScroll() {
-  if (document.querySelector('.def-popup.def-peek')) closeDefinition();
-}, { passive: true, capture: true });
-
 // ── Definition popup ──
 
 const DEFINITION_ENDPOINT = '/api/define/';
@@ -1691,20 +1650,16 @@ function closeDefinition() {
   if (popup) popup.remove();
 }
 
-// A peek follows the pointer and stays out of its way: no overlay to click
-// through, and it closes when the pointer leaves the chip.
-function showDefinition(word, anchorEl, isPeek) {
+function showDefinition(word, anchorEl) {
   closeDefinition();
 
-  if (!isPeek) {
-    var overlay = document.createElement('div');
-    overlay.className = 'def-overlay';
-    overlay.addEventListener('click', closeDefinition);
-    document.body.appendChild(overlay);
-  }
+  var overlay = document.createElement('div');
+  overlay.className = 'def-overlay';
+  overlay.addEventListener('click', closeDefinition);
+  document.body.appendChild(overlay);
 
   var popup = document.createElement('div');
-  popup.className = isPeek ? 'def-popup def-peek' : 'def-popup';
+  popup.className = 'def-popup';
   popup.innerHTML = '<div class="def-loading">Loading...</div>';
   document.body.appendChild(popup);
 
