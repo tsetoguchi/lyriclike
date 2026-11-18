@@ -28,6 +28,11 @@
   // Sent by the editor when a word is picked by hand; a step that asks for
   // that click moves on when it hears this.
   const RHYMES_PICKED_EVENT = 'rhymes-picked';
+  // The phone layout shows the rhymes on their own tab. Once that tab is
+  // tapped, the rhymes it opened are lit along with it.
+  const RHYMES_TAB = '.mobile-tab[data-tab="rhymes"]';
+  const OPEN_RHYMES = '.main.show-rhymes #rhymes-panel';
+  const LYRICS_TAB_NAME = 'lyrics';
   // tour_ended's trigger when the page goes away with the tour still open.
   const LEFT_TRIGGER = 'left';
   // friend-invite.js, a module, may hold the tour, and DOMContentLoaded only
@@ -39,12 +44,13 @@
   // `{Click}` and `{click}` become "Tap" and "tap" on touch screens, and
   // `{word}` the word a rhyme page linked to. A target
   // matching several elements lights them all as one. A `live` part takes
-  // clicks, so what the card offers can be tried; its phone stand-in, a tab
-  // that would switch the view under the tour, never does. A step whose part
+  // clicks, so what the card offers can be tried; on a phone its stand-in
+  // takes them only when the step is `phoneLive`. A step whose part
   // is hidden is passed over. The gutters slide open after load, so they are
   // judged by their switch (`shownWhen`) rather than a width that may still be
-  // zero. A step with `advanceOn` has no Next button: it asks for an action
-  // and moves on when the page reports that event.
+  // zero. A step with `advanceOn` has no Next button on a wide screen: it asks
+  // for an action and moves on when the page reports that event. On a phone
+  // the word is small and the ask easy to miss, so Next shows there too.
   const SWITCHES_STEP = {
     // On a phone the switches live in the bottom bar: Syllables, and the
     // rhyme letters inside Highlights.
@@ -83,18 +89,19 @@
 
   const RHYMES_STEP = {
     target: '#rhymes-panel',
-    phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+    phoneTarget: RHYMES_TAB + ', ' + OPEN_RHYMES,
     live: true,
+    phoneLive: true,
     title: 'Rhymes',
     text: '{Click} a word in your lyrics and its rhymes show here. {Click} ' +
       'a rhyme to swap it into your line.',
-    phoneText: 'Your rhymes are on this tab. Tap one there to swap it into ' +
-      'your line.',
+    phoneText: 'Your rhymes are on this tab. Tap it to see them, then tap ' +
+      'one to swap it into your line.',
   };
 
   const NEXT_LINE_STEP = {
     target: '#rhymes-panel',
-    phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+    phoneTarget: RHYMES_TAB,
     title: 'The next line',
     text: 'When you start a new line, the rhymes switch to the last word of ' +
       'the line above, and the one you pick is added to your line.',
@@ -129,7 +136,7 @@
   const WORD_STEPS = [
     {
       target: '#rhymes-panel',
-      phoneTarget: '.mobile-tab[data-tab="rhymes"]',
+      phoneTarget: RHYMES_TAB,
       title: 'Rhymes for "{word}"',
       text: 'Everything here rhymes with "{word}", the closest first. Near ' +
         'rhymes and other kinds are further down.',
@@ -227,8 +234,12 @@
     return phoneRectOf(step) || rectOf(step.target);
   }
 
+  function isTabLayout() {
+    return rectOf(RHYMES_TAB) !== null;
+  }
+
   function phoneRectOf(step) {
-    return step.phoneTarget ? rectOf(step.phoneTarget) : null;
+    return step.phoneTarget && isTabLayout() ? rectOf(step.phoneTarget) : null;
   }
 
   function textFor(step) {
@@ -236,7 +247,12 @@
   }
 
   function isLive(step) {
-    return Boolean(step.live) && phoneRectOf(step) === null;
+    if (phoneRectOf(step) !== null) return Boolean(step.phoneLive);
+    return Boolean(step.live);
+  }
+
+  function isWaitingForAction(step) {
+    return Boolean(step.advanceOn) && !isTabLayout();
   }
 
   function hasVisibleTarget(step) {
@@ -352,7 +368,6 @@
     countEl.textContent = 'Step ' + (index + 1) + ' of ' + steps.length;
     backBtn.hidden = index === 0;
     nextBtn.textContent = isLast ? LAST_LABEL : NEXT_LABEL;
-    nextBtn.hidden = Boolean(steps[index].advanceOn);
     fitStepToLayout();
     markDashes(index);
     replayWordsIn();
@@ -367,6 +382,7 @@
     const step = steps[stepIndex];
     textEl.textContent = fillWords(textFor(step));
     spotEl.classList.toggle(LIVE_CLASS, isLive(step));
+    nextBtn.hidden = isWaitingForAction(step);
   }
 
   function drawDashes() {
@@ -445,7 +461,17 @@
     drawDashes();
   }
 
+  // A step that let the Rhymes tab be tapped may leave the writer on it, and
+  // the steps around it are about the Lyrics tab, so it is switched back
+  // before the steps are counted again.
+  function returnToLyricsTab() {
+    if (!isTabLayout() || document.querySelector(OPEN_RHYMES) === null) return;
+    if (typeof window.switchMobileTab !== 'function') return;
+    window.switchMobileTab(LYRICS_TAB_NAME);
+  }
+
   function goNext() {
+    returnToLyricsTab();
     refreshSteps();
     if (stepIndex === steps.length - 1) {
       endTour('finished');
@@ -455,6 +481,7 @@
   }
 
   function goBack() {
+    returnToLyricsTab();
     refreshSteps();
     if (stepIndex > 0) showStep(stepIndex - 1);
   }
@@ -478,7 +505,7 @@
     if (event.key === 'Escape') endTour('skipped');
     if (event.key === 'Tab') keepFocusInCard(event);
     if (event.target instanceof HTMLTextAreaElement) return;
-    const isWaiting = Boolean(steps[stepIndex].advanceOn);
+    const isWaiting = isWaitingForAction(steps[stepIndex]);
     if (event.key === 'ArrowRight' && !isWaiting) goNext();
     else if (event.key === 'ArrowLeft') goBack();
   }
