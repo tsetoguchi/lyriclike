@@ -48,9 +48,9 @@
   // takes them only when the step is `phoneLive`. A step whose part
   // is hidden is passed over. The gutters slide open after load, so they are
   // judged by their switch (`shownWhen`) rather than a width that may still be
-  // zero. A step with `advanceOn` has no Next button on a wide screen: it asks
-  // for an action and moves on when the page reports that event. On a phone
-  // the word is small and the ask easy to miss, so Next shows there too.
+  // zero. A step with `advanceOn` asks for an action and moves on by itself
+  // when the page reports that event. Next stays, so the ask is never the
+  // only way on.
   const SWITCHES_STEP = {
     // On a phone the switches live in the bottom bar: Syllables, and the
     // rhyme letters inside Highlights.
@@ -250,10 +250,6 @@
     return Boolean(step.live);
   }
 
-  function isWaitingForAction(step) {
-    return Boolean(step.advanceOn) && !isTabLayout();
-  }
-
   function hasVisibleTarget(step) {
     if (step.shownWhen) return document.querySelector(step.shownWhen) !== null;
     return targetRect(step) !== null;
@@ -381,7 +377,6 @@
     const step = steps[stepIndex];
     textEl.textContent = fillWords(textFor(step));
     spotEl.classList.toggle(LIVE_CLASS, isLive(step));
-    nextBtn.hidden = isWaitingForAction(step);
   }
 
   function drawDashes() {
@@ -504,8 +499,7 @@
     if (event.key === 'Escape') endTour('skipped');
     if (event.key === 'Tab') keepFocusInCard(event);
     if (event.target instanceof HTMLTextAreaElement) return;
-    const isWaiting = isWaitingForAction(steps[stepIndex]);
-    if (event.key === 'ArrowRight' && !isWaiting) goNext();
+    if (event.key === 'ArrowRight') goNext();
     else if (event.key === 'ArrowLeft') goBack();
   }
 
