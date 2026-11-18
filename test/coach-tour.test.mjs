@@ -72,8 +72,9 @@ class FakeElement {
   }
 }
 
-// A page whose every selector is on screen except those in `hiddenSelectors`.
-function loadTour({ isTouch = false } = {}) {
+// A page whose every selector is on screen, except the phone's tabs on a wide
+// screen. `isRhymesTabOpen` puts a phone on the Rhymes tab.
+function loadTour({ isTouch = false, isPhone = false, isRhymesTabOpen = false } = {}) {
   const els = {};
   const named = ['coach-tour', 'coach-title', 'coach-text', 'coach-back', 'coach-next', 'coach-skip'];
   named.forEach((id) => { els[id] = new FakeElement(); });
@@ -92,8 +93,15 @@ function loadTour({ isTouch = false } = {}) {
   const document = new FakeElement();
   document.getElementById = (id) => els[id];
   document.createElement = () => new FakeElement();
-  document.querySelector = (selector) => (selector === '.modal-overlay.open' ? null : new FakeElement());
-  document.querySelectorAll = () => [{ getBoundingClientRect: () => VISIBLE_RECT }];
+  const isShown = (selector) => {
+    if (selector.includes('show-rhymes')) return isPhone && isRhymesTabOpen;
+    if (selector.includes('.mobile-tab')) return isPhone;
+    return selector !== '.modal-overlay.open';
+  };
+  document.querySelector = (selector) => (isShown(selector) ? new FakeElement() : null);
+  document.querySelectorAll = (selector) => selector.split(',')
+    .filter((each) => isShown(each.trim()))
+    .map(() => ({ getBoundingClientRect: () => VISIBLE_RECT }));
   const sandbox = {
     document,
     window: new FakeElement(),
@@ -108,6 +116,8 @@ function loadTour({ isTouch = false } = {}) {
     HTMLTextAreaElement: class {},
   };
   sandbox.window.matchMedia = () => ({ matches: isTouch });
+  sandbox.window.switchedTabs = [];
+  sandbox.window.switchMobileTab = (tab) => sandbox.window.switchedTabs.push(tab);
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
   vm.runInContext(VERSE_SOURCE, sandbox);
@@ -233,6 +243,47 @@ describe('the sample tour rhyme step', () => {
     await openSampleTour(page);
     const stepCount = page.events.find((each) => each.name === 'tour_started').params.steps;
     assert.equal(stepCount, 6);
+  });
+});
+
+describe('the sample tour on a phone', () => {
+  it('offers Next on the rhyme step, so tapping the word is not the only way on', async () => {
+    const page = loadTour({ isTouch: true, isPhone: true });
+    await openSampleTour(page);
+    pressNextUntilTitle(page, 'Try a rhyme');
+    assert.equal(page.els['coach-next'].hidden, false);
+    page.els['coach-next'].fire('click');
+    assert.equal(page.els['coach-title'].textContent, 'Rhymes');
+  });
+
+  it('still moves on when the word is tapped', async () => {
+    const page = loadTour({ isTouch: true, isPhone: true });
+    await openSampleTour(page);
+    pressNextUntilTitle(page, 'Try a rhyme');
+    page.document.fire(RHYMES_PICKED);
+    assert.equal(page.els['coach-title'].textContent, 'Rhymes');
+  });
+
+  it('lets the Rhymes tab be tapped on the rhymes step', async () => {
+    const page = loadTour({ isTouch: true, isPhone: true });
+    await openSampleTour(page);
+    pressNextUntilTitle(page, 'Rhymes');
+    assert.equal(page.parts['.coach-spot'].classList.contains('is-live'), true);
+    assert.match(page.els['coach-text'].textContent, /^Your rhymes are on this tab\. Tap it/);
+  });
+
+  it('keeps the tab dark on the steps that only point at it', async () => {
+    const page = loadTour({ isTouch: true, isPhone: true });
+    await openSampleTour(page);
+    pressNextUntilTitle(page, 'The next line');
+    assert.equal(page.parts['.coach-spot'].classList.contains('is-live'), false);
+  });
+
+  it('goes back to the Lyrics tab when it moves past the rhymes step', async () => {
+    const page = loadTour({ isTouch: true, isPhone: true, isRhymesTabOpen: true });
+    await openSampleTour(page);
+    page.els['coach-next'].fire('click');
+    assert.deepEqual([...page.sandbox.window.switchedTabs], ['lyrics']);
   });
 });
 
