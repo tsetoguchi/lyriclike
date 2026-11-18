@@ -667,8 +667,8 @@ updateSortButtons();
 
 let currentHighlightWord = '';
 let pickedBounds = null;
-// Where a chip adds its word when the caret sits on no word, such as a fresh
-// line. Null means a chip swaps the picked word instead.
+// Where an extension's tab adds its word when the caret sits on no word, such
+// as a fresh line. Null means the word goes at the caret the writer left.
 let insertCaret = null;
 let highlightedText = '';
 let currentResults = null;
@@ -1019,15 +1019,12 @@ function handleSelection(event) {
 }
 
 // A caret on no word, like a fresh line, means the writer is about to answer
-// the line above, so its last word is the one to rhyme with. Its rhymes are
-// then added at the caret rather than swapped over that word.
+// the line above, so its last word is the one to rhyme with. The caret is
+// kept, as that is where the writer means to add a word.
 function pickLineAboveForCaret(text, caret, isPointerPick) {
   const target = lastWordOfLineAbove(text, caret);
   insertCaret = target ? caret : null;
-  if (!target) {
-    updateChipHint();
-    return;
-  }
+  if (!target) return;
   showPickedRhymes(target.word, target.bounds, isPointerPick, true);
 }
 
@@ -1047,7 +1044,6 @@ function lastWordOfLineAbove(text, caret) {
 function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   pickHighlightWord(word, bounds, isPointerPick);
   selectedContextEl.textContent = getWordContext(textareaEl.value, bounds ? bounds.start : 0);
-  updateChipHint();
   if (isPointerPick) {
     announcePointerPick();
     document.dispatchEvent(new CustomEvent(RHYMES_PICKED_EVENT));
@@ -1481,8 +1477,6 @@ textareaEl.addEventListener('input', function handleInput(event) {
   lastTextValue = textareaEl.value;
   updateGutters();
   renderHighlight();
-  // An edit can take away the word a chip would swap.
-  updateChipHint();
   // With every word deleted, the panel would go on naming one that is gone.
   // A page that loads empty keeps a word linked from a rhyme page.
   if (event.isTrusted && currentHighlightWord && textareaEl.value.trim() === '') {
@@ -1535,28 +1529,19 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
     return;
   }
 
-  // A chip adds itself at the caret or swaps itself into the lyric. With
-  // nowhere to put it (the picked word was edited away), the click falls back
-  // to the word's meaning.
+  // A chip opens its meaning. Rhymes are not put in the lyric for the
+  // writer: a rhyme answers a line, so the writer types it where it goes.
   const wordEl = clicked.closest('.rhyme-word');
   if (!wordEl) return;
-  if (isLongPressClick) {
-    isLongPressClick = false;
-    return;
-  }
-  const word = wordEl.textContent.trim();
-  const group = wordEl.closest('.rhyme-group');
-  const mode = chipMode();
-  if (placeChipWord(word)) {
-    trackEvent('rhyme_inserted', { group: group ? group.dataset.type : '', mode });
-    document.dispatchEvent(new Event('rhyme-inserted'));
-    return;
-  }
-  showDefinition(word, wordEl, false);
+  showDefinition(wordEl.textContent.trim(), wordEl, false);
   trackEvent('definition_opened', { trigger: 'tap' });
 });
 
-// ── Swapping a rhyme into the lyric ──
+const CHIP_HINT_POINTER = 'Click a rhyme to see what it means';
+const CHIP_HINT_TOUCH = 'Tap a rhyme to see what it means';
+chipHintEl.textContent = isTouchPrimary() ? CHIP_HINT_TOUCH : CHIP_HINT_POINTER;
+
+// ── Placing a word from an extension's tab ──
 
 // "Night" becomes "Light" and "NIGHT" becomes "LIGHT", so a swap never
 // leaves the line looking wrong.
@@ -1568,32 +1553,6 @@ function matchWordCase(original, replacement) {
   const isCapitalized = first !== first.toLowerCase();
   if (isCapitalized) return replacement.charAt(0).toUpperCase() + replacement.slice(1);
   return replacement;
-}
-
-const CHIP_MODE_ADD = 'add';
-const CHIP_MODE_SWAP = 'swap';
-const CHIP_MODE_MEANING = 'meaning';
-const CHIP_HINTS = {
-  add: { pointer: 'Click a rhyme to add it to your line', touch: 'Tap a rhyme to add it to your line' },
-  swap: { pointer: 'Click a rhyme to swap it in', touch: 'Tap a rhyme to swap it in' },
-  meaning: { pointer: 'Click a rhyme to see what it means', touch: 'Tap a rhyme to see what it means' },
-};
-
-function chipMode() {
-  if (insertCaret !== null) return CHIP_MODE_ADD;
-  return pickedBounds === null ? CHIP_MODE_MEANING : CHIP_MODE_SWAP;
-}
-
-// Says what a chip will do, since adding, swapping and looking up a meaning
-// look the same until one is clicked. With no word in the lyrics to swap,
-// such as a word linked from a rhyme page, a chip opens its meaning.
-function updateChipHint() {
-  const hints = CHIP_HINTS[chipMode()];
-  chipHintEl.textContent = isTouchPrimary() ? hints.touch : hints.pointer;
-}
-
-function placeChipWord(word) {
-  return insertCaret === null ? replacePickedWord(word) : addWordAt(insertCaret, word);
 }
 
 function isPickedWord(word) {
@@ -1621,8 +1580,8 @@ function placePanelWord(word, inPlaceOf) {
   return addWordAt(panelWordCaret(), word);
 }
 
-// Once added, the word is picked like a swapped one, so a second chip swaps
-// it rather than adding another word beside it.
+// Once added, the word is picked like a swapped one, so a second word swaps
+// it rather than being added beside it.
 function addWordAt(position, word) {
   if (word === '' || !canEditLyrics()) return false;
   const text = textareaEl.value;
@@ -1635,7 +1594,6 @@ function addWordAt(position, word) {
   pickedBounds = { start: start, end: start + word.length };
   currentHighlightWord = RhymeCore.normalizeWord(word);
   markPickedWord();
-  updateChipHint();
   return true;
 }
 
@@ -1648,8 +1606,8 @@ function canEditLyrics() {
 }
 
 // Returns false when there is no picked word to replace. The swapped-in word
-// stays picked, so a second chip swaps it again: the writer can try several
-// rhymes in place while the list stays on the word they started from.
+// stays picked, so a second word swaps it again: the writer can try several
+// in place while the list stays on the word they started from.
 function replacePickedWord(word) {
   console.assert(typeof word === 'string', 'replacePickedWord: word must be a string');
   if (!pickedBounds || typeof word !== 'string' || word === '') return false;
@@ -1682,13 +1640,9 @@ function insertIntoEditor(text, start, end) {
 // Hovering a chip shows its meaning after a short pause, so sweeping the
 // pointer across the list does not fire a lookup for every word it crosses.
 const DEFINITION_HOVER_DELAY_MS = 350;
-// Touch has no hover, so holding a chip down shows the meaning instead.
-const DEFINITION_LONG_PRESS_MS = 500;
 
 let definitionHoverTimer = null;
 let hoveredChipEl = null;
-let longPressTimer = null;
-let isLongPressClick = false;
 
 function canHover() {
   return window.matchMedia('(hover: hover)').matches;
@@ -1714,28 +1668,8 @@ function handleChipPointerOut(event) {
   closeDefinition();
 }
 
-function handleChipTouchStart(event) {
-  if (event.pointerType !== 'touch') return;
-  const chip = event.target.closest('.rhyme-word');
-  if (!chip) return;
-  isLongPressClick = false;
-  clearTimeout(longPressTimer);
-  longPressTimer = setTimeout(function showHeldDefinition() {
-    isLongPressClick = true;
-    showDefinition(chip.textContent.trim(), chip, false);
-    trackEvent('definition_opened', { trigger: 'long_press' });
-  }, DEFINITION_LONG_PRESS_MS);
-}
-
-function cancelLongPress() {
-  clearTimeout(longPressTimer);
-}
-
 resultsEl.addEventListener('pointerover', handleChipPointerOver);
 resultsEl.addEventListener('pointerout', handleChipPointerOut);
-resultsEl.addEventListener('pointerdown', handleChipTouchStart);
-resultsEl.addEventListener('pointerup', cancelLongPress);
-resultsEl.addEventListener('pointercancel', cancelLongPress);
 // A peek is pinned to where its chip was; once the list scrolls it points
 // at nothing, so it goes.
 resultsEl.addEventListener('scroll', function closePeekOnScroll() {
@@ -2140,7 +2074,6 @@ window.resetRhymesPanel = resetRhymesPanel;
 function showRhymesForWord(word, bounds) {
   insertCaret = null;
   pickHighlightWord(word, bounds, false);
-  updateChipHint();
   selectedContextEl.textContent = bounds ? getWordContext(textareaEl.value, bounds.start) : '';
   if (!canSearchRhymes()) {
     showPendingRhymes(word);

@@ -2488,6 +2488,14 @@ body.expects-sample .lyrics-area > .rhyme-scheme-gutter {
   pointer-events: none;
 }
 
+body:has(.coach-tour:not([hidden])) .def-overlay {
+  z-index: var(--z-over-tour);
+}
+
+body:has(.coach-tour:not([hidden])) .def-popup {
+  z-index: var(--z-over-tour-raised);
+}
+
 .def-popup::-webkit-scrollbar {
   width: var(--scrollbar-width);
 }

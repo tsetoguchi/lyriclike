@@ -1762,7 +1762,7 @@ function takeLinkedWord() {
   return LINKED_WORD_PATTERN.test(word) ? word : null;
 }
 
-// The word starts their page, picked so a rhyme click swaps it, and
+// The word starts their page, picked so its rhymes show, and
 // selected so typing replaces it. A draft of theirs is never written over:
 // its rhymes show beside it instead. On phones the pad sits behind the
 // Rhymes tab, and focusing it would raise the keyboard, so it is not focused.

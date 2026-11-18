@@ -94,9 +94,9 @@
     phoneLive: true,
     title: 'Rhymes',
     text: '{Click} a word in your lyrics and its rhymes show here. {Click} ' +
-      'a rhyme to swap it into your line.',
+      'a rhyme to see what it means.',
     phoneText: 'Your rhymes are on this tab. Tap it to see them, then tap ' +
-      'one to swap it into your line.',
+      'one to see what it means.',
   };
 
   const NEXT_LINE_STEP = {
@@ -104,7 +104,7 @@
     phoneTarget: RHYMES_TAB,
     title: 'The next line',
     text: 'When you start a new line, the rhymes switch to the last word of ' +
-      'the line above, and the one you pick is added to your line.',
+      'the line above, ready for the word that answers it.',
   };
 
   const SAMPLE_STEPS = [
@@ -119,7 +119,7 @@
     {
       ...RHYMES_STEP,
       text: 'The rhymes for the word you picked show here. {Click} one to ' +
-        'swap it into your line.',
+        'see what it means.',
     },
     NEXT_LINE_STEP,
     {
@@ -130,16 +130,15 @@
     },
   ];
 
-  // The pad is blank, so the rhymes they came for lead. A chip pressed with
-  // nothing written opens its meaning in a dialog the dark would cover, so
-  // the panel is lit but not live.
+  // The pad is blank, so the rhymes they came for lead.
   const WORD_STEPS = [
     {
       target: '#rhymes-panel',
       phoneTarget: RHYMES_TAB,
+      live: true,
       title: 'Rhymes for "{word}"',
-      text: 'Everything here rhymes with "{word}", the closest first. Near ' +
-        'rhymes and other kinds are further down.',
+      text: 'Everything here rhymes with "{word}", the closest first. {Click} ' +
+        'one to see what it means.',
       phoneText: 'Your rhymes for "{word}" are on this tab, the closest first.',
     },
     {
