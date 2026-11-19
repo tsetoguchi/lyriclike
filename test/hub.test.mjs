@@ -159,7 +159,43 @@ describe('hub.js', () => {
   });
 });
 
+function runSplash({ signedInHint, isNative }) {
+  const classList = fakeClassList();
+  const document = { ...fakeEventTarget(), documentElement: { classList } };
+  const window = {
+    document,
+    Event: FakeEvent,
+    setTimeout: () => 0,
+    Promise,
+    localStorage: { getItem: () => (signedInHint ? '1' : null) },
+    performance: { now: () => 0 },
+    NativeShell: { isNative },
+  };
+  vm.runInNewContext(SPLASH_SOURCE, window);
+  return classList;
+}
+
 describe('splash.js', () => {
+  it('covers every app launch, signed out too', () => {
+    const classes = runSplash({ signedInHint: false, isNative: true });
+    assert.equal(classes.contains('is-splashing'), true);
+  });
+
+  it('keeps a signed-out app launch off the start screen', () => {
+    const classes = runSplash({ signedInHint: false, isNative: true });
+    assert.equal(classes.contains('expects-account'), false);
+  });
+
+  it('marks a signed-in visit as expecting an account', () => {
+    const classes = runSplash({ signedInHint: true, isNative: false });
+    assert.equal(classes.contains('expects-account'), true);
+  });
+
+  it('leaves a signed-out website visit uncovered', () => {
+    const classes = runSplash({ signedInHint: false, isNative: false });
+    assert.equal(classes.contains('is-splashing'), false);
+  });
+
   it('announces splash-lifted once when the time cap lifts it', async () => {
     const document = {
       ...fakeEventTarget(),
