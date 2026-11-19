@@ -28,7 +28,7 @@ const MINUTE_MS = 60 * 1000;
 
 const BASE = {
   isPhone: true,
-  isSplashing: true,
+  expectsAccount: true,
   isTourSeen: true,
   hasDestination: false,
   hasTabMark: false,
@@ -55,7 +55,7 @@ function throwingStorage() {
 // Just enough of a page for the gate: the root element's classes, the phone
 // query, the two storages and the address.
 function runGate({ localStorage, sessionStorage, href = 'https://lyriclike.com/' }) {
-  const classes = new Set(['is-splashing']);
+  const classes = new Set(['is-splashing', 'expects-account']);
   const classList = {
     add: name => classes.add(name),
     contains: name => classes.has(name),
@@ -96,7 +96,7 @@ describe('shouldShowHub', () => {
     assert.equal(shouldShowHub({ ...BASE, hasTabMark: true, lastActiveMs: null }), false);
   });
 
-  for (const key of ['isPhone', 'isSplashing', 'isTourSeen']) {
+  for (const key of ['isPhone', 'expectsAccount', 'isTourSeen']) {
     it(`skips without ${key}`, () => {
       assert.equal(shouldShowHub({ ...BASE, [key]: false }), false);
     });

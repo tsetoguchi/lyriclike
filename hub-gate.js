@@ -10,7 +10,9 @@
   const TAB_MARK_KEY = 'hub_tab_seen';
   const LAST_ACTIVE_KEY = 'hub_last_active';
   const HUB_CLASS = 'is-hub';
-  const SPLASH_CLASS = 'is-splashing';
+  // splash.js sets this when a signed-in visit is expected; the app's
+  // signed-out launches splash too, but never open on the hub.
+  const EXPECTS_ACCOUNT_CLASS = 'expects-account';
   const PHONE_QUERY = '(max-width: 768px)';
   // Read here, owned elsewhere: coach-tour.js, sharing.js, friend-invite.js.
   const TOUR_SEEN_KEY = 'tour_seen';
@@ -36,7 +38,7 @@
   }
 
   function shouldShowHub(visit) {
-    if (!visit.isPhone || !visit.isSplashing || !visit.isTourSeen) return false;
+    if (!visit.isPhone || !visit.expectsAccount || !visit.isTourSeen) return false;
     if (visit.hasDestination) return false;
     return isFreshOpen(visit.hasTabMark, visit.lastActiveMs, visit.nowMs);
   }
@@ -50,7 +52,7 @@
     const local = win.localStorage;
     return {
       isPhone: win.matchMedia(PHONE_QUERY).matches,
-      isSplashing: win.document.documentElement.classList.contains(SPLASH_CLASS),
+      expectsAccount: win.document.documentElement.classList.contains(EXPECTS_ACCOUNT_CLASS),
       isTourSeen: local.getItem(TOUR_SEEN_KEY) !== null,
       hasDestination: hasLinkDestination(win.location.href, {
         pendingShared: local.getItem(PENDING_SHARE_KEY),

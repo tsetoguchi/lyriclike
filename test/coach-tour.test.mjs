@@ -129,7 +129,7 @@ function loadTour({ isTouch = false, isPhone = false, isRhymesTabOpen = false } 
 // marks; the await lets that promise's callback land.
 async function finishLoading(page) {
   page.document.fire('DOMContentLoaded');
-  await Promise.resolve();
+  await new Promise((done) => setImmediate(done));
   page.timers.forEach((callback) => callback());
 }
 
@@ -145,6 +145,19 @@ function pressNextUntilTitle(page, title) {
 }
 
 describe('the tour start', () => {
+  it('waits for the splash to lift before it counts down', async () => {
+    const page = loadTour();
+    const classes = new Set(['is-splashing']);
+    page.document.documentElement = { classList: { contains: (name) => classes.has(name) } };
+    page.sandbox.window.startCoachTour('sample');
+    page.document.fire('DOMContentLoaded');
+    await new Promise((done) => setImmediate(done));
+    assert.deepEqual(page.timers, []);
+    page.document.fire('splash-lifted');
+    await new Promise((done) => setImmediate(done));
+    assert.equal(page.timers.length, 1);
+  });
+
   it('waits for the modules before it opens', () => {
     const page = loadTour();
     page.sandbox.window.startCoachTour('sample');
@@ -240,11 +253,11 @@ describe('the sample tour rhyme step', () => {
     assert.equal(page.els['coach-title'].textContent, 'Rhymes');
   });
 
-  it('takes one step for the numbers and letters, not three', async () => {
+  it('keeps the sample tour to four steps', async () => {
     const page = loadTour();
     await openSampleTour(page);
     const stepCount = page.events.find((each) => each.name === 'tour_started').params.steps;
-    assert.equal(stepCount, 6);
+    assert.equal(stepCount, 4);
   });
 });
 
@@ -276,8 +289,9 @@ describe('the sample tour on a phone', () => {
 
   it('keeps the tab dark on the steps that only point at it', async () => {
     const page = loadTour({ isTouch: true, isPhone: true });
-    await openSampleTour(page);
-    pressNextUntilTitle(page, 'The next line');
+    page.sandbox.window.startCoachTour('word', 'love');
+    await finishLoading(page);
+    assert.equal(page.els['coach-title'].textContent, 'Rhymes for "love"');
     assert.equal(page.parts['.coach-spot'].classList.contains('is-live'), false);
   });
 

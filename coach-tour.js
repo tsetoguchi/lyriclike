@@ -40,6 +40,11 @@
   const modulesRun = new Promise(done => {
     document.addEventListener('DOMContentLoaded', done, { once: true });
   });
+  // splash.js covers the page with the logo; the tour starts once it lifts,
+  // so the delay is counted on a page the visitor can see.
+  const SPLASH_CLASS = 'is-splashing';
+  const SPLASH_FADING_CLASS = 'is-splash-fading';
+  const SPLASH_LIFTED_EVENT = 'splash-lifted';
 
   // `{Click}` and `{click}` become "Tap" and "tap" on touch screens, and
   // `{word}` the word a rhyme page linked to. A target
@@ -107,13 +112,10 @@
       'the line above, ready for the word that answers it.',
   };
 
+  // Four steps, not six: the sample already says it is one, and the
+  // next-line rhymes are on the empty pad's own hint, so the tour keeps only
+  // what a first look would miss.
   const SAMPLE_STEPS = [
-    {
-      target: '#lyrics-highlight .lyric-word',
-      keepClear: '#sample-clear',
-      title: 'Write here',
-      text: 'This is your page. The verse is a sample to play with.',
-    },
     NUMBERS_STEP,
     TRY_RHYME_STEP,
     {
@@ -121,7 +123,6 @@
       text: 'The rhymes for the word you picked show here. {Click} one to ' +
         'see what it means.',
     },
-    NEXT_LINE_STEP,
     {
       target: '#sample-clear',
       live: true,
@@ -529,10 +530,26 @@
   // `name` is a key of TOURS; `word` fills the word tour's cards. Returns
   // whether the tour will run, so the caller can hold back its own
   // first-visit hints.
+  function isSplashShowing() {
+    const html = document.documentElement;
+    if (!html || !html.classList) return false;
+    return html.classList.contains(SPLASH_CLASS) && !html.classList.contains(SPLASH_FADING_CLASS);
+  }
+
+  // Asked once the modules have run, when the splash's own wait is decided.
+  function whenSplashLifted() {
+    if (!isSplashShowing()) return Promise.resolve();
+    return new Promise(done => {
+      document.addEventListener(SPLASH_LIFTED_EVENT, done, { once: true });
+    });
+  }
+
   function startCoachTour(name, word) {
     if (isSeen() || !TOURS[name]) return false;
     chooseTour(name, word);
-    modulesRun.then(() => setTimeout(openTourUnlessHeld, START_DELAY_MS));
+    modulesRun
+      .then(whenSplashLifted)
+      .then(() => setTimeout(openTourUnlessHeld, START_DELAY_MS));
     return true;
   }
 

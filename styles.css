@@ -438,6 +438,17 @@ header .nav-icon circle {
   border-color: var(--accent);
 }
 
+/* On a phone the way out of the sample runs the width of the verse, so it
+   reads as the next step and is an easy thumb target. Notice copies of the
+   button sit in a row and keep their own size. */
+@media (max-width: 768px) {
+  #sample-clear,
+  #save-keep {
+    right: var(--space-6);
+    padding-block: var(--space-3);
+  }
+}
+
 /* What happened to the page: a save someone else beat, or a page this
    account can no longer open. It sits between the title and the text, lined
    up with both, and wraps on a phone rather than covering the words. */

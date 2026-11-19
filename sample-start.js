@@ -68,3 +68,6 @@ lyricsEl.addEventListener('input', schedulePlace);
 new ResizeObserver(schedulePlace).observe(lyricsAreaEl);
 window.addEventListener('resize', schedulePlace);
 document.fonts.ready.then(schedulePlace);
+// storage.js may show the sample before this module runs, with no hidden
+// change left to watch, so a button already showing is placed now.
+schedulePlace();
