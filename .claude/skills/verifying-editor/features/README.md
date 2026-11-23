@@ -7,7 +7,8 @@ mistakes live in `../SKILL.md`.
 ## Baseline
 
 - Site running on `http://localhost:8788` per `running-lyriclike-locally`.
-- Signed out, `localStorage` cleared, `rhymeSort` unset.
+- Signed out, `localStorage` and `sessionStorage` cleared, `rhymeSort`
+  unset. The toggles live in `sessionStorage`.
 - Desktop 1440×900 unless the file says phone.
 
 ## Proof rules
@@ -22,7 +23,7 @@ mistakes live in `../SKILL.md`.
 - [Counts and scheme](./counts-and-scheme.md): syllable gutter, rhyme
   scheme letters, internal rhyme marks.
 - [Pick a word](./pick-a-word.md): picking, rhyme chips, sort menu,
-  swapping a chip in.
+  a rhyme's meaning.
 - [Draft saving](./draft-saving.md): signed-out text survives a reload.
 - [Phone layout](./phone-layout.md): Lyrics and Rhymes tabs at 393px.
 - [Phone page head](./phone-page-head.md): title and buttons scroll away,
