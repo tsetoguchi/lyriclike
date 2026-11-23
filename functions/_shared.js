@@ -70,7 +70,11 @@ export function sessionTokenFrom(request) {
 
 // Where the iOS and Android apps load their bundled pages from. They are the
 // only other origins allowed to call the API.
-const APP_ORIGINS = new Set(['capacitor://localhost', 'https://localhost']);
+const IOS_ORIGIN = 'capacitor://localhost';
+const ANDROID_ORIGIN = 'https://localhost';
+const APP_ORIGINS = new Set([IOS_ORIGIN, ANDROID_ORIGIN]);
+const PLATFORM_BY_APP_ORIGIN = Object.freeze({ [IOS_ORIGIN]: 'ios', [ANDROID_ORIGIN]: 'android' });
+const WEB_PLATFORM = 'web';
 
 export function isAppOrigin(origin) {
   return APP_ORIGINS.has(origin);
@@ -88,6 +92,14 @@ export function isAppClient(request) {
 // Together with an app origin, which only the app's own pages can send, it is.
 export function isFromApp(request) {
   return isAppClient(request) && isAppOrigin(request.headers.get('Origin'));
+}
+
+// 'ios', 'android' or 'web', so the logs can tell how many people use the apps.
+// A Google sign-in started in an app finishes in the system browser, so that
+// one row reads 'web'; the app's own page loads after it read right.
+export function platformOf(request) {
+  if (!isFromApp(request)) return WEB_PLATFORM;
+  return PLATFORM_BY_APP_ORIGIN[request.headers.get('Origin')];
 }
 
 // The key accounts are matched on. Only case and surrounding spaces are folded:
@@ -193,8 +205,8 @@ export function rateLimitIp(ip) {
 export async function writeLog(env, request, { userId, event }) {
   const ip = truncateIp(request.headers.get('CF-Connecting-IP'));
   await env.lyricalmiracle_db.prepare(
-    'INSERT INTO logs (id, user_id, event, ip, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(crypto.randomUUID(), userId || null, event, ip, Date.now()).run();
+    'INSERT INTO logs (id, user_id, event, ip, platform, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(crypto.randomUUID(), userId || null, event, ip, platformOf(request), Date.now()).run();
 }
 
 // The cookie holds a random token; the database keeps only its hash, so a

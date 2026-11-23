@@ -3,7 +3,7 @@ import { isEventHookSet } from '../_event-hook.js';
 import { sendParkedEvents } from '../_event-resend.js';
 import { DAY_MS } from '../_ratelimit.js';
 import {
-  hasBearerToken, parseCookies, requireUser, sessionCookie, truncateIp, writeLog,
+  hasBearerToken, parseCookies, platformOf, requireUser, sessionCookie, truncateIp, writeLog,
 } from '../_shared.js';
 
 const NINETY_DAYS_MS = 90 * DAY_MS;
@@ -19,16 +19,22 @@ function signedOut(env) {
   );
 }
 
-// One row per person per UTC day, so return visits can be counted even when
-// nothing gets saved. The check and the insert are one statement, so two tabs
-// loading at once still leave one row.
+// One row per person per platform per UTC day, so return visits can be
+// counted even when nothing gets saved, and a day spent on both the website
+// and the app shows both. The check and the insert are one statement, so two
+// tabs loading at once still leave one row.
 function logDailyVisit(env, request, userId, now) {
   const dayStart = now - (now % DAY_MS);
   const ip = truncateIp(request.headers.get('CF-Connecting-IP'));
+  const platform = platformOf(request);
   return env.lyricalmiracle_db.prepare(
-    'INSERT INTO logs (id, user_id, event, ip, created_at) SELECT ?, ?, ?, ?, ? ' +
-    'WHERE NOT EXISTS (SELECT 1 FROM logs WHERE user_id = ? AND event = ? AND created_at >= ?)'
-  ).bind(crypto.randomUUID(), userId, APP_OPEN, ip, now, userId, APP_OPEN, dayStart).run();
+    'INSERT INTO logs (id, user_id, event, ip, platform, created_at) SELECT ?, ?, ?, ?, ?, ? ' +
+    'WHERE NOT EXISTS (SELECT 1 FROM logs ' +
+    'WHERE user_id = ? AND event = ? AND platform = ? AND created_at >= ?)'
+  ).bind(
+    crypto.randomUUID(), userId, APP_OPEN, ip, platform, now,
+    userId, APP_OPEN, platform, dayStart,
+  ).run();
 }
 
 // Each statement on its own: one table that is missing (a database not yet

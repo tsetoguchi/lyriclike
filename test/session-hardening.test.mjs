@@ -226,6 +226,14 @@ describe('logged IP addresses', () => {
     const row = await database().prepare('SELECT ip FROM logs').first();
     assert.equal(row.ip, '198.51.100.0');
   });
+
+  it('records which client wrote the row', async () => {
+    const appHeaders = { Origin: 'capacitor://localhost', 'X-LyricLike-Client': 'app' };
+    await writeLog(env, new Request(BASE_URL + '/x', { headers: appHeaders }), { userId, event: 'login' });
+    await writeLog(env, new Request(BASE_URL + '/x'), { userId, event: 'logout' });
+    const rows = await database().prepare('SELECT event, platform FROM logs ORDER BY event').all();
+    assert.deepEqual(rows.results.map(row => [row.event, row.platform]), [['login', 'ios'], ['logout', 'web']]);
+  });
 });
 
 describe('forged requests', () => {

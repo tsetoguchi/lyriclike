@@ -11,6 +11,8 @@ import { BASE_URL, addGoogleUser, addSession, makeEnv, query } from './support/a
 
 const TOKEN = 'a'.repeat(64);
 const DAY_MS = 24 * 60 * 60 * 1000;
+const IOS_ORIGIN = 'capacitor://localhost';
+const ANDROID_ORIGIN = 'https://localhost';
 
 let env;
 let userId;
@@ -23,8 +25,19 @@ async function loadPage({ token = TOKEN } = {}) {
   return response;
 }
 
+// How the iOS or Android app calls the API: its own origin, the marker header
+// and the token as a Bearer header.
+async function loadAppPage(origin) {
+  const headers = { Origin: origin, 'X-LyricLike-Client': 'app', Authorization: `Bearer ${TOKEN}` };
+  const request = new Request(BASE_URL + '/api/me', { headers });
+  const pending = [];
+  const response = await me.onRequestGet({ request, env, waitUntil: p => pending.push(p) });
+  await Promise.all(pending);
+  return response;
+}
+
 async function visits() {
-  return query(env, "SELECT user_id, created_at FROM logs WHERE event = 'app_open'");
+  return query(env, "SELECT user_id, platform, created_at FROM logs WHERE event = 'app_open'");
 }
 
 beforeEach(async () => {
@@ -66,5 +79,44 @@ describe('daily visit log', () => {
 
     assert.equal(response.status, 401);
     assert.equal((await visits()).length, 0);
+  });
+
+  it('marks a website visit as web', async () => {
+    await loadPage();
+
+    assert.equal((await visits())[0].platform, 'web');
+  });
+
+  it('marks an iPhone app visit as ios', async () => {
+    const response = await loadAppPage(IOS_ORIGIN);
+
+    assert.equal(response.status, 200);
+    assert.equal((await visits())[0].platform, 'ios');
+  });
+
+  it('marks an Android app visit as android', async () => {
+    await loadAppPage(ANDROID_ORIGIN);
+
+    assert.equal((await visits())[0].platform, 'android');
+  });
+
+  it('logs the website and the app once each on the same day', async () => {
+    await loadPage();
+    await loadAppPage(IOS_ORIGIN);
+    await loadAppPage(IOS_ORIGIN);
+    await loadPage();
+
+    const platforms = (await visits()).map(row => row.platform).sort();
+    assert.deepEqual(platforms, ['ios', 'web']);
+  });
+
+  it('treats the app header without an app origin as web', async () => {
+    const headers = { Cookie: `sid=${TOKEN}`, 'X-LyricLike-Client': 'app' };
+    const request = new Request(BASE_URL + '/api/me', { headers });
+    const pending = [];
+    await me.onRequestGet({ request, env, waitUntil: p => pending.push(p) });
+    await Promise.all(pending);
+
+    assert.equal((await visits())[0].platform, 'web');
   });
 });
