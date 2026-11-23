@@ -5519,6 +5519,19 @@ body.signed-in .sidebar-links {
     color: var(--ink);
   }
 
+  /* Under the finger while Highlights is held (highlights-hold.js). */
+  .bottom-nav .rhymes-menu-popover .toggle-btn.is-picking {
+    background: var(--panel-fill-hover);
+  }
+
+  /* A held press opens the menu, so the page mustn't scroll or show the
+     system's long-press callout under it. */
+  #rhymes-menu-btn {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
   /* Drawn, not typed: iA Writer Quattro's ✓ reads as a square-root sign. */
   .rhymes-menu-popover .toggle-btn.active::after {
     content: "";
