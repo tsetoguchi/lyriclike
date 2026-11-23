@@ -96,7 +96,6 @@ const highlightEl = document.getElementById('lyrics-highlight');
 const mobileTabsEl = document.getElementById('mobile-tabs');
 const mainEl = document.querySelector('.main');
 const selectedContextEl = document.getElementById('selected-context');
-const chipHintEl = document.getElementById('chip-hint');
 const wordBarEl = document.querySelector('.selected-word-bar');
 const rhymeSchemeGutterEl = document.getElementById('rhyme-scheme-gutter');
 const rhymeSchemeToggleEl = document.getElementById('rhyme-scheme-toggle');
@@ -1542,10 +1541,6 @@ resultsEl.addEventListener('click', function handleResultsClick(event) {
   showDefinition(wordEl.textContent.trim(), wordEl);
   trackEvent('definition_opened', { trigger: 'tap' });
 });
-
-const CHIP_HINT_POINTER = 'Click a rhyme to see what it means';
-const CHIP_HINT_TOUCH = 'Tap a rhyme to see what it means';
-chipHintEl.textContent = isTouchPrimary() ? CHIP_HINT_TOUCH : CHIP_HINT_POINTER;
 
 // ── Placing a word from an extension's tab ──
 
