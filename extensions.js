@@ -9,14 +9,15 @@
 // are in. It may also set what the Invite button offers, and ask whether the
 // phone start screen is up, hearing 'hub-shown' and 'hub-hidden' on document
 // as it comes and goes. On a phone it may also fill the bottom bar with its
-// own buttons. It may also add a line of text to the account delete
+// own buttons, and put small buttons in the sidebar's foot beside the
+// account. It may also add a line of text to the account delete
 // dialog. It may also add a tab beside the rhymes in the word panel, and
 // place a word in the lyrics. With no script set, nothing is fetched and the
 // neutral dialog in limits.js is all anyone sees.
 (function exposeSiteExtensions(root) {
   'use strict';
 
-  const HOOK_VERSION = 10;
+  const HOOK_VERSION = 11;
   const ACCOUNT_LEGAL_SLOT_ID = 'account-legal-slot';
   const ACCOUNT_MENU_SLOT_ID = 'account-menu-slot';
   const ANSWER_DELETE = 'delete';
@@ -24,6 +25,7 @@
   const AUTH_FINE_PRINT_SLOT_ID = 'auth-fine-print-slot';
   const HEADER_SLOT_ID = 'header-slot';
   const RAIL_SLOT_ID = 'rail-slot';
+  const SIDEBAR_FOOT_ACTION_SLOT_ID = 'sidebar-foot-action-slot';
   const SIDEBAR_FOOT_SLOT_ID = 'sidebar-foot-slot';
   const SIDEBAR_SLOT_ID = 'sidebar-slot';
   const REASON_INVALID = 'invalid';
@@ -132,6 +134,12 @@
   // show signed in or out; the script decides what fits each.
   function sidebarSlot() {
     return document.getElementById(SIDEBAR_SLOT_ID);
+  }
+
+  // A spot in the sidebar's foot, left of the account, for the script's own
+  // small buttons. Empty, it takes no room.
+  function sidebarFootActionSlot() {
+    return document.getElementById(SIDEBAR_FOOT_ACTION_SLOT_ID);
   }
 
   function railSlot() {
@@ -423,6 +431,7 @@
     authFinePrintSlot,
     accountLegalSlot,
     sidebarFootSlot,
+    sidebarFootActionSlot,
     sidebarSlot,
     railSlot,
     accountMenuSlot,
