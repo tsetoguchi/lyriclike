@@ -114,6 +114,9 @@
 /tab-swipe.js
   Cache-Control: no-cache
 
+/sheet-drag.js
+  Cache-Control: no-cache
+
 /notebook-list.js
   Cache-Control: no-cache
 

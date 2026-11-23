@@ -16,6 +16,9 @@ Highlights opens its menu under the finger so one slide picks an overlay.
   the menu.
 - `hold-miss` letting go off the overlays leaves the menu open.
 - `tap-menu` a quick tap on Highlights still opens and shuts the menu.
+- `sheet-drag` a drag down on a word's meaning sheet (Rhymes, tap a chip)
+  follows the finger; past a third of its height, or a flick, it closes,
+  otherwise it springs back (sheet-drag.js).
 
 ## How to get to it (user POV)
 
@@ -75,6 +78,12 @@ sidebar with `window.Sidebar.isOpen()`. Wait 600ms after each swipe.
   stand-in click. The popover stays open.
 - **Tap menu.** Wait 600ms, `page.click('#rhymes-menu-btn')`: the popover
   opens. Click again: it shuts.
+- **Sheet drag.** On Rhymes, click a `#rhyme-results .rhyme-word`, wait
+  700ms. Fire touchstart/touchmove/touchend on `.def-popup` itself, straight
+  down from 10px under its top. Mid-drag its inline `transform` is a
+  `translateY` and `.def-overlay`'s opacity is under 1. A 25px drag over
+  600ms leaves it open with no inline transform; 90px closes it (no
+  `.def-popup` after 500ms); 30px in 40ms closes it too.
 - **Proof.** Screenshots to `.playwright-mcp/phone-gestures/`: one with the
   sidebar open after the mid-screen swipe, one with the menu open during
   the hold.

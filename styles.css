@@ -2562,6 +2562,24 @@ body:has(.coach-tour:not([hidden])) .def-popup {
     border-radius: var(--radius-sm);
     margin: 0 auto var(--space-4);
   }
+
+  /* sheet-drag.js moves the sheet with a finger and fades the dim to match.
+     The opening slide must not hold it in place meanwhile, and letting go
+     carries it on from there. The time matches SETTLE_MS in that file. */
+  .def-overlay.is-dragging,
+  .def-overlay.is-settling,
+  .def-popup.is-dragging,
+  .def-popup.is-settling {
+    animation: none;
+  }
+
+  .def-popup.is-settling {
+    transition: transform 0.25s var(--ease-pop);
+  }
+
+  .def-overlay.is-settling {
+    transition: opacity 0.25s var(--ease-pop);
+  }
 }
 
 /* Last, so it wins over the phone sheet's slide as well. */
@@ -2569,6 +2587,7 @@ body:has(.coach-tour:not([hidden])) .def-popup {
   .def-overlay,
   .def-popup {
     animation: none;
+    transition: none;
   }
 }
 
