@@ -103,8 +103,8 @@ function recordingTab(label = 'More') {
 }
 
 describe('the word panel tab hook', () => {
-  it('hooks report version 10', () => {
-    assert.equal(loadPage().hooks.version, 10);
+  it('hooks report version 11', () => {
+    assert.equal(loadPage().hooks.version, 11);
   });
 
   it('keeps the strip hidden until a tab is added', () => {
