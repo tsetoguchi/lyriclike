@@ -82,6 +82,9 @@ Start signed out with `localStorage` cleared.
    changes to that word, but the view stays on Lyrics. That is on purpose.
 3. Click `#tab-rhyme-word`. The rhymes panel shows 30 chips.
 4. `#bottom-nav` is visible.
+5. Swipes, the Highlights hold, the bar switches and the edge fades each
+   have a recipe in `features/`. The test browser has no touch screen;
+   `features/phone-gestures.md` has the helpers that fake one.
 
 ## Doubled buttons
 
