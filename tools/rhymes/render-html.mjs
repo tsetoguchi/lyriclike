@@ -340,6 +340,7 @@ const HAND_WRITTEN_PATHS = [
   '/rhymezone-alternative/',
   '/masterwriter-alternative/',
   '/rhymebrain-alternative/',
+  '/rhymegenie-alternative/',
   '/privacy/',
   '/delete-account/'
 ];
