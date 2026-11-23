@@ -1694,8 +1694,11 @@ function clearSample() {
 
 // Listening on the scroller in the capture phase runs this before the
 // editor's own input handlers, so the button is gone by the time they measure
-// the page, and before the draft handler below decides whether to save.
+// the page, and before the draft handler below decides whether to save. On
+// phones the title sits in the scroller too (page-head.js), and naming a page
+// is not writing in it.
 document.querySelector('.lyrics-area').addEventListener('input', (event) => {
+  if (event.target.id !== 'lyrics') return;
   if (sampleShowing && !isSampleShowing() && !isTourHoldingSample()) endSample();
   if (event.isTrusted) trackFirstWrite();
 }, true);
