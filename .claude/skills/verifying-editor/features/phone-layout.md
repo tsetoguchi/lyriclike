@@ -9,7 +9,7 @@ Rhymes tab label but keeps the writer on their lyrics.
 - `phone-pick` puts the picked word on the Rhymes tab label.
 - `phone-rhymes` opens the rhymes view from the tab.
 - `phone-nav` shows the bottom bar on Lyrics: Syllables, Highlights,
-  My Notebook, Create. Rhyme Scheme and Internal Rhymes sit in the
+  Notebook, Create. Rhyme Scheme and Internal Rhymes sit in the
   Highlights menu.
 
 ## How to get to it (user POV)
