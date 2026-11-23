@@ -31,8 +31,8 @@ Preconditions:
 - **Sort.** Click `#rhyme-sort-btn`, then
   `#rhyme-sort-menu [data-order="alphabetical"]`. Chips start
   `alight, alright, bite`, and the menu closes.
-- **Meaning.** Click a chip. `.def-popup` opens for "alight", and the
-  line still says "night".
+- **Meaning.** Click a chip. `.def-popup` opens with a meaning, and the
+  line still says "night". Close it by clicking outside it.
 - **Proof.** Screenshot the open meaning to
   `.playwright-mcp/pick-a-word/`.
 - **Reset.** Pick `[data-order="closest"]` to set the sort back.
@@ -43,3 +43,5 @@ Preconditions:
 - Words under 2 letters don't pick.
 - The sort choice is saved in `localStorage.rhymeSort` and leaks into the
   next run.
+- `Escape` doesn't close a meaning. Its `.def-overlay` then blocks every
+  later click. Click outside the sheet (or the overlay) to close it.

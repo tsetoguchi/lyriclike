@@ -79,11 +79,31 @@ sidebar with `window.Sidebar.isOpen()`. Wait 600ms after each swipe.
 - **Tap menu.** Wait 600ms, `page.click('#rhymes-menu-btn')`: the popover
   opens. Click again: it shuts.
 - **Sheet drag.** On Rhymes, click a `#rhyme-results .rhyme-word`, wait
-  700ms. Fire touchstart/touchmove/touchend on `.def-popup` itself, straight
-  down from 10px under its top. Mid-drag its inline `transform` is a
-  `translateY` and `.def-overlay`'s opacity is under 1. A 25px drag over
-  600ms leaves it open with no inline transform; 90px closes it (no
-  `.def-popup` after 500ms); 30px in 40ms closes it too.
+  700ms. Drag `.def-popup` itself straight down from 10px under its top
+  with `dragSheet` below. The sheet is half the screen (426px at 852), and
+  it closes past a third of its height or on a flick of 0.5px/ms.
+  Mid-drag its inline `transform` is a `translateY` and `.def-overlay`'s
+  opacity is under 1. `dragSheet(25, 600)` and `dragSheet(100, 600)` leave
+  it open with no inline transform; `dragSheet(160, 600)` closes it (no
+  `.def-popup` after 500ms); `dragSheet(30, 40)` closes it as a flick.
+
+```js
+// Five moves spaced with real timers, so the sheet sees the speed.
+const dragSheet = (dy, ms) => page.evaluate(async ([dy, ms]) => {
+  const el = document.querySelector('.def-popup');
+  const r = el.getBoundingClientRect();
+  const x = r.x + r.width / 2, y0 = r.y + 10;
+  const t = y => new Touch({ identifier: 2, target: el, clientX: x, clientY: y });
+  const fire = (type, y, isDown) => el.dispatchEvent(new TouchEvent(type, {
+    bubbles: true, cancelable: true, touches: isDown ? [t(y)] : [], changedTouches: [t(y)] }));
+  fire('touchstart', y0, true);
+  for (let i = 1; i <= 5; i++) {
+    await new Promise(done => setTimeout(done, ms / 5));
+    fire('touchmove', y0 + dy * i / 5, true);
+  }
+  fire('touchend', y0 + dy, false);
+}, [dy, ms]);
+```
 - **Proof.** Screenshots to `.playwright-mcp/phone-gestures/`: one with the
   sidebar open after the mid-screen swipe, one with the menu open during
   the hold.
@@ -100,6 +120,12 @@ sidebar with `window.Sidebar.isOpen()`. Wait 600ms after each swipe.
   tap-menu step.
 - Mouse presses never start a hold. A `pointerType` other than `touch`
   proves nothing.
+- Space the sheet's moves with `setTimeout`. Paced by
+  `requestAnimationFrame` the flick comes out too slow and the sheet stays
+  open.
+- Swipes do nothing while the welcome tour is open, and tab swipes do
+  nothing while the sidebar is open. A swipe under 60px doesn't change
+  tabs.
 - Real iPhone touch can differ: the long-press callout, scroll stealing the
   drag. Ask the user to check the hold and the mid-screen swipe on an
   iPhone.

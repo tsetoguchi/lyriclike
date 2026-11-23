@@ -6,7 +6,9 @@ in the top right corner the whole time.
 
 ## Sub-features
 
-- `head-scroll` moves the title and button row up as the words scroll.
+- `head-scroll` the title and button row live inside the lyric's
+  scroller (`#page-head` is a child of `.lyrics-area`), so they scroll
+  away with the words. The button row sits above the title.
 - `head-invite-corner` keeps the corner Invite (`#invite-btn-panel`) on
   screen at every scroll position.
 - `head-invite-single` never shows the row's own Invite (`#invite-btn`) on
@@ -21,7 +23,8 @@ in the top right corner the whole time.
 Preconditions:
 
 - Signed in as Ann (`smoke-token-ann`, see `running-lyriclike-locally`).
-  Invite only shows signed in.
+  Invite only shows signed in with limits on: `window.currentUser.page_limit`
+  is a number. The seeded Ann has it.
 - `page.setViewportSize({ width: 393, height: 852 })`, `innerWidth` is 393.
 - A long page. Fill `#lyrics` with 60 lines and fire `input`:
   ```js

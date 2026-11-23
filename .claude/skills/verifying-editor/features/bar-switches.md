@@ -10,7 +10,8 @@ labels stay grey, so a switch never looks like the selected tab.
 - `switch-on` an on switch has filled dots in white, label still grey.
 - `switch-no-dot` nothing is drawn under the label.
 - `highlights-on` Highlights counts as on while either overlay is on.
-- `places-plain` Notebook and Create never change look.
+- `places-plain` Create never changes look. Notebook's icon turns
+  white while the sidebar is open; its label stays grey.
 
 ## How to get to it (user POV)
 
@@ -38,15 +39,17 @@ const look = id => page.evaluate(id => {
 
 White ink is `rgb(226, 231, 239)`, grey is `rgb(139, 150, 166)`.
 
-- **On.** On a fresh visit Syllables is on. `look('syllable-toggle')` has
+- **On.** With `sessionStorage` cleared, Syllables is on.
+  `look('syllable-toggle')` has
   `fill` white, `stroke` `none`, `icon` white, `label` grey, `under`
   `none`.
 - **Off.** `page.click('#syllable-toggle')`. Now `fill` is `none`,
   `stroke` grey, `icon` grey.
 - **Highlights.** Turn both overlays off in the Highlights menu:
   `#rhymes-menu-btn` reads off. Turn one on: it reads on.
-- **Places.** `#notebook-btn` and `#create-btn` keep the grey icon either
-  way.
+- **Places.** `#create-btn` keeps the grey icon. Click `#notebook-btn`:
+  the sidebar opens and its `icon` is white. `window.Sidebar.hide()`: grey
+  again.
 - **Proof.** A screenshot of the bar (`clip` the bottom 92px) with one
   switch on and one off, to `.playwright-mcp/bar-switches/`.
 
