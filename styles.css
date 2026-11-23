@@ -5447,32 +5447,31 @@ body.signed-in .sidebar-links {
   }
 
   /* The bar mixes switches (Syllables, Highlights) with places to go
-     (Notebook, Create). A brighter colour for "on" made the switches read as
-     the selected tab, so every item keeps one ink and an on switch gets a dot
-     under its name instead. */
+     (Notebook, Create). A brighter label for "on" made the switches read as
+     the selected tab, so every label keeps one ink. The switches' own icons
+     carry it: hollow dots when off, filled and white when on. */
   .bottom-nav .toggle-btn.active {
     background: transparent;
     border: none;
     color: var(--ink-faded);
   }
 
-  .bottom-nav > .toggle-btn,
-  .rhymes-menu > .toggle-btn {
-    position: relative;
+  .bottom-nav > .toggle-btn .nav-icon circle,
+  .rhymes-menu > .toggle-btn .nav-icon circle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
   }
 
-  /* Hangs in the bar's bottom padding so it costs no height. */
-  .bottom-nav > .toggle-btn.active::after,
-  .rhymes-menu > .toggle-btn.active::after {
-    content: "";
-    position: absolute;
-    top: calc(100% + var(--on-dot-gap));
-    left: 50%;
-    width: var(--on-dot-size);
-    height: var(--on-dot-size);
-    translate: -50% 0;
-    border-radius: 50%;
-    background: var(--accent);
+  .bottom-nav > .toggle-btn.active .nav-icon,
+  .rhymes-menu > .toggle-btn.active .nav-icon {
+    color: var(--ink);
+  }
+
+  .bottom-nav > .toggle-btn.active .nav-icon circle,
+  .rhymes-menu > .toggle-btn.active .nav-icon circle {
+    fill: currentColor;
+    stroke: none;
   }
 
   .bottom-nav .toggle-btn:hover {
@@ -5554,15 +5553,6 @@ body.signed-in .sidebar-links {
     background: currentColor;
     -webkit-mask: var(--check-mask) center / contain no-repeat;
     mask: var(--check-mask) center / contain no-repeat;
-  }
-}
-
-/* Forced colors would paint the dot as Canvas, which hides it. */
-@media (max-width: 768px) and (forced-colors: active) {
-  .bottom-nav > .toggle-btn.active::after,
-  .rhymes-menu > .toggle-btn.active::after {
-    forced-color-adjust: none;
-    background: ButtonText;
   }
 }
 
