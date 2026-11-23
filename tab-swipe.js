@@ -1,7 +1,7 @@
 // Swipes between the phone's two tabs: a swipe left on Lyrics opens Rhymes,
 // and a swipe right on Rhymes goes back to Lyrics. app.js's switchMobileTab
-// does the switching, as a tap on the tab would. A swipe from the screen's
-// left edge belongs to the sidebar (sidebar-swipe.js), so it is left alone.
+// does the switching, as a tap on the tab would. A swipe right on Lyrics, and
+// one from the screen's left edge, belong to the sidebar (sidebar-swipe.js).
 (function defineTabSwipe() {
   'use strict';
 
@@ -52,10 +52,15 @@
     return Boolean(textarea) && textarea.selectionStart !== textarea.selectionEnd;
   }
 
-  function canStartAt(touch, target) {
-    if (!window.matchMedia(PHONE_QUERY).matches || isBusy()) return false;
-    if (touch.clientX <= EDGE_PX || !mainEl.contains(target)) return false;
+  // Whether a sideways swipe from here is the page's to take, on a phone.
+  function canSwipeFrom(target) {
+    if (!window.matchMedia(PHONE_QUERY).matches || !mainEl.contains(target)) return false;
     return !isInSidewaysScroller(target) && !hasTextSelected();
+  }
+
+  function canStartAt(touch, target) {
+    if (isBusy() || touch.clientX <= EDGE_PX) return false;
+    return canSwipeFrom(target);
   }
 
   function onTouchStart(event) {
@@ -81,5 +86,5 @@
   document.addEventListener('touchend', onTouchEnd, { passive: true });
   document.addEventListener('touchcancel', () => { start = null; }, { passive: true });
 
-  window.TabSwipe = { tabAfterSwipe };
+  window.TabSwipe = { tabAfterSwipe, canSwipeFrom, currentTab };
 })();

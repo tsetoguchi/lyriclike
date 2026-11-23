@@ -1,5 +1,6 @@
-// sidebar-swipe.js: a drag from the left edge pulls the sliding sidebar out,
-// and a drag left on it pushes it back, settling by distance or a flick.
+// sidebar-swipe.js: a drag right from the left edge, or from anywhere on the
+// phone's Lyrics tab, pulls the sliding sidebar out, and a drag left on it
+// pushes it back, settling by distance or a flick.
 //
 //   node --test "test/*.test.mjs"
 
@@ -43,8 +44,12 @@ function makeElement(width = 0) {
   return element;
 }
 
-// options: { isOpen, isDocked, isTourOpen }
-function startSwipe({ isOpen = false, isDocked = false, isTourOpen = false } = {}) {
+// options: { isOpen, isDocked, isTourOpen, tab, canSwipeFrom }. With no tab,
+// tab-swipe.js isn't loaded.
+function startSwipe(options = {}) {
+  const {
+    isOpen = false, isDocked = false, isTourOpen = false, tab = null, canSwipeFrom = true,
+  } = options;
   const sidebarEl = makeElement(SIDEBAR_WIDTH);
   const rowEl = makeElement();
   sidebarEl.children.push(rowEl);
@@ -62,6 +67,7 @@ function startSwipe({ isOpen = false, isDocked = false, isTourOpen = false } = {
     },
     isCoachTourOpen: () => isTourOpen,
   };
+  if (tab) window.TabSwipe = { currentTab: () => tab, canSwipeFrom: () => canSwipeFrom };
   const document = {
     body: { classList: new FakeClassList() },
     getElementById: id => ({ sidebar: sidebarEl, 'sidebar-scrim': scrimEl })[id],
@@ -175,6 +181,29 @@ describe('swiping the sidebar', () => {
     for (const options of [{ isDocked: true }, { isTourOpen: true }]) {
       const swipe = startSwipe(options);
       drag(swipe, { fromX: 5, path: [100, 200], target: swipe.pageEl });
+      assert.deepEqual(swipe.calls, []);
+    }
+  });
+
+  it('opens from a drag right anywhere on Lyrics', () => {
+    const swipe = startSwipe({ tab: 'lyrics' });
+    const moves = drag(swipe, { fromX: 150, path: [170, 250, 350], target: swipe.pageEl });
+    assert.equal(moves.at(-1).isPrevented, true);
+    assert.deepEqual(swipe.calls, ['show']);
+  });
+
+  it('leaves a drag left on Lyrics to the tabs', () => {
+    const swipe = startSwipe({ tab: 'lyrics' });
+    const moves = drag(swipe, { fromX: 300, path: [280, 200, 100], target: swipe.pageEl });
+    assert.equal(moves.some(move => move.isPrevented), false);
+    assert.deepEqual(swipe.calls, []);
+  });
+
+  it('opens off the edge only on Lyrics, and not where a row keeps its drag', () => {
+    for (const options of [{ tab: 'rhymes' }, { tab: 'lyrics', canSwipeFrom: false }]) {
+      const swipe = startSwipe(options);
+      const moves = drag(swipe, { fromX: 150, path: [170, 250, 350], target: swipe.pageEl });
+      assert.equal(moves.some(move => move.isPrevented), false);
       assert.deepEqual(swipe.calls, []);
     }
   });

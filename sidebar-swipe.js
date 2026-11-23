@@ -1,13 +1,15 @@
-// Swipes for the sliding sidebar. A drag from the screen's left edge pulls it
-// out, and a drag left on it or its scrim pushes it back. It follows the
+// Swipes for the sliding sidebar. A drag right pulls it out, from the screen's
+// left edge or from anywhere on the phone's Lyrics tab, and a drag left on it
+// or its scrim pushes it back. It follows the
 // finger, then sidebar.js opens or closes it from where it was let go. The
 // docked sidebar is part of the page, so it takes no swipes.
 (function defineSidebarSwipe() {
   'use strict';
 
-  // Where an opening drag may start: the screen's first strip, so drags on
-  // the lyrics, the rhymes and the lists keep their own meaning.
+  // An opening drag may start in the screen's first strip anywhere. Off it,
+  // only on Lyrics, so the rhymes and the lists keep their own drags.
   const EDGE_PX = 20;
+  const LYRICS_TAB = 'lyrics';
   // Movement before the drag picks a direction; a mostly vertical one is a
   // scroll and is left alone.
   const SLOP_PX = 10;
@@ -42,7 +44,14 @@
     if (window.Sidebar.isOpen()) {
       return sidebarEl.contains(target) || target === scrimEl;
     }
-    return touch.clientX <= EDGE_PX;
+    return touch.clientX <= EDGE_PX || isOnLyrics(target);
+  }
+
+  // tab-swipe.js knows the phone's tabs and which spots keep their own drags.
+  function isOnLyrics(target) {
+    const tabs = window.TabSwipe;
+    if (!tabs || tabs.currentTab() !== LYRICS_TAB) return false;
+    return tabs.canSwipeFrom(target);
   }
 
   function onTouchStart(event) {
@@ -86,7 +95,8 @@
     if (!drag.isDragging) {
       const isSideways = isSidewaysDrag(drag.dx, touch.clientY - drag.startY);
       if (isSideways === null) return;
-      if (!isSideways) {
+      // A shut sidebar only opens rightward; a drag left is tab-swipe.js's.
+      if (!isSideways || (!drag.wasOpen && drag.dx < 0)) {
         drag = null;
         return;
       }
