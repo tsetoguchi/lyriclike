@@ -5370,16 +5370,21 @@ body.signed-in .sidebar-links {
     bottom: 0;
     z-index: var(--z-bar);
     display: flex;
-    /* Stretch, so a label that wraps to two lines doesn't leave its
-       neighbours short. */
     align-items: stretch;
-    padding-top: var(--space-2);
+    /* No line or shadow on top: the page fades out under the bar instead,
+       through the tall top padding. Taps in that fade go through to the
+       lyric; only the buttons catch them. */
+    padding-top: var(--space-8);
     /* The labels rest on the home indicator's inset, with a small floor on
        screens that have none. */
     padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
-    background: var(--paper);
-    border-top: var(--hairline) solid var(--margin-line);
-    box-shadow: var(--shadow-bottom-nav);
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in srgb, var(--paper) 88%, transparent) 38%,
+      var(--paper) 62%
+    );
+    pointer-events: none;
     transform: translateY(0);
     transition: transform var(--duration-slow) ease, opacity var(--duration-slow) ease;
   }
@@ -5387,8 +5392,7 @@ body.signed-in .sidebar-links {
   .bottom-nav.ducked,
   .bottom-nav.off-screen,
   .bottom-nav.keyboard-up {
-    /* Past 100% so the shadow clears the edge too. */
-    transform: translateY(130%);
+    transform: translateY(100%);
     opacity: 0;
   }
 
@@ -5401,6 +5405,10 @@ body.signed-in .sidebar-links {
   .bottom-nav.has-bar-slot.ducked {
     transform: translateY(0);
     opacity: 1;
+  }
+
+  .bottom-nav > * {
+    pointer-events: auto;
   }
 
   .bottom-bar-slot {
@@ -5436,21 +5444,21 @@ body.signed-in .sidebar-links {
     border-radius: 0;
     color: var(--ink-faded);
     font-family: var(--font-ui);
-    font-size: var(--text-caption-1);
+    font-size: var(--text-caption-2);
     font-weight: var(--weight-regular);
     letter-spacing: normal;
     text-transform: none;
     line-height: 1.2;
-    /* A narrow phone can still squeeze a label: it wraps rather than
-       overruns its neighbour. */
-    white-space: normal;
+    /* Labels are one short word each and stay on one line, so the row
+       never goes uneven. */
+    white-space: nowrap;
     text-align: center;
   }
 
   .bottom-nav .nav-icon {
     display: block;
-    width: var(--nav-icon-size);
-    height: var(--nav-icon-size);
+    width: var(--bar-icon-size);
+    height: var(--bar-icon-size);
     fill: none;
     stroke: currentColor;
     stroke-width: 2;

@@ -99,6 +99,7 @@
   --dialog-width: 400px;
   --resize-handle-width: 10px;
   --nav-icon-size: 24px;
+  --bar-icon-size: 26px;
   --header-icon-size: 20px;
   --def-popup-max-height: 280px;
   --scrollbar-width: 6px;
@@ -250,7 +251,6 @@
   --scrim: rgba(0, 0, 0, 0.66);                /* dimmed desk */
   --scrim-light: rgba(0, 0, 0, 0.55);
   --shadow-popup: 0 8px 32px rgba(0, 0, 0, 0.60);
-  --shadow-bottom-nav: 0 -2px 12px rgba(0, 0, 0, 0.45);
   --sheet-handle: rgba(226, 231, 239, 0.28);
   --scrollbar-thumb: rgba(226, 231, 239, 0.46);
   --scrollbar-thumb-rest: rgba(226, 231, 239, 0.10);
