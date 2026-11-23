@@ -331,11 +331,12 @@ function populateGroupBody(group) {
 
 // The groups the writer has opened, by type, kept from word to word. The
 // strongest group with any words always opens as well, so a picked word shows
-// rhymes rather than a menu of headers.
+// rhymes rather than a menu of headers. A redraw of the word already shown
+// keeps exactly what was open, so groups the writer folded stay folded.
 let openRhymeTypes = new Set();
 
-function listOpenTypes(keys) {
-  return keys.filter((key, i) => i === 0 || openRhymeTypes.has(key));
+function listOpenTypes(keys, isRedraw) {
+  return keys.filter((key, i) => (i === 0 && !isRedraw) || openRhymeTypes.has(key));
 }
 
 function openGroups(openKeys) {
@@ -466,6 +467,11 @@ function renderResults(word, results) {
   tabRhymeWordEl.textContent = word;
   // Only a sort change fades the chips in; setRhymeSort() adds this back.
   resultsEl.classList.remove(RESORTED_CLASS);
+  // The same word comes back often without anyone asking: a swipe back to
+  // Rhymes ends with a lift on the editor, which picks the caret's word again.
+  // Its groups are on screen, so they say what the writer left open.
+  const isRedraw = word === baseWord && resultsEl.querySelector('.rhyme-group') !== null;
+  if (isRedraw) rememberOpenGroups();
   baseWord = word;
   baseResults = results;
   currentResults = sortRhymeResults(word, results);
@@ -484,7 +490,7 @@ function renderResults(word, results) {
   resultsEl.innerHTML = shown
     .map(({ key, name, desc }) => buildGroupHtml(key, name, desc, results[key]))
     .join('');
-  openGroups(listOpenTypes(shown.map(({ key }) => key)));
+  openGroups(listOpenTypes(shown.map(({ key }) => key), isRedraw));
 }
 
 function describeLookupResult(results) {
