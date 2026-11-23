@@ -10,7 +10,7 @@ labels stay grey, so a switch never looks like the selected tab.
 - `switch-on` an on switch has filled dots in white, label still grey.
 - `switch-no-dot` nothing is drawn under the label.
 - `highlights-on` Highlights counts as on while either overlay is on.
-- `places-plain` My Notebook and Create never change look.
+- `places-plain` Notebook and Create never change look.
 
 ## How to get to it (user POV)
 
