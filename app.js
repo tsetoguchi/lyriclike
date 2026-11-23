@@ -1886,11 +1886,12 @@ function handleEditorScrollForNav() {
   setBottomNavDucked(lyricsAreaEl.scrollTop > 0);
 }
 
-// Fades the bottom edge only while some of the page is still below it.
+// Fades each edge only while some of the page is hidden past it.
 function updateEditorFade() {
   const hiddenBelow = editorContentEnd - lyricsAreaEl.scrollTop -
     lyricsAreaEl.clientHeight;
   lyricsAreaEl.classList.toggle('has-more-below', hiddenBelow > EDITOR_FADE_SLACK_PX);
+  lyricsAreaEl.classList.toggle('has-more-above', lyricsAreaEl.scrollTop > EDITOR_FADE_SLACK_PX);
 }
 
 // The bar floats over the editor, so the editor has to know how much of its
