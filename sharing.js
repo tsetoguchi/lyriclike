@@ -53,17 +53,19 @@
     STOPPED: "You won't get these emails again.",
     REMINDER_STOP_QUESTION: "You won't get an email when a song you're writing sits unfinished. "
       + 'You can turn these back on in the account menu.',
+    REMINDERS_STOPPED: 'Song reminders are off. You can turn them back on in the account menu.',
   });
 
   // The two kinds of "stop these emails" link, each with its own route.
   const STOP_KINDS = Object.freeze({
     stop: {
       pattern: STOP_TOKEN_PATTERN, url: '/api/invites/stop', question: TEXT.STOP_QUESTION,
-      heading: 'Stop these emails',
+      heading: 'Stop these emails', doneHeading: 'Emails stopped', done: TEXT.STOPPED,
     },
     reminder_stop: {
       pattern: REMINDER_TOKEN_PATTERN, url: '/api/reminders/stop',
       question: TEXT.REMINDER_STOP_QUESTION, heading: 'Turn off song reminders',
+      doneHeading: 'Reminders off', done: TEXT.REMINDERS_STOPPED,
     },
   });
 
@@ -542,7 +544,7 @@
 
   // Only a POST stops the mail, and only after this button: mail scanners
   // open every link in a mail, and must not opt anyone out by doing so.
-  async function confirmStop(token, { pattern, url, question, heading }) {
+  async function confirmStop(token, { pattern, url, question, heading, doneHeading, done }) {
     if (!pattern.test(token)) return;
     const confirmed = await Dialog.open({
       heading, message: question, confirmLabel: heading,
@@ -559,7 +561,7 @@
       await Dialog.open({ heading, message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
       return;
     }
-    await Dialog.open({ heading: 'Emails stopped', message: TEXT.STOPPED, confirmLabel: 'OK', noCancel: true });
+    await Dialog.open({ heading: doneHeading, message: done, confirmLabel: 'OK', noCancel: true });
   }
 
   function openShareLink(link) {
