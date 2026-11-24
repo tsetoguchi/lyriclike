@@ -76,11 +76,17 @@ describe('collect', () => {
       batch({ events: [] }),
       batch({ events: tooMany }),
       batch({ events: [{ name: 'has space' }] }),
-      batch({ events: [{ name: 'ok', params: { nested: { a: 1 } } }] }),
-      batch({ events: [{ name: 'ok', params: { 'bad-key': 1 } }] }),
+      batch({ events: [{ name: 'ok', params: ['not', 'an', 'object'] }] }),
     ];
     for (const body of bad) assert.equal((await post(collect, env, COLLECT, body)).status, 400);
     assert.equal(sent.length, 0);
+  });
+
+  it('drops a param Google can\'t store but keeps the event', () => {
+    const odd = batch({ events: [{ name: 'ok', params: {
+      word: null, nested: { a: 1 }, 'bad-key': 1, trigger: 'tap',
+    } }] });
+    assert.deepEqual(collect.readBatch(odd).events, [{ name: 'ok', params: { trigger: 'tap' } }]);
   });
 
   it('cuts long values to Google\'s 100 characters', () => {

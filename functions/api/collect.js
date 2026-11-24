@@ -45,14 +45,15 @@ function cleanValue(value) {
   return undefined;
 }
 
+// A param Google can't store (an empty value, a list, a bad name) is left
+// out on its own, so one odd value never costs the whole batch.
 function cleanParams(params) {
   if (params === undefined) return {};
   if (!isPlainObject(params) || Object.keys(params).length > MAX_PARAMS) return null;
   const cleaned = {};
   for (const [key, value] of Object.entries(params)) {
     const kept = cleanValue(value);
-    if (!NAME_PATTERN.test(key) || kept === undefined) return null;
-    cleaned[key] = kept;
+    if (NAME_PATTERN.test(key) && kept !== undefined) cleaned[key] = kept;
   }
   return cleaned;
 }
