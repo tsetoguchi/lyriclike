@@ -99,7 +99,18 @@ function fontFaceRules(env) {
 // The page color sits on a full-width table too, since Gmail drops <body>
 // styles. One button, the app's outlined amber pill. An optional footer link
 // (the invite's stop link) goes in both parts.
-function renderEmail(env, { heading, paragraphs, button, footer, footerLink }) {
+// An optional preheader is the inbox's preview line. It is hidden in the
+// email, and the run of zero-width characters after it stops inboxes from
+// filling the rest of the line with the heading.
+const PREHEADER_PADDING = '&zwnj;&nbsp;'.repeat(60);
+
+function preheaderHtml(preheader) {
+  if (!preheader) return '';
+  return '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;'
+    + `font-size:1px;line-height:1px;mso-hide:all;">${escapeHtml(preheader)}${PREHEADER_PADDING}</div>\n`;
+}
+
+function renderEmail(env, { heading, paragraphs, button, footer, footerLink, preheader }) {
   const footerText = footerLink ? `${footer} ${footerLink.label}: ${footerLink.url}` : footer;
   const footerHtml = escapeHtml(footer) + (footerLink
     ? ` <a href="${escapeHtml(footerLink.url)}" style="color:${FADED_INK};">${escapeHtml(footerLink.label)}</a>`
@@ -115,7 +126,7 @@ function renderEmail(env, { heading, paragraphs, button, footer, footerLink }) {
 ${fontFaceRules(env)}
 </style></head>
 <body style="margin:0;background:${PAGE_BACKGROUND};" bgcolor="${PAGE_BACKGROUND}">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE_BACKGROUND}" style="background:${PAGE_BACKGROUND};"><tr><td>
+${preheaderHtml(preheader)}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE_BACKGROUND}" style="background:${PAGE_BACKGROUND};"><tr><td>
 <div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:${FONT_BODY};color:${INK};">
 <p style="margin:0 0 20px -${LOGO_PLATE_INSET}px;"><a href="${escapeHtml(baseUrl(env))}/" style="text-decoration:none;"><img src="${escapeHtml(baseUrl(env))}/${LOGO_PATH}" alt="LyricLike" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" style="display:block;border:0;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;font-family:${FONT_BODY};font-weight:700;font-size:20px;color:${INK};"></a></p>
 <h1 style="font-family:${FONT_BODY};font-weight:700;font-size:20px;line-height:1.3;margin:0 0 16px;color:${INK};">${escapeHtml(heading)}</h1>
@@ -387,6 +398,7 @@ function reminderMessage(env, { title, lyricId, stopToken }) {
     subject: isUntitled ? 'Your untitled song is waiting' : `Your song "${pageTitle}" is waiting`,
     ...renderEmail(env, {
       heading: 'Your song is waiting',
+      preheader: `You left ${named} a few days ago. Pick it up where you stopped.`,
       paragraphs: [`You left ${named} a few days ago. Pick it up where you stopped.`],
       button: { label: 'Open the song', url: openPageUrl(env, lyricId) },
       footer: "You got this because a song sat unfinished. We send at most one every two weeks.",
