@@ -61,5 +61,7 @@ async function toggle() {
 if (button && stateLabel) {
   button.addEventListener('click', toggle);
   document.addEventListener('auth-checked', showForUser);
+  // sharing.js sends it after the email's turn-off link worked for this account.
+  document.addEventListener('reminders-changed', showForUser);
   showForUser();
 }

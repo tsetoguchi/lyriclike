@@ -66,8 +66,18 @@
       pattern: REMINDER_TOKEN_PATTERN, url: '/api/reminders/stop',
       question: TEXT.REMINDER_STOP_QUESTION, heading: 'Turn off song reminders',
       doneHeading: 'Reminders off', done: TEXT.REMINDERS_STOPPED,
+      afterStop: noteRemindersOff,
     },
   });
+
+  // The token starts with the account id. When it is the signed-in account,
+  // the account menu's switch (song-reminders.js) shows Off without a reload.
+  function noteRemindersOff(token) {
+    const user = window.currentUser;
+    if (!user || !token.startsWith(`${user.id}.`)) return;
+    user.reminders_on = false;
+    document.dispatchEvent(new Event('reminders-changed'));
+  }
 
   const byId = id => document.getElementById(id);
 
@@ -544,7 +554,9 @@
 
   // Only a POST stops the mail, and only after this button: mail scanners
   // open every link in a mail, and must not opt anyone out by doing so.
-  async function confirmStop(token, { pattern, url, question, heading, doneHeading, done }) {
+  async function confirmStop(token, {
+    pattern, url, question, heading, doneHeading, done, afterStop,
+  }) {
     if (!pattern.test(token)) return;
     const confirmed = await Dialog.open({
       heading, message: question, confirmLabel: heading,
@@ -561,6 +573,7 @@
       await Dialog.open({ heading, message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
       return;
     }
+    if (afterStop) afterStop(token);
     await Dialog.open({ heading: doneHeading, message: done, confirmLabel: 'OK', noCancel: true });
   }
 
