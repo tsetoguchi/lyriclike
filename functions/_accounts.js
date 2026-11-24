@@ -65,7 +65,23 @@ export async function describeAccount(env, userId) {
     // At 0 a friend earns no pages, so the Invite button has nothing to offer.
     invite_pages_per_friend: bonusPagesPerFriend(env),
     extension_script_url: extensionScriptUrl(env),
+    // The "your song is waiting" email, on unless turned off.
+    reminders_on: await isRemindersOn(env, row.id),
   };
+}
+
+// Its own query, so a database not yet migrated (no reminder_opt_outs table)
+// still answers every account; reminders then read as on.
+async function isRemindersOn(env, userId) {
+  try {
+    const row = await env.lyricalmiracle_db.prepare(
+      'SELECT 1 AS off FROM reminder_opt_outs WHERE user_id = ?'
+    ).bind(userId).first();
+    return !row;
+  } catch (err) {
+    console.error('reminder setting read failed', err);
+    return true;
+  }
 }
 
 // The optional extension script must be a path on this site, since the CSP

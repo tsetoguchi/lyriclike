@@ -17,6 +17,8 @@
   const PEOPLE_LIMIT_ERROR = 'people_limit';
   const PAGE_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
   const STOP_TOKEN_PATTERN = /^[0-9a-f]{64}\.[A-Za-z0-9_-]{43}$/;
+  const REMINDER_TOKEN_PATTERN = /^[A-Za-z0-9-]{1,64}\.[A-Za-z0-9_-]{43}$/;
+  const FROM_REMINDER = 'reminder';
 
   // The poll. The free plan allows 100,000 function calls a day for the whole
   // site, and one tab polling every 10 s all day is 8,640, so it slows down
@@ -49,6 +51,20 @@
     STOP_QUESTION: "You won't get an email when someone shares a LyricLike page with this "
       + 'address. You can still open pages shared with you.',
     STOPPED: "You won't get these emails again.",
+    REMINDER_STOP_QUESTION: "You won't get an email when a song you're writing sits unfinished. "
+      + 'You can turn these back on in the account menu.',
+  });
+
+  // The two kinds of "stop these emails" link, each with its own route.
+  const STOP_KINDS = Object.freeze({
+    stop: {
+      pattern: STOP_TOKEN_PATTERN, url: '/api/invites/stop', question: TEXT.STOP_QUESTION,
+      heading: 'Stop these emails',
+    },
+    reminder_stop: {
+      pattern: REMINDER_TOKEN_PATTERN, url: '/api/reminders/stop',
+      question: TEXT.REMINDER_STOP_QUESTION, heading: 'Turn off song reminders',
+    },
   });
 
   const byId = id => document.getElementById(id);
@@ -526,21 +542,21 @@
 
   // Only a POST stops the mail, and only after this button: mail scanners
   // open every link in a mail, and must not opt anyone out by doing so.
-  async function confirmStop(token) {
-    if (!STOP_TOKEN_PATTERN.test(token)) return;
+  async function confirmStop(token, { pattern, url, question, heading }) {
+    if (!pattern.test(token)) return;
     const confirmed = await Dialog.open({
-      heading: 'Stop these emails', message: TEXT.STOP_QUESTION, confirmLabel: 'Stop these emails',
+      heading, message: question, confirmLabel: heading,
     });
     if (!confirmed) return;
     try {
-      const res = await fetch('/api/invites/stop', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
       if (!res.ok) throw new Error(String(res.status));
     } catch {
-      await Dialog.open({ heading: 'Stop these emails', message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
+      await Dialog.open({ heading, message: TEXT.FAILED, confirmLabel: 'OK', noCancel: true });
       return;
     }
     await Dialog.open({ heading: 'Emails stopped', message: TEXT.STOPPED, confirmLabel: 'OK', noCancel: true });
@@ -548,11 +564,15 @@
 
   function openShareLink(link) {
     if (!link || typeof link.token !== 'string') return;
-    if (link.kind === 'stop') {
-      confirmStop(link.token);
+    if (STOP_KINDS[link.kind]) {
+      confirmStop(link.token, STOP_KINDS[link.kind]);
       return;
     }
     if (link.kind !== 'shared' || !PAGE_ID_PATTERN.test(link.token)) return;
+    // A song reminder opens the writer's own page through this same link.
+    if (link.from === FROM_REMINDER && typeof window.trackEvent === 'function') {
+      window.trackEvent('reminder_opened');
+    }
     if (window.currentUser) {
       openSharedPage(link.token, link.to);
       return;
@@ -719,7 +739,7 @@
   window.openShareLink = openShareLink;
 
   const link = window.authLink;
-  if (link && (link.kind === 'shared' || link.kind === 'stop')) {
+  if (link && (link.kind === 'shared' || STOP_KINDS[link.kind])) {
     window.authLink = null;
     openShareLink(link);
   }

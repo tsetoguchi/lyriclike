@@ -122,6 +122,9 @@
             </div>
             <div id="account-menu-slot" class="account-menu-group"></div>
             <div class="account-menu-group">
+              <button id="reminders-toggle-btn" class="account-menu-item" type="button"
+                      role="switch" aria-checked="true" hidden>
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg>Song reminders<span id="reminders-state" class="account-menu-state">On</span></button>
               <button id="account-legal-btn" class="account-menu-item" type="button"
                       aria-controls="account-menu-legal">
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM9 7h6M9 10.5h6M9 16.5c.8-1.4 1.6-1.4 2 0s1.3-1.4 2-.6.9.8 2 .4"/></svg>Legal<svg class="account-menu-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -527,6 +530,7 @@
   <script type="module" src="extensions.js"></script>
   <script type="module" src="in-app-browser.js"></script>
   <script type="module" src="account-menu-views.js"></script>
+  <script type="module" src="song-reminders.js"></script>
   <script type="module" src="sample-start.js"></script>
   <script type="module" src="save-nudge.js"></script>
   <script type="module" src="whats-new.js"></script>

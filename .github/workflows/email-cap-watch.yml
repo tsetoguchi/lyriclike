@@ -2,7 +2,8 @@ name: Email cap
 
 # Once a day, asks the production database how much mail was skipped or
 # failed in the last day. Resend's free plan allows 100 mails a day, split
-# into three pools (signup 40, account 30, invite 30). A pool that filled up
+# into pools (signup 30, account 30, invite 20, feedback 10, reminder 10).
+# This job watches all but feedback. A pool that filled up
 # means real mail was dropped, so it fails this job and GitHub emails the repo
 # owner. More than a few failed sends means a Resend or DNS problem.
 # A passing run still prints how full each pool got.
@@ -32,7 +33,7 @@ jobs:
           cat > check.mjs <<'EOF'
           const DAY_MS = 24 * 60 * 60 * 1000;
           const FAILED_LIMIT = 5;
-          const POOLS = ['signup', 'account', 'invite'];
+          const POOLS = ['signup', 'account', 'invite', 'reminder'];
 
           const token = process.env.CLOUDFLARE_D1_TOKEN;
           if (!token) throw new Error('The CLOUDFLARE_D1_TOKEN secret is not set.');

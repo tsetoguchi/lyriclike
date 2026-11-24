@@ -74,7 +74,7 @@ describe('privacy page', () => {
   });
 
   it('is dated the day it last changed', () => {
-    assert.match(html, /Last updated November 8, 2026/);
+    assert.match(html, /Last updated November 24, 2026/);
   });
 
   it('gives an email to ask about your data', () => {

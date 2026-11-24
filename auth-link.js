@@ -1,7 +1,9 @@
 // Emailed links arrive as /#signup_token=…, /#reset_token=…, /#shared=… (a
 // page someone shared, with &signup=1 for someone with no account yet and
 // &to= the address it was shared with) or
-// /#stop_token=… (stop invite mail). The value rides in the fragment so it
+// /#stop_token=… (stop invite mail) or /#reminder_stop=… (stop the "your song
+// is waiting" mail). A song reminder opens its page as /#shared=…&from=reminder,
+// so the visit can be counted. The value rides in the fragment so it
 // never reaches request logs, and this script takes it out of the address bar
 // and history before anything else runs, analytics included, since analytics
 // reports the page URL. auth-forms.js picks the sign-in links up from
@@ -12,6 +14,7 @@
 
   const LINK_KINDS = Object.freeze({
     signup_token: 'confirm', reset_token: 'reset', shared: 'shared', stop_token: 'stop',
+    reminder_stop: 'reminder_stop',
   });
   const MAX_FRAGMENT_LENGTH = 512;
 
@@ -28,7 +31,7 @@
     history.replaceState(null, '', window.location.pathname + window.location.search);
     return {
       kind: LINK_KINDS[found], token: params.get(found), signup: params.get('signup') === '1',
-      to: params.get('to') || '',
+      to: params.get('to') || '', from: params.get('from') || '',
     };
   }
 

@@ -77,10 +77,10 @@ function isJson(request) {
 // The one exception: a mail app's one-click unsubscribe is a cross-site POST
 // with a form body. The route needs no cookie; its signed token is the only
 // thing that lets it act, so a forged request can do nothing with it.
-const ONE_CLICK_STOP_PATH = '/api/invites/stop';
+const ONE_CLICK_STOP_PATHS = new Set(['/api/invites/stop', '/api/reminders/stop']);
 
 function isOneClickStop(request) {
-  return request.method === 'POST' && new URL(request.url).pathname === ONE_CLICK_STOP_PATH;
+  return request.method === 'POST' && ONE_CLICK_STOP_PATHS.has(new URL(request.url).pathname);
 }
 
 // The other exception: Apple sends a person back from its sign-in page with a
