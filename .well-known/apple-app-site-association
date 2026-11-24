@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["484VZ7RM5N.com.lyriclike.app"],
+        "components": [
+          { "/": "/open/*", "comment": "Song links from emails open the page in the app" }
+        ]
+      }
+    ]
+  }
+}
