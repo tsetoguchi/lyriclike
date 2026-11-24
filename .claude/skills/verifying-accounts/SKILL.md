@@ -94,7 +94,7 @@ Screenshot each new screen into `.playwright-mcp/`.
 | 429 answers | Rate limits. Rerun the seed |
 | Only Google shows | `PASSWORD_AUTH_ENABLED` binding missing |
 | Seed fails with `FOREIGN KEY constraint failed` | An older copy of the seed script. The current one clears every row that points at either test account |
-| `/ext/site.js` 404 in the console | A `.dev.vars` copied from the main folder sets `EXTENSION_SCRIPT_URL`. Harmless here |
+| The extension script 404s in the console | A `.dev.vars` copied from the main folder sets `EXTENSION_SCRIPT_URL`. Harmless here |
 
 ## Hand to the user
 
