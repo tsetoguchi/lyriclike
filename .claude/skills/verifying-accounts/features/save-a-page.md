@@ -24,7 +24,8 @@ Preconditions:
 
 - **Create.** Click `#new-lyric-btn`. No dialog opens (`#dialog-overlay`
   stays hidden). The title `#lyrics-panel-title` is blank and focused.
-  Nothing is on the server yet: `/api/lyrics` is still `[]`.
+  The page is saved at once, empty: within a second or two `/api/lyrics`
+  lists it as "Untitled" with `is_empty: 1`.
 - **Title.** Type a title and press Enter. Focus moves to the words.
 - **Write.** Type a line. It saves about 1 second later; wait 2-3 seconds.
 - **Saved.** `GET /api/lyrics` lists the page with its title and
