@@ -9,7 +9,8 @@ common mistakes live in `../SKILL.md`.
 - Site running on port 8788 with the password bindings from `../SKILL.md`.
 - `seed-accounts.mjs` output loaded: `pat@local.test` (confirmed) and
   `sam@local.test` (pending). Password `lyric-test-pass-42`.
-- Cookies and `localStorage` cleared.
+- Cookies and `localStorage` cleared, then `localStorage.tour_seen` set to
+  `'1'`. Without it the first-visit tour covers the page and blocks clicks.
 
 ## Proof rules
 
@@ -21,14 +22,18 @@ common mistakes live in `../SKILL.md`.
 
 - [Password log in](./password-log-in.md): email step, wrong and right
   password, mixed-case email, sign out.
-- [Save a page](./save-a-page.md): create a titled page and see it again
-  after logging back in.
+- [Save a page](./save-a-page.md): create a page, name it, write, and see
+  it again after logging back in.
 - [Confirm email link](./confirm-email-link.md): finish a sign-up from the
-  email link, and the used-link message.
+  email link, and both used-link messages.
 - [Reset password link](./reset-password-link.md): set a new password from
-  the email link.
+  the email link, and the used-link message.
+- [Change password](./change-password.md): change it from the account
+  menu.
+- [Delete account](./delete-account.md): delete it from the account menu.
 
 ## Not coverable locally
 
-- Sending the sign-up and reset emails, and Turnstile. Check on the real
-  site.
+- Sending the sign-up, reset and add-a-password emails, and Turnstile.
+  Check on the real site.
+- Google and Apple sign-in, which need the real providers.
