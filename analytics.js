@@ -57,13 +57,6 @@
     return;
   }
 
-  window.dataLayer = window.dataLayer || [];
-  // gtag queues into dataLayer, so calls made before the tag arrives are kept.
-  function gtag() {
-    window.dataLayer.push(arguments);
-  }
-  window.gtag = gtag;
-
   // Off in code, not just in the GA property, so the app's privacy manifest
   // can say "no tracking" whatever the property's settings become.
   const PRIVACY_CONFIG = Object.freeze({
@@ -71,20 +64,53 @@
     allow_ad_personalization_signals: false,
   });
 
-  gtag('js', new Date());
-  gtag('config', MEASUREMENT_ID, isInternalBrowser()
-    ? { ...PRIVACY_CONFIG, traffic_type: 'internal' }
-    : { ...PRIVACY_CONFIG });
+  // Google's tag sends nothing from inside the app, so there the events go
+  // through the site's own server (analytics-relay.js).
+  function isInApp() {
+    const shell = window.NativeShell;
+    return Boolean(shell && shell.isNative && window.AnalyticsRelay);
+  }
 
-  // A yes/no flag only, so reports can split signed-in visitors from the rest
-  // without GA ever holding an account id or an address.
-  window.setSignedInProperty = function setSignedInProperty(isSignedIn) {
-    gtag('set', 'user_properties', { signed_in: isSignedIn ? 'yes' : 'no' });
-  };
+  function startAppRelay() {
+    const relay = window.AnalyticsRelay.start({ isInternal: isInternalBrowser() });
+    window.setSignedInProperty = relay.setSignedIn;
+    window.trackEvent = relay.track;
+  }
 
-  window.trackEvent = function trackEvent(name, params) {
-    gtag('event', name, params || {});
-  };
+  function loadTag() {
+    const tag = document.createElement('script');
+    tag.async = true;
+    tag.src = TAG_URL;
+    document.head.appendChild(tag);
+  }
+
+  function startTag() {
+    window.dataLayer = window.dataLayer || [];
+    // gtag queues into dataLayer, so calls made before the tag arrives are kept.
+    function gtag() {
+      window.dataLayer.push(arguments);
+    }
+    window.gtag = gtag;
+
+    gtag('js', new Date());
+    gtag('config', MEASUREMENT_ID, isInternalBrowser()
+      ? { ...PRIVACY_CONFIG, traffic_type: 'internal' }
+      : { ...PRIVACY_CONFIG });
+
+    // A yes/no flag only, so reports can split signed-in visitors from the
+    // rest without GA ever holding an account id or an address.
+    window.setSignedInProperty = function setSignedInProperty(isSignedIn) {
+      gtag('set', 'user_properties', { signed_in: isSignedIn ? 'yes' : 'no' });
+    };
+
+    window.trackEvent = function trackEvent(name, params) {
+      gtag('event', name, params || {});
+    };
+    loadTag();
+  }
+
+  if (isInApp()) startAppRelay();
+  else startTag();
 
   // Without this, the editor could break on someone's phone and nobody would
   // ever hear about it.
@@ -111,9 +137,4 @@
     const location = stackLocation(reason && reason.stack);
     reportError((location ? location + ' ' : '') + 'unhandled: ' + message);
   });
-
-  const tag = document.createElement('script');
-  tag.async = true;
-  tag.src = TAG_URL;
-  document.head.appendChild(tag);
 })();
