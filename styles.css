@@ -3146,6 +3146,18 @@ body:not(.signed-in) .invite-btn {
   stroke-linejoin: round;
 }
 
+/* A switch row's On / Off, where a submenu row has its chevron. */
+.account-menu-state {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: var(--text-caption-2);
+  color: var(--ink-faded);
+}
+
+.account-menu-item[aria-checked="true"] .account-menu-state {
+  color: var(--accent);
+}
+
 /* The second page's title doubles as the way back. */
 .account-menu-back {
   font-weight: var(--weight-bold);

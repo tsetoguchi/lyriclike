@@ -12,14 +12,18 @@ export const SIGNUP_LINK_HOURS = 24;
 export const RESET_LINK_MINUTES = 30;
 
 // Mail per address per day, and a daily budget kept under Resend's free cap
-// of 100. Signup, invite and feedback mail each have their own pool, so abuse
-// that gets past Turnstile, a burst of shares, or a flood of feedback cannot
-// use up the quota that reset mail depends on.
+// of 100. Signup, invite, feedback and song reminder mail each have their own
+// pool, so abuse that gets past Turnstile, a burst of shares, a flood of
+// feedback or a busy reminder day cannot use up the quota that reset mail
+// depends on.
 const ADDRESS_DAILY_LIMIT = 5;
 export const EMAIL_POOL = Object.freeze({
   SIGNUP: 'signup', ACCOUNT: 'account', INVITE: 'invite', FEEDBACK: 'feedback',
+  REMINDER: 'reminder',
 });
-export const POOL_DAILY_LIMIT = Object.freeze({ signup: 40, account: 30, invite: 20, feedback: 10 });
+export const POOL_DAILY_LIMIT = Object.freeze({
+  signup: 30, account: 30, invite: 20, feedback: 10, reminder: 10,
+});
 
 // A pool that reaches this share of its cap emails ALERT_EMAIL, so a busy day
 // shows up before mail starts being refused.
@@ -320,6 +324,96 @@ export async function sendInviteEmail(
   } catch (err) {
     console.error('invite email error', err);
     await logEmailEvent(context, 'email_failed');
+  }
+}
+
+// ── Song reminders ──
+
+const REMINDER_TITLE_MAX = 60;
+const UNTITLED = 'Untitled';
+// No full stop: the plain-text part puts a colon and the link after it.
+const REMINDER_STOP_LABEL = 'Turn off these reminders';
+// The reminder stop token is "{account id}.{hmac}", signed with
+// REMINDER_SIGNING_SECRET. The reminders Worker signs it and the site's stop
+// route checks it, so both hold that secret. The prefix names what the
+// signature is for.
+const REMINDER_STOP_PREFIX = 'reminder-stop:';
+const REMINDER_TOKEN_PATTERN = /^([A-Za-z0-9-]{1,64})\.([A-Za-z0-9_-]{43})$/;
+
+async function reminderSigningKey(env) {
+  if (!env.REMINDER_SIGNING_SECRET) throw new Error('REMINDER_SIGNING_SECRET is not set');
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(env.REMINDER_SIGNING_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+async function signReminderStop(env, userId) {
+  const message = new TextEncoder().encode(REMINDER_STOP_PREFIX + userId);
+  return crypto.subtle.sign('HMAC', await reminderSigningKey(env), message);
+}
+
+export async function reminderStopToken(env, userId) {
+  return `${userId}.${base64Url(new Uint8Array(await signReminderStop(env, userId)))}`;
+}
+
+// Returns the account id a valid token carries, or null.
+export async function verifyReminderStopToken(env, token) {
+  if (typeof token !== 'string') return null;
+  const match = REMINDER_TOKEN_PATTERN.exec(token);
+  if (!match) return null;
+  try {
+    const message = new TextEncoder().encode(REMINDER_STOP_PREFIX + match[1]);
+    const ok = await crypto.subtle.verify('HMAC', await reminderSigningKey(env),
+      fromBase64Url(match[2]), message);
+    return ok ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+// The title only, never a line of the song: the words are private, and this
+// mail passes through Resend and the person's mail provider. The button opens
+// the page through the same link a shared page uses, which also covers a
+// person who is signed out.
+function reminderMessage(env, { title, lyricId, stopToken }) {
+  const pageTitle = oneLine(title, REMINDER_TITLE_MAX);
+  const isUntitled = !pageTitle || pageTitle === UNTITLED;
+  const named = isUntitled ? 'your untitled song' : `“${pageTitle}”`;
+  return {
+    subject: isUntitled ? 'Your untitled song is waiting' : `Your song "${pageTitle}" is waiting`,
+    ...renderEmail(env, {
+      heading: 'Your song is waiting',
+      paragraphs: [`You left ${named} a few days ago. Pick it up where you stopped.`],
+      button: { label: 'Open the song', url: linkTo(env, 'shared', lyricId, 'from=reminder') },
+      footer: "You got this because a song sat unfinished. We send at most one every two weeks.",
+      footerLink: { label: REMINDER_STOP_LABEL, url: linkTo(env, 'reminder_stop', stopToken) },
+    }),
+  };
+}
+
+// Counts against the reminder pool and the address like other mail. Returns
+// { sent } so the caller records only mail that went out.
+export async function sendReminderEmail(context, { to, title, lyricId, userId }) {
+  try {
+    const { env } = context;
+    const { count, skipped } = await claimEmailSlot(env, EMAIL_POOL.REMINDER, to);
+    if (skipped) {
+      await logEmailEvent(context, emailSkippedEvent(skipped, EMAIL_POOL.REMINDER));
+      return { sent: false, isPoolFull: skipped === 'pool' };
+    }
+    const stopToken = await reminderStopToken(env, userId);
+    const headers = {
+      'List-Unsubscribe': `<${baseUrl(env)}/api/reminders/stop?token=${stopToken}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    };
+    const message = reminderMessage(env, { title, lyricId, stopToken });
+    const { ok } = await sendEmail(env, { to, ...message, headers });
+    await logEmailEvent(context, ok ? 'reminder_sent' : 'email_failed');
+    await warnIfPoolFilling(context, EMAIL_POOL.REMINDER, count);
+    return { sent: ok };
+  } catch (err) {
+    console.error('reminder email error', err);
+    await logEmailEvent(context, 'email_failed');
+    return { sent: false };
   }
 }
 

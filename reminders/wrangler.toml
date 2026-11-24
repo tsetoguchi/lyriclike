@@ -1,0 +1,30 @@
+# The "your song is waiting" email (functions/_reminders.js). Once a day its
+# cron picks who is due straight from the database and sends through Resend.
+# It has no URL: a cron needs none, and the site's bot protection would
+# challenge a scheduled caller from outside.
+#
+# Secrets, set with `wrangler secret put <NAME>` in this folder:
+#   RESEND_API_KEY           a Resend key that can send
+#   EMAIL_FROM               the sender line, the same as the site's
+#   REMINDER_SIGNING_SECRET  signs the "turn off" link; the same value as the
+#                            Pages setting, whose stop route checks it
+name = "lyricalmiracle-reminders"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+preview_urls = false
+
+# 01:00 UTC: 10:00 in Tokyo, morning in Europe, evening in the Americas.
+[triggers]
+crons = ["0 1 * * *"]
+
+[observability]
+enabled = true
+
+[vars]
+APP_BASE_URL = "https://lyriclike.com"
+
+[[d1_databases]]
+binding = "lyricalmiracle_db"
+database_name = "lyricalmiracle-db"
+database_id = "581d1db7-8372-4f83-a375-693388712173"

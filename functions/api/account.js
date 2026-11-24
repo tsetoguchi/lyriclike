@@ -100,6 +100,8 @@ export async function onRequestDelete(context) {
       'DELETE FROM friend_invites WHERE friend_id = ? OR inviter_id = ?'
     ).bind(user.id, user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM invite_codes WHERE user_id = ?').bind(user.id),
+    env.lyricalmiracle_db.prepare('DELETE FROM reminder_emails WHERE user_id = ?').bind(user.id),
+    env.lyricalmiracle_db.prepare('DELETE FROM reminder_opt_outs WHERE user_id = ?').bind(user.id),
     env.lyricalmiracle_db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
   for (const id of rooms.owned) closeRoom(context, id);

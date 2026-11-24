@@ -96,7 +96,7 @@ describe('/api/me', () => {
     assert.deepEqual(body, {
       id: 'google-1', email: 'ann@example.com', name: 'Ann', has_password: false, providers: ['google'],
       can_share: false, page_count: 0, page_limit: null, people_limit: null,
-      limits_enforced: false, invite_pages_per_friend: 2, extension_script_url: null,
+      limits_enforced: false, invite_pages_per_friend: 2, extension_script_url: null, reminders_on: true,
     });
     assert.strictEqual(body.has_password, false);
   });
@@ -307,10 +307,10 @@ describe('email', () => {
     for (let i = 0; i < 50; i++) {
       await sendConfirmSignupEmail(context(), { to: `w${i}@example.com`, token: 'a'.repeat(64) });
     }
-    assert.equal(services.mail.length, 40);
+    assert.equal(services.mail.length, 30);
 
     await sendResetEmail(context(), { to: 'real@example.com', token: 'a'.repeat(64) });
-    assert.equal(services.mail.length, 41);
+    assert.equal(services.mail.length, 31);
   });
 
   it('logs which pool was full, apart from a busy address', async () => {
@@ -322,7 +322,9 @@ describe('email', () => {
   });
 
   it('keeps the daily pools within the free plan of 100', () => {
-    assert.deepEqual(POOL_DAILY_LIMIT, { signup: 40, account: 30, invite: 20, feedback: 10 });
+    assert.deepEqual(POOL_DAILY_LIMIT, {
+      signup: 30, account: 30, invite: 20, feedback: 10, reminder: 10,
+    });
     assert.deepEqual(Object.values(EMAIL_POOL).sort(), Object.keys(POOL_DAILY_LIMIT).sort());
     assert.equal(emailSkippedEvent('pool', EMAIL_POOL.INVITE), 'email_skipped_pool_invite');
     assert.equal(emailSkippedEvent('address', EMAIL_POOL.INVITE), 'email_skipped_address');
