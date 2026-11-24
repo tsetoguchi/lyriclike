@@ -51,7 +51,9 @@ app.
 
 ## Run through
 
-Start with cookies and `localStorage` cleared.
+Start with cookies and `localStorage` cleared, then set
+`localStorage.tour_seen = '1'` and reload. Without it the first-visit tour
+covers the page and every click times out.
 
 1. **Log in.** `#sign-in-btn` opens "Log in or sign up". Fill `#auth-email`
    with `pat@local.test`, click `#auth-submit`. Title becomes "Enter your
@@ -59,21 +61,26 @@ Start with cookies and `localStorage` cleared.
 2. **Wrong password.** `#auth-error` reads "That password isn't right. Try
    again or reset it."
 3. **Right password.** The box closes. `/api/me` returns Pat.
-4. **Save a page.** Signed in, "Create page" (`#new-lyric-btn`) asks for a
-   title in `#dialog-input`; click `#dialog-confirm`. Type a line, wait 3s.
-   `/api/lyrics` lists the page.
+4. **Save a page.** Signed in, "Create page" (`#new-lyric-btn`) opens a
+   blank page with the title `#lyrics-panel-title` focused; no dialog. Type
+   a title, press Enter, type a line, wait 2-3s. `/api/lyrics` lists the
+   page, and `/api/lyrics/<id>` has the line as its `body`.
 5. **Sign out.** `#account-settings-btn`, then `#settings-sign-out-btn`.
    `/api/me` is 401 and the editor is empty.
 6. **Log in again** as `PAT@Local.test` (mixed case). The saved page and its
    text come back.
 7. **Confirm link.** Sign out, open
-   `/#signup_token=` + 64 `c`s. Title "Confirm your email", asking for the
-   sign-up password. Submit it: the box closes and `/api/me` is Sam.
-8. **Used link.** Open the same link again and submit. It says "That link
-   was already used. You're signed in."
+   `/#signup_token=` + 64 `c`s. Title "Almost done", "Enter your password
+   to finish signing up." Submit the sign-up password: the box closes and
+   `/api/me` is Sam.
+8. **Used link.** Still signed in, open the same link again and submit. It
+   says "That link was already used. You're signed in."
 9. **Reset link.** Clear cookies, open `/#reset_token=` + 64 `e`s. Title
-   "Set a new password". Submit a new one: signed in as Pat. A login POST
-   with the old password gets 401; the new one gets 200.
+   "Set a new password". Submit `fresh-reset-pass-77-xq`: signed in as
+   Pat. A login POST with the old password gets 401; the new one gets 200.
+10. **Change password and delete account.** Rerun the seed, log in as Pat,
+   and follow `features/change-password.md`, then
+   `features/delete-account.md`.
 
 Screenshot each new screen into `.playwright-mcp/`.
 
@@ -83,9 +90,11 @@ Screenshot each new screen into `.playwright-mcp/`.
 |---|---|
 | Every password is wrong | Server pepper doesn't match `LOCAL_PEPPER` |
 | Sign-up form says the security check failed | Expected locally. Use the seeded pending sign-up |
-| Click hangs for 30s | A dialog (`.modal-overlay.open`) is covering it, e.g. the Create page title box |
+| Click hangs for 30s, "coach-tour ... intercepts pointer events" | The first-visit tour is open. Set `localStorage.tour_seen = '1'` and reload |
 | 429 answers | Rate limits. Rerun the seed |
 | Only Google shows | `PASSWORD_AUTH_ENABLED` binding missing |
+| Seed fails with `FOREIGN KEY constraint failed` | An older copy of the seed script. The current one clears every row that points at either test account |
+| `/ext/site.js` 404 in the console | A `.dev.vars` copied from the main folder sets `EXTENSION_SCRIPT_URL`. Harmless here |
 
 ## Hand to the user
 

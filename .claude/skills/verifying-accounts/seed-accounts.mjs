@@ -21,13 +21,31 @@ const HOUR_MS = 60 * 60 * 1000;
 
 const quote = value => `'${String(value).replace(/'/g, "''")}'`;
 
+// Tables whose user_id points at users. D1 enforces foreign keys, so these go
+// before the users rows. Once Sam confirms, Sam is a real user with a random
+// id and a session, so both test accounts are matched by email, not only Pat
+// by id.
+const USER_TABLES = [
+  'reset_tokens', 'sessions', 'identities', 'user_limits', 'invite_codes', 'apple_grants',
+  'app_tickets',
+];
+
+function clearTestAccounts() {
+  const ids = `(SELECT id FROM users WHERE id = ${quote(USER.id)}
+  OR email_normalized IN (${quote(USER.email)}, ${quote(PENDING_EMAIL)}))`;
+  return [
+    `DELETE FROM lyric_shares WHERE user_id IN ${ids} OR lyric_id IN (SELECT id FROM lyrics WHERE user_id IN ${ids});`,
+    `DELETE FROM friend_invites WHERE friend_id IN ${ids} OR inviter_id IN ${ids};`,
+    ...USER_TABLES.map(table => `DELETE FROM ${table} WHERE user_id IN ${ids};`),
+    `DELETE FROM lyrics WHERE user_id IN ${ids};`,
+    `DELETE FROM users WHERE id IN ${ids};`,
+  ].join('\n');
+}
+
 async function buildSql(passwordHash, now) {
   const later = now + HOUR_MS;
   return `
-DELETE FROM reset_tokens WHERE user_id = ${quote(USER.id)};
-DELETE FROM sessions WHERE user_id = ${quote(USER.id)};
-DELETE FROM lyrics WHERE user_id = ${quote(USER.id)};
-DELETE FROM users WHERE id = ${quote(USER.id)} OR email_normalized = ${quote(PENDING_EMAIL)};
+${clearTestAccounts()}
 DELETE FROM pending_signups WHERE email_normalized IN (${quote(USER.email)}, ${quote(PENDING_EMAIL)});
 DELETE FROM rate_limits;
 INSERT INTO users (id, email, email_normalized, name, password_hash, password_updated_at, created_at)
