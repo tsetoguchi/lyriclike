@@ -239,3 +239,9 @@
 /app-check/*
   ! X-Frame-Options
   Cache-Control: no-cache
+
+# Apple reads this to learn which links open the iOS app (only /open/*).
+# It has no file extension, so the type is set here; Apple wants JSON.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600

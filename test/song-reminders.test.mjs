@@ -125,7 +125,7 @@ describe('the daily run', () => {
     const [mail] = services.mail;
     assert.deepEqual(mail.to, [ANN.email]);
     assert.equal(mail.subject, 'Your song "Midnight Drive" is waiting');
-    assert.match(mail.text, /#shared=song-1&from=reminder/);
+    assert.ok(mail.text.includes('https://lyriclike.com/open/song-1?from=reminder'));
     assert.match(mail.text, /#reminder_stop=ann-1\./);
     assert.ok(!mail.text.includes(SECRET_WORDS));
     assert.ok(!mail.html.includes(SECRET_WORDS));

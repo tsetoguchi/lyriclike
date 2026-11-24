@@ -37,6 +37,11 @@
   const ABNORMAL_CLOSE = 1006;
   const APP_STORE_PLATFORM = 'ios';
   const TRANSACTION_EVENT = 'transaction';
+  // Links like https://lyriclike.com/open/<page>?from=reminder open the app
+  // (Universal Links, .well-known/apple-app-site-association). The page id
+  // follows the same rule as sharing.js's PAGE_ID_PATTERN.
+  const OPEN_PATH_PATTERN = /^\/open\/([A-Za-z0-9-]{1,64})\/?$/;
+  const FROM_PATTERN = /^[a-z]{1,20}$/;
 
   function isSameSite(url, pageUrl) {
     return url.protocol === pageUrl.protocol && url.host === pageUrl.host;
@@ -195,6 +200,34 @@
     return true;
   }
 
+  // The same fragment an emailed page link carries, so auth-link.js and
+  // sharing.js open the page as they would on the website. Returns null for
+  // any other link, including the sign-in return.
+  function pageLinkHash(url) {
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return null;
+    }
+    if (parsed.origin !== API_ORIGIN) return null;
+    const match = OPEN_PATH_PATTERN.exec(parsed.pathname);
+    if (!match) return null;
+    const from = parsed.searchParams.get('from');
+    const fromPart = from && FROM_PATTERN.test(from) ? `&from=${from}` : '';
+    return `#shared=${match[1]}${fromPart}`;
+  }
+
+  // Setting the fragment works whether the app was already open (auth-forms.js
+  // hears the hashchange) or was just started by the link (auth-link.js reads
+  // it when it loads, after this file).
+  function openPageLink(url) {
+    const hash = pageLinkHash(url);
+    if (!hash) return false;
+    globalThis.location.hash = hash;
+    return true;
+  }
+
   // Asks the system for Apple's identity token. The nonce is made here: Apple
   // gets its hash, the server gets the original, and a token made for another
   // sign-in will not match. Returns the sheet's fields, or null if the person
@@ -293,6 +326,7 @@
     globalThis.fetch = apiFetch;
     openLinksInSystemBrowser({ document: globalThis.document, pageUrl, browser });
     app.addListener('appUrlOpen', event => finishGoogleSignIn(event.url, context));
+    app.addListener('appUrlOpen', event => openPageLink(event.url));
     const platform = globalThis.Capacitor.getPlatform();
     root.NativeShell = {
       isNative: true,
@@ -351,7 +385,7 @@
 
   const NativeShell = {
     API_ORIGIN, toApiUrl, externalTargetFor, createTokenStore, createApiFetch, rememberSession,
-    startGoogleSignIn, finishGoogleSignIn, startAppleSignIn, openLiveSocket,
+    startGoogleSignIn, finishGoogleSignIn, startAppleSignIn, openLiveSocket, pageLinkHash,
   };
   if (typeof module === 'object' && module.exports) {
     module.exports = NativeShell;

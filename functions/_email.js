@@ -371,9 +371,14 @@ export async function verifyReminderStopToken(env, token) {
 }
 
 // The title only, never a line of the song: the words are private, and this
-// mail passes through Resend and the person's mail provider. The button opens
-// the page through the same link a shared page uses, which also covers a
-// person who is signed out.
+// mail passes through Resend and the person's mail provider. The button is an
+// /open/ link: on an iPhone with the app it opens the app (Universal Links),
+// and anywhere else functions/open/[id].js sends it on to the website's
+// shared-page link, which also covers a person who is signed out.
+function openPageUrl(env, lyricId) {
+  return `${baseUrl(env)}/open/${encodeURIComponent(lyricId)}?from=reminder`;
+}
+
 function reminderMessage(env, { title, lyricId, stopToken }) {
   const pageTitle = oneLine(title, REMINDER_TITLE_MAX);
   const isUntitled = !pageTitle || pageTitle === UNTITLED;
@@ -383,7 +388,7 @@ function reminderMessage(env, { title, lyricId, stopToken }) {
     ...renderEmail(env, {
       heading: 'Your song is waiting',
       paragraphs: [`You left ${named} a few days ago. Pick it up where you stopped.`],
-      button: { label: 'Open the song', url: linkTo(env, 'shared', lyricId, 'from=reminder') },
+      button: { label: 'Open the song', url: openPageUrl(env, lyricId) },
       footer: "You got this because a song sat unfinished. We send at most one every two weeks.",
       footerLink: { label: REMINDER_STOP_LABEL, url: linkTo(env, 'reminder_stop', stopToken) },
     }),
