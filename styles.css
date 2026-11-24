@@ -139,11 +139,11 @@ header .header-tools .toggle-btn:has(> .nav-icon) {
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon):hover {
-  background: var(--panel-fill-hover);
+  background: var(--switch-fill-hover);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
-  background: var(--panel-fill-strong);
+  background: var(--switch-fill-strong);
 }
 
 /* The name hides until the cursor rests on the switch, then eases in below
@@ -789,7 +789,7 @@ header .nav-icon circle {
   flex-direction: column;
   gap: var(--space-2);
   background: var(--panel-card);
-  border: var(--hairline) solid transparent;
+  border: var(--hairline) solid var(--panel-rim);
   border-radius: var(--radius-xl);
   box-shadow: var(--panel-shadow);
   font-family: var(--font-ui);
@@ -1086,14 +1086,14 @@ header .nav-icon circle {
    lighter fill inside it, and a hairline divides two that are off. A switch
    may hold an icon, a word, or both. Here, after .tip-btn, so a tip button
    in a group takes the group's shape. */
-/* The panels' slate fills, not a see-through wash, so the switches match the
-   dialogs' buttons: the track is Done's fill, the picked one Copy's. */
+/* Solid slate fills, not a see-through wash, so the switches read as one
+   pill on the dark header. */
 .switch-group {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1);
-  background: var(--panel-fill);
+  background: var(--switch-fill);
   border-radius: var(--radius-pill);
 }
 
@@ -1112,11 +1112,11 @@ header .nav-icon circle {
 }
 
 .switch-group > .toggle-btn:hover {
-  background: var(--panel-fill-hover);
+  background: var(--switch-fill-hover);
 }
 
 .switch-group > .toggle-btn.active {
-  background: var(--panel-fill-strong);
+  background: var(--switch-fill-strong);
   border-color: transparent;
   color: var(--ink);
 }
@@ -2415,11 +2415,11 @@ header .nav-icon circle {
   width: var(--drawer-width);
   max-height: var(--def-popup-max-height);
   overflow-y: auto;
-  background: var(--paper-card);
-  border: var(--hairline) solid var(--rule);
+  background: var(--panel-card);
+  border: var(--hairline) solid var(--panel-rim);
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  box-shadow: var(--shadow-popup);
+  box-shadow: var(--panel-shadow);
 }
 
 /* The popup grows out of the rhyme it belongs to: down from under it, or up
@@ -2535,7 +2535,7 @@ body:has(.coach-tour:not([hidden])) .def-popup {
     max-height: 50vh;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     border: none;
-    border-top: var(--hairline) solid var(--rule);
+    border-top: var(--hairline) solid var(--panel-rim);
     padding: var(--space-5) var(--space-4);
     padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
     animation: def-sheet-up var(--duration-flash) var(--ease-pop);
@@ -3335,7 +3335,7 @@ a.account-menu-item {
   box-sizing: border-box;
   padding: var(--space-6);
   background: var(--panel-card);
-  border: var(--hairline) solid transparent;
+  border: var(--hairline) solid var(--panel-rim);
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow);
   transform: scale(0.88);
@@ -3532,8 +3532,8 @@ a.account-menu-item {
   box-sizing: border-box;
   height: var(--tap-target);
   padding: 0 var(--space-4);
-  background: var(--panel-fill);
-  border: var(--hairline) solid transparent;
+  background: var(--panel-field);
+  border: var(--hairline) solid var(--panel-rim);
   border-radius: var(--field-radius);
   color: var(--ink);
   font-family: var(--font-ui);
@@ -3551,11 +3551,11 @@ a.account-menu-item {
 }
 
 .modal-input:hover {
-  background: var(--panel-fill-hover);
+  background: var(--panel-field-hover);
 }
 
 .modal-input:focus {
-  background: var(--panel-fill);
+  background: var(--panel-field);
   box-shadow: 0 0 0 2px var(--accent-border);
 }
 
@@ -3584,18 +3584,18 @@ a.account-menu-item {
   align-items: center;
   gap: var(--space-2);
   padding-right: calc((var(--tap-target) - var(--field-action-height)) / 2);
-  background: var(--panel-fill);
-  border: var(--hairline) solid transparent;
+  background: var(--panel-field);
+  border: var(--hairline) solid var(--panel-rim);
   border-radius: var(--field-radius);
   transition: background var(--duration-base), box-shadow var(--duration-base);
 }
 
 .field-with-action:hover {
-  background: var(--panel-fill-hover);
+  background: var(--panel-field-hover);
 }
 
 .field-with-action:has(> .modal-input:focus) {
-  background: var(--panel-fill);
+  background: var(--panel-field);
   box-shadow: 0 0 0 2px var(--accent-border);
 }
 
@@ -3628,6 +3628,7 @@ a.account-menu-item {
 
 .field-action.is-ready {
   background: var(--panel-fill-strong);
+  border-color: var(--panel-rim-strong);
   color: var(--ink);
 }
 
@@ -3653,7 +3654,7 @@ a.account-menu-item {
   min-height: var(--panel-button-height);
   padding: 0 var(--space-4);
   background: var(--panel-fill);
-  border: var(--hairline) solid transparent;
+  border: var(--hairline) solid var(--panel-rim);
   color: var(--panel-button-ink);
   font-size: var(--text-subhead);
   font-weight: var(--weight-semibold);
@@ -3673,6 +3674,7 @@ a.account-menu-item {
 /* The answer most likely wanted is a step lighter. */
 .modal-panel .toggle-btn.modal-confirm {
   background: var(--panel-fill-strong);
+  border-color: var(--panel-rim-strong);
   color: var(--ink);
 }
 
@@ -3683,6 +3685,7 @@ a.account-menu-item {
 /* Losing work should look like it. */
 .modal-panel .toggle-btn.modal-confirm.danger-btn {
   background: var(--danger-tint);
+  border-color: transparent;
   color: var(--danger-text);
 }
 
@@ -5576,7 +5579,7 @@ body.signed-in .sidebar-links {
 
   /* Under the finger while Highlights is held (highlights-hold.js). */
   .bottom-nav .rhymes-menu-popover .toggle-btn.is-picking {
-    background: var(--panel-fill-hover);
+    background: var(--switch-fill-hover);
   }
 
   /* A held press opens the menu, so the page mustn't scroll or show the

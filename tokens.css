@@ -191,17 +191,27 @@
   --danger-tint-hover: rgba(240, 120, 130, 0.22);
   --danger-text: #f08a8f;
 
-  /* Panels (questions, Share, Invite, Feedback, Log in, Change password):
-     a slate card a step lighter than the menus, with gray fields and
-     buttons. No button is amber or white; the one most likely wanted is a
-     step lighter than the rest. */
-  --panel-card: #232a35;
-  --panel-fill: #2e3644;
-  --panel-fill-hover: #374050;
-  --panel-fill-strong: #434c5c;
-  --panel-fill-strong-hover: #4b5567;
+  /* Panels (questions, Share, Invite, Feedback, Log in, Change password),
+     the tour card and a word's meaning: the desk's own deep blue, held
+     apart from the dimmed page by a hairline rim. Fields and buttons are a step or two
+     lighter, each with the same rim. No button is amber or white; the one
+     most likely wanted is a step lighter than the rest. */
+  --panel-card: var(--desk);
+  --panel-rim: var(--rule);
+  --panel-rim-strong: var(--margin-line);
+  --panel-field: #141922;
+  --panel-field-hover: #181e28;
+  --panel-fill: var(--paper-card);
+  --panel-fill-hover: #232a35;
+  --panel-fill-strong: var(--rule);
+  --panel-fill-strong-hover: #343d4b;
   --panel-button-ink: #c9d0da;
-  --panel-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --panel-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  /* The header's switches keep the slate the panels used to wear: on the
+     dark header, the panels' darker fills would vanish. */
+  --switch-fill: #2e3644;
+  --switch-fill-hover: #374050;
+  --switch-fill-strong: #434c5c;
   --panel-radius: 24px;
   --field-radius: 14px;
   --field-action-radius: 10px;
