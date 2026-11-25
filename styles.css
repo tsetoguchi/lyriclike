@@ -3970,6 +3970,21 @@ a.account-menu-item {
   min-height: var(--tap-target);
 }
 
+/* A link styled as the main button: it hands off to the phone's mail app. */
+.modal-panel .toggle-btn.auth-open-mail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--tap-target);
+  text-decoration: none;
+}
+
+.modal-panel .toggle-btn.auth-open-mail[hidden] {
+  display: none;
+}
+
 .auth-links {
   display: flex;
   flex-direction: column;

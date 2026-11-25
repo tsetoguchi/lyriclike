@@ -25,6 +25,19 @@
   const NEXT_PASSWORD = 'password';
   const IOS_PLATFORM = 'ios';
   const WEB_PLATFORM = 'web';
+  // "Open mail app" links. iOS has no link to "the default mail app", so
+  // Gmail and Outlook addresses go to their own app (in the iOS app, when
+  // it is installed) or their web inbox (in Safari, which can't tell what
+  // is installed). Everyone else gets Apple Mail. Android asks for the
+  // default mail app, but only Chrome-style browsers read intent: links, so
+  // the Android app (a plain webview) does not show the button.
+  const IOS_MAIL_URL = 'message://';
+  const ANDROID_MAIL_URL = 'intent:#Intent;action=android.intent.action.MAIN;'
+    + 'category=android.intent.category.APP_EMAIL;launchFlags=0x10000000;end';
+  const MAIL_PROVIDERS = Object.freeze([
+    { domains: /^(gmail|googlemail)\.com$/, app: 'googlegmail://', web: 'https://mail.google.com/mail/' },
+    { domains: /^(outlook|hotmail|live|msn)\.[a-z.]+$/, app: 'ms-outlook://', web: 'https://outlook.live.com/mail/' },
+  ]);
 
   const HTTP_OK = 200;
   const HTTP_CREATED = 201;
@@ -103,7 +116,7 @@
     },
     [VIEW.CHECK_EMAIL]: {
       title: 'Check your email', google: false, email: 'text', password: null,
-      submit: null, links: ['resend'], turnstile: 'signup',
+      submit: null, links: ['resend'], turnstile: 'signup', openMail: true,
     },
     [VIEW.FORGOT]: {
       title: 'Reset password', google: false, email: 'field', password: null,
@@ -112,7 +125,7 @@
     },
     [VIEW.FORGOT_SENT]: {
       title: 'Check your email', google: false, email: false, password: null,
-      submit: null, links: ['back'], turnstile: null,
+      submit: null, links: ['back'], turnstile: null, openMail: true,
     },
     [VIEW.CONFIRM]: {
       title: 'Almost done', google: false, email: false, password: 'current-password',
@@ -386,6 +399,73 @@
     return shell.platform === WEB_PLATFORM && methods.appleWeb;
   }
 
+  function mailProviderFor(email) {
+    const domain = String(email || '').split('@')[1] || '';
+    return MAIL_PROVIDERS.find(provider => provider.domains.test(domain.toLowerCase())) || null;
+  }
+
+  function appLauncher() {
+    const plugins = window.Capacitor && window.Capacitor.Plugins;
+    return (plugins && plugins.AppLauncher) || null;
+  }
+
+  // An app build from before the launcher plugin has none, and gets Apple Mail.
+  async function iosAppMailUrl(provider) {
+    const launcher = appLauncher();
+    if (!provider || !launcher) return IOS_MAIL_URL;
+    try {
+      const { value } = await launcher.canOpenUrl({ url: provider.app });
+      return value ? provider.app : IOS_MAIL_URL;
+    } catch {
+      return IOS_MAIL_URL;
+    }
+  }
+
+  // Phones only: a computer has no one mail app to hand off to. Resolves
+  // with null when there is no button to show.
+  async function mailAppUrl(email) {
+    const shell = window.NativeShell;
+    const provider = mailProviderFor(email);
+    if (shell && shell.isNative) return shell.platform === IOS_PLATFORM ? iosAppMailUrl(provider) : null;
+    const nav = window.navigator;
+    const agent = (nav && nav.userAgent) || '';
+    // iPadOS Safari calls itself a Mac; touch gives it away.
+    const isIpad = /Macintosh/.test(agent) && nav.maxTouchPoints > 1;
+    if (/iPhone|iPad|iPod/.test(agent) || isIpad) return provider ? provider.web : IOS_MAIL_URL;
+    if (/Android/.test(agent)) return ANDROID_MAIL_URL;
+    return null;
+  }
+
+  // A web inbox opens in a new tab, so this one keeps waiting for the
+  // confirm and signs in by itself when it comes.
+  async function showOpenMail(isWanted) {
+    const link = document.getElementById('auth-open-mail');
+    const view = currentView;
+    setShown(link, false);
+    if (!isWanted) return;
+    const url = await mailAppUrl(emailInput.value.trim());
+    if (!url || currentView !== view) return;
+    link.setAttribute('href', url);
+    if (url.startsWith('https:')) {
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener');
+    } else {
+      link.removeAttribute('target');
+      link.removeAttribute('rel');
+    }
+    setShown(link, true);
+  }
+
+  // In the app, the plugin opens the mail app; the webview may not hand a
+  // non-web link to iOS by itself.
+  function openMailApp(event) {
+    const launcher = appLauncher();
+    const shell = window.NativeShell;
+    if (!launcher || !shell || !shell.isNative) return;
+    event.preventDefault();
+    launcher.openUrl({ url: event.currentTarget.getAttribute('href') }).catch(() => {});
+  }
+
   function showView(name, message) {
     const view = describeView(name);
     const hasApple = isAppleOffered(view);
@@ -412,6 +492,7 @@
     setShown(passwordHint, Boolean(view.hint));
     if (view.submit) submitButton.textContent = view.submit;
     showLinks(view.links);
+    showOpenMail(Boolean(view.openMail));
     clearError();
     prepareTurnstile(view.turnstile);
   }
@@ -753,7 +834,7 @@
   function focusFirstField() {
     if (!overlay.classList.contains('open')) return;
     const candidates = [emailInput, passwordInput, submitButton, document.getElementById('auth-apple'),
-      document.getElementById('auth-google'),
+      document.getElementById('auth-google'), document.getElementById('auth-open-mail'),
       ...linkButtons, document.getElementById('auth-close')];
     const target = candidates.find(element => element.offsetParent !== null);
     if (target) target.focus();
@@ -786,7 +867,7 @@
 
   // Keeps Tab inside the panel while it is open.
   function trapFocus(event) {
-    const focusable = Array.from(overlay.querySelectorAll('button, input'))
+    const focusable = Array.from(overlay.querySelectorAll('button, input, a[href]'))
       .filter(element => !element.disabled && element.offsetParent !== null);
     if (focusable.length === 0) return;
     const first = focusable[0];
@@ -829,6 +910,7 @@
   document.getElementById('auth-google').addEventListener('click', startSignIn);
   document.getElementById('auth-apple').addEventListener('click', startAppleSignIn);
   document.getElementById('auth-close').addEventListener('click', closeAuthModal);
+  document.getElementById('auth-open-mail').addEventListener('click', openMailApp);
   document.addEventListener('visibilitychange', checkConfirmedOnReturn);
   passwordToggle.addEventListener('click', () => {
     setPasswordVisible(passwordInput.type === 'password');
