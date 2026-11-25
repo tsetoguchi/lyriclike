@@ -466,10 +466,19 @@ export async function sendEmail(env, { to, subject, text, html, headers, replyTo
       body: JSON.stringify(message),
       signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
     });
+    if (!response.ok) await logRefusal(response);
     return { ok: response.ok };
-  } catch {
+  } catch (err) {
+    console.error('email not sent', err?.name || 'error');
     return { ok: false };
   }
+}
+
+// Resend's status and error name, so a refused send says why in the logs.
+// Its message can repeat the address, so that part is left out.
+async function logRefusal(response) {
+  const body = await response.json().catch(() => ({}));
+  console.error('email refused', response.status, body?.name || 'unknown');
 }
 
 async function logEmailEvent({ env, request }, event) {

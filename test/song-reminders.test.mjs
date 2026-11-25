@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { reminderStopToken } from '../functions/_email.js';
-import { findDueReminders, hasRealWriting } from '../functions/_reminders.js';
+import { findDueReminders, hasRealWriting, isHeldOut } from '../functions/_reminders.js';
 import * as account from '../functions/api/account.js';
 import * as remindersSetting from '../functions/api/me/reminders.js';
 import * as stop from '../functions/api/reminders/stop.js';
@@ -21,7 +21,9 @@ const DAY_MS = 24 * HOUR_MS;
 const NOW = 1_800_000_000_000;
 const SONG = 'one line\ntwo line\nthree line\nfour line';
 const SECRET_WORDS = 'four line';
+// Ann's id lands in the emailed group, Hal's in the held-back one.
 const ANN = { id: 'ann-1', email: 'ann@example.com', token: 'ann-token' };
+const HAL = { id: 'user-1', email: 'hal@example.com' };
 const REMINDER_SETTINGS = {
   REMINDER_SIGNING_SECRET: 'reminder-secret-not-a-secret',
 };
@@ -121,7 +123,7 @@ describe('who is due a reminder', () => {
 describe('the daily run', () => {
   it('sends one email with the title and never the words', async () => {
     await addSong(ANN.id);
-    assert.deepEqual(await runReminders(env, NOW), { due: 1, sent: 1 });
+    assert.deepEqual(await runReminders(env, NOW), { due: 1, sent: 1, held: 0 });
     const [mail] = services.mail;
     assert.deepEqual(mail.to, [ANN.email]);
     assert.equal(mail.subject, 'Your song "Midnight Drive" is waiting');
@@ -142,7 +144,7 @@ describe('the daily run', () => {
   it('records the send, so a second run the same day sends nothing', async () => {
     await addSong(ANN.id);
     await runReminders(env, NOW);
-    assert.deepEqual(await runReminders(env, NOW + HOUR_MS), { due: 0, sent: 0 });
+    assert.deepEqual(await runReminders(env, NOW + HOUR_MS), { due: 0, sent: 0, held: 0 });
     assert.equal(services.mail.length, 1);
     const [row] = await query(env, 'SELECT lyric_id, sent_at FROM reminder_emails');
     assert.deepEqual({ ...row }, { lyric_id: 'song-1', sent_at: NOW });
@@ -151,7 +153,7 @@ describe('the daily run', () => {
   it('a failed send is not recorded, so it can go out another day', async () => {
     await addSong(ANN.id);
     services.mailDown = true;
-    assert.deepEqual(await runReminders(env, NOW), { due: 1, sent: 0 });
+    assert.deepEqual(await runReminders(env, NOW), { due: 1, sent: 0, held: 0 });
     assert.deepEqual(await query(env, 'SELECT * FROM reminder_emails'), []);
   });
 
@@ -160,6 +162,39 @@ describe('the daily run', () => {
     const result = await runReminders({ ...env, REMINDER_SIGNING_SECRET: '' }, NOW);
     assert.deepEqual(result, { skipped: ['REMINDER_SIGNING_SECRET'] });
     assert.equal(services.mail.length, 0);
+  });
+});
+
+describe('the holdout', () => {
+  it('puts about one in five accounts in the held-back group, the same each time', async () => {
+    let heldCount = 0;
+    for (let i = 0; i < 1000; i += 1) {
+      if (await isHeldOut(`account-${i}`)) heldCount += 1;
+    }
+    assert.ok(heldCount > 160 && heldCount < 240, `${heldCount} of 1000 held`);
+    assert.equal(await isHeldOut(HAL.id), true);
+    assert.equal(await isHeldOut(HAL.id), true);
+    assert.equal(await isHeldOut(ANN.id), false);
+  });
+
+  it('a held-back account gets no email and is written down instead', async () => {
+    await addGoogleUser(env, { id: HAL.id, email: HAL.email });
+    await addSong(ANN.id);
+    await addSong(HAL.id, { id: 'song-2' });
+    assert.deepEqual(await runReminders(env, NOW), { due: 2, sent: 1, held: 1 });
+    assert.deepEqual(services.mail.map(mail => mail.to[0]), [ANN.email]);
+    const holds = await query(env, 'SELECT user_id, lyric_id, held_at FROM reminder_holds');
+    assert.deepEqual(holds.map(row => ({ ...row })),
+      [{ user_id: HAL.id, lyric_id: 'song-2', held_at: NOW }]);
+    const sends = await query(env, 'SELECT user_id FROM reminder_emails');
+    assert.deepEqual(sends.map(row => row.user_id), [ANN.id]);
+  });
+
+  it('a held-back account is not picked again for 14 days', async () => {
+    await addGoogleUser(env, { id: HAL.id, email: HAL.email });
+    await addSong(HAL.id, { id: 'song-2' });
+    await runReminders(env, NOW);
+    assert.deepEqual(await runReminders(env, NOW + HOUR_MS), { due: 0, sent: 0, held: 0 });
   });
 });
 
@@ -219,5 +254,16 @@ describe('deleting the account', () => {
     assert.equal(response.status, 200);
     assert.deepEqual(await query(env, 'SELECT * FROM reminder_emails'), []);
     assert.deepEqual(await query(env, 'SELECT * FROM reminder_opt_outs'), []);
+  });
+
+  it('takes its held-back row with it too', async () => {
+    await env.lyricalmiracle_db.prepare(
+      'INSERT INTO reminder_holds (user_id, lyric_id, held_at) VALUES (?, ?, ?)'
+    ).bind(ANN.id, 'song-1', 1).run();
+    const request = new Request(`${BASE_URL}/api/account`, {
+      method: 'DELETE', headers: { Cookie: `sid=${ANN.token}` },
+    });
+    await account.onRequestDelete({ request, env, waitUntil: () => {} });
+    assert.deepEqual(await query(env, 'SELECT * FROM reminder_holds'), []);
   });
 });
