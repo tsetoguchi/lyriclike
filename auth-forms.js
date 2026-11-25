@@ -25,6 +25,12 @@
   const NEXT_PASSWORD = 'password';
   const IOS_PLATFORM = 'ios';
   const WEB_PLATFORM = 'web';
+  // "Open mail app" links. iOS opens Apple Mail. Android asks for whichever
+  // mail app is the default, but only Chrome-style browsers read intent:
+  // links, so the Android app (a plain webview) does not show the button.
+  const IOS_MAIL_URL = 'message://';
+  const ANDROID_MAIL_URL = 'intent:#Intent;action=android.intent.action.MAIN;'
+    + 'category=android.intent.category.APP_EMAIL;launchFlags=0x10000000;end';
 
   const HTTP_OK = 200;
   const HTTP_CREATED = 201;
@@ -103,7 +109,7 @@
     },
     [VIEW.CHECK_EMAIL]: {
       title: 'Check your email', google: false, email: 'text', password: null,
-      submit: null, links: ['resend'], turnstile: 'signup',
+      submit: null, links: ['resend'], turnstile: 'signup', openMail: true,
     },
     [VIEW.FORGOT]: {
       title: 'Reset password', google: false, email: 'field', password: null,
@@ -112,7 +118,7 @@
     },
     [VIEW.FORGOT_SENT]: {
       title: 'Check your email', google: false, email: false, password: null,
-      submit: null, links: ['back'], turnstile: null,
+      submit: null, links: ['back'], turnstile: null, openMail: true,
     },
     [VIEW.CONFIRM]: {
       title: 'Almost done', google: false, email: false, password: 'current-password',
@@ -386,6 +392,26 @@
     return shell.platform === WEB_PLATFORM && methods.appleWeb;
   }
 
+  // Phones only: a computer has no one mail app to hand off to.
+  function mailAppUrl() {
+    const shell = window.NativeShell;
+    if (shell && shell.isNative) return shell.platform === IOS_PLATFORM ? IOS_MAIL_URL : null;
+    const nav = window.navigator;
+    const agent = (nav && nav.userAgent) || '';
+    // iPadOS Safari calls itself a Mac; touch gives it away.
+    const isIpad = /Macintosh/.test(agent) && nav.maxTouchPoints > 1;
+    if (/iPhone|iPad|iPod/.test(agent) || isIpad) return IOS_MAIL_URL;
+    if (/Android/.test(agent)) return ANDROID_MAIL_URL;
+    return null;
+  }
+
+  function showOpenMail(isWanted) {
+    const link = document.getElementById('auth-open-mail');
+    const url = isWanted ? mailAppUrl() : null;
+    if (url) link.setAttribute('href', url);
+    setShown(link, Boolean(url));
+  }
+
   function showView(name, message) {
     const view = describeView(name);
     const hasApple = isAppleOffered(view);
@@ -412,6 +438,7 @@
     setShown(passwordHint, Boolean(view.hint));
     if (view.submit) submitButton.textContent = view.submit;
     showLinks(view.links);
+    showOpenMail(Boolean(view.openMail));
     clearError();
     prepareTurnstile(view.turnstile);
   }
@@ -753,7 +780,7 @@
   function focusFirstField() {
     if (!overlay.classList.contains('open')) return;
     const candidates = [emailInput, passwordInput, submitButton, document.getElementById('auth-apple'),
-      document.getElementById('auth-google'),
+      document.getElementById('auth-google'), document.getElementById('auth-open-mail'),
       ...linkButtons, document.getElementById('auth-close')];
     const target = candidates.find(element => element.offsetParent !== null);
     if (target) target.focus();
@@ -786,7 +813,7 @@
 
   // Keeps Tab inside the panel while it is open.
   function trapFocus(event) {
-    const focusable = Array.from(overlay.querySelectorAll('button, input'))
+    const focusable = Array.from(overlay.querySelectorAll('button, input, a[href]'))
       .filter(element => !element.disabled && element.offsetParent !== null);
     if (focusable.length === 0) return;
     const first = focusable[0];

@@ -519,11 +519,7 @@
       ]);
       return;
     }
-    if (status !== HTTP_OK) return;
-    NotebookList.load();
-    if (openPage.role === 'editor') {
-      PageNotice.show(`${openPage.ownerName || 'Someone'} shared this with you.`);
-    }
+    if (status === HTTP_OK) NotebookList.load();
   }
 
   // Called once signed in. Returns whether there was a page to open.
