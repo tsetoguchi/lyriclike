@@ -23,11 +23,29 @@
 
   let drag = null;
 
+  // Pure: whether a drag has gone far enough down that letting go closes it.
+  function isPastShare({ dy, height }) {
+    return dy > height * CLOSE_SHARE;
+  }
+
   // Pure: whether a drag let go here closes the sheet.
   function isClosedAfterRelease({ dy, elapsedMs, height }) {
     const speed = elapsedMs > 0 ? dy / elapsedMs : 0;
     if (speed >= FLICK_PX_PER_MS) return true;
-    return dy > height * CLOSE_SHARE;
+    return isPastShare({ dy, height });
+  }
+
+  // haptics.js may be missing (an older bundle); then nothing plays.
+  function feel(moment) {
+    if (window.AppHaptics) window.AppHaptics[moment]();
+  }
+
+  // One tick as the drag crosses the line where letting go closes it, and
+  // none again until it has gone back up over the line.
+  function tickAtShare() {
+    const isPast = isPastShare(drag);
+    if (isPast && !drag.isPast) feel('tick');
+    drag.isPast = isPast;
   }
 
   function isPhone() {
@@ -42,7 +60,7 @@
     const touch = event.touches[0];
     drag = {
       sheet, startX: touch.clientX, startY: touch.clientY,
-      startedAt: event.timeStamp, isDragging: false, dy: 0,
+      startedAt: event.timeStamp, isDragging: false, dy: 0, isPast: false,
     };
   }
 
@@ -59,6 +77,7 @@
     drag.scrim = document.querySelector(SCRIM_SELECTOR);
     drag.sheet.classList.add(DRAGGING_CLASS);
     if (drag.scrim) drag.scrim.classList.add(DRAGGING_CLASS);
+    feel('startTicks');
   }
 
   function followFinger() {
@@ -85,10 +104,12 @@
     }
     event.preventDefault();
     followFinger();
+    tickAtShare();
   }
 
   // The sheet's transition carries it on from where the finger left it.
   function settle(ended, isClosed) {
+    feel('endTicks');
     const { sheet, scrim } = ended;
     sheet.classList.remove(DRAGGING_CLASS);
     sheet.classList.add(SETTLING_CLASS);
@@ -136,5 +157,5 @@
   document.addEventListener('touchend', onTouchEnd);
   document.addEventListener('touchcancel', onTouchCancel);
 
-  window.SheetDrag = { isClosedAfterRelease };
+  window.SheetDrag = { isClosedAfterRelease, isPastShare };
 })();

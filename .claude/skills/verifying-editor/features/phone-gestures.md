@@ -76,15 +76,17 @@ sidebar with `window.Sidebar.isOpen()`. Wait 600ms after each swipe.
   flipped, Rhyme Scheme's hasn't, and the popover is `hidden`.
 - **Hold miss.** Hold again, then `pointerup` on the button itself and the
   stand-in click. The popover stays open.
-- **Tap menu.** Wait 600ms, `page.click('#rhymes-menu-btn')`: the popover
-  opens. Click again: it shuts.
+- **Tap menu.** Hold miss left the popover open. Wait 600ms,
+  `page.click('#rhymes-menu-btn')`: it shuts. Click again: it opens.
 - **Sheet drag.** On Rhymes, click a `#rhyme-results .rhyme-word`, wait
   700ms. Drag `.def-popup` itself straight down from 10px under its top
-  with `dragSheet` below. The sheet is half the screen (426px at 852), and
-  it closes past a third of its height or on a flick of 0.5px/ms.
-  Mid-drag its inline `transform` is a `translateY` and `.def-overlay`'s
-  opacity is under 1. `dragSheet(25, 600)` and `dragSheet(100, 600)` leave
-  it open with no inline transform; `dragSheet(160, 600)` closes it (no
+  with `dragSheet` below. The sheet's height follows its meaning (258 to
+  337px at 852 tall, capped at half the screen), so read
+  `h = document.querySelector('.def-popup').offsetHeight` first. It closes
+  past `h / 3` or on a flick of 0.5px/ms. Mid-drag its inline `transform`
+  is a `translateY` and `.def-overlay`'s opacity is under 1.
+  `dragSheet(25, 600)` and `dragSheet(h / 3 - 10, 600)` leave it open with
+  no inline transform; `dragSheet(h / 3 + 10, 600)` closes it (no
   `.def-popup` after 500ms); `dragSheet(30, 40)` closes it as a flick.
 
 ```js

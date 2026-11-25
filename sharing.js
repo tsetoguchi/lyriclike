@@ -179,6 +179,11 @@
   let copyLink = '';
   let returnFocusTo = null;
 
+  // haptics.js may be missing (an older bundle); then nothing plays.
+  function feel(moment) {
+    if (window.AppHaptics) window.AppHaptics[moment]();
+  }
+
   // What happened after Share or Remove. Errors read in red; a success is a
   // quiet line, since the new row in the list already shows it.
   function showResult(text, { error = false } = {}) {
@@ -389,6 +394,7 @@
         return;
       }
       if (!res.ok) {
+        feel('error');
         showResult(errorMessage(data), { error: true });
         return;
       }
@@ -396,6 +402,7 @@
         showResult(`Already shared with ${data.email}.`);
       } else {
         trackEvent('page_shared');
+        feel('success');
         if (data.emailed) showResult(`Shared with ${data.email}.`);
         else showResult(notEmailedText(data.email_limit));
         // The page on the owner's screen goes live now, without a reload.
@@ -405,7 +412,9 @@
       emailInput.value = '';
       await loadPeople();
     } catch {
-      if (page === dialogPage) showResult(TEXT.FAILED, { error: true });
+      if (page !== dialogPage) return;
+      feel('error');
+      showResult(TEXT.FAILED, { error: true });
     } finally {
       submitButton.disabled = false;
       updateActions();
@@ -421,8 +430,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+      if (!res.ok) feel('error');
       showResult(res.ok ? '' : TEXT.FAILED, { error: !res.ok });
     } catch {
+      feel('error');
       showResult(TEXT.FAILED, { error: true });
     }
     if (page === dialogPage) await loadPeople();

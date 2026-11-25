@@ -48,4 +48,6 @@ Preconditions:
   `localStorage` first, not just the draft.
 - The tour and the pointer never show together. A fresh clear always gets
   the tour.
+- Picking a word sets `localStorage.sample_hint_seen`, and after that the
+  pointer never shows. The pointer step needs it unset.
 - "Create page" while signed out opens the sign-up box, not a blank page.

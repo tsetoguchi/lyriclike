@@ -31,5 +31,5 @@ Preconditions:
 
 - `page.reload()` inside `browser_run_code_unsafe` can land on
   `about:blank`. Use `page.goto`.
-- The sample verse is never saved. While it shows, `swag_draft` stays
-  empty.
+- The sample verse is never saved. While it shows, `swag_draft` is
+  `null`: it is never written, not written empty.

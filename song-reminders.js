@@ -47,6 +47,8 @@ async function toggle() {
   isSaving = true;
   const wasOn = user.reminders_on;
   showState(!wasOn);
+  // The light tap the system's own switches play (haptics.js).
+  if (window.AppHaptics) window.AppHaptics.tap();
   try {
     const saved = await saveSetting(!wasOn);
     if (window.currentUser === user) user.reminders_on = saved.reminders_on;
