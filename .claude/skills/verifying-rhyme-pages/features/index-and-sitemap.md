@@ -27,8 +27,9 @@ Preconditions:
   `/rhymes/<word>/` links number 5,000, one per page folder.
 - **Sitemap.** `/sitemap.xml` answers 200 with 5,010 `<loc>`: 5,000 word
   pages, plus home, `/rhymes/`, `/guide/`, the four `*-alternative/`
-  comparison pages, `/privacy/`, `/delete-account/` and `/pricing` (no
-  trailing slash: another worker serves it).
+  comparison pages, `/privacy/`, `/delete-account/`, and one page with no
+  trailing slash that another worker serves (`PLANS_PATH` in
+  `tools/rhymes/render-html.mjs`).
 - **Proof.** Screenshot the index to
   `.playwright-mcp/index-and-sitemap/index.png` and save the `<loc>` count.
 

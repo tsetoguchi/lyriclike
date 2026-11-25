@@ -42,7 +42,8 @@ app.
    Songwriters | LyricLike", h1 "Rhyming dictionary", linking every page.
 4. **Sitemap.** `/sitemap.xml` answers 200 with one `<loc>` per word page
    plus 10 others: home, `/rhymes/`, the guide, the four comparison pages,
-   privacy, delete-account and `/pricing` (5,010 today).
+   privacy, delete-account, and one page with no trailing slash that
+   another worker serves (5,010 today).
 5. **Search box.** On a word page, the index and the 404 page, typing a
    word and pressing "Find rhymes" opens the editor on that word, the same
    way the "Write with these rhymes" link does.
