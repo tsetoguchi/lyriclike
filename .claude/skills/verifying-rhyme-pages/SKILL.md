@@ -38,11 +38,15 @@ app.
      the address goes back to `/`
 2. **Missing word.** `/rhymes/zzqqx/` answers a real 404 with title "Page
    not found | LyricLike", not the app.
-3. **Index.** `/rhymes/` answers 200, "Rhyming Dictionary for Songwriters",
-   linking every page.
-4. **Sitemap.** `/sitemap.xml` answers 200 with one `<loc>` per page plus
-   the home page (5,003 today).
-5. **Phone.** At 393px, `document.documentElement.scrollWidth` is at most
+3. **Index.** `/rhymes/` answers 200, title "Rhyming Dictionary for
+   Songwriters | LyricLike", h1 "Rhyming dictionary", linking every page.
+4. **Sitemap.** `/sitemap.xml` answers 200 with one `<loc>` per word page
+   plus 10 others: home, `/rhymes/`, the guide, the four comparison pages,
+   privacy, delete-account and `/pricing` (5,010 today).
+5. **Search box.** On a word page, the index and the 404 page, typing a
+   word and pressing "Find rhymes" opens the editor on that word, the same
+   way the "Write with these rhymes" link does.
+6. **Phone.** At 393px, `document.documentElement.scrollWidth` is at most
    `innerWidth`: no sideways scroll.
 
 Screenshot the word page at both widths into `.playwright-mcp/`.
