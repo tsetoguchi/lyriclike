@@ -121,6 +121,12 @@ const randomSortOptionEl = rhymeSortMenuEl.querySelector('[data-order="random"]'
 
 // ── Restore session state ──
 
+// A switch flipping plays the light tap the system's own switches play.
+// haptics.js may be missing (an older bundle); then nothing plays.
+function tapSwitch() {
+  if (window.AppHaptics) window.AppHaptics.tap();
+}
+
 // aria-pressed is what tells a screen reader the switch is on; the class is
 // only how it looks.
 function setToggleState(button, isOn) {
@@ -1315,6 +1321,7 @@ function toggleRhymeScheme() {
   rhymeSchemeVisible = !rhymeSchemeVisible;
   sessionStorage.setItem('rhymeSchemeVisible', rhymeSchemeVisible ? '1' : '0');
   setToggleState(rhymeSchemeToggleEl, rhymeSchemeVisible);
+  tapSwitch();
   trackEvent('overlay_toggled', { overlay: 'rhyme_scheme', is_on: rhymeSchemeVisible });
   syncRhymesMenuButton();
   // Showing or hiding either margin changes the editor's width, so the text
@@ -1338,6 +1345,7 @@ function toggleSyllables() {
   syllablesVisible = !syllablesVisible;
   sessionStorage.setItem('syllablesVisible', syllablesVisible ? '1' : '0');
   setToggleState(toggleBtn, syllablesVisible);
+  tapSwitch();
   trackEvent('overlay_toggled', { overlay: 'syllables', is_on: syllablesVisible });
   openGutter(gutterEl, syllablesVisible);
   redrawPreview();
@@ -1350,6 +1358,7 @@ function toggleInternalRhymes() {
   internalRhymesVisible = !internalRhymesVisible;
   sessionStorage.setItem('internalRhymesVisible', internalRhymesVisible ? '1' : '0');
   setToggleState(internalRhymeToggleEl, internalRhymesVisible);
+  tapSwitch();
   trackEvent('overlay_toggled', { overlay: 'internal_rhymes', is_on: internalRhymesVisible });
   syncRhymesMenuButton();
   if (internalRhymesVisible) ensureRhymeData();

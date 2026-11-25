@@ -24,14 +24,33 @@
 
   let drag = null;
 
+  // Pure: whether a drag has gone far enough that letting go switches the
+  // sidebar, flicks aside.
+  function isPastShare({ wasOpen, dx, width }) {
+    const travel = wasOpen ? -dx : dx;
+    return travel > width * SETTLE_SHARE;
+  }
+
   // Pure: whether a drag let go at this point leaves the sidebar open.
   function isOpenAfterRelease({ wasOpen, dx, elapsedMs, width }) {
     const speed = elapsedMs > 0 ? dx / elapsedMs : 0;
     if (speed >= FLICK_PX_PER_MS) return true;
     if (speed <= -FLICK_PX_PER_MS) return false;
-    const travel = wasOpen ? -dx : dx;
-    const isPastShare = travel > width * SETTLE_SHARE;
-    return wasOpen ? !isPastShare : isPastShare;
+    const isPast = isPastShare({ wasOpen, dx, width });
+    return wasOpen ? !isPast : isPast;
+  }
+
+  // haptics.js may be missing (an older bundle); then nothing plays.
+  function feel(moment) {
+    if (window.AppHaptics) window.AppHaptics[moment]();
+  }
+
+  // One tick as the drag crosses the line where letting go switches it, and
+  // none again until it has backed over the line.
+  function tickAtShare() {
+    const isPast = isPastShare(drag);
+    if (isPast && !drag.isPast) feel('tick');
+    drag.isPast = isPast;
   }
 
   function isSwipeable() {
@@ -61,7 +80,7 @@
     if (!canStartAt(touch, event.target)) return;
     drag = {
       wasOpen: window.Sidebar.isOpen(), startX: touch.clientX, startY: touch.clientY,
-      startedAt: event.timeStamp, isDragging: false, dx: 0,
+      startedAt: event.timeStamp, isDragging: false, dx: 0, isPast: false,
     };
   }
 
@@ -78,6 +97,7 @@
     document.body.classList.add(DRAGGING_CLASS);
     sidebarEl.style.visibility = 'visible';
     scrimEl.style.visibility = 'visible';
+    feel('startTicks');
   }
 
   // offset runs from -width (shut) to 0 (open).
@@ -104,11 +124,13 @@
     }
     event.preventDefault();
     followFinger();
+    tickAtShare();
   }
 
   // The inline styles go in the same frame the class settles, so the
   // sidebar's own transition carries it on from where the finger left it.
   function settle(isOpen) {
+    feel('endTicks');
     document.body.classList.remove(DRAGGING_CLASS);
     for (const el of [sidebarEl, scrimEl]) {
       el.style.removeProperty('transform');
@@ -141,5 +163,5 @@
   document.addEventListener('touchend', onTouchEnd);
   document.addEventListener('touchcancel', onTouchCancel);
 
-  window.SidebarSwipe = { isOpenAfterRelease };
+  window.SidebarSwipe = { isOpenAfterRelease, isPastShare };
 })();
