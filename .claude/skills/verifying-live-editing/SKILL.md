@@ -7,9 +7,10 @@ description: Use when a change touches LyricLike live co-editing or sharing - th
 
 ## Overview
 
-Two servers run: the room Worker (`collab/`, port 8787) and the site (8788),
-which reaches the room through its `PAGE_ROOM` binding. Two browser windows
-with separate cookies play Ann (owner) and Bo (co-writer) on `smoke-page`.
+Two servers run: the room Worker (`collab/`, port 8787) and the site (a
+free port, usually 8788), which reaches the room through its `PAGE_ROOM`
+binding. Two browser windows with separate cookies play Ann (owner) and Bo
+(co-writer) on `smoke-page`.
 
 **REQUIRED:** read `running-lyriclike-locally` first. Its sign-in seed makes
 Ann, Bo and the shared page.
@@ -24,76 +25,85 @@ app.
 
 ## Set up
 
-1. Start the room first, in the background. Starting both at once gives
-   `SQLITE_BUSY`:
+1. Pick a free site port. Other sessions often hold 8788 or 8789, and a
+   second server on a held port can still print `Ready` while the browser
+   reaches the other one. Check before you start:
+   ```powershell
+   foreach ($p in 8787,8788,8789,8790,8791) { try { Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction Stop | Out-Null; "$p busy" } catch { "$p free" } }
+   ```
+   The room must get 8787. The site can use any free port: the room is
+   found by name, not port. `<port>` below is the one you picked.
+2. Copy `.dev.vars` into a new worktree, then start the room first, in the
+   background. Starting both at once gives `SQLITE_BUSY`:
    ```bash
-   cd collab && npx --yes wrangler@4.131.2 dev --persist-to ../.wrangler/state
+   cd collab && npm ci && npx --yes wrangler@4.131.2 dev --persist-to ../.wrangler/state
    ```
    Wait for `Ready on http://127.0.0.1:8787`.
-2. Load the seed (`tools/live-smoke-seed.sql`).
-3. Start the site with the switch on:
+3. Apply migrations and load the seed (`running-lyriclike-locally`).
+4. Start the site with the switch on:
    ```bash
-   npx --yes wrangler@4.131.2 pages dev . --port 8788 --binding LIVE_EDITING=on
+   npx --yes wrangler@4.131.2 pages dev . --port <port> --binding LIVE_EDITING=on
    ```
    Its startup table must show `env.PAGE_ROOM ... [connected]`. If it says
    `[not connected]`, the room isn't running.
-4. Open a second window for Bo. Each `browser_run_code_unsafe` call starts
-   fresh, so find Bo's page through the browser every time:
+5. Open a second window for Bo. Set the first-visit keys in both before
+   the first load: on a fresh browser the tour ("Syllables and rhymes")
+   and Ann's "Write together" card cover the page and swallow clicks.
+   Each `browser_run_code_unsafe` call starts fresh, so find Bo's page
+   through the browser every time:
    ```js
    // once
+   const seen = () => { localStorage.tour_seen = '1'; localStorage.sample_seen = '1'; localStorage.whats_new_seen = 'live-editing'; };
    const ctxB = await page.context().browser().newContext({ viewport: { width: 1440, height: 900 } });
    await ctxB.newPage();
+   await page.context().addInitScript(seen);
+   await ctxB.addInitScript(seen);
    await page.context().addCookies([{ name: 'sid', value: 'smoke-token-ann', domain: 'localhost', path: '/' }]);
    await ctxB.addCookies([{ name: 'sid', value: 'smoke-token-bo', domain: 'localhost', path: '/' }]);
    // every later call
    const bo = page.context().browser().contexts().find(c => c !== page.context()).pages()[0];
    ```
+   Ann's window is the main context and keeps storage from earlier
+   sessions. Clear it first, as in Reset step 1: an old draft there gets
+   saved as an extra page.
+
+Two console errors and one warning are normal on every load: a 404 for
+the extension script `site.js`, its MIME refusal, and "Extension script
+did not load". `.dev.vars` sets an extension hook that has no file
+locally.
 
 ## Reset between runs
 
 The room keeps its own copy of each page, so reseeding the database alone
 leaves the old text. In this order:
 
-1. Close Bo's window and send Ann's to `about:blank`. An open tab pushes
-   its text back into the room when it reconnects.
-2. Stop both servers (see `running-lyriclike-locally`; check 8787 and 8788).
+1. In Ann's window, still on the site, run
+   `localStorage.clear(); indexedDB.deleteDatabase('live-pages')`, then
+   send it to `about:blank`. Close Bo's window. Live pages are kept in
+   IndexedDB too, so a kept copy shows the last run's text until the room
+   syncs, and an open tab pushes its text back when it reconnects.
+2. Stop both servers (see `running-lyriclike-locally`; check 8787 and
+   `<port>`). Kill only processes you started.
 3. Delete `.wrangler/state/v3/do/lyricalmiracle-collab-PageRoom`.
 4. Rerun the seed, start the room, wait for Ready, start the site.
 
-## Run through (switch on)
+## Run through
 
-1. **Open.** Both go to `/`. Ann's list shows Smoke and Solo. Bo's shows
-   "Shared with me", Smoke, Ann. Both click Smoke (`#lyrics-list-items`
-   `getByText('Smoke', { exact: true })`). Both editors read `hello`.
-2. **Presence.** `#page-presence` reads "B鈴 here now" for Ann and "A here
-   now" for Bo. Ann sees a Share button.
-3. **Ann types.** Click `#lyrics`, `Control+End`, type ` from Ann`. Bo's
-   `#lyrics` and `#lyrics-highlight` show it within about a second. Poll
-   every 100ms rather than waiting a fixed time.
-4. **Bo types** a new line. Ann sees it, plus Bo's coloured caret
-   (`#presence-over` has a child).
-5. **Saved.** About 10s later, `GET /api/lyrics/smoke-page` returns the
-   joined text. The room writes to the database late on purpose.
+Follow the feature files in order. Each has the steps and what proves it:
 
-## Run through (switch off)
-
-Stop only the site (node processes whose command line has `pages dev`),
-leave the room running, and restart the site without `--binding
-LIVE_EDITING=on`.
-
-1. Bo opens Smoke. `#page-notice-text` reads "Live editing is paused. You
-   can read this page." and `#lyrics` is read-only.
-2. A save from Bo, `PUT /api/lyrics/smoke-page` with
-   `{ body, base_revision: <current> }`, answers `403 {"error":"paused"}`.
-   A wrong `base_revision` gives 409 instead, which proves nothing.
-3. `/api/me` for Bo has `can_share: false`.
-
-Screenshot both windows into `.playwright-mcp/`.
+1. `features/co-editing.md`, with the switch on.
+2. `features/paused-pages.md`, with the switch off. `.dev.vars` sets
+   `LIVE_EDITING=on`, so leaving the flag out does not turn it off. Stop
+   only the site (node and workerd processes whose command line has
+   `<port>`), leave the room running, and restart with
+   `--binding LIVE_EDITING=off`. Check Bo's `/api/me` has
+   `can_share: false` before you drive.
 
 ## Faster check without a browser
 
 `node tools/live-smoke.mjs` runs two socket clients against both servers.
-Use it after room changes. It doesn't show anything on screen.
+Use it after room changes. It doesn't show anything on screen. It always
+talks to the site on 8788, so it only works when your site has that port.
 
 - Warm the room first: the first few connections after the room starts get
   a 500 ("Network connection lost"). The browser retries; the script
@@ -107,8 +117,11 @@ Use it after room changes. It doesn't show anything on screen.
 | Symptom | Cause |
 |---|---|
 | Typing never reaches the other window | Site started before the room, or `LIVE_EDITING` not set. Page falls back to polling |
-| Old text after a reset | The room kept its copy, or an open tab pushed it back. Follow "Reset between runs" |
-| Console shows `WebSocket ... failed` a few times, then works | Cold room start. Normal locally |
+| Old text after a reset | The room kept its copy, Ann's IndexedDB kept one, or an open tab pushed it back. Follow "Reset between runs" |
+| Console shows `WebSocket ... failed` up to about a dozen times, then works | Cold room start, up to a minute. Normal locally. The site log shows `500 ... Network connection lost`, then `101` and the room log shows `join` |
+| "Offline, changes will sync" stays up while typing still reaches the other window | After a cold start the notice stays until that person types. Trust the room's `join` lines and the typing, not the notice |
+| Clicks time out on a fresh browser | The tour or the Write together card is open. Set the first-visit keys (Set up, step 5) |
+| Paused notice never shows | `.dev.vars` turned live editing back on. Restart with `--binding LIVE_EDITING=off` |
 | `bo` is undefined | Variables don't survive between run-code calls. Look it up again |
 | Close codes (4001, 4004...) never arrive locally | Known: the local two-process proxy drops them. Check on the preview site |
 
