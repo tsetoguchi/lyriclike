@@ -18,7 +18,11 @@ Preconditions:
 - Baseline from the README.
 
 - **Load.** `page.goto('/rhymes/zzqqx/')` answers 404.
-- **Page.** Title "Page not found | LyricLike". The editor does not load.
+- **Page.** Title "Page not found | LyricLike", h1 "Page not found". The
+  editor does not load: the only scripts are analytics. The search box is
+  there (see [word search](./word-search.md)).
+- **Left out on purpose.** `/rhymes/sex/` gives the same 404: the word is
+  in `tools/rhymes/page-excluded-words.json`.
 - **Proof.** Screenshot to `.playwright-mcp/missing-word/404.png`.
 
 ## Gotchas
