@@ -20,6 +20,11 @@
   // The click that follows a hold must not shut the menu it just opened.
   let heldUntil = 0;
 
+  // haptics.js may be missing (an older bundle); then nothing plays.
+  function feel(moment) {
+    if (window.AppHaptics) window.AppHaptics[moment]();
+  }
+
   // The overlay button under a point, or null.
   function itemAt(x, y) {
     const el = document.elementFromPoint(x, y);
@@ -31,6 +36,8 @@
     if (press.item === item) return;
     if (press.item) press.item.classList.remove(PICKING_CLASS);
     if (item) item.classList.add(PICKING_CLASS);
+    // A tick each time the finger slides onto another overlay.
+    if (item) feel('tick');
     press.item = item;
   }
 
@@ -38,8 +45,12 @@
     press = null;
     if (event.pointerType !== 'touch' || window.isRhymesMenuOpen()) return;
     press = { x: event.clientX, y: event.clientY, isHeld: false, item: null };
+    // Readies the ticks now, so the first slide onto an overlay plays at once.
+    feel('startTicks');
     press.timer = setTimeout(() => {
       press.isHeld = true;
+      // The snap lands with the menu, as the press gives way to it.
+      feel('snap');
       window.setRhymesMenuOpen(true);
     }, HOLD_MS);
   }
@@ -59,6 +70,7 @@
     press = null;
     if (!ended) return;
     clearTimeout(ended.timer);
+    feel('endTicks');
     if (!ended.isHeld) return;
     heldUntil = event.timeStamp + AFTER_HOLD_MS;
     if (!ended.item) return;
@@ -70,6 +82,7 @@
   function cancel() {
     if (!press) return;
     clearTimeout(press.timer);
+    feel('endTicks');
     if (press.item) press.item.classList.remove(PICKING_CLASS);
     press = null;
   }
