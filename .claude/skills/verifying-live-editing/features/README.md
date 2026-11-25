@@ -6,7 +6,10 @@ reset steps and common mistakes live in `../SKILL.md`.
 
 ## Baseline
 
-- Room on 8787 and site on 8788, started in that order, per `../SKILL.md`.
+- Room on 8787 and the site on a free port, started in that order, per
+  `../SKILL.md`.
+- First-visit keys set in both windows (`../SKILL.md`, Set up), so the
+  tour and the Write together card don't block clicks.
 - `tools/live-smoke-seed.sql` loaded: Ann owns `smoke-page` and
   `smoke-solo`; `smoke-page` is shared with Bo.
 - Ann in the main window (`smoke-token-ann`), Bo in a second context
