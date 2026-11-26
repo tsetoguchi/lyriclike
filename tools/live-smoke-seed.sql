@@ -1,7 +1,12 @@
 -- Local-only data for tools/live-smoke.mjs. Never run against a remote database.
 -- The session ids are the sha256 of smoke-token-ann and smoke-token-bo.
-DELETE FROM lyric_shares WHERE lyric_id IN ('smoke-page', 'smoke-solo');
-DELETE FROM lyrics WHERE id IN ('smoke-page', 'smoke-solo');
+-- Clear every page Ann and Bo own, not just the two below: a test that signs
+-- in as Ann can save a new page, and that page would block deleting her.
+DELETE FROM lyric_shares WHERE user_id IN ('smoke-ann', 'smoke-bo')
+  OR lyric_id IN (SELECT id FROM lyrics WHERE user_id IN ('smoke-ann', 'smoke-bo'))
+  OR lyric_id IN ('smoke-page', 'smoke-solo');
+DELETE FROM lyrics WHERE user_id IN ('smoke-ann', 'smoke-bo')
+  OR id IN ('smoke-page', 'smoke-solo');
 DELETE FROM sessions WHERE user_id IN ('smoke-ann', 'smoke-bo');
 DELETE FROM users WHERE id IN ('smoke-ann', 'smoke-bo');
 INSERT INTO users (id, email, email_normalized, name, created_at) VALUES

@@ -33,8 +33,10 @@ Preconditions:
   minute: the first sockets fail and the retries back off. Typing before
   then still syncs later, but the timing checks below fail.
 - **Presence.** On desktop the chips are in `#presence-header`: Ann sees
-  one chip "B鈴" (title "Bö 鈴木", aria-label "Here now: Bö 鈴木"), Bo
-  sees "A" ("Here now: Ann"). `#page-presence` adds a "here now" note,
+  one chip "B鈴" (title "Bö 鈴木"), Bo sees "A". The "Here now: Bö 鈴木"
+  and "Here now: Ann" labels are not in the chip text: they are the
+  aria-label of the `button` inside `#presence-header`, so read
+  `#presence-header button`'s `aria-label`. `#page-presence` adds a "here now" note,
   but only on phones (768px wide or less). On desktop it is hidden and
   its text runs together ("B鈴here now").
   `#share-btn` reads "Share" for Ann and "People" for Bo.
