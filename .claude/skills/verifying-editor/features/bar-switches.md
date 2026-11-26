@@ -30,7 +30,9 @@ Read a switch with:
 const look = id => page.evaluate(id => {
   const b = document.getElementById(id);
   const icon = b.querySelector('.nav-icon');
-  const dot = getComputedStyle(icon.querySelector('circle'));
+  // Create and Notebook icons have no circle, so guard it.
+  const circle = icon.querySelector('circle');
+  const dot = circle ? getComputedStyle(circle) : {};
   return { on: b.classList.contains('active'), fill: dot.fill, stroke: dot.stroke,
     icon: getComputedStyle(icon).color, label: getComputedStyle(b.querySelector('.nav-label')).color,
     under: getComputedStyle(b, '::after').content };
