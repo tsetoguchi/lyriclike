@@ -3071,13 +3071,23 @@ body:not(.signed-in) .invite-btn {
   padding-bottom: 0;
 }
 
-#account-menu-slot:empty {
+/* An extension's rows sit in the Account group as if they were its own. */
+.account-menu-slot {
+  display: contents;
+}
+
+/* With passwords off and no extension rows, Account has nothing to show, so it
+   takes no room and draws no rule. */
+#account-menu-account:not(:has(> .account-menu-item:not([hidden]), > .account-menu-slot > *)) {
   display: none;
 }
 
-/* With passwords switched off, the password group has nothing to show. */
-#account-menu-password:not(:has(> :not([hidden]))) {
-  display: none;
+/* Names a group, quiet like "Signed in as". */
+.account-menu-heading {
+  margin: 0;
+  padding: var(--space-1) var(--space-4) var(--space-1);
+  font-size: var(--text-caption-2);
+  color: var(--ink-faded);
 }
 
 /* The menu's two pages. Only the shown one takes room; the other lies over
