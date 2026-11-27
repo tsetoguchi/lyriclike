@@ -3090,9 +3090,10 @@ body:not(.signed-in) .invite-btn {
   color: var(--ink-faded);
 }
 
-/* The menu's two pages. Only the shown one takes room; the other lies over
-   it, slid a little to its side and faded, so switching reads as turning
-   a page: the account page leaves left, Legal comes in from the right. */
+/* The menu's pages. Only the shown one takes room; the others lie over
+   it, slid a little to their side and faded, so switching reads as turning
+   a page: the first page leaves left, Account or Legal comes in from the
+   right. */
 .account-menu-views {
   position: relative;
   overflow: hidden;
@@ -3124,6 +3125,7 @@ body:not(.signed-in) .invite-btn {
   transform: translateX(-30%);
 }
 
+#account-menu-account:not(.is-current),
 #account-menu-legal:not(.is-current) {
   transform: translateX(30%);
 }
@@ -3141,6 +3143,7 @@ body:not(.signed-in) .invite-btn {
   }
 
   #account-menu-main:not(.is-current),
+  #account-menu-account:not(.is-current),
   #account-menu-legal:not(.is-current) {
     transform: none;
   }
