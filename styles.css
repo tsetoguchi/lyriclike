@@ -3076,6 +3076,12 @@ body:not(.signed-in) .invite-btn {
   display: contents;
 }
 
+/* An older server sends no reminder setting, so Notifications has no row to
+   show and takes no room. */
+#account-menu-notifications:not(:has(> .account-menu-item:not([hidden]))) {
+  display: none;
+}
+
 /* Names a group, quiet like "Signed in as". */
 .account-menu-heading {
   margin: 0;
