@@ -1,6 +1,6 @@
 // haptics.js, and the gestures that play it: each moment maps to the right
-// system feedback, a drag ticks once per crossing of its line, the switch in
-// the account menu silences everything, and the website never plays a thing.
+// system feedback, a drag ticks once per crossing of its line, and the
+// website never plays a thing.
 //
 //   node --test "test/*.test.mjs"
 
@@ -40,15 +40,6 @@ function fakePlugin() {
   };
 }
 
-function fakePreferences(initial = {}) {
-  const values = new Map(Object.entries(initial));
-  return {
-    values,
-    get: async ({ key }) => ({ value: values.has(key) ? values.get(key) : null }),
-    set: async ({ key, value }) => { values.set(key, value); },
-  };
-}
-
 // Counts the moments a gesture asks for, the way haptics.js would see them.
 function countingHaptics() {
   const moments = [];
@@ -85,10 +76,9 @@ class FakeStyle {
 }
 
 describe('createHaptics', () => {
-  it('plays each moment as its system feedback', async () => {
+  it('plays each moment as its system feedback', () => {
     const plugin = fakePlugin();
-    const haptics = createHaptics({ plugin, preferences: null });
-    await haptics.ready;
+    const haptics = createHaptics({ plugin });
     haptics.tap();
     haptics.snap();
     haptics.success();
@@ -98,10 +88,9 @@ describe('createHaptics', () => {
     ]);
   });
 
-  it('runs ticks inside one start and end', async () => {
+  it('runs ticks inside one start and end', () => {
     const plugin = fakePlugin();
-    const haptics = createHaptics({ plugin, preferences: null });
-    await haptics.ready;
+    const haptics = createHaptics({ plugin });
     haptics.startTicks();
     haptics.startTicks();
     haptics.tick();
@@ -113,39 +102,11 @@ describe('createHaptics', () => {
     ]);
   });
 
-  it('starts the ticks itself when a tick comes first', async () => {
+  it('starts the ticks itself when a tick comes first', () => {
     const plugin = fakePlugin();
-    const haptics = createHaptics({ plugin, preferences: null });
-    await haptics.ready;
+    const haptics = createHaptics({ plugin });
     haptics.tick();
     assert.deepEqual(plugin.calls, ['selectionStart', 'selectionChanged']);
-  });
-
-  it('plays nothing once switched off, and keeps that choice', async () => {
-    const plugin = fakePlugin();
-    const preferences = fakePreferences();
-    const haptics = createHaptics({ plugin, preferences });
-    await haptics.ready;
-    haptics.setOn(false);
-    for (const moment of ['tap', 'snap', 'startTicks', 'tick', 'endTicks', 'success', 'error']) {
-      haptics[moment]();
-    }
-    assert.deepEqual(plugin.calls, []);
-    assert.equal(preferences.values.get('haptics_on'), '0');
-
-    const later = createHaptics({ plugin, preferences });
-    assert.equal(await later.ready, false);
-    later.tap();
-    assert.deepEqual(plugin.calls, []);
-  });
-
-  it('plays again once switched back on', async () => {
-    const plugin = fakePlugin();
-    const haptics = createHaptics({ plugin, preferences: fakePreferences({ haptics_on: '0' }) });
-    await haptics.ready;
-    haptics.setOn(true);
-    haptics.tap();
-    assert.deepEqual(plugin.calls, ['impact:LIGHT']);
   });
 
   it('never throws, whether the plugin throws, refuses or is missing', async () => {
@@ -153,14 +114,11 @@ describe('createHaptics', () => {
       impact: () => { throw new Error('no engine'); },
       notification: () => Promise.reject(new Error('refused')),
     };
-    const unreadable = { get: async () => { throw new Error('gone'); }, set: () => { throw new Error('gone'); } };
-    const haptics = createHaptics({ plugin: throwing, preferences: unreadable });
-    assert.equal(await haptics.ready, true);
+    const haptics = createHaptics({ plugin: throwing });
     haptics.tap();
     haptics.error();
     haptics.tick();
-    haptics.setOn(false);
-    const none = createHaptics({ plugin: null, preferences: null });
+    const none = createHaptics({ plugin: null });
     none.tap();
     none.tick();
     assert.equal(none.isAvailable, false);
@@ -208,52 +166,17 @@ describe('haptics.js on the page', () => {
     assert.deepEqual(plugin.calls, []);
   });
 
-  it('plays through the plugin in the app', async () => {
+  it('plays through the plugin in the app', () => {
     const plugin = fakePlugin();
     const Capacitor = {
       isNativePlatform: () => true,
-      Plugins: { Haptics: plugin, Preferences: fakePreferences() },
+      Plugins: { Haptics: plugin },
     };
     const context = runOnPage(Capacitor);
-    await context.AppHaptics.ready;
     context.AppHaptics.snap();
     assert.deepEqual(plugin.calls, ['impact:MEDIUM']);
   });
 
-  it('shows the account menu switch in the app, and it silences the taps', async () => {
-    const plugin = fakePlugin();
-    const handlers = {};
-    const attributes = {};
-    const button = {
-      hidden: true,
-      setAttribute: (name, value) => { attributes[name] = value; },
-      addEventListener: (type, handler) => { handlers[type] = handler; },
-    };
-    const state = { textContent: '' };
-    const Capacitor = {
-      isNativePlatform: () => true,
-      Plugins: { Haptics: plugin, Preferences: fakePreferences() },
-    };
-    const context = runOnPage(Capacitor, { 'haptics-toggle-btn': button, 'haptics-state': state });
-    await context.AppHaptics.ready;
-    assert.equal(button.hidden, false);
-    assert.equal(state.textContent, 'On');
-    handlers.click();
-    assert.equal(state.textContent, 'Off');
-    assert.equal(attributes['aria-checked'], 'false');
-    context.AppHaptics.snap();
-    assert.deepEqual(plugin.calls, []);
-    handlers.click();
-    assert.equal(state.textContent, 'On');
-    // Turning it back on plays the tap it brings back.
-    assert.deepEqual(plugin.calls, ['impact:LIGHT']);
-  });
-
-  it('leaves the switch hidden on the website', () => {
-    const button = { hidden: true, setAttribute: () => {}, addEventListener: () => {} };
-    runOnPage(null, { 'haptics-toggle-btn': button, 'haptics-state': { textContent: '' } });
-    assert.equal(button.hidden, true);
-  });
 });
 
 function makeSidebarElement(width = 0) {
