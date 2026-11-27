@@ -4590,6 +4590,23 @@ body.sidebar-open #sidebar-scrim {
   text-overflow: ellipsis;
 }
 
+/* A page on its way, as when the connection drops: its title fades in and
+   out until the page is on screen. */
+.lyrics-list-item.is-loading .lyrics-list-title {
+  animation: title-loading 1.2s ease-in-out infinite;
+}
+
+@keyframes title-loading {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-list-item.is-loading .lyrics-list-title {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 /* Out of sight until the row is hovered or reached by keyboard, so the list
    reads as titles. On touch there is no hover, so they always show. */
 .lyrics-list-actions {

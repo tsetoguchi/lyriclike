@@ -73,6 +73,10 @@ const SIGN_OUT_WAIT_MS = 8000;
 // A fetch started by pressing a row is only used by a click that follows
 // soon after; older than this, its page may have changed since.
 const PREFETCH_MAX_AGE_MS = 3000;
+// A page that opens quicker than this never shows its row loading.
+const LOADING_SHOW_DELAY_MS = 250;
+// What openLyric answers when the request itself failed.
+const REQUEST_FAILED = 0;
 
 let currentLyricId = crypto.randomUUID();
 let currentTitle = 'Untitled';
@@ -107,6 +111,9 @@ let currentPageInfo = { role: 'owner', shareCount: 0, ownerName: '' };
 let lastAnnouncedPageId = null;
 // The page fetch a press on a list row started, waiting for its click.
 let prefetchedLyric = null;
+// The page the last notebook tap asked for, until it is on screen. A newer
+// tap replaces it, which stops the older one from trying again.
+let wantedLyricId = null;
 
 function setPageInfo(lyric) {
   currentPageInfo = {
@@ -238,12 +245,40 @@ async function handleCreateClick() {
 // the request itself failed. The new page is only shown once the save waiting
 // on the page being left is done, so its last words are not lost; the fetch
 // runs alongside that save rather than after it. The row lights up at once,
-// and goes back to the open page if this one does not open.
+// its title pulses while the page is slow to come, and it goes back to the
+// open page if this one does not open.
 async function loadLyric(id) {
   NotebookList.mark(id);
-  const status = await openLyric(id);
+  wantedLyricId = id;
+  const loadingTimer = setTimeout(() => NotebookList.markLoading(id), LOADING_SHOW_DELAY_MS);
+  const status = await openLyricWhenOnline(id);
+  clearTimeout(loadingTimer);
+  if (wantedLyricId === id) {
+    wantedLyricId = null;
+    NotebookList.markLoading(null);
+  }
   NotebookList.mark(currentLyricId);
   return status;
+}
+
+// With no connection the page can't come yet, so it is asked for again once
+// the device is back online, unless another page was asked for meanwhile.
+async function openLyricWhenOnline(id) {
+  let status = await openLyric(id);
+  while (status === REQUEST_FAILED && isOffline() && wantedLyricId === id) {
+    await waitForOnline();
+    if (wantedLyricId !== id) return status;
+    status = await openLyric(id);
+  }
+  return status;
+}
+
+function isOffline() {
+  return navigator.onLine === false;
+}
+
+function waitForOnline() {
+  return new Promise(resolve => window.addEventListener('online', resolve, { once: true }));
 }
 
 // The open page itself is fetched only after its save lands: fetched during

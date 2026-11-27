@@ -5,6 +5,7 @@
   'use strict';
 
   const HTTP_UNAUTHORIZED = 401;
+  const LOADING_CLASS = 'is-loading';
   const LOADING_MESSAGE = 'Loading...';
   const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
   const SIGNED_OUT_MESSAGE = 'Log in to see your notebook';
@@ -337,6 +338,14 @@
     }
   }
 
+  // The row whose page is on its way: its title fades in and out until the
+  // page is on screen. null stops it.
+  function markLoading(id) {
+    for (const item of container.querySelectorAll('.lyrics-list-item[data-id]')) {
+      item.classList.toggle(LOADING_CLASS, item.dataset.id === id);
+    }
+  }
+
   // After a save, the list is only fetched again if it shows this page under
   // another title, or not at all.
   // On a live page the room writes a new title to the database up to 10 s
@@ -401,6 +410,7 @@
     open,
     refreshIfBehind,
     mark,
+    markLoading,
     has: id => listedTitles.has(id),
     ownPageCount: currentOwnPageCount,
     refreshPageCount: () => showPageCount(currentOwnPageCount()),
