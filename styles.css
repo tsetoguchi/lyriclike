@@ -4591,10 +4591,8 @@ body.sidebar-open #sidebar-scrim {
 }
 
 /* A page on its way, as when the connection drops: its title fades in and
-   out until the page is on screen. The Notebook heading does the same
-   while the list is on its way. */
-.lyrics-list-item.is-loading .lyrics-list-title,
-.list-group-toggle.is-loading {
+   out until the page is on screen. */
+.lyrics-list-item.is-loading .lyrics-list-title {
   animation: title-loading 1.2s ease-in-out infinite;
 }
 
@@ -4602,11 +4600,25 @@ body.sidebar-open #sidebar-scrim {
   50% { opacity: 0.35; }
 }
 
+/* While the list is on its way, the Notebook heading brightens from grey to
+   white and back. It is already grey, so fading it would leave it unreadable. */
+.list-group-toggle.is-loading {
+  animation: heading-loading 1.6s ease-in-out infinite;
+}
+
+@keyframes heading-loading {
+  50% { color: var(--ink); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .lyrics-list-item.is-loading .lyrics-list-title,
-  .list-group-toggle.is-loading {
+  .lyrics-list-item.is-loading .lyrics-list-title {
     animation: none;
     opacity: 0.5;
+  }
+
+  .list-group-toggle.is-loading {
+    animation: none;
+    color: var(--ink);
   }
 }
 
