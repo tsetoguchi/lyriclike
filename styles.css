@@ -3100,17 +3100,18 @@ body:not(.signed-in) .invite-btn {
   color: var(--ink-faded);
 }
 
-/* The menu's pages. Only the shown one takes room; the others lie over
-   it, slid a little to their side and faded, so switching reads as turning
+/* The menu's pages. They all sit in one grid cell, so the menu is as tall
+   as the tallest page and keeps one size on every page. The hidden ones
+   are slid a little to their side and faded, so switching reads as turning
    a page: the first page leaves left, the opened page comes in from the
    right. */
 .account-menu-views {
-  position: relative;
+  display: grid;
   overflow: hidden;
-  transition: height var(--duration-slow) var(--ease-glide);
 }
 
 .account-menu-view {
+  grid-area: 1 / 1;
   display: flex;
   flex-direction: column;
   transition:
@@ -3120,8 +3121,6 @@ body:not(.signed-in) .invite-btn {
 }
 
 .account-menu-view:not(.is-current) {
-  position: absolute;
-  inset: 0 0 auto;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -3147,7 +3146,6 @@ body:not(.signed-in) .invite-btn {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .account-menu-views,
   .account-menu-view,
   .account-menu-view:not(.is-current) {
     transition: opacity var(--duration-base) ease-out, visibility 0s;

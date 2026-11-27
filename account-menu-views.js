@@ -1,10 +1,9 @@
 // The account menu's inner pages: Notifications, Account and Legal each open
 // one, and its back row returns to the first page. The pages slide past each
-// other while the menu eases to the new page's height, and the menu always
-// opens on its first page.
+// other, the menu keeps one size on every page (styles.css stacks them in
+// one grid cell), and it always opens on its first page.
 const CURRENT_CLASS = 'is-current';
 const INSTANT_CLASS = 'is-instant';
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 const accountMenu = document.getElementById('account-menu');
 const views = document.getElementById('account-menu-views');
@@ -30,28 +29,10 @@ function setPage(page) {
   }
 }
 
-// Only the shown page takes room, so the box would jump to its height.
-// It is pinned at the old height and eased to the new one, then let go
-// so the page can still grow, as when the password note appears.
-function easeHeight(change) {
-  const fromHeight = views.offsetHeight;
-  change();
-  views.style.height = '';
-  const toHeight = views.offsetHeight;
-  if (fromHeight === toHeight || window.matchMedia(REDUCED_MOTION_QUERY).matches) return;
-  views.style.height = `${fromHeight}px`;
-  void views.offsetHeight;
-  views.style.height = `${toHeight}px`;
-}
-
-function releaseHeight(event) {
-  if (event.target === views && event.propertyName === 'height') views.style.height = '';
-}
-
 // Going in focuses the page's back row; coming back focuses the row that
 // opened it.
 function showPage(page, returnFocusTo) {
-  easeHeight(() => setPage(page));
+  setPage(page);
   (page ? page.back : returnFocusTo).focus({ preventScroll: true });
 }
 
@@ -60,7 +41,6 @@ function resetOnOpen() {
   if (accountMenu.hidden) return;
   views.classList.add(INSTANT_CLASS);
   setPage(null);
-  views.style.height = '';
   void views.offsetHeight;
   views.classList.remove(INSTANT_CLASS);
 }
@@ -69,6 +49,5 @@ for (const page of pages) {
   page.opener.addEventListener('click', () => showPage(page));
   page.back.addEventListener('click', () => showPage(null, page.opener));
 }
-views.addEventListener('transitionend', releaseHeight);
 new MutationObserver(resetOnOpen)
   .observe(accountMenu, { attributes: true, attributeFilter: ['hidden'] });
