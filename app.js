@@ -111,11 +111,8 @@ const rhymesMenuPopoverEl = document.getElementById('rhymes-menu-popover');
 const headerEl = document.querySelector('header');
 const headerRightEl = document.querySelector('.header-right');
 const headerActionsEl = document.querySelector('.header-actions');
-const switchDockEl = document.getElementById('switch-dock');
+const headerToolsEl = document.querySelector('.header-tools');
 const userAreaEl = document.getElementById('user-area');
-// Desktop has no top bar: the account, its extension slot and the status line
-// sit in a row over the right-hand panel instead.
-const panelAccountEl = document.getElementById('panel-account');
 const rhymeSortEl = document.getElementById('rhyme-sort');
 const rhymeSortBtn = document.getElementById('rhyme-sort-btn');
 const rhymeSortMenuEl = document.getElementById('rhyme-sort-menu');
@@ -1836,12 +1833,11 @@ function placeControlsForViewport() {
     rhymesMenuPopoverEl.append(rhymeSchemeToggleEl, internalRhymeToggleEl);
     bottomNavEl.append(toggleBtn, rhymesMenuEl, notebookBtn, createBtn);
     headerEl.insertBefore(userAreaEl, headerEl.firstElementChild);
-    headerRightEl.prepend(statusEl);
   } else {
     setRhymesMenuOpen(false);
     headerActionsEl.append(notebookBtn, createBtn);
-    switchDockEl.append(toggleBtn, rhymeSchemeToggleEl, internalRhymeToggleEl);
-    panelAccountEl.append(statusEl, userAreaEl);
+    headerToolsEl.append(toggleBtn, rhymeSchemeToggleEl, internalRhymeToggleEl);
+    headerRightEl.appendChild(userAreaEl);
   }
   controlsAreInBottomNav = wantsBottomNav;
 }
