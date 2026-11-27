@@ -53,6 +53,9 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* No double-tap zoom: a quick second tap on a word or button zoomed the
+     page. Pinch zoom stays. */
+  touch-action: manipulation;
 }
 
 :focus-visible {

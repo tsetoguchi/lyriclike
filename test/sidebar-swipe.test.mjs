@@ -44,11 +44,12 @@ function makeElement(width = 0) {
   return element;
 }
 
-// options: { isOpen, isDocked, isTourOpen, tab, canSwipeFrom }. With no tab,
+// options: { isOpen, isDocked, isTourOpen, isHubShowing, tab, canSwipeFrom }. With no tab,
 // tab-swipe.js isn't loaded.
 function startSwipe(options = {}) {
   const {
-    isOpen = false, isDocked = false, isTourOpen = false, tab = null, canSwipeFrom = true,
+    isOpen = false, isDocked = false, isTourOpen = false, isHubShowing = false, tab = null,
+    canSwipeFrom = true,
   } = options;
   const sidebarEl = makeElement(SIDEBAR_WIDTH);
   const rowEl = makeElement();
@@ -66,6 +67,7 @@ function startSwipe(options = {}) {
       hide: () => calls.push('hide'),
     },
     isCoachTourOpen: () => isTourOpen,
+    isHubShowing: () => isHubShowing,
   };
   if (tab) window.TabSwipe = { currentTab: () => tab, canSwipeFrom: () => canSwipeFrom };
   const document = {
@@ -177,8 +179,8 @@ describe('swiping the sidebar', () => {
     assert.deepEqual(swipe.calls, ['show']);
   });
 
-  it('takes no swipes while docked or during the tour', () => {
-    for (const options of [{ isDocked: true }, { isTourOpen: true }]) {
+  it('takes no swipes while docked, during the tour, or on the start screen', () => {
+    for (const options of [{ isDocked: true }, { isTourOpen: true }, { isHubShowing: true }]) {
       const swipe = startSwipe(options);
       drag(swipe, { fromX: 5, path: [100, 200], target: swipe.pageEl });
       assert.deepEqual(swipe.calls, []);

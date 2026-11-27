@@ -56,6 +56,8 @@
   function isSwipeable() {
     const sidebar = window.Sidebar;
     if (!sidebar || sidebar.isDocked()) return false;
+    // The start screen has no sidebar to pull out (hub.js).
+    if (window.isHubShowing && window.isHubShowing()) return false;
     return !(window.isCoachTourOpen && window.isCoachTourOpen());
   }
 
