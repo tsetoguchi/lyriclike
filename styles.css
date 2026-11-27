@@ -3071,18 +3071,29 @@ body:not(.signed-in) .invite-btn {
   padding-bottom: 0;
 }
 
-#account-menu-slot:empty {
+/* An extension's rows sit in the Account group as if they were its own. */
+.account-menu-slot {
+  display: contents;
+}
+
+/* An older server sends no reminder setting, so the Notifications page would
+   be empty and its row is left out. */
+.account-menu-views:not(:has(#reminders-toggle-btn:not([hidden]))) #notifications-page-btn {
   display: none;
 }
 
-/* With passwords switched off, the password group has nothing to show. */
-#account-menu-password:not(:has(> :not([hidden]))) {
-  display: none;
+/* Names a group, quiet like "Signed in as". */
+.account-menu-heading {
+  margin: 0;
+  padding: var(--space-1) var(--space-4) var(--space-1);
+  font-size: var(--text-caption-2);
+  color: var(--ink-faded);
 }
 
-/* The menu's two pages. Only the shown one takes room; the other lies over
-   it, slid a little to its side and faded, so switching reads as turning
-   a page: the account page leaves left, Legal comes in from the right. */
+/* The menu's pages. Only the shown one takes room; the others lie over
+   it, slid a little to their side and faded, so switching reads as turning
+   a page: the first page leaves left, the opened page comes in from the
+   right. */
 .account-menu-views {
   position: relative;
   overflow: hidden;
@@ -3114,6 +3125,8 @@ body:not(.signed-in) .invite-btn {
   transform: translateX(-30%);
 }
 
+#account-menu-notifications:not(.is-current),
+#account-menu-account:not(.is-current),
 #account-menu-legal:not(.is-current) {
   transform: translateX(30%);
 }
@@ -3131,6 +3144,8 @@ body:not(.signed-in) .invite-btn {
   }
 
   #account-menu-main:not(.is-current),
+  #account-menu-notifications:not(.is-current),
+  #account-menu-account:not(.is-current),
   #account-menu-legal:not(.is-current) {
     transform: none;
   }
