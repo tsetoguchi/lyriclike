@@ -3174,25 +3174,6 @@ body:not(.signed-in) .invite-btn {
   stroke-linejoin: round;
 }
 
-/* A switch row's word only shows when saving fails; the switch drawn
-   beside it says On or Off the rest of the time. */
-.account-menu-state {
-  display: none;
-  flex-shrink: 0;
-  margin-left: auto;
-  font-size: var(--text-caption-2);
-  color: var(--ink-faded);
-}
-
-.account-menu-item[data-failed] .account-menu-state {
-  display: block;
-  white-space: nowrap;
-}
-
-.account-menu-switch-label {
-  white-space: nowrap;
-}
-
 /* The switch, where a submenu row has its chevron: a pill that fills
    amber when on, with a white knob that slides to the side it's set to. */
 .account-menu-switch {
