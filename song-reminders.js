@@ -3,19 +3,13 @@
 // The server answers with the account, so the switch shows what was saved.
 
 const REMINDERS_URL = '/api/me/reminders';
-const ON_LABEL = 'On';
-const OFF_LABEL = 'Off';
-const FAILED_LABEL = "Couldn't save";
-const FAILED_SHOW_MS = 2000;
 
 const button = document.getElementById('reminders-toggle-btn');
-const stateLabel = document.getElementById('reminders-state');
 
 let isSaving = false;
 
 function showState(isOn) {
   button.setAttribute('aria-checked', String(isOn));
-  stateLabel.textContent = isOn ? ON_LABEL : OFF_LABEL;
 }
 
 // Older servers don't send reminders_on, so the switch stays hidden there.
@@ -36,11 +30,6 @@ async function saveSetting(isOn) {
   return (await res.json()).user;
 }
 
-function showFailure(wasOn) {
-  stateLabel.textContent = FAILED_LABEL;
-  setTimeout(() => showState(wasOn), FAILED_SHOW_MS);
-}
-
 async function toggle() {
   const user = window.currentUser;
   if (isSaving || !user) return;
@@ -54,13 +43,14 @@ async function toggle() {
     if (window.currentUser === user) user.reminders_on = saved.reminders_on;
     showState(saved.reminders_on);
   } catch {
-    showFailure(wasOn);
+    // The save didn't go through, so the switch slides back.
+    showState(wasOn);
   } finally {
     isSaving = false;
   }
 }
 
-if (button && stateLabel) {
+if (button) {
   button.addEventListener('click', toggle);
   document.addEventListener('auth-checked', showForUser);
   // sharing.js sends it after the email's turn-off link worked for this account.
