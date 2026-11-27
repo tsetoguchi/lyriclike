@@ -64,6 +64,11 @@ const UNSAVED_LEAVE_MESSAGE =
 // A live draft whose page could not be fetched at load tries again this often.
 const REOPEN_RETRY_MS = 5000;
 const SIGN_OUT_HEADING = 'Log out';
+// Said when a tap needs the server and there is no connection.
+const OFFLINE_HEADING = "You're offline";
+const OFFLINE_MESSAGE = 'Connect to the internet and try again.';
+const OFFLINE_SAVE_STATUS = 'Offline';
+const SAVE_FAILED_STATUS = 'Save failed';
 const UNSAVED_SIGN_OUT_MESSAGE =
   "Your newest words on this page aren't saved yet, most likely because you're offline. "
   + "If you log out now, they're lost.";
@@ -542,6 +547,7 @@ async function ensurePageOnServer() {
 // The server treats both the same way: the owner's call deletes the page,
 // an editor's only takes them off it. Only the words differ.
 async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
+  if (isOffline()) return tellOffline();
   const confirmed = await Dialog.open(shared
     ? {
       heading: LEAVE_LYRIC_HEADING,
@@ -561,12 +567,32 @@ async function deleteLyric({ id, title, shared, owner_name: ownerName }) {
     clearTimeout(saveTimer);
     await waitForSaves();
   }
-  const res = await fetch(`/api/lyrics/${id}`, { method: 'DELETE' });
+  const res = await sendDelete(id);
+  if (!res) return tellOffline();
 
   if (id === currentLyricId) startBlankPage(DEFAULT_TITLE);
   else if (res.ok && !shared && isPageBlocked()) saveBlockedPage();
 
   NotebookList.load();
+}
+
+// The server's answer, or null when the request itself failed.
+async function sendDelete(id) {
+  try {
+    return await fetch(`/api/lyrics/${id}`, { method: 'DELETE' });
+  } catch {
+    return null;
+  }
+}
+
+// Nothing was changed, so the page and the notebook stay as they are.
+async function tellOffline() {
+  await Dialog.open({
+    heading: OFFLINE_HEADING,
+    message: OFFLINE_MESSAGE,
+    confirmLabel: 'OK',
+    noCancel: true,
+  });
 }
 
 function isPageBlocked() {
@@ -615,6 +641,7 @@ function sendRename(id, title) {
 }
 
 async function renameLyric(id, oldTitle) {
+  if (isOffline()) return tellOffline();
   const entered = await askForLyricName({ heading: RENAME_HEADING, confirmLabel: 'Rename', value: oldTitle });
   if (entered === null) return;
   const newTitle = entered.trim();
@@ -632,7 +659,8 @@ async function renameLyric(id, oldTitle) {
   try {
     await sendRename(id, newTitle);
   } catch {
-    // The list below still shows the name the server has.
+    // The list keeps the name the server has.
+    return tellOffline();
   }
   NotebookList.load();
 }
@@ -704,6 +732,33 @@ function performSave({ force = false } = {}) {
   });
   return saveInFlight;
 }
+
+// A save that could not go out for want of a connection: its page, and
+// whether it was forced (a new page, which has to reach the server even
+// empty). null when none is waiting.
+let saveWaitingForOnline = null;
+
+// Offline, the words are kept on this device (saveDraft), so the save is
+// not a failure yet: it goes out again once the device is back online.
+function showSaveFailure(pageId, force) {
+  if (!isOffline()) {
+    setSaveIndicator(SAVE_FAILED_STATUS);
+    return;
+  }
+  setSaveIndicator(OFFLINE_SAVE_STATUS);
+  const waiting = saveWaitingForOnline;
+  const isForced = force || Boolean(waiting && waiting.pageId === pageId && waiting.force);
+  saveWaitingForOnline = { pageId, force: isForced };
+}
+
+function saveWhenBackOnline() {
+  const waiting = saveWaitingForOnline;
+  saveWaitingForOnline = null;
+  if (!waiting || waiting.pageId !== currentLyricId) return;
+  performSave({ force: waiting.force });
+}
+
+window.addEventListener('online', saveWhenBackOnline);
 
 // Resolves once no save is on the wire or waiting to follow one.
 async function waitForSaves() {
@@ -792,7 +847,7 @@ async function sendSave(force) {
     });
   } catch {
     unansweredBody = body;
-    if (pageId === currentLyricId) setSaveIndicator('Save failed');
+    if (pageId === currentLyricId) showSaveFailure(pageId, force);
     return;
   }
   if (pageId !== currentLyricId) return;
@@ -1584,6 +1639,7 @@ window.OpenPage = {
   goLiveWhenSaved,
   goLiveAfterShare,
   confirmSignOut,
+  tellOffline,
   clear: clearLyricState,
 };
 

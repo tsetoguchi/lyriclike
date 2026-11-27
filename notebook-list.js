@@ -6,6 +6,8 @@
 
   const HTTP_UNAUTHORIZED = 401;
   const LOADING_CLASS = 'is-loading';
+  // A list that comes quicker than this never shows its heading loading.
+  const LOADING_SHOW_DELAY_MS = 250;
   const LOADING_MESSAGE = 'Loading...';
   const EMPTY_NOTEBOOK_MESSAGE = 'You have no pages';
   const SIGNED_OUT_MESSAGE = 'Log in to see your notebook';
@@ -93,7 +95,16 @@
     }
 
     if (!container.querySelector('.lyrics-list-item')) showListMessage(LOADING_MESSAGE);
+    const loadingTimer = setTimeout(() => markListLoading(true), LOADING_SHOW_DELAY_MS);
+    const lyrics = await fetchList();
+    clearTimeout(loadingTimer);
+    if (!isWaitingForOnline) markListLoading(false);
+    return lyrics;
+  }
 
+  // The rows, or nothing when they could not be had: then the list says why,
+  // or, offline, keeps what it shows and asks again once back online.
+  async function fetchList() {
     try {
       const res = await fetch('/api/lyrics');
 
@@ -115,8 +126,29 @@
       renderLyricsList(lyrics);
       return lyrics;
     } catch {
-      showListMessage(LOAD_FAILED_MESSAGE);
+      if (navigator.onLine === false) waitToLoadWhenOnline();
+      else showListMessage(LOAD_FAILED_MESSAGE);
+      return null;
     }
+  }
+
+  // With no connection the rows on screen stay, so a page can still be
+  // tapped, and the Notebook heading fades in and out until the list loads.
+  let isWaitingForOnline = false;
+
+  function waitToLoadWhenOnline() {
+    if (isWaitingForOnline) return;
+    isWaitingForOnline = true;
+    markListLoading(true);
+    window.addEventListener('online', () => {
+      isWaitingForOnline = false;
+      load();
+    }, { once: true });
+  }
+
+  function markListLoading(isLoading) {
+    const heading = document.querySelector('.list-group-toggle[data-group="own"]');
+    if (heading) heading.classList.toggle(LOADING_CLASS, isLoading);
   }
 
   // Draws the rows from a list already fetched, so a change to the row

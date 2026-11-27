@@ -4591,8 +4591,10 @@ body.sidebar-open #sidebar-scrim {
 }
 
 /* A page on its way, as when the connection drops: its title fades in and
-   out until the page is on screen. */
-.lyrics-list-item.is-loading .lyrics-list-title {
+   out until the page is on screen. The Notebook heading does the same
+   while the list is on its way. */
+.lyrics-list-item.is-loading .lyrics-list-title,
+.list-group-toggle.is-loading {
   animation: title-loading 1.2s ease-in-out infinite;
 }
 
@@ -4601,7 +4603,8 @@ body.sidebar-open #sidebar-scrim {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lyrics-list-item.is-loading .lyrics-list-title {
+  .lyrics-list-item.is-loading .lyrics-list-title,
+  .list-group-toggle.is-loading {
     animation: none;
     opacity: 0.5;
   }
