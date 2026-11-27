@@ -5,7 +5,7 @@
 const REMINDERS_URL = '/api/me/reminders';
 const ON_LABEL = 'On';
 const OFF_LABEL = 'Off';
-const FAILED_LABEL = "Couldn't save";
+const FAILED_LABEL = 'Not saved';
 const FAILED_SHOW_MS = 2000;
 
 const button = document.getElementById('reminders-toggle-btn');
@@ -14,6 +14,7 @@ const stateLabel = document.getElementById('reminders-state');
 let isSaving = false;
 
 function showState(isOn) {
+  delete button.dataset.failed;
   button.setAttribute('aria-checked', String(isOn));
   stateLabel.textContent = isOn ? ON_LABEL : OFF_LABEL;
 }
@@ -36,8 +37,11 @@ async function saveSetting(isOn) {
   return (await res.json()).user;
 }
 
+// The switch slides back at once and the note says why, then goes.
 function showFailure(wasOn) {
+  showState(wasOn);
   stateLabel.textContent = FAILED_LABEL;
+  button.dataset.failed = '';
   setTimeout(() => showState(wasOn), FAILED_SHOW_MS);
 }
 

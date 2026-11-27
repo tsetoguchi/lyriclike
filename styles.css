@@ -3174,16 +3174,64 @@ body:not(.signed-in) .invite-btn {
   stroke-linejoin: round;
 }
 
-/* A switch row's On / Off, where a submenu row has its chevron. */
+/* A switch row's word only shows when saving fails; the switch drawn
+   beside it says On or Off the rest of the time. */
 .account-menu-state {
+  display: none;
   flex-shrink: 0;
   margin-left: auto;
   font-size: var(--text-caption-2);
   color: var(--ink-faded);
 }
 
-.account-menu-item[aria-checked="true"] .account-menu-state {
-  color: var(--accent);
+.account-menu-item[data-failed] .account-menu-state {
+  display: block;
+  white-space: nowrap;
+}
+
+.account-menu-switch-label {
+  white-space: nowrap;
+}
+
+/* The switch, where a submenu row has its chevron: a pill that fills
+   amber when on, with a white knob that slides to the side it's set to. */
+.account-menu-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 12px;
+  background: var(--ink-border);
+  transition: background-color var(--duration-base) var(--ease-glide);
+}
+
+.account-menu-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform var(--duration-base) var(--ease-glide);
+}
+
+.account-menu-item[aria-checked="true"] .account-menu-switch {
+  background: var(--accent);
+}
+
+.account-menu-item[aria-checked="true"] .account-menu-switch::after {
+  transform: translateX(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-menu-switch,
+  .account-menu-switch::after {
+    transition: none;
+  }
 }
 
 /* The second page's title doubles as the way back. */
