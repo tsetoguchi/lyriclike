@@ -1,7 +1,7 @@
-// The account menu's inner pages: Account and Legal each open one, and its
-// back row returns to the first page. The pages slide past each other while
-// the menu eases to the new page's height, and the menu always opens on its
-// first page.
+// The account menu's inner pages: Notifications, Account and Legal each open
+// one, and its back row returns to the first page. The pages slide past each
+// other while the menu eases to the new page's height, and the menu always
+// opens on its first page.
 const CURRENT_CLASS = 'is-current';
 const INSTANT_CLASS = 'is-instant';
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -11,6 +11,7 @@ const views = document.getElementById('account-menu-views');
 const mainView = document.getElementById('account-menu-main');
 // Each inner page with the row that opens it and the row that leads back.
 const pages = [
+  ['account-menu-notifications', 'notifications-page-btn', 'notifications-page-back'],
   ['account-menu-account', 'account-page-btn', 'account-page-back'],
   ['account-menu-legal', 'account-legal-btn', 'account-legal-back'],
 ].map(([viewId, openerId, backId]) => ({
