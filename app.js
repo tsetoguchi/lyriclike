@@ -1,5 +1,12 @@
 // ── Constants ──
 const DEBOUNCE_DELAY_MS = 150;
+// A tapped line this close to the top or bottom of the writing, as a share
+// of what shows, is brought to the middle.
+const EDGE_ZONE_TOP = 0.2;
+const EDGE_ZONE_BOTTOM = 0.25;
+// How long after a tap the keyboard may still be rising on a phone; a resize
+// in that time centres the tapped line again in the room that is left.
+const KEYBOARD_SETTLE_MS = 1000;
 const LOOKUP_FOUND = 'rhymes';
 const LOOKUP_NO_RHYMES = 'no_rhymes';
 const LOOKUP_NOT_IN_DICTIONARY = 'not_in_dictionary';
@@ -1056,6 +1063,8 @@ function showPickedRhymes(word, bounds, isPointerPick, isLineAbove = false) {
   pickHighlightWord(word, bounds, isPointerPick);
   selectedContextEl.textContent = getWordContext(textareaEl.value, bounds ? bounds.start : 0);
   if (isPointerPick) {
+    lastPointerPickAt = Date.now();
+    requestAnimationFrame(centerTappedLine);
     announcePointerPick();
     document.dispatchEvent(new CustomEvent(RHYMES_PICKED_EVENT));
   }
@@ -1222,6 +1231,49 @@ function revealCaretLine() {
   } else if (line.top < viewTop) {
     lyricsAreaEl.scrollTop = line.top;
   }
+}
+
+// When the last tap picked a word, so a keyboard rising after it knows.
+let lastPointerPickAt = 0;
+
+// The part of the writing that shows: from the scroll offset down to the
+// tool bar, measured in the scroller's own coordinates.
+function visibleWritingSpan() {
+  const top = lyricsAreaEl.scrollTop;
+  return { top, height: lyricsAreaEl.clientHeight - bottomNavObstruction() };
+}
+
+// Where the editor's text starts inside the scroller; the sample's clear
+// link can sit above it.
+function editorOffsetInScroller() {
+  const areaTop = lyricsAreaEl.getBoundingClientRect().top;
+  return textareaEl.getBoundingClientRect().top - areaTop + lyricsAreaEl.scrollTop;
+}
+
+function isNearEdge(line, view) {
+  const topEdge = view.top + view.height * EDGE_ZONE_TOP;
+  const bottomEdge = view.top + view.height * (1 - EDGE_ZONE_BOTTOM);
+  return line.top < topEdge || line.bottom > bottomEdge;
+}
+
+// A word tapped near the top or bottom of the writing is brought to the
+// middle, so the lines around it show as well.
+function centerTappedLine() {
+  if (!canMeasureEditor()) return;
+  const offset = editorOffsetInScroller();
+  const caretLine = caretLineBounds();
+  const line = { top: caretLine.top + offset, bottom: caretLine.bottom + offset };
+  const view = visibleWritingSpan();
+  if (!isNearEdge(line, view)) return;
+  const target = (line.top + line.bottom) / 2 - view.height / 2;
+  lyricsAreaEl.scrollTo({
+    top: Math.max(0, target),
+    behavior: isMotionReduced() ? 'auto' : 'smooth',
+  });
+}
+
+function isKeyboardRisingAfterTap() {
+  return Date.now() - lastPointerPickAt < KEYBOARD_SETTLE_MS;
 }
 
 // ── Rhyme scheme detection ──
@@ -1975,7 +2027,7 @@ function hideBottomNavUnderKeyboard() {
 function handleViewportResize() {
   hideBottomNavUnderKeyboard();
   fitAppToVisualViewport();
-  requestAnimationFrame(revealCaretLine);
+  requestAnimationFrame(isKeyboardRisingAfterTap() ? centerTappedLine : revealCaretLine);
 }
 
 if (window.visualViewport) {
