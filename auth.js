@@ -216,18 +216,34 @@ function endSession() {
   if (window.OpenPage) window.OpenPage.clear();
 }
 
+// Logging out ends the session on the server, so it needs a connection:
+// without one this device would only look logged out.
 async function signOut() {
+  if (navigator.onLine === false) return tellSignOutOffline();
   const button = document.getElementById('settings-sign-out-btn');
   button.disabled = true;
   try {
-    // Live words still on their way get a moment to save, and offline the
-    // writer decides (storage.js).
+    // Live words still on their way get a moment to save (storage.js).
     if (window.OpenPage && !await window.OpenPage.confirmSignOut()) return;
-    await fetch('/api/auth/logout', { method: 'POST' });
-    endSession();
+    if (await sendLogout()) endSession();
+    else await tellSignOutOffline();
   } finally {
     button.disabled = false;
   }
+}
+
+async function sendLogout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tellSignOutOffline() {
+  closeAccountMenu();
+  return window.OpenPage ? window.OpenPage.tellOffline() : undefined;
 }
 
 document.getElementById('settings-sign-out-btn').addEventListener('click', signOut);
