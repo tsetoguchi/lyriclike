@@ -96,6 +96,10 @@
   --sidebar-width: 260px;
   --sidebar-width-phone: 320px;
   --rail-width: 56px;
+  /* Desktop's account row over the right-hand panel, and the room left
+     under the lyrics so their last line can scroll above the dock. */
+  --account-row-height: 60px;
+  --dock-clearance: 96px;
   --dialog-width: 400px;
   --resize-handle-width: 10px;
   --nav-icon-size: 24px;
