@@ -3076,12 +3076,6 @@ body:not(.signed-in) .invite-btn {
   display: contents;
 }
 
-/* With passwords off and no extension rows, Account has nothing to show, so it
-   takes no room and draws no rule. */
-#account-menu-account:not(:has(> .account-menu-item:not([hidden]), > .account-menu-slot > *)) {
-  display: none;
-}
-
 /* Names a group, quiet like "Signed in as". */
 .account-menu-heading {
   margin: 0;

@@ -114,17 +114,6 @@
               <span id="settings-user-caption" class="account-menu-caption">Signed in as</span>
               <span id="settings-user-email" class="account-menu-email"></span>
             </div>
-            <!-- Extension scripts add their account rows to the slot. -->
-            <div id="account-menu-account" class="account-menu-group" role="group" aria-labelledby="account-menu-account-heading">
-              <p id="account-menu-account-heading" class="account-menu-heading">Account</p>
-              <button id="change-password-btn" class="account-menu-item" type="button" hidden
-                      aria-haspopup="dialog">
-                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Change password</button>
-              <button id="add-password-btn" class="account-menu-item" type="button" hidden>
-                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Add a password</button>
-              <p id="security-status" class="account-menu-status" aria-live="polite" hidden></p>
-              <div id="account-menu-slot" class="account-menu-slot"></div>
-            </div>
             <div id="account-menu-settings" class="account-menu-group" role="group" aria-labelledby="account-menu-settings-heading">
               <p id="account-menu-settings-heading" class="account-menu-heading">Settings</p>
               <button id="reminders-toggle-btn" class="account-menu-item" type="button"
@@ -136,7 +125,16 @@
               <button id="account-rate-app" class="account-menu-item" type="button" hidden>
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Rate LyricLike</button>
             </div>
-            <div class="account-menu-group">
+            <!-- Extension scripts add their account rows to the slot. -->
+            <div id="account-menu-account" class="account-menu-group" role="group" aria-labelledby="account-menu-account-heading">
+              <p id="account-menu-account-heading" class="account-menu-heading">Account</p>
+              <button id="change-password-btn" class="account-menu-item" type="button" hidden
+                      aria-haspopup="dialog">
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Change password</button>
+              <button id="add-password-btn" class="account-menu-item" type="button" hidden>
+                <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Add a password</button>
+              <p id="security-status" class="account-menu-status" aria-live="polite" hidden></p>
+              <div id="account-menu-slot" class="account-menu-slot"></div>
               <button id="settings-sign-out-btn" class="account-menu-item" type="button">
                 <svg class="account-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 8l4 4-4 4M19 12H9"/></svg>Sign out</button>
               <button id="settings-delete-account-btn" class="account-menu-item is-danger" type="button">
