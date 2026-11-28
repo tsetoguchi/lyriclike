@@ -131,26 +131,54 @@ header h1 {
 }
 
 /* What the lyrics show: three switches in a .switch-group (below), which
-   draws the pill and the dividers. The header's own icon rules would
-   otherwise win over the group's shape, so these restate it. */
+   draws the dividers. In the header the group drops its slate pill, and a
+   switch shows its state in ink instead: amber when on, pencil grey when
+   off, the way the app marks what is picked. The header's own icon rules
+   would otherwise win over the group's shape, so these restate it. */
+header .header-tools.switch-group {
+  background: transparent;
+}
+
 header .header-tools .toggle-btn:has(> .nav-icon) {
   position: relative;
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);
-  color: var(--ink);
+  color: var(--ink-faded);
   transition: background var(--duration-fast), color var(--duration-fast);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon):hover {
-  background: var(--switch-fill-hover);
+  background: var(--ink-wash);
 }
 
 header .header-tools .toggle-btn:has(> .nav-icon).active {
-  background: var(--switch-fill-strong);
+  background: transparent;
+  color: var(--accent);
+}
+
+header .header-tools .toggle-btn:has(> .nav-icon).active:hover {
+  background: var(--ink-wash);
+}
+
+/* With no fill to mark the edge, the dividers stay beside a switch that is
+   on. Only a hover's wash still hides them. */
+header .header-tools > .toggle-btn.active:not(:hover) + .toggle-btn:not(:hover)::before,
+header .header-tools > .toggle-btn:not(:hover) + .toggle-btn.active:not(:hover)::before {
+  opacity: 1;
+}
+
+/* Forced colours paint on and off in one colour, so an off switch's dots
+   go hollow, as on the phone's bar. */
+@media (forced-colors: active) {
+  header .header-tools .toggle-btn:not(.active) .nav-icon circle {
+    fill: none;
+    stroke: currentColor;
+  }
 }
 
 /* The name hides until the cursor rests on the switch, then eases in below
-   it. Kept in the page rather than removed, so it still names the button. */
+   it. Kept in the page rather than removed, so it still names the button.
+   Wide screens show it beside the icon instead (below). */
 header .header-tools .nav-label {
   position: absolute;
   top: calc(100% + var(--space-2));
@@ -172,6 +200,48 @@ header .header-tools .toggle-btn:hover .nav-label,
 header .header-tools .toggle-btn:focus-visible .nav-label {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* Wide enough for the names to sit beside the icons, and for the group to
+   centre over the lyrics rather than the whole header. The rhymes panel
+   (or a side panel in its place) and its resize handle always fill the
+   right of the page at these widths, so the lyrics column is the header
+   less their width. */
+@media (min-width: 1200px) {
+  header {
+    position: relative;
+  }
+
+  header .header-tools {
+    position: absolute;
+    top: 50%;
+    left: calc((100% - var(--rhymes-panel-width) - var(--resize-handle-width)) / 2);
+    transform: translate(-50%, -50%);
+  }
+
+  /* The icon-over-word stack the phone's bar uses turns on its side. */
+  header .header-tools .toggle-btn:has(> .nav-icon) {
+    flex-direction: row;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  header .header-tools .nav-label,
+  header .header-tools .toggle-btn:hover .nav-label,
+  header .header-tools .toggle-btn:focus-visible .nav-label {
+    position: static;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    color: inherit;
+    font-size: var(--text-subhead);
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* The wordmark is the way home: a full page load back to the index. It keeps
