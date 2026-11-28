@@ -31,6 +31,7 @@ mistakes live in `../SKILL.md`.
 - [Phone gestures](./phone-gestures.md): swipes to the sidebar and between
   tabs, hold Highlights to pick an overlay.
 - [Bar switches](./bar-switches.md): hollow and filled icons for off and
-  on in the bottom bar.
+  on in the bottom bar; named amber and grey switches in the desktop
+  header.
 - [Edge fades](./edge-fades.md): top and bottom of the lyrics fade while
   there is more past them.
