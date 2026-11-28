@@ -1011,10 +1011,25 @@ function showPendingRhymes(word) {
   resultsEl.innerHTML = '<div class="empty-state">' + RHYMES_PENDING_MESSAGE + '</div>';
 }
 
+// A swipe that scrolls the writing also ends in a touchend on the editor. It
+// leaves the caret where it was, so taking it for a tap would pick the old
+// word again and scroll back to it.
+let touchStartScrollTop = null;
+
+textareaEl.addEventListener('touchstart', function noteTouchStart() {
+  touchStartScrollTop = lyricsAreaEl.scrollTop;
+}, { passive: true });
+
+function isSwipeEnd(event) {
+  if (event.type !== 'touchend' || touchStartScrollTop === null) return false;
+  return lyricsAreaEl.scrollTop !== touchStartScrollTop;
+}
+
 // pickHighlightWord() has no way to know what triggered it once this is
 // debounced, so the event type is read now, synchronously, and carried
 // through the closure to where the pick actually happens.
 function handleSelection(event) {
+  if (isSwipeEnd(event)) return;
   const isPointerPick = event.type === 'mouseup' || event.type === 'touchend';
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function processSelection() {
