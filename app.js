@@ -1445,9 +1445,10 @@ function handleResizeMove(event) {
   const panelRight = getShowingPanel().getBoundingClientRect().right;
   const newWidth = panelRight - event.clientX;
   const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
-  rhymesPanelEl.style.width = clampedWidth + 'px';
-  // Both panels take the same width, so the side panel keeps in step.
-  if (sidePanelEl) sidePanelEl.style.width = clampedWidth + 'px';
+  // Set on the page's token rather than on each panel: both panels take
+  // their width from it, and the header centres its switches over the
+  // lyrics by it, so all three keep in step.
+  document.documentElement.style.setProperty('--rhymes-panel-width', clampedWidth + 'px');
 }
 
 function handleResizeEnd() {

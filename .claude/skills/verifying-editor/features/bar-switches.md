@@ -119,6 +119,9 @@ Amber is `rgb(233, 180, 95)`, grey `rgb(139, 150, 166)`, no fill
   in `#user-area` (Log in signed out, the account button signed in).
   Skip any with a zero-width box: signed in, `#sign-in-btn` is still in
   the page but hidden.
+- **Resize.** At 1440, drag `#resize-handle` with `page.mouse` (down on
+  its middle, move to x=700, up), then to x=1040. After each drag
+  `groupCentre` is still within 8px of `lyricsCentre`.
 - **Narrow.** At 1024, `nameShown` is false for all three. Colours are as
   in **Ink**.
 - **Forced colours.** `page.emulateMedia({ forcedColors: 'active' })`:
