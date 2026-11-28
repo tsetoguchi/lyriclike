@@ -1344,6 +1344,23 @@ header .nav-icon circle {
   color: var(--ink);
 }
 
+/* Under a fingertip the heading is too short to hit, so an unseen strip
+   gives it a tap target's height without moving anything. */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+  .list-group-toggle {
+    position: relative;
+  }
+
+  .list-group-toggle::after {
+    content: '';
+    position: absolute;
+    top: calc(50% - var(--tap-target) / 2);
+    bottom: calc(50% - var(--tap-target) / 2);
+    left: 0;
+    right: 0;
+  }
+}
+
 .list-group-chevron {
   width: 12px;
   height: 12px;
@@ -5037,6 +5054,23 @@ body.sidebar-open #sidebar-scrim {
 .sidebar-links a:hover,
 .auth-fine-print a:hover {
   color: var(--ink);
+}
+
+/* The same for the small links at the foot: a tap target's height, and a
+   step wider each side, short of the dot between two links. */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+  .sidebar-links a {
+    position: relative;
+  }
+
+  .sidebar-links a::after {
+    content: '';
+    position: absolute;
+    top: calc(50% - var(--tap-target) / 2);
+    bottom: calc(50% - var(--tap-target) / 2);
+    left: calc(-1 * var(--space-1));
+    right: calc(-1 * var(--space-1));
+  }
 }
 
 /* Phones only: auth.js moves the account here, to the foot's far right. Its

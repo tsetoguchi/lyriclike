@@ -35,3 +35,5 @@ mistakes live in `../SKILL.md`.
   header.
 - [Edge fades](./edge-fades.md): top and bottom of the lyrics fade while
   there is more past them.
+- [Tap targets](./tap-targets.md): unseen 44px strips on small sidebar
+  controls under a fingertip.
